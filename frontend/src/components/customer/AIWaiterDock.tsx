@@ -315,16 +315,16 @@ export function AIWaiterDock() {
       {open && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:justify-end p-0 sm:p-6" data-testid="ai-waiter-panel">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setOpen(false)} />
-          <div className={`relative z-10 w-full sm:w-[460px] sm:max-w-md h-[90vh] sm:h-[680px] sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden border ${mode === "chat" ? "bg-[#0F0709] border-[#C9A348]/30" : "bg-[#FAF5EC] border-[#C9A348]/40"}`}>
+          <div className="relative z-10 w-full sm:w-[460px] sm:max-w-md h-[90vh] sm:h-[680px] sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden border bg-[#FAF5EC] border-[#C9A348]/40">
             {/* Header */}
-            <header className={`px-5 py-4 flex items-center justify-between border-b ${mode === "chat" ? "bg-[#150A0D] text-[#FAF5EC] border-[#C9A348]/20" : "mehfil-royal-bg text-[#FAF5EC] border-[#C9A348]/30"}`}>
+            <header className="px-5 py-4 flex items-center justify-between border-b mehfil-royal-bg text-[#FAF5EC] border-[#C9A348]/30">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-full bg-gradient-to-br from-[#DDB85C] to-[#8A6A1B] flex items-center justify-center shadow-md">
                   <Sparkles className="h-5 w-5 text-[#5C0E1B]" />
                 </div>
                 <div>
-                  <div className="font-royal tracking-wider uppercase text-sm">{mode === "chat" ? "Mehfil Concierge" : "MehfilAI"}</div>
-                  <div className="font-editorial italic text-[10px] text-[#FAF5EC]/70">Your personal sommelier · live</div>
+                  <div className="font-royal tracking-wider uppercase text-sm">MehfilAI Concierge</div>
+                  <div className="font-editorial italic text-[10px] text-[#FAF5EC]/80">Your personal sommelier · live</div>
                 </div>
               </div>
               <div className="flex items-center gap-1">
@@ -340,14 +340,13 @@ export function AIWaiterDock() {
             </header>
 
             {/* Mode tabs */}
-            <div className={`flex border-b ${mode === "chat" ? "bg-[#0F0709] border-[#C9A348]/15" : "bg-[#FAF5EC] border-[#E7DFCB]"}`} data-testid="ai-mode-tabs">
+            <div className="flex border-b bg-[#FAF5EC] border-[#E7DFCB]" data-testid="ai-mode-tabs">
               {([
                 { k: "explore", label: "Explore", icon: BookOpen },
                 { k: "chat", label: "Chat", icon: MessageSquare },
                 { k: "voice", label: "Talk", icon: Mic },
               ] as { k: Mode; label: string; icon: typeof BookOpen }[]).map((t) => {
                 const active = mode === t.k;
-                const dark = mode === "chat";
                 return (
                   <button
                     key={t.k}
@@ -355,8 +354,8 @@ export function AIWaiterDock() {
                     onClick={() => setMode(t.k)}
                     className={`flex-1 py-3 text-[11px] font-royal tracking-[0.2em] uppercase border-b-2 transition flex items-center justify-center gap-1.5 ${
                       active
-                        ? dark ? "border-[#C9A348] text-[#C9A348] bg-[#150A0D]" : "border-[#8A1A2A] text-[#8A1A2A] bg-[#F3EBD8]"
-                        : dark ? "border-transparent text-[#FAF5EC]/50 hover:text-[#C9A348]" : "border-transparent text-[#1A1106]/60 hover:text-[#8A1A2A]"
+                        ? "border-[#8A1A2A] text-[#8A1A2A] bg-[#F3EBD8]"
+                        : "border-transparent text-[#1A1106]/60 hover:text-[#8A1A2A]"
                     }`}
                   >
                     <t.icon className="h-3.5 w-3.5" /> {t.label}
@@ -405,7 +404,8 @@ export function AIWaiterDock() {
 }
 
 // =====================================================================
-// CHAT PANE — Mehfil Concierge (dark royal, suggestion chips, tap-and-order)
+// =====================================================================
+// CHAT PANE — Mehfil cream/maroon (consistent with rest of customer site)
 // =====================================================================
 function ChatPane({
   language, setLanguage, tone, setTone,
@@ -424,39 +424,39 @@ function ChatPane({
 }) {
   const cart = useCart();
   return (
-    <div className="flex-1 flex flex-col overflow-hidden text-[#FAF5EC]" data-testid="ai-chat-pane">
+    <div className="flex-1 flex flex-col overflow-hidden bg-[#FAF5EC] text-[#1A1106]" data-testid="ai-chat-pane">
       {/* Tone + Language selectors */}
-      <div className="px-4 pt-3 flex items-center gap-2 border-b border-[#C9A348]/15 pb-3" data-testid="chat-controls">
+      <div className="px-4 pt-3 flex items-center gap-2 border-b border-[#E7DFCB] pb-3" data-testid="chat-controls">
         <div className="flex-1 grid grid-cols-2 gap-2">
           <select
             data-testid="chat-tone-select"
             value={tone}
             onChange={(e) => setTone(e.target.value as Tone)}
-            className="bg-[#1A0F12] text-[#FAF5EC] text-[11px] font-royal tracking-[0.15em] uppercase border border-[#C9A348]/30 rounded-full px-3 py-1.5 outline-none cursor-pointer"
+            className="bg-white text-[#8A1A2A] text-[11px] font-royal tracking-[0.15em] uppercase border border-[#C9A348]/40 rounded-full px-3 py-1.5 outline-none cursor-pointer focus:border-[#8A1A2A]"
           >
-            {TONES.map((t) => <option key={t.code} value={t.code} className="bg-[#1A0F12]">{t.label}</option>)}
+            {TONES.map((t) => <option key={t.code} value={t.code} className="bg-white text-[#1A1106]">{t.label}</option>)}
           </select>
           <select
             data-testid="chat-language-select"
             value={language}
             onChange={(e) => setLanguage(e.target.value as Lang)}
-            className="bg-[#1A0F12] text-[#FAF5EC] text-[11px] font-royal tracking-[0.15em] uppercase border border-[#C9A348]/30 rounded-full px-3 py-1.5 outline-none cursor-pointer"
+            className="bg-white text-[#8A1A2A] text-[11px] font-royal tracking-[0.15em] uppercase border border-[#C9A348]/40 rounded-full px-3 py-1.5 outline-none cursor-pointer focus:border-[#8A1A2A]"
           >
-            {LANGS.map((l) => <option key={l.code} value={l.code} className="bg-[#1A0F12]">{l.label}</option>)}
+            {LANGS.map((l) => <option key={l.code} value={l.code} className="bg-white text-[#1A1106]">{l.label}</option>)}
           </select>
         </div>
       </div>
 
       {/* Your tray ribbon */}
-      <div className="px-5 pt-3 pb-3 border-b border-[#C9A348]/15 flex items-center justify-between" data-testid="chat-tray-ribbon">
+      <div className="px-5 pt-3 pb-3 border-b border-[#E7DFCB] flex items-center justify-between bg-[#F3EBD8]/60" data-testid="chat-tray-ribbon">
         <div>
-          <div className="font-royal tracking-[0.3em] uppercase text-[10px] text-[#C9A348]">Your tray</div>
-          <div className="font-editorial italic text-[11px] text-[#FAF5EC]/60 mt-1">
+          <div className="font-royal tracking-[0.3em] uppercase text-[10px] text-[#8A6A1B]">Your tray</div>
+          <div className="font-editorial italic text-[11px] text-[#1A1106]/65 mt-1">
             {cart.count() === 0 ? "Nothing yet — say \u201Cadd the mutton biryani\u201D or tap a chip below." : `${cart.count()} item${cart.count() > 1 ? "s" : ""} · ${formatCurrency(cart.subtotal())}`}
           </div>
         </div>
         <div className="text-right">
-          <div className="font-royal text-[#C9A348] text-sm" data-testid="chat-tray-total">{cart.count()} · {formatCurrency(cart.subtotal())}</div>
+          <div className="font-royal text-[#8A1A2A] text-sm" data-testid="chat-tray-total">{cart.count()} · {formatCurrency(cart.subtotal())}</div>
         </div>
       </div>
 
@@ -465,16 +465,16 @@ function ChatPane({
         {messages.map((m, idx) => (
           <div key={m.id} className={`max-w-[88%] ${m.role === "user" ? "ml-auto" : ""}`}>
             <div
-              className={`rounded-2xl px-4 py-3 font-editorial italic text-[15px] leading-relaxed ${
+              className={`rounded-2xl px-4 py-3 font-editorial italic text-[15px] leading-relaxed shadow-sm ${
                 m.role === "user"
-                  ? "bg-[#C9A348] text-[#1A1106] rounded-br-sm"
-                  : "bg-[#1A0F12] text-[#FAF5EC] rounded-bl-sm border border-[#C9A348]/15"
+                  ? "bg-[#8A1A2A] text-[#FAF5EC] rounded-br-sm"
+                  : "bg-white text-[#1A1106] rounded-bl-sm border border-[#C9A348]/25"
               }`}
               data-testid={`msg-${m.role}-${idx}`}
             >
               {m.content || (streaming && idx === messages.length - 1 ? <span className="opacity-60">…</span> : "")}
               {streaming && idx === messages.length - 1 && m.role === "assistant" && m.content && (
-                <span className="ml-1 inline-block w-1.5 h-4 bg-[#C9A348] align-middle animate-pulse" />
+                <span className="ml-1 inline-block w-1.5 h-4 bg-[#8A1A2A] align-middle animate-pulse" />
               )}
             </div>
           </div>
@@ -482,7 +482,7 @@ function ChatPane({
       </div>
 
       {/* Suggestion chips */}
-      <div className="border-t border-[#C9A348]/15 px-5 pt-3 pb-2 space-y-2" data-testid="chat-chips">
+      <div className="border-t border-[#E7DFCB] px-5 pt-3 pb-2 space-y-2 bg-[#FAF5EC]" data-testid="chat-chips">
         {trayChips.length > 0 && (
           <div className="flex flex-wrap gap-2" data-testid="chat-tap-and-order-chips">
             {trayChips.map((r) => (
@@ -490,10 +490,10 @@ function ChatPane({
                 key={r.id}
                 data-testid={`chip-tap-add-${r.id}`}
                 onClick={() => onTapChip(r)}
-                className="group inline-flex items-center gap-1.5 rounded-full border border-[#C9A348]/50 px-3.5 py-1.5 text-[10px] font-royal tracking-[0.18em] uppercase text-[#C9A348] hover:bg-[#C9A348]/15 hover:border-[#C9A348] transition"
+                className="group inline-flex items-center gap-1.5 rounded-full bg-white border border-[#8A1A2A]/40 px-3.5 py-1.5 text-[10px] font-royal tracking-[0.18em] uppercase text-[#8A1A2A] hover:bg-[#8A1A2A] hover:text-[#FAF5EC] hover:border-[#8A1A2A] transition"
               >
                 <Plus className="h-3 w-3" /> {r.name}
-                <span className="text-[#C9A348]/60 normal-case font-editorial italic text-[10px] tracking-normal ml-1">{formatCurrency(r.price)}</span>
+                <span className="opacity-70 normal-case font-editorial italic text-[10px] tracking-normal ml-1">{formatCurrency(r.price)}</span>
               </button>
             ))}
           </div>
@@ -505,7 +505,7 @@ function ChatPane({
               data-testid={`chip-quick-${q.replace(/\W+/g, "-").toLowerCase()}`}
               onClick={() => sendText(q)}
               disabled={streaming}
-              className="rounded-full border border-[#FAF5EC]/20 px-3.5 py-1.5 text-[10px] font-royal tracking-[0.18em] uppercase text-[#FAF5EC]/85 hover:border-[#C9A348]/60 hover:text-[#C9A348] transition disabled:opacity-40"
+              className="rounded-full border border-[#C9A348]/50 px-3.5 py-1.5 text-[10px] font-royal tracking-[0.18em] uppercase text-[#8A6A1B] hover:border-[#8A1A2A] hover:text-[#8A1A2A] hover:bg-white transition disabled:opacity-40"
             >
               {q}
             </button>
@@ -514,7 +514,7 @@ function ChatPane({
             <Link
               href="/customer/checkout"
               data-testid="chip-checkout"
-              className="inline-flex items-center gap-1.5 rounded-full bg-[#C9A348]/15 border border-[#C9A348] px-4 py-1.5 text-[10px] font-royal tracking-[0.18em] uppercase text-[#C9A348] hover:bg-[#C9A348]/25 transition"
+              className="inline-flex items-center gap-1.5 rounded-full mehfil-btn-gold px-4 py-1.5 text-[10px] font-royal tracking-[0.18em] uppercase"
             >
               <ArrowRight className="h-3 w-3" /> Checkout
             </Link>
@@ -523,8 +523,8 @@ function ChatPane({
       </div>
 
       {/* Composer */}
-      <div className="px-4 pb-4 pt-2 bg-[#0F0709]">
-        <div className="flex items-center gap-2 bg-[#1A0F12] rounded-full border border-[#C9A348]/30 p-1.5">
+      <div className="px-4 pb-4 pt-2 bg-[#FAF5EC] border-t border-[#E7DFCB]">
+        <div className="flex items-center gap-2 bg-white rounded-full border border-[#C9A348]/40 p-1.5 focus-within:border-[#8A1A2A]">
           <input
             data-testid="ai-waiter-input"
             type="text"
@@ -533,13 +533,13 @@ function ChatPane({
             onKeyDown={(e) => e.key === "Enter" && sendText(input)}
             placeholder="Ask in any language…"
             disabled={streaming}
-            className="flex-1 bg-transparent px-4 py-2 text-sm outline-none placeholder:text-[#FAF5EC]/30 text-[#FAF5EC] font-editorial italic"
+            className="flex-1 bg-transparent px-4 py-2 text-sm outline-none placeholder:text-[#1A1106]/40 text-[#1A1106] font-editorial italic"
           />
           <button
             data-testid="ai-waiter-send"
             onClick={() => sendText(input)}
             disabled={streaming || !input.trim()}
-            className="h-9 w-9 rounded-full bg-[#C9A348] text-[#1A1106] flex items-center justify-center disabled:opacity-40 hover:bg-[#DDB85C]"
+            className="h-9 w-9 rounded-full mehfil-btn-royal flex items-center justify-center disabled:opacity-40"
           >
             {streaming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </button>

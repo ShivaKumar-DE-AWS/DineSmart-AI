@@ -2024,6 +2024,9 @@ video {
   --tw-border-opacity: 1;
   border-color: rgb(63 63 70 / var(--tw-border-opacity));
 }
+.border-\[\#C9A348\]\/25 {
+  border-color: rgb(201 163 72 / 0.25);
+}
 .bg-\[\#0F0709\] {
   --tw-bg-opacity: 1;
   background-color: rgb(15 7 9 / var(--tw-bg-opacity));
@@ -2179,6 +2182,9 @@ video {
 .bg-zinc-700 {
   --tw-bg-opacity: 1;
   background-color: rgb(63 63 70 / var(--tw-bg-opacity));
+}
+.bg-\[\#F3EBD8\]\/60 {
+  background-color: rgb(243 235 216 / 0.6);
 }
 .bg-gradient-to-b {
   background-image: linear-gradient(to bottom, var(--tw-gradient-stops));
@@ -3024,6 +3030,10 @@ h1, h2, h3, h4, h5, h6 { font-family: var(--font-heading), system-ui, sans-serif
 .last\:border-0:last-child {
   border-width: 0px;
 }
+.focus-within\:border-\[\#8A1A2A\]:focus-within {
+  --tw-border-opacity: 1;
+  border-color: rgb(138 26 42 / var(--tw-border-opacity));
+}
 .hover\:-translate-y-1:hover {
   --tw-translate-y: -0.25rem;
   transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
@@ -3109,6 +3119,10 @@ h1, h2, h3, h4, h5, h6 { font-family: var(--font-heading), system-ui, sans-serif
 }
 .hover\:bg-warn\/90:hover {
   background-color: rgb(255 159 10 / 0.9);
+}
+.hover\:bg-white:hover {
+  --tw-bg-opacity: 1;
+  background-color: rgb(255 255 255 / var(--tw-bg-opacity));
 }
 .hover\:text-\[\#8A1A2A\]:hover {
   --tw-text-opacity: 1;
