@@ -1,0 +1,23 @@
+{
+  "summary": "Focused regression on TrackPage React-hooks fix. Verified the hooks reorder fix in /app/frontend/src/app/customer/track/[orderId]/page.tsx (all hooks — useRef, useEffect, useState, useEffect — now declared BEFORE the `if (!order) return …` guard). End-to-end flow exercised: POST /api/orders (200) → navigated to /customer/track/{order_id} → page rendered cleanly with NO 'Rendered more hooks' error and NO pageerror in console. All 4 stages (confirmed/preparing/ready/served) rendered inside [data-testid='track-stages']. Token 'A-005' and 'Updates every 3 seconds' text visible. [data-testid='track-enable-notif'] visible (Notification.permission='denied' which is !== 'granted'). Then logged in chef@smartdine.ai/Chef@123 (200), issued PATCH /api/orders/{id}/status with {status:'ready'} (200). After ~4.5s the polling refetch fired and the Ready stage transitioned to completed (bg-clay text-white ring-4 ring-clay/20) — observed in the second screenshot. No console errors throughout. Regression CONFIRMED FIXED.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "TrackPage hooks ordering is now correct: hooks unconditionally declared at top, early-return guard placed after them, internal `if (!order) return` guards inside useEffect bodies are kept as defensive no-ops — this is the canonical fix and matches React Rules-of-Hooks.",
+    "Minor (pre-existing, not blocking): woff2 preload warnings on /_next/static/media/*.woff2 — cosmetic Next.js font preload warnings, not functional issues."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "n/a (frontend-only regression)", "frontend": "100% (all 9 assertions pass)" },
+  "test_credentials": "chef@smartdine.ai / Chef@123 (used for PATCH /api/orders/{id}/status to 'ready')",
+  "seed_data_creation": "Created one TEST_ order (customer_name='TEST_TrackUser', token A-005) via POST /api/orders for the regression flow. Order was promoted to 'ready' by chef. Safe to leave or sweep.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "TrackPage regression is closed. Hooks order is correct in /app/frontend/src/app/customer/track/[orderId]/page.tsx (lines 28-47 are all hooks; early return is at line 49). For any future TrackPage feature work, keep the pattern: declare every hook before the `if (!order) return` guard. Backend payment flow + 29 pytest suite remain green from iteration_2 and were NOT re-run per scope.",
+  "rca of the issue": "Previously (iteration_2): useRef/useEffect/useState/useEffect were placed AFTER `if (!order) return <Loading/>`, causing React to call 1 hook on first render and 5+ on second render → 'Rendered more hooks than during the previous render'. Fix applied (iteration_3): all 5 hooks moved above the early return; defensive `if (!order) return` kept inside useEffect bodies. Verified by reproducing the full track + status-update flow end-to-end with zero hooks errors."
+}

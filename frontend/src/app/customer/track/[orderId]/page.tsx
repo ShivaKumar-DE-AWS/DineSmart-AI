@@ -24,12 +24,7 @@ export default function TrackPage() {
     refetchInterval: 3000,
   });
 
-  if (!order) return <div className="py-20 text-center text-stone">Loading…</div>;
-
-  const currentIdx = STAGES.findIndex((s) => s.key === order.status);
-  const idx = currentIdx === -1 ? 0 : currentIdx;
-
-  // Fire chime + notification when status reaches "ready"
+  // ALL hooks must be declared unconditionally, before any early returns
   const prevStatusRef = useRef<string | null>(null);
   useEffect(() => {
     if (!order) return;
@@ -50,6 +45,11 @@ export default function TrackPage() {
     if (p === "granted") { toast.success("We'll ping you when it's ready"); playChime("ready"); }
     else toast.error("Notifications denied");
   };
+
+  if (!order) return <div className="py-20 text-center text-stone">Loading…</div>;
+
+  const currentIdx = STAGES.findIndex((s) => s.key === order.status);
+  const idx = currentIdx === -1 ? 0 : currentIdx;
 
   return (
     <div className="px-6 md:px-12 lg:px-20 py-12 max-w-3xl mx-auto">
