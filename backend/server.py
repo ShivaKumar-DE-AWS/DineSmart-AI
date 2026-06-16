@@ -15,12 +15,16 @@ from typing import Optional, List, Dict, Any
 from pathlib import Path
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Depends, Request, status
+from fastapi import FastAPI, HTTPException, Depends, Request, status, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, Response, FileResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, Field, EmailStr
 from motor.motor_asyncio import AsyncIOMotorClient
+import io
+import re
+import mimetypes
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
@@ -43,6 +47,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount uploads directory for menu images (served via /api/uploads/<file>)
+UPLOAD_DIR = ROOT_DIR / "uploads"
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/api/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 
 # =========================================================
 # JWT helpers (minimal HS256, no external dep)
@@ -309,6 +318,23 @@ async def login(req: LoginReq):
 async def me(user=Depends(require_user)):
     return {"user": {"id": user["sub"], "email": user["email"], "name": user["name"], "role": user["role"]}}
 
+class GuestReq(BaseModel):
+    name: Optional[str] = None
+    phone: Optional[str] = None
+
+@app.post("/api/auth/guest")
+async def auth_guest(req: GuestReq):
+    """Lightweight guest sign-in for customers. Name & phone are optional."""
+    name = (req.name or "").strip() or "Mehfil Guest"
+    phone = (req.phone or "").strip() or None
+    guest_id = f"guest_{uuid.uuid4().hex[:12]}"
+    payload = {"sub": guest_id, "email": f"{guest_id}@guest.mehfil", "name": name, "role": "customer", "phone": phone}
+    token = jwt_sign(payload, ttl_hours=24 * 30)
+    await db.guests.insert_one({
+        "id": guest_id, "name": name, "phone": phone, "created_at": now_iso(),
+    })
+    return {"token": token, "user": {"id": guest_id, "email": payload["email"], "name": name, "role": "customer", "phone": phone}}
+
 # =========================================================
 # Menu
 # =========================================================
@@ -427,6 +453,11 @@ async def list_inventory():
     items = await db.inventory.find({}, {"_id": 0}).to_list(500)
     return {"items": items}
 
+@app.post("/api/inventory", dependencies=[Depends(require_roles("admin"))])
+async def create_inventory_item(item: InventoryItemModel):
+    await db.inventory.insert_one(item.model_dump())
+    return item
+
 @app.patch("/api/inventory/{item_id}", dependencies=[Depends(require_roles("admin", "kitchen"))])
 async def update_inventory(item_id: str, patch: Dict[str, Any]):
     patch.pop("id", None); patch.pop("_id", None)
@@ -434,6 +465,34 @@ async def update_inventory(item_id: str, patch: Dict[str, Any]):
     if res.matched_count == 0:
         raise HTTPException(status_code=404, detail="Inventory item not found")
     return {"ok": True}
+
+@app.delete("/api/inventory/{item_id}", dependencies=[Depends(require_roles("admin"))])
+async def delete_inventory(item_id: str):
+    await db.inventory.delete_one({"id": item_id})
+    return {"ok": True}
+
+# =========================================================
+# Image Upload (admin)
+# =========================================================
+ALLOWED_IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+MAX_IMAGE_BYTES = 5 * 1024 * 1024  # 5MB
+
+@app.post("/api/upload/image", dependencies=[Depends(require_roles("admin"))])
+async def upload_image(file: UploadFile = File(...)):
+    """Save an uploaded image to disk and return its public URL."""
+    ext = Path(file.filename or "").suffix.lower() or ".jpg"
+    if ext not in ALLOWED_IMAGE_EXTS:
+        raise HTTPException(status_code=400, detail=f"Unsupported file type {ext}")
+    raw = await file.read()
+    if len(raw) > MAX_IMAGE_BYTES:
+        raise HTTPException(status_code=400, detail="Image too large (max 5MB)")
+    if len(raw) == 0:
+        raise HTTPException(status_code=400, detail="Empty file")
+    fname = f"{uuid.uuid4().hex}{ext}"
+    out_path = UPLOAD_DIR / fname
+    with open(out_path, "wb") as f:
+        f.write(raw)
+    return {"url": f"/api/uploads/{fname}", "filename": fname, "size": len(raw)}
 
 # =========================================================
 # Analytics
@@ -760,7 +819,11 @@ async def _build_waiter_system_prompt() -> str:
         "Channel warm Hyderabadi hospitality: greet guests with grace, speak in 2–4 sentences, and never push. "
         "Recommend ONLY from this menu. If asked about Hyderabadi heritage, share a brief delicious fact (e.g. dum biryani's Nizami origins, qubani ka meetha's royal lineage). "
         "Suggest classic pairings: biryani + raita + qubani; tandoori chicken + butter naan; chai with double ka meetha. "
-        "If the guest is ready to order, instruct: \"Tap any dish on the menu to add it — I'll keep you company while you choose.\"\n\n"
+        "When you recommend dishes, ALWAYS finish your message with a hidden recommendation block on its own line, "
+        "exactly in this format (use 1 to 4 EXACT dish names from the menu): "
+        "<recommend>Chicken Dum Biryani|Qubani Ka Meetha</recommend>. "
+        "Do not include the recommend tag if you are not recommending any specific dish. "
+        "Keep the rest of your reply natural and conversational — never mention the tag.\n\n"
         f"MENU:\n{menu_block}"
     )
 
@@ -811,6 +874,54 @@ async def ai_waiter(req: ChatReq):
 async def ai_history(session_id: str):
     msgs = await db.chat_messages.find({"session_id": session_id}, {"_id": 0}).sort("created_at", 1).to_list(200)
     return {"messages": msgs}
+
+# ---------- Speech-to-Text (Whisper) ----------
+@app.post("/api/ai-waiter/transcribe")
+async def ai_transcribe(file: UploadFile = File(...), language: str = Form("en")):
+    """Transcribe a user's spoken audio (webm/wav/mp3) to text via Whisper."""
+    if not EMERGENT_LLM_KEY:
+        raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY missing")
+    raw = await file.read()
+    if not raw:
+        raise HTTPException(status_code=400, detail="Empty audio")
+    if len(raw) > 25 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Audio too large (max 25MB)")
+    try:
+        from emergentintegrations.llm.openai import OpenAISpeechToText
+        stt = OpenAISpeechToText(api_key=EMERGENT_LLM_KEY)
+        # Whisper needs a file-like object with a name attribute
+        bio = io.BytesIO(raw)
+        bio.name = file.filename or "audio.webm"
+        resp = await stt.transcribe(file=bio, model="whisper-1", response_format="json", language=language)
+        text = getattr(resp, "text", None) or (resp.get("text") if isinstance(resp, dict) else "")
+        return {"text": text or ""}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Transcription failed: {e}")
+
+# ---------- Text-to-Speech (TTS) ----------
+class TTSReq(BaseModel):
+    text: str
+    voice: str = "nova"
+
+@app.post("/api/ai-waiter/speak")
+async def ai_speak(req: TTSReq):
+    """Convert MehfilAI text to mp3 audio."""
+    if not EMERGENT_LLM_KEY:
+        raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY missing")
+    clean_text = req.text.strip()[:4000]
+    if not clean_text:
+        raise HTTPException(status_code=400, detail="Empty text")
+    try:
+        from emergentintegrations.llm.openai import OpenAITextToSpeech
+        tts = OpenAITextToSpeech(api_key=EMERGENT_LLM_KEY)
+        audio = await tts.generate_speech(text=clean_text, model="tts-1", voice=req.voice, response_format="mp3")
+        return Response(content=audio, media_type="audio/mpeg")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"TTS failed: {e}")
 
 # =========================================================
 # Reservations

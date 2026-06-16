@@ -1,3 +1,11 @@
 {
-  "/page": "app/page.js"
+  "/_not-found/page": "app/_not-found/page.js",
+  "/auth/login/page": "app/auth/login/page.js",
+  "/admin/page": "app/admin/page.js",
+  "/admin/menu/page": "app/admin/menu/page.js",
+  "/admin/inventory/page": "app/admin/inventory/page.js",
+  "/customer/page": "app/customer/page.js",
+  "/customer/checkout/page": "app/customer/checkout/page.js",
+  "/customer/menu/page": "app/customer/menu/page.js",
+  "/customer/cart/page": "app/customer/cart/page.js"
 }
