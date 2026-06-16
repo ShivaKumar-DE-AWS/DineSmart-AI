@@ -62,8 +62,13 @@ export default function CheckoutPage() {
         if (res.customer) {
           setProfile(res.customer);
           if (!name.trim()) setName(res.customer.name);
-        } else { setProfile(null); }
-      } catch { /* ignore */ }
+        } else {
+          setProfile(null);
+        }
+      } catch (err) {
+        // Lookup is best-effort — never block checkout. Log so we notice if the endpoint is down.
+        console.warn("[checkout] customer lookup failed:", err);
+      }
     }, 500);
     return () => clearTimeout(handle);
   }, [phone, name]);

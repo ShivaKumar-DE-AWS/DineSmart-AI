@@ -359,7 +359,9 @@ export default function MehfilHome() {
                 <Quote className="h-7 w-7 text-[#C9A348]" />
                 <p className="font-editorial italic text-base text-[#1A1106]/85 mt-4 leading-relaxed">&ldquo;{r.text}&rdquo;</p>
                 <div className="mt-5 flex items-center gap-1 text-[#C9A348]">
-                  {[...Array(5)].map((_, i) => <Star key={i} className="h-3.5 w-3.5 fill-current" />)}
+                  {Array.from({ length: 5 }, (_, i) => (
+                    <Star key={`${r.name}-star-${i}`} className="h-3.5 w-3.5 fill-current" />
+                  ))}
                 </div>
                 <div className="mt-3 font-royal tracking-wider uppercase text-xs text-[#8A1A2A]">{r.name}</div>
                 <div className="font-editorial italic text-xs text-[#1A1106]/60">{r.role}</div>

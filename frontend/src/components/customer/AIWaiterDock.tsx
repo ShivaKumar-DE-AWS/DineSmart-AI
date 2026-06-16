@@ -61,7 +61,12 @@ function parseSseChunk(buffer: string): { payloads: { delta?: string; error?: st
   const payloads: { delta?: string; error?: string; done?: boolean }[] = [];
   for (const line of lines) {
     if (!line.startsWith("data:")) continue;
-    try { payloads.push(JSON.parse(line.slice(5).trim())); } catch { /* swallow */ }
+    try {
+      payloads.push(JSON.parse(line.slice(5).trim()));
+    } catch (err) {
+      // SSE frames can arrive mid-flush; log so we can debug if it keeps happening
+      console.warn("[ai-waiter] dropped malformed SSE payload", err);
+    }
   }
   return { payloads, rest };
 }
@@ -152,19 +157,6 @@ export function AIWaiterDock() {
     });
   }, []);
 
-  const finalizeLastAssistant = useCallback((doSpeak: boolean) => {
-    setMessages((m) => {
-      const copy = [...m];
-      const last = copy[copy.length - 1];
-      if (!last || last.role !== "assistant") return copy;
-      const { clean, names } = extractRecommendations(last.content);
-      const recs = resolveRecs(names);
-      copy[copy.length - 1] = { ...last, content: clean, recs };
-      if (doSpeak && clean) void speakText(clean);
-      return copy;
-    });
-  }, [resolveRecs]);
-
   const replaceLastAssistant = useCallback((content: string) => {
     setMessages((m) => {
       const copy = [...m];
@@ -187,12 +179,28 @@ export function AIWaiterDock() {
       if (ttsAudioRef.current) ttsAudioRef.current.pause();
       const audio = new Audio(url);
       ttsAudioRef.current = audio;
-      audio.play().catch(() => { /* ignore */ });
+      audio.play().catch((err) => {
+        // Autoplay policies can block before a user gesture — non-fatal, just log
+        console.warn("[ai-waiter] TTS playback blocked:", err);
+      });
       audio.onended = () => URL.revokeObjectURL(url);
     } catch (e) {
       console.warn("[ai-waiter] TTS failed:", e);
     }
   }, [ttsOn]);
+
+  const finalizeLastAssistant = useCallback((doSpeak: boolean) => {
+    setMessages((m) => {
+      const copy = [...m];
+      const last = copy[copy.length - 1];
+      if (!last || last.role !== "assistant") return copy;
+      const { clean, names } = extractRecommendations(last.content);
+      const recs = resolveRecs(names);
+      copy[copy.length - 1] = { ...last, content: clean, recs };
+      if (doSpeak && clean) void speakText(clean);
+      return copy;
+    });
+  }, [resolveRecs, speakText]);
 
   const sendText = useCallback(async (text: string, opts?: { speak?: boolean }) => {
     if (!text.trim() || streaming) return;
