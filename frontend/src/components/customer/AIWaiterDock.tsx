@@ -1,12 +1,12 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Sparkles, Send, X, Loader2, Mic, MessageSquare, BookOpen, Plus, Square, Volume2, VolumeX } from "lucide-react";
+import { Sparkles, Send, X, Loader2, Mic, MessageSquare, BookOpen, Plus, Minus, Square, Volume2, VolumeX, ArrowRight } from "lucide-react";
+import Link from "next/link";
 import { api, apiUrl } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
 import { useCart } from "@/stores/cart";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
-import { ChatMessage } from "./ChatMessage";
 import type { MenuItem } from "@/types";
 
 type Mode = "explore" | "chat" | "voice";
@@ -27,8 +27,15 @@ function getSessionId(): string {
 const INITIAL_GREETING: Msg = {
   id: "greeting",
   role: "assistant",
-  content: "Aadab. I am MehfilAI — your personal sommelier. Tell me what you're craving, ask for tonight's special, or simply say 'surprise me.'",
+  content: "Aadab. I'm MehfilAI — your personal sommelier. Tell me what you're craving, ask for tonight's special, or simply say 'surprise me.'",
 };
+
+const QUICK_PROMPTS = [
+  "What's your signature dish?",
+  "Suggest a pairing",
+  "Build me a meal for 2",
+  "Something not too spicy",
+];
 
 function parseSseChunk(buffer: string): { payloads: { delta?: string; error?: string; done?: boolean }[]; rest: string } {
   const lines = buffer.split("\n\n");
@@ -41,7 +48,6 @@ function parseSseChunk(buffer: string): { payloads: { delta?: string; error?: st
   return { payloads, rest };
 }
 
-/** Extracts <recommend>name1|name2</recommend> at end of content. Returns {clean, names}. */
 function extractRecommendations(content: string): { clean: string; names: string[] } {
   const m = content.match(/<recommend>([^<]*)<\/recommend>\s*$/i);
   if (!m) return { clean: content, names: [] };
@@ -71,7 +77,6 @@ export function AIWaiterDock() {
   });
   const menu = useMemo(() => (menuData?.items ?? []).filter((i) => i.available !== false), [menuData]);
 
-  // Build a lookup for tap-and-order parsing
   const menuByName = useMemo(() => {
     const m = new Map<string, MenuItem>();
     for (const it of menu) m.set(it.name.toLowerCase(), it);
@@ -83,16 +88,20 @@ export function AIWaiterDock() {
     const seen = new Set<string>();
     for (const n of names) {
       const k = n.toLowerCase();
-      // exact
       let hit = menuByName.get(k);
-      // fuzzy: any menu item whose name contains the rec or vice-versa
       if (!hit) hit = menu.find((it) => it.name.toLowerCase().includes(k) || k.includes(it.name.toLowerCase()));
       if (hit && !seen.has(hit.id)) { seen.add(hit.id); out.push(hit); }
     }
     return out.slice(0, 4);
   }, [menu, menuByName]);
 
-  // Listen for external "open" requests
+  // Default suggestion chips when conversation is fresh — picks 3 popular dishes
+  const defaultRecChips = useMemo(() => {
+    const bestsellers = menu.filter((m) => m.tags?.includes("bestseller"));
+    const pool = bestsellers.length >= 3 ? bestsellers : menu;
+    return pool.slice(0, 3);
+  }, [menu]);
+
   useEffect(() => {
     const onOpen = (e: Event) => {
       const detail = (e as CustomEvent).detail as { mode?: Mode } | undefined;
@@ -107,7 +116,6 @@ export function AIWaiterDock() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, streaming]);
 
-  // Cleanup TTS audio on close
   useEffect(() => {
     if (!open && ttsAudioRef.current) {
       ttsAudioRef.current.pause();
@@ -145,7 +153,6 @@ export function AIWaiterDock() {
     });
   }, []);
 
-  /** Calls /api/ai-waiter/speak and plays the returned mp3. */
   const speakText = useCallback(async (text: string) => {
     if (!ttsOn) return;
     try {
@@ -157,10 +164,10 @@ export function AIWaiterDock() {
       if (!res.ok) throw new Error(`TTS ${res.status}`);
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
-      if (ttsAudioRef.current) { ttsAudioRef.current.pause(); }
+      if (ttsAudioRef.current) ttsAudioRef.current.pause();
       const audio = new Audio(url);
       ttsAudioRef.current = audio;
-      audio.play().catch(() => { /* user gesture issue, ignore */ });
+      audio.play().catch(() => { /* ignore */ });
       audio.onended = () => URL.revokeObjectURL(url);
     } catch (e) {
       console.warn("[ai-waiter] TTS failed:", e);
@@ -208,7 +215,7 @@ export function AIWaiterDock() {
     }
   }, [streaming, appendAssistantDelta, replaceLastAssistant, finalizeLastAssistant]);
 
-  // -------- Voice (mic) ----------
+  // Voice
   const startRecording = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -219,10 +226,7 @@ export function AIWaiterDock() {
       rec.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop());
         const blob = new Blob(audioChunksRef.current, { type: mime || "audio/webm" });
-        if (blob.size < 800) {
-          toast.info("Hold the mic a little longer.");
-          return;
-        }
+        if (blob.size < 800) { toast.info("Hold the mic a little longer."); return; }
         setVoiceProcessing(true);
         try {
           const fd = new FormData();
@@ -237,9 +241,7 @@ export function AIWaiterDock() {
         } catch (e) {
           const err = e as Error;
           toast.error(`Voice failed: ${err.message}`);
-        } finally {
-          setVoiceProcessing(false);
-        }
+        } finally { setVoiceProcessing(false); }
       };
       rec.start();
       mediaRecorderRef.current = rec;
@@ -256,9 +258,18 @@ export function AIWaiterDock() {
     setRecording(false);
   }, []);
 
-  const addRec = (it: MenuItem) => { cart.add(it); toast.success(`${it.name} added to your thali`); };
+  const addToTray = (it: MenuItem) => { cart.add(it); toast.success(`${it.name} added to your tray`); };
 
-  // ---------- UI ----------
+  // Get the most recent recommendations across messages — used to show chips above input
+  const latestRecs = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].recs && messages[i].recs!.length > 0) return messages[i].recs!;
+    }
+    return [] as MenuItem[];
+  }, [messages]);
+
+  const trayChips = latestRecs.length > 0 ? latestRecs : defaultRecChips;
+
   return (
     <>
       {!open && (
@@ -275,27 +286,24 @@ export function AIWaiterDock() {
       {open && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:justify-end p-0 sm:p-6" data-testid="ai-waiter-panel">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setOpen(false)} />
-          <div className="relative z-10 w-full sm:w-[460px] sm:max-w-md h-[85vh] sm:h-[640px] bg-[#FAF5EC] sm:rounded-2xl border border-[#C9A348]/40 shadow-2xl flex flex-col overflow-hidden">
+          <div className={`relative z-10 w-full sm:w-[460px] sm:max-w-md h-[90vh] sm:h-[680px] sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden border ${mode === "chat" ? "bg-[#0F0709] border-[#C9A348]/30" : "bg-[#FAF5EC] border-[#C9A348]/40"}`}>
             {/* Header */}
-            <header className="mehfil-royal-bg text-[#FAF5EC] px-5 py-4 flex items-center justify-between border-b border-[#C9A348]/30">
+            <header className={`px-5 py-4 flex items-center justify-between border-b ${mode === "chat" ? "bg-[#150A0D] text-[#FAF5EC] border-[#C9A348]/20" : "mehfil-royal-bg text-[#FAF5EC] border-[#C9A348]/30"}`}>
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-full bg-gradient-to-br from-[#DDB85C] to-[#8A6A1B] flex items-center justify-center shadow-md">
                   <Sparkles className="h-5 w-5 text-[#5C0E1B]" />
                 </div>
                 <div>
-                  <div className="font-royal tracking-wider uppercase text-sm">MehfilAI</div>
+                  <div className="font-royal tracking-wider uppercase text-sm">{mode === "chat" ? "Mehfil Concierge" : "MehfilAI"}</div>
                   <div className="font-editorial italic text-[10px] text-[#FAF5EC]/70">Your personal sommelier · live</div>
                 </div>
               </div>
               <div className="flex items-center gap-1">
-                <button
-                  data-testid="ai-tts-toggle"
-                  onClick={() => setTtsOn((v) => !v)}
-                  title={ttsOn ? "Mute voice" : "Unmute voice"}
-                  className="h-9 w-9 rounded-full hover:bg-[#C9A348]/15 flex items-center justify-center text-[#C9A348]"
-                >
-                  {ttsOn ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-                </button>
+                {mode !== "explore" && (
+                  <button data-testid="ai-tts-toggle" onClick={() => setTtsOn((v) => !v)} title={ttsOn ? "Mute voice" : "Unmute voice"} className="h-9 w-9 rounded-full hover:bg-[#C9A348]/15 flex items-center justify-center text-[#C9A348]">
+                    {ttsOn ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+                  </button>
+                )}
                 <button data-testid="ai-waiter-close" onClick={() => setOpen(false)} className="h-9 w-9 rounded-full hover:bg-[#C9A348]/15 flex items-center justify-center text-[#FAF5EC]">
                   <X className="h-4 w-4" />
                 </button>
@@ -303,116 +311,58 @@ export function AIWaiterDock() {
             </header>
 
             {/* Mode tabs */}
-            <div className="flex border-b border-[#E7DFCB] bg-[#FAF5EC]" data-testid="ai-mode-tabs">
+            <div className={`flex border-b ${mode === "chat" ? "bg-[#0F0709] border-[#C9A348]/15" : "bg-[#FAF5EC] border-[#E7DFCB]"}`} data-testid="ai-mode-tabs">
               {([
                 { k: "explore", label: "Explore", icon: BookOpen },
                 { k: "chat", label: "Chat", icon: MessageSquare },
                 { k: "voice", label: "Talk", icon: Mic },
-              ] as { k: Mode; label: string; icon: typeof BookOpen }[]).map((t) => (
-                <button
-                  key={t.k}
-                  data-testid={`ai-mode-${t.k}`}
-                  onClick={() => setMode(t.k)}
-                  className={`flex-1 py-3 text-[11px] font-royal tracking-[0.2em] uppercase border-b-2 transition flex items-center justify-center gap-1.5 ${
-                    mode === t.k ? "border-[#8A1A2A] text-[#8A1A2A] bg-[#F3EBD8]" : "border-transparent text-[#1A1106]/60 hover:text-[#8A1A2A]"
-                  }`}
-                >
-                  <t.icon className="h-3.5 w-3.5" /> {t.label}
-                </button>
-              ))}
+              ] as { k: Mode; label: string; icon: typeof BookOpen }[]).map((t) => {
+                const active = mode === t.k;
+                const dark = mode === "chat";
+                return (
+                  <button
+                    key={t.k}
+                    data-testid={`ai-mode-${t.k}`}
+                    onClick={() => setMode(t.k)}
+                    className={`flex-1 py-3 text-[11px] font-royal tracking-[0.2em] uppercase border-b-2 transition flex items-center justify-center gap-1.5 ${
+                      active
+                        ? dark ? "border-[#C9A348] text-[#C9A348] bg-[#150A0D]" : "border-[#8A1A2A] text-[#8A1A2A] bg-[#F3EBD8]"
+                        : dark ? "border-transparent text-[#FAF5EC]/50 hover:text-[#C9A348]" : "border-transparent text-[#1A1106]/60 hover:text-[#8A1A2A]"
+                    }`}
+                  >
+                    <t.icon className="h-3.5 w-3.5" /> {t.label}
+                  </button>
+                );
+              })}
             </div>
 
             {/* Body */}
-            {mode === "explore" ? (
-              <ExploreList menu={menu} onAdd={addRec} />
-            ) : (
-              <>
-                <div ref={scrollRef} className="flex-1 overflow-y-auto p-5 space-y-4" data-testid="ai-waiter-messages">
-                  {messages.map((m, idx) => (
-                    <div key={m.id} className="space-y-2">
-                      <ChatMessage
-                        role={m.role}
-                        content={m.content || (streaming && idx === messages.length - 1 ? "…" : "")}
-                        isStreaming={streaming && idx === messages.length - 1 && m.role === "assistant"}
-                      />
-                      {m.recs && m.recs.length > 0 && (
-                        <div className="grid grid-cols-2 gap-2 mt-2" data-testid={`ai-recs-${m.id}`}>
-                          {m.recs.map((r) => (
-                            <button
-                              key={r.id}
-                              data-testid={`ai-rec-add-${r.id}`}
-                              onClick={() => addRec(r)}
-                              className="group text-left bg-white border border-[#C9A348]/30 hover:border-[#8A1A2A] rounded-lg overflow-hidden shadow-sm hover:shadow-md transition"
-                            >
-                              <div className="aspect-[5/3] bg-cover bg-center" style={{ backgroundImage: `url(${r.image_url})` }} />
-                              <div className="p-2.5">
-                                <div className="font-royal text-[11px] text-[#8A1A2A] leading-tight line-clamp-1">{r.name}</div>
-                                <div className="flex items-center justify-between mt-1.5">
-                                  <span className="font-royal text-xs text-[#8A1A2A]">{formatCurrency(r.price)}</span>
-                                  <span className="mehfil-btn-gold rounded-full px-2.5 py-1 text-[9px] font-royal tracking-wider uppercase inline-flex items-center gap-1">
-                                    <Plus className="h-2.5 w-2.5" /> Tap to add
-                                  </span>
-                                </div>
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
+            {mode === "explore" && (<ExploreList menu={menu} />)}
 
-                {/* Composer */}
-                <div className="p-4 border-t border-[#E7DFCB] bg-[#FAF5EC]">
-                  {mode === "chat" ? (
-                    <div className="flex items-center gap-2 bg-white rounded-full border border-[#C9A348]/30 p-1.5">
-                      <input
-                        data-testid="ai-waiter-input"
-                        type="text"
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && sendText(input)}
-                        placeholder="What are you craving tonight?"
-                        disabled={streaming}
-                        className="flex-1 bg-transparent px-4 py-2 text-sm outline-none placeholder:text-[#1A1106]/40 font-editorial italic"
-                      />
-                      <button
-                        data-testid="ai-waiter-send"
-                        onClick={() => sendText(input)}
-                        disabled={streaming || !input.trim()}
-                        className="h-9 w-9 rounded-full mehfil-btn-royal flex items-center justify-center disabled:opacity-40"
-                      >
-                        {streaming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center gap-2" data-testid="ai-voice-controls">
-                      <button
-                        data-testid={recording ? "ai-voice-stop" : "ai-voice-start"}
-                        onClick={recording ? stopRecording : startRecording}
-                        disabled={voiceProcessing || streaming}
-                        className={`h-16 w-16 rounded-full flex items-center justify-center shadow-2xl transition-all ${
-                          recording ? "bg-[#8A1A2A] mehfil-glow" : "mehfil-btn-gold"
-                        } disabled:opacity-50`}
-                      >
-                        {voiceProcessing || streaming ? (
-                          <Loader2 className="h-6 w-6 animate-spin text-[#FAF5EC]" />
-                        ) : recording ? (
-                          <Square className="h-6 w-6 text-[#FAF5EC] fill-current" />
-                        ) : (
-                          <Mic className="h-7 w-7 text-[#1A1106]" />
-                        )}
-                      </button>
-                      <div className="font-royal tracking-[0.2em] uppercase text-[10px] text-[#8A1A2A]">
-                        {voiceProcessing ? "Transcribing…" : recording ? "Listening… tap to send" : streaming ? "MehfilAI is thinking…" : "Tap & speak to MehfilAI"}
-                      </div>
-                      <div className="font-editorial italic text-[10px] text-[#1A1106]/50 text-center px-4">
-                        Try: &ldquo;Spicy biryani for two with a sweet finish&rdquo;
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </>
+            {mode === "chat" && (
+              <ChatPane
+                messages={messages}
+                streaming={streaming}
+                scrollRef={scrollRef}
+                input={input}
+                setInput={setInput}
+                sendText={sendText}
+                trayChips={trayChips}
+                onTapChip={addToTray}
+              />
+            )}
+
+            {mode === "voice" && (
+              <VoicePane
+                messages={messages}
+                streaming={streaming}
+                scrollRef={scrollRef}
+                onAdd={addToTray}
+                recording={recording}
+                voiceProcessing={voiceProcessing}
+                startRecording={startRecording}
+                stopRecording={stopRecording}
+              />
             )}
           </div>
         </div>
@@ -421,7 +371,193 @@ export function AIWaiterDock() {
   );
 }
 
-function ExploreList({ menu, onAdd }: { menu: MenuItem[]; onAdd: (it: MenuItem) => void }) {
+// =====================================================================
+// CHAT PANE — Mehfil Concierge (dark royal, suggestion chips, tap-and-order)
+// =====================================================================
+function ChatPane({
+  messages, streaming, scrollRef, input, setInput, sendText, trayChips, onTapChip,
+}: {
+  messages: Msg[];
+  streaming: boolean;
+  scrollRef: React.RefObject<HTMLDivElement>;
+  input: string;
+  setInput: (v: string) => void;
+  sendText: (t: string) => void;
+  trayChips: MenuItem[];
+  onTapChip: (it: MenuItem) => void;
+}) {
+  const cart = useCart();
+  return (
+    <div className="flex-1 flex flex-col overflow-hidden text-[#FAF5EC]" data-testid="ai-chat-pane">
+      {/* Your tray ribbon */}
+      <div className="px-5 pt-4 pb-3 border-b border-[#C9A348]/15 flex items-center justify-between" data-testid="chat-tray-ribbon">
+        <div>
+          <div className="font-royal tracking-[0.3em] uppercase text-[10px] text-[#C9A348]">Your tray</div>
+          <div className="font-editorial italic text-[11px] text-[#FAF5EC]/60 mt-1">
+            {cart.count() === 0 ? "Nothing yet — say \u201Cadd the mutton biryani\u201D or tap a chip below." : `${cart.count()} item${cart.count() > 1 ? "s" : ""} · ${formatCurrency(cart.subtotal())}`}
+          </div>
+        </div>
+        <div className="text-right">
+          <div className="font-royal text-[#C9A348] text-sm" data-testid="chat-tray-total">{cart.count()} · {formatCurrency(cart.subtotal())}</div>
+        </div>
+      </div>
+
+      {/* Messages */}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-4 space-y-3" data-testid="ai-waiter-messages">
+        {messages.map((m, idx) => (
+          <div key={m.id} className={`max-w-[88%] ${m.role === "user" ? "ml-auto" : ""}`}>
+            <div
+              className={`rounded-2xl px-4 py-3 font-editorial italic text-[15px] leading-relaxed ${
+                m.role === "user"
+                  ? "bg-[#C9A348] text-[#1A1106] rounded-br-sm"
+                  : "bg-[#1A0F12] text-[#FAF5EC] rounded-bl-sm border border-[#C9A348]/15"
+              }`}
+              data-testid={`msg-${m.role}-${idx}`}
+            >
+              {m.content || (streaming && idx === messages.length - 1 ? <span className="opacity-60">…</span> : "")}
+              {streaming && idx === messages.length - 1 && m.role === "assistant" && m.content && (
+                <span className="ml-1 inline-block w-1.5 h-4 bg-[#C9A348] align-middle animate-pulse" />
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Suggestion chips */}
+      <div className="border-t border-[#C9A348]/15 px-5 pt-3 pb-2 space-y-2" data-testid="chat-chips">
+        {trayChips.length > 0 && (
+          <div className="flex flex-wrap gap-2" data-testid="chat-tap-and-order-chips">
+            {trayChips.map((r) => (
+              <button
+                key={r.id}
+                data-testid={`chip-tap-add-${r.id}`}
+                onClick={() => onTapChip(r)}
+                className="group inline-flex items-center gap-1.5 rounded-full border border-[#C9A348]/50 px-3.5 py-1.5 text-[10px] font-royal tracking-[0.18em] uppercase text-[#C9A348] hover:bg-[#C9A348]/15 hover:border-[#C9A348] transition"
+              >
+                <Plus className="h-3 w-3" /> {r.name}
+                <span className="text-[#C9A348]/60 normal-case font-editorial italic text-[10px] tracking-normal ml-1">{formatCurrency(r.price)}</span>
+              </button>
+            ))}
+          </div>
+        )}
+        <div className="flex flex-wrap gap-2">
+          {QUICK_PROMPTS.map((q) => (
+            <button
+              key={q}
+              data-testid={`chip-quick-${q.replace(/\W+/g, "-").toLowerCase()}`}
+              onClick={() => sendText(q)}
+              disabled={streaming}
+              className="rounded-full border border-[#FAF5EC]/20 px-3.5 py-1.5 text-[10px] font-royal tracking-[0.18em] uppercase text-[#FAF5EC]/85 hover:border-[#C9A348]/60 hover:text-[#C9A348] transition disabled:opacity-40"
+            >
+              {q}
+            </button>
+          ))}
+          {cart.count() > 0 && (
+            <Link
+              href="/customer/checkout"
+              data-testid="chip-checkout"
+              className="inline-flex items-center gap-1.5 rounded-full bg-[#C9A348]/15 border border-[#C9A348] px-4 py-1.5 text-[10px] font-royal tracking-[0.18em] uppercase text-[#C9A348] hover:bg-[#C9A348]/25 transition"
+            >
+              <ArrowRight className="h-3 w-3" /> Checkout
+            </Link>
+          )}
+        </div>
+      </div>
+
+      {/* Composer */}
+      <div className="px-4 pb-4 pt-2 bg-[#0F0709]">
+        <div className="flex items-center gap-2 bg-[#1A0F12] rounded-full border border-[#C9A348]/30 p-1.5">
+          <input
+            data-testid="ai-waiter-input"
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && sendText(input)}
+            placeholder="Ask in any language…"
+            disabled={streaming}
+            className="flex-1 bg-transparent px-4 py-2 text-sm outline-none placeholder:text-[#FAF5EC]/30 text-[#FAF5EC] font-editorial italic"
+          />
+          <button
+            data-testid="ai-waiter-send"
+            onClick={() => sendText(input)}
+            disabled={streaming || !input.trim()}
+            className="h-9 w-9 rounded-full bg-[#C9A348] text-[#1A1106] flex items-center justify-center disabled:opacity-40 hover:bg-[#DDB85C]"
+          >
+            {streaming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// =====================================================================
+// VOICE PANE — recommendation cards still appear after voice replies
+// =====================================================================
+function VoicePane({
+  messages, streaming, scrollRef, onAdd, recording, voiceProcessing, startRecording, stopRecording,
+}: {
+  messages: Msg[]; streaming: boolean; scrollRef: React.RefObject<HTMLDivElement>;
+  onAdd: (it: MenuItem) => void;
+  recording: boolean; voiceProcessing: boolean;
+  startRecording: () => void; stopRecording: () => void;
+}) {
+  return (
+    <>
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-5 space-y-3" data-testid="ai-waiter-messages-voice">
+        {messages.map((m, idx) => (
+          <div key={m.id} className="space-y-2">
+            <div className={`max-w-[88%] ${m.role === "user" ? "ml-auto" : ""} rounded-2xl px-4 py-3 font-editorial italic text-[15px] leading-relaxed ${
+              m.role === "user" ? "bg-[#8A1A2A] text-[#FAF5EC] rounded-br-sm" : "bg-white text-[#1A1106] rounded-bl-sm border border-[#C9A348]/20"
+            }`}>
+              {m.content || (streaming && idx === messages.length - 1 ? "…" : "")}
+            </div>
+            {m.recs && m.recs.length > 0 && (
+              <div className="flex flex-wrap gap-2" data-testid={`voice-recs-${m.id}`}>
+                {m.recs.map((r) => (
+                  <button
+                    key={r.id}
+                    data-testid={`voice-rec-add-${r.id}`}
+                    onClick={() => onAdd(r)}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-white border border-[#C9A348]/40 px-3 py-1.5 text-[10px] font-royal tracking-[0.18em] uppercase text-[#8A1A2A] hover:bg-[#8A1A2A] hover:text-[#FAF5EC] transition"
+                  >
+                    <Plus className="h-3 w-3" /> {r.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      <div className="p-5 border-t border-[#E7DFCB] bg-[#FAF5EC]">
+        <div className="flex flex-col items-center gap-2" data-testid="ai-voice-controls">
+          <button
+            data-testid={recording ? "ai-voice-stop" : "ai-voice-start"}
+            onClick={recording ? stopRecording : startRecording}
+            disabled={voiceProcessing || streaming}
+            className={`h-16 w-16 rounded-full flex items-center justify-center shadow-2xl transition-all ${
+              recording ? "bg-[#8A1A2A] mehfil-glow" : "mehfil-btn-gold"
+            } disabled:opacity-50`}
+          >
+            {voiceProcessing || streaming ? <Loader2 className="h-6 w-6 animate-spin text-[#FAF5EC]" /> :
+              recording ? <Square className="h-6 w-6 text-[#FAF5EC] fill-current" /> :
+              <Mic className="h-7 w-7 text-[#1A1106]" />}
+          </button>
+          <div className="font-royal tracking-[0.2em] uppercase text-[10px] text-[#8A1A2A]">
+            {voiceProcessing ? "Transcribing…" : recording ? "Listening… tap to send" : streaming ? "MehfilAI is thinking…" : "Tap & speak to MehfilAI"}
+          </div>
+          <div className="font-editorial italic text-[10px] text-[#1A1106]/50 text-center px-4">Try: &ldquo;Spicy biryani for two with a sweet finish&rdquo;</div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// =====================================================================
+// EXPLORE PANE — list with qty controls when item is in cart
+// =====================================================================
+function ExploreList({ menu }: { menu: MenuItem[] }) {
+  const cart = useCart();
   const [q, setQ] = useState("");
   const categories = useMemo(() => Array.from(new Set(menu.map((m) => m.category))), [menu]);
   const [cat, setCat] = useState<string>("");
@@ -446,7 +582,7 @@ function ExploreList({ menu, onAdd }: { menu: MenuItem[]; onAdd: (it: MenuItem) 
               key={c}
               data-testid={`ai-explore-cat-${c}`}
               onClick={() => setCat(c)}
-              className={`whitespace-nowrap rounded-full px-3 py-1 text-[10px] font-royal tracking-wider uppercase border ${
+              className={`whitespace-nowrap rounded-full px-3 py-1 text-[10px] font-royal tracking-wider uppercase border transition ${
                 cat === c ? "bg-[#8A1A2A] text-[#FAF5EC] border-[#8A1A2A]" : "bg-white text-[#8A1A2A] border-[#C9A348]/30"
               }`}
             >
@@ -455,25 +591,48 @@ function ExploreList({ menu, onAdd }: { menu: MenuItem[]; onAdd: (it: MenuItem) 
           ))}
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto p-3 space-y-2">
-        {filtered.map((m) => (
-          <div key={m.id} className="flex items-center gap-3 bg-white border border-[#C9A348]/20 rounded-lg p-2.5" data-testid={`ai-explore-item-${m.id}`}>
-            <div className="h-14 w-14 rounded-md bg-cover bg-center shrink-0" style={{ backgroundImage: `url(${m.image_url})` }} />
-            <div className="flex-1 min-w-0">
-              <div className="font-royal text-[13px] text-[#8A1A2A] leading-tight line-clamp-1">{m.name}</div>
-              <div className="font-editorial italic text-[11px] text-[#1A1106]/60 line-clamp-1">{m.description}</div>
-              <div className="font-royal text-xs text-[#8A1A2A] mt-0.5">{formatCurrency(m.price)}</div>
+      <div className="flex-1 overflow-y-auto p-3 space-y-2 bg-[#FAF5EC]">
+        {filtered.map((m) => {
+          const line = cart.items.find((i) => i.item_id === m.id);
+          return (
+            <div key={m.id} className="flex items-center gap-3 bg-white border border-[#C9A348]/20 rounded-lg p-2.5" data-testid={`ai-explore-item-${m.id}`}>
+              <div className="h-14 w-14 rounded-md bg-cover bg-center shrink-0" style={{ backgroundImage: `url(${m.image_url})` }} />
+              <div className="flex-1 min-w-0">
+                <div className="font-royal text-[13px] text-[#8A1A2A] leading-tight line-clamp-1">{m.name}</div>
+                <div className="font-editorial italic text-[11px] text-[#1A1106]/60 line-clamp-1">{m.description}</div>
+                <div className="font-royal text-xs text-[#8A1A2A] mt-0.5">{formatCurrency(m.price)}</div>
+              </div>
+              {line ? (
+                <div className="flex items-center gap-1 bg-[#5C0E1B] text-[#FAF5EC] rounded-full p-1 shadow shrink-0" data-testid={`ai-explore-qty-${m.id}`}>
+                  <button
+                    data-testid={`ai-explore-dec-${m.id}`}
+                    onClick={() => cart.setQty(m.id, line.qty - 1)}
+                    className="h-7 w-7 rounded-full hover:bg-[#8A1A2A] flex items-center justify-center"
+                  >
+                    <Minus className="h-3 w-3" />
+                  </button>
+                  <span className="px-1 w-6 text-center font-royal text-sm font-semibold" data-testid={`ai-explore-qty-val-${m.id}`}>{line.qty}</span>
+                  <button
+                    data-testid={`ai-explore-inc-${m.id}`}
+                    onClick={() => cart.setQty(m.id, line.qty + 1)}
+                    className="h-7 w-7 rounded-full hover:bg-[#8A1A2A] flex items-center justify-center"
+                  >
+                    <Plus className="h-3 w-3" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  data-testid={`ai-explore-add-${m.id}`}
+                  onClick={() => { cart.add(m); toast.success(`${m.name} added to your tray`); }}
+                  className="mehfil-btn-royal rounded-full p-2 shrink-0"
+                  title="Tap to add"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                </button>
+              )}
             </div>
-            <button
-              data-testid={`ai-explore-add-${m.id}`}
-              onClick={() => onAdd(m)}
-              className="mehfil-btn-royal rounded-full p-2 shrink-0"
-              title="Tap to add"
-            >
-              <Plus className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        ))}
+          );
+        })}
         {filtered.length === 0 && (
           <div className="text-center py-10 font-editorial italic text-[#1A1106]/50 text-sm">No matches in this chapter.</div>
         )}

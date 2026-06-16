@@ -628,7 +628,10 @@ async def _validate_and_price_draft(req_draft: OrderCreateReq) -> Dict[str, Any]
         if not m.get("available", True):
             raise HTTPException(status_code=400, detail=f"{m['name']} is not available")
         trusted_subtotal += float(m["price"]) * int(line.qty)
-        trusted_items.append({"item_id": m["id"], "name": m["name"], "price": float(m["price"]), "qty": int(line.qty)})
+        item_doc = {"item_id": m["id"], "name": m["name"], "price": float(m["price"]), "qty": int(line.qty)}
+        if line.notes:
+            item_doc["notes"] = line.notes.strip()[:300]
+        trusted_items.append(item_doc)
     trusted_tax = round(trusted_subtotal * TAX_RATE, 2)
     trusted_total = round(trusted_subtotal + trusted_tax, 2)
     return {"items": trusted_items, "subtotal": trusted_subtotal, "tax": trusted_tax, "total": trusted_total}

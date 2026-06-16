@@ -1,8 +1,9 @@
 {
-  "/auth/login/page": "app/auth/login/page.js",
   "/customer/menu/page": "app/customer/menu/page.js",
-  "/customer/page": "app/customer/page.js",
-  "/customer/reserve/page": "app/customer/reserve/page.js",
   "/counter/page": "app/counter/page.js",
-  "/admin/page": "app/admin/page.js"
+  "/kitchen/page": "app/kitchen/page.js",
+  "/customer/page": "app/customer/page.js",
+  "/admin/customers/page": "app/admin/customers/page.js",
+  "/customer/checkout/page": "app/customer/checkout/page.js",
+  "/customer/cart/page": "app/customer/cart/page.js"
 }

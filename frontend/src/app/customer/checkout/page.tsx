@@ -6,7 +6,7 @@ import { useCart } from "@/stores/cart";
 import { formatCurrency } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
-import { Lock, CreditCard, ExternalLink, ArrowLeft, ScrollText, User2 } from "lucide-react";
+import { Lock, CreditCard, ExternalLink, ArrowLeft, ScrollText, User2, ChefHat, Plus, Minus } from "lucide-react";
 
 function renderPayLabel(submitting: boolean, stripeEnabled: boolean | null, total: number): string {
   if (submitting) return "Sending to the khansama…";
@@ -15,10 +15,27 @@ function renderPayLabel(submitting: boolean, stripeEnabled: boolean | null, tota
   return `Confirm & Pay ${amount}`;
 }
 
+// Common cooking preferences offered as one-tap chips per item
+const COOKING_CHIPS = [
+  "Less spicy",
+  "Extra spicy",
+  "Double masala",
+  "No onion",
+  "No garlic",
+  "Leg piece",
+  "Chest piece",
+  "Less oil",
+  "Less salt",
+  "Boneless",
+  "Extra raita",
+  "Serve hot",
+];
+
 export default function CheckoutPage() {
   const router = useRouter();
   const cart = useCart();
   const [name, setName] = useState("");
+  const [generalNotes, setGeneralNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [stripeEnabled, setStripeEnabled] = useState<boolean | null>(null);
   const subtotal = cart.subtotal();
@@ -31,6 +48,17 @@ export default function CheckoutPage() {
       .catch(() => setStripeEnabled(false));
   }, []);
 
+  const toggleChip = (item_id: string, chip: string) => {
+    const line = cart.items.find((i) => i.item_id === item_id);
+    if (!line) return;
+    const current = (line.notes || "").trim();
+    const parts = current ? current.split(/,\s*/).filter(Boolean) : [];
+    const idx = parts.findIndex((p) => p.toLowerCase() === chip.toLowerCase());
+    if (idx >= 0) parts.splice(idx, 1);
+    else parts.push(chip);
+    cart.setNote(item_id, parts.join(", "));
+  };
+
   const submit = async () => {
     if (!name.trim()) { toast.error("Please share your name so we can address you properly"); return; }
     if (cart.items.length === 0) { toast.error("Your thali is empty"); return; }
@@ -39,8 +67,15 @@ export default function CheckoutPage() {
       const payload = {
         order_draft: {
           customer_name: name,
-          items: cart.items.map((i) => ({ item_id: i.item_id, name: i.name, price: i.price, qty: i.qty })),
+          items: cart.items.map((i) => ({
+            item_id: i.item_id,
+            name: i.name,
+            price: i.price,
+            qty: i.qty,
+            notes: i.notes?.trim() || undefined,
+          })),
           payment_method: "stripe",
+          notes: generalNotes.trim() || undefined,
         },
         origin_url: window.location.origin,
       };
@@ -77,7 +112,7 @@ export default function CheckoutPage() {
         <h1 className="font-royal text-4xl md:text-5xl text-[#8A1A2A] tracking-wide">
           Seal the <span className="font-editorial italic mehfil-gold-gradient">mehfil</span>
         </h1>
-        <p className="font-editorial italic text-sm text-[#1A1106]/70 mt-3">A name, a payment, and the feast is yours.</p>
+        <p className="font-editorial italic text-sm text-[#1A1106]/70 mt-3">A name, your preferences, and the feast is yours.</p>
       </div>
 
       <div className="grid lg:grid-cols-3 gap-8">
@@ -99,6 +134,75 @@ export default function CheckoutPage() {
             </label>
           </section>
 
+          {/* Per-item cooking instructions */}
+          <section className="mehfil-card rounded-2xl p-6" data-testid="checkout-cooking-instructions">
+            <div className="mehfil-divider mb-4"><span className="font-royal tracking-[0.3em] text-[10px] uppercase flex items-center gap-1.5"><ChefHat className="h-3 w-3" /> Cooking instructions</span></div>
+            <p className="font-editorial italic text-xs text-[#1A1106]/65 mb-5 leading-relaxed">
+              Tell our khansama exactly how each dish should arrive. Tap a chip or type your own request — &ldquo;leg piece, less spicy, no garam masala.&rdquo;
+            </p>
+            <div className="space-y-5">
+              {cart.items.map((line) => {
+                const selected = (line.notes || "").split(/,\s*/).map((s) => s.toLowerCase()).filter(Boolean);
+                return (
+                  <div key={line.item_id} className="border border-[#C9A348]/20 rounded-xl p-4 bg-white/60" data-testid={`cook-card-${line.item_id}`}>
+                    <div className="flex items-center justify-between gap-3 mb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="h-7 w-7 rounded-full bg-[#8A1A2A] text-[#FAF5EC] font-royal text-xs flex items-center justify-center">{line.qty}</span>
+                        <div className="font-royal text-[15px] text-[#8A1A2A] leading-tight">{line.name}</div>
+                      </div>
+                      <div className="flex items-center gap-1 bg-[#FAF5EC] rounded-full p-0.5 border border-[#C9A348]/30">
+                        <button data-testid={`cook-dec-${line.item_id}`} onClick={() => cart.setQty(line.item_id, line.qty - 1)} className="h-7 w-7 rounded-full hover:bg-[#8A1A2A] hover:text-[#FAF5EC] flex items-center justify-center"><Minus className="h-3 w-3" /></button>
+                        <span className="px-1 w-5 text-center font-royal text-xs">{line.qty}</span>
+                        <button data-testid={`cook-inc-${line.item_id}`} onClick={() => cart.setQty(line.item_id, line.qty + 1)} className="h-7 w-7 rounded-full hover:bg-[#8A1A2A] hover:text-[#FAF5EC] flex items-center justify-center"><Plus className="h-3 w-3" /></button>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 mb-3" data-testid={`cook-chips-${line.item_id}`}>
+                      {COOKING_CHIPS.map((c) => {
+                        const active = selected.includes(c.toLowerCase());
+                        return (
+                          <button
+                            key={c}
+                            type="button"
+                            data-testid={`cook-chip-${line.item_id}-${c.replace(/\W+/g, "-").toLowerCase()}`}
+                            onClick={() => toggleChip(line.item_id, c)}
+                            className={`rounded-full px-3 py-1 text-[10px] font-royal tracking-[0.15em] uppercase border transition ${
+                              active
+                                ? "bg-[#8A1A2A] text-[#FAF5EC] border-[#8A1A2A] shadow"
+                                : "bg-white text-[#8A1A2A] border-[#C9A348]/40 hover:border-[#8A1A2A]"
+                            }`}
+                          >
+                            {active ? "✓ " : "+ "}{c}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <input
+                      data-testid={`cook-note-${line.item_id}`}
+                      value={line.notes || ""}
+                      onChange={(e) => cart.setNote(line.item_id, e.target.value)}
+                      placeholder="Type extra preferences — e.g. extra crispy, family-size portion…"
+                      className="w-full bg-white border border-[#C9A348]/30 rounded-full px-4 py-2 text-xs outline-none font-editorial italic focus:border-[#8A1A2A]"
+                    />
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="mt-6">
+              <label className="block">
+                <span className="font-royal tracking-wider uppercase text-[10px] text-[#8A6A1B]">A note for the whole order (optional)</span>
+                <textarea
+                  data-testid="checkout-general-notes"
+                  value={generalNotes}
+                  onChange={(e) => setGeneralNotes(e.target.value)}
+                  placeholder="Birthday — please send out the meetha last with a candle. Allergic to peanuts."
+                  rows={2}
+                  className="mt-1.5 w-full bg-white border border-[#C9A348]/30 rounded-xl px-4 py-3 text-sm outline-none font-editorial italic resize-none focus:border-[#8A1A2A]"
+                />
+              </label>
+            </div>
+          </section>
+
           <section className="mehfil-card rounded-2xl p-6" data-testid="checkout-payment">
             <div className="mehfil-divider mb-4"><span className="font-royal tracking-[0.3em] text-[10px] uppercase flex items-center gap-1.5"><CreditCard className="h-3 w-3" /> Payment</span></div>
             {stripeEnabled === true && (
@@ -116,15 +220,19 @@ export default function CheckoutPage() {
 
         <aside className="mehfil-card rounded-2xl p-6 h-fit lg:sticky lg:top-24" data-testid="checkout-summary">
           <div className="mehfil-divider mb-4"><span className="font-royal tracking-[0.3em] text-[10px] uppercase flex items-center gap-1.5"><ScrollText className="h-3 w-3" /> The bill</span></div>
-          <div className="space-y-1.5 text-sm mb-4 max-h-60 overflow-y-auto pr-1">
+          <div className="space-y-2.5 text-sm mb-4 max-h-72 overflow-y-auto pr-1">
             {cart.items.map((i) => (
-              <div key={i.item_id} className="flex justify-between gap-3">
-                <span className="font-editorial text-[#1A1106]/75 truncate">{i.qty}× {i.name}</span>
-                <span className="font-royal text-[#8A1A2A] shrink-0">{formatCurrency(i.qty * i.price)}</span>
+              <div key={i.item_id} className="border-b border-[#C9A348]/15 pb-2 last:border-0">
+                <div className="flex justify-between gap-3">
+                  <span className="font-editorial text-[#1A1106]/85 truncate">{i.qty}× {i.name}</span>
+                  <span className="font-royal text-[#8A1A2A] shrink-0">{formatCurrency(i.qty * i.price)}</span>
+                </div>
+                {i.notes && (
+                  <div className="font-editorial italic text-[10px] text-[#8A6A1B] mt-0.5 truncate" data-testid={`summary-notes-${i.item_id}`}>↳ {i.notes}</div>
+                )}
               </div>
             ))}
           </div>
-          <div className="border-t border-[#C9A348]/30 my-3" />
           <div className="space-y-1.5 text-sm">
             <div className="flex justify-between"><span className="text-[#1A1106]/60 font-editorial italic">Subtotal</span><span className="font-royal text-[#8A1A2A]">{formatCurrency(subtotal)}</span></div>
             <div className="flex justify-between"><span className="text-[#1A1106]/60 font-editorial italic">Tax</span><span className="font-royal text-[#8A1A2A]">{formatCurrency(tax)}</span></div>
