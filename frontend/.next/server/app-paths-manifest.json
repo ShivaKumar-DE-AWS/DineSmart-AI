@@ -1,7 +1,10 @@
 {
-  "/auth/login/page": "app/auth/login/page.js",
+  "/customer/menu/page": "app/customer/menu/page.js",
+  "/customer/cart/page": "app/customer/cart/page.js",
+  "/customer/checkout/page": "app/customer/checkout/page.js",
+  "/customer/token/[orderId]/page": "app/customer/token/[orderId]/page.js",
+  "/counter/page": "app/counter/page.js",
   "/admin/page": "app/admin/page.js",
-  "/customer/page": "app/customer/page.js",
   "/admin/tables/page": "app/admin/tables/page.js",
-  "/customer/track/page": "app/customer/track/page.js"
+  "/customer/page": "app/customer/page.js"
 }
