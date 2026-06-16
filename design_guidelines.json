@@ -1,0 +1,140 @@
+{
+  "project_name": "SmartDine AI",
+  "theme": "Light & Dark Hybrid (Contextual)",
+  "archetype": "Organic & Earthy (Customer/Admin) + Performance Pro Brutalist (Kitchen/Counter)",
+  "typography": {
+    "fonts": {
+      "heading": "Cabinet Grotesk",
+      "body": "Manrope",
+      "mono": "JetBrains Mono",
+      "display": "Anton"
+    },
+    "scale": {
+      "h1": "text-5xl sm:text-6xl tracking-tight leading-none",
+      "h2": "text-3xl sm:text-4xl tracking-tight leading-tight",
+      "h3": "text-xl sm:text-2xl leading-snug",
+      "h4": "text-lg sm:text-xl font-medium",
+      "body": "text-base leading-relaxed",
+      "small": "text-sm tracking-wide",
+      "kds_timer": "text-4xl sm:text-5xl font-mono tracking-tighter",
+      "counter_token": "text-[15vw] sm:text-[10vw] font-display uppercase tracking-tight leading-none"
+    },
+    "rules": [
+      "No generic SaaS fonts (Inter, Roboto). Use Cabinet Grotesk for all major headings.",
+      "Counter portal uses Anton for massive, glanceable token numbers.",
+      "Kitchen timers must use JetBrains Mono to prevent layout shift during countdowns.",
+      "Use uppercase tracking-[0.2em] for small labels and overlines."
+    ]
+  },
+  "colors": {
+    "customer_admin": {
+      "background": "#F6F4F0",
+      "surface": "#FFFFFF",
+      "surface_glass": "rgba(255, 255, 255, 0.7)",
+      "primary": "#C84B31",
+      "primary_hover": "#A83C25",
+      "secondary": "#4E6C50",
+      "text_primary": "#1A1A1A",
+      "text_secondary": "#5C5C5C",
+      "border": "#E2DFD8"
+    },
+    "kitchen_counter": {
+      "background": "#0A0A0A",
+      "surface": "#141414",
+      "primary": "#FF3B30",
+      "success": "#32D74B",
+      "warning": "#FF9F0A",
+      "text_primary": "#FFFFFF",
+      "text_secondary": "#A1A1AA",
+      "border": "#27272A"
+    },
+    "rules": [
+      "Customer/Admin must feel warm, tactile, and appetizing (Terracotta and Stone).",
+      "Kitchen/Counter must be high-contrast dark mode for eye relief and glanceability.",
+      "Never use pure black or pure white; always tint slightly."
+    ]
+  },
+  "spacing_and_layout": {
+    "customer_portal": {
+      "strategy": "Editorial & Asymmetric",
+      "grid": "grid-cols-1 md:grid-cols-12 gap-8 md:gap-12",
+      "padding": "p-6 md:p-12 lg:p-24",
+      "components": "Generous breathing room, overlapping elements, bento grids for menu highlights."
+    },
+    "admin_portal": {
+      "strategy": "The Control Room",
+      "grid": "grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4",
+      "padding": "p-4 md:p-8",
+      "components": "Dense but clear. Cardless design (grid borders) to maximize data density."
+    },
+    "kitchen_portal": {
+      "strategy": "Fluid Modular Columns",
+      "grid": "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4",
+      "padding": "p-4",
+      "components": "Horizontal scrolling or multi-column flex wrap. 100% height utilization."
+    },
+    "counter_portal": {
+      "strategy": "Split Screen Display",
+      "grid": "grid-cols-2 gap-0",
+      "padding": "p-0",
+      "components": "Two massive full-height columns (Preparing vs Ready). No padding around edges."
+    }
+  },
+  "components": {
+    "ai_waiter": {
+      "description": "Floating dock widget expanding into a full-screen blurred chat overlay.",
+      "styling": "Glassmorphism base (backdrop-blur-xl bg-white/70), 1px solid border-white/40, warm shadow-lg. Input field rounded-full."
+    },
+    "menu_item_card": {
+      "description": "Appetizing bento-style card.",
+      "styling": "rounded-2xl bg-surface border-0 shadow-sm hover:-translate-y-1 hover:shadow-md transition-all duration-300. Image takes up 60% of card height, full bleed."
+    },
+    "kds_order_ticket": {
+      "description": "Kitchen Display System individual order card.",
+      "styling": "rounded-none or max rounded-md. High contrast borders. border-l-8 for status color. Background #141414. Massive fonts for special notes (bg-warning text-black)."
+    },
+    "admin_stat_card": {
+      "description": "KPI widgets for Admin Dashboard.",
+      "styling": "Cardless. Flat background, 1px subtle border-border, no shadow. text-3xl font-medium for metrics."
+    }
+  },
+  "interactions_and_motion": {
+    "hover_states": "All buttons: slight scale (scale-95 on active), hover:bg-primary_hover hover:text-white.",
+    "page_transitions": "Framer motion fade and slight slide-up (y: 10, opacity: 0 to 1).",
+    "kds_alerts": "Pulse animation for delayed tickets (animate-pulse border-primary). Haptic/Auditory cue integration ready.",
+    "counter_update": "Flip-clock or slot-machine roll animation when a new token moves from Preparing to Ready."
+  },
+  "media_and_assets": {
+    "icons": "lucide-react for Admin/Customer. @phosphor-icons/react (Duotone) for Customer Marketing.",
+    "images": {
+      "hero_customer": {
+        "url": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxODF8MHwxfHNlYXJjaHwxfHxyZXN0YXVyYW50JTIwaGVybyUyMHdpZGUlMjBzaG90fGVufDB8fHx8MTc4MTYwODg4NXww&ixlib=rb-4.1.0&q=85",
+        "description": "Warm lit restaurant interior. Use with bg-black/30 overlay."
+      },
+      "menu_burger_1": {
+        "url": "https://images.unsplash.com/photo-1550547660-d9450f859349?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Nzd8MHwxfHNlYXJjaHwxfHxnb3VybWV0JTIwYnVyZ2VyfGVufDB8fHx8MTc4MTYwODg5MHww&ixlib=rb-4.1.0&q=85",
+        "description": "Gourmet burger for menu item card."
+      },
+      "menu_burger_2": {
+        "url": "https://images.unsplash.com/photo-1549611016-3a70d82b5040?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Nzd8MHwxfHNlYXJjaHwzfHxnb3VybWV0JTIwYnVyZ2VyfGVufDB8fHx8MTc4MTYwODg5MHww&ixlib=rb-4.1.0&q=85",
+        "description": "Another gourmet burger for menu grid."
+      },
+      "kitchen_bg": {
+        "url": "https://images.unsplash.com/photo-1577219492769-b63a779fac28?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzN8MHwxfHNlYXJjaHw0fHxjaGVmJTIwY29va2luZyUyMGtpdGNoZW58ZW58MHx8fHwxNzgxNjA4ODk1fDA&ixlib=rb-4.1.0&q=85",
+        "description": "Chef cooking. Use for login/auth backgrounds on the operational portals."
+      }
+    }
+  },
+  "testing_and_accessibility": {
+    "data_testid": "MANDATORY: All interactive elements must have data-testid attributes (e.g., data-testid='add-to-cart-btn').",
+    "contrast": "Customer/Admin must meet APCA minimums. Kitchen/Counter uses hyper-contrast (WCAG AAA) for extreme environments."
+  },
+  "instructions_to_main_agent": [
+    "Ensure routing matches the 4 portals: /customer, /admin, /kitchen, /counter.",
+    "Use standard HTML/Tailwind for customer marketing layouts (bento grid, overlapping), do not rely purely on Shadcn Cards.",
+    "Admin uses Shadcn tables and charts (recharts).",
+    "Kitchen display must use pure CSS grid/flex with drag-and-drop structural prep (use highly distinctive background colors for ticket statuses: Red=Late, Green=Ready).",
+    "AI Waiter must be a floating absolute/fixed component available across the /customer route.",
+    "DO NOT use Inter or Roboto. Apply Cabinet Grotesk for headings and Manrope for body across the app via next/font."
+  ]
+}
