@@ -1,75 +1,60 @@
-# SmartDine AI — Product Requirements Document
+# Mehfil Restaurant (formerly SmartDine AI) — PRD
 
-## 1. Original Problem Statement
-Unify two repos (customer site + DineSmart-OS) into a single Next.js application called **SmartDine AI** containing four role-aware portals: `/customer`, `/admin`, `/kitchen`, `/counter`. Preserve the customer site's visual warmth and DineSmart-OS operational features. Stack: Next.js App Router + TypeScript + Tailwind + ShadCN + Supabase-ready architecture.
+## Original Problem Statement
+Rebrand the existing "SmartDine AI" restaurant SaaS to **Mehfil Restaurant** — a premium, royal, heritage Hyderabad theme (dark maroon + gold serif headings) on the customer side. Add an AI Waiter that supports text Chat, Voice (Talk), and Menu Explore — all with one-tap ordering from AI suggestions. Wire up full Owner-side CRUD for Menu (with image upload) and Inventory. Customer login must be simplified to a frictionless "Continue as Guest" flow.
 
-## 2. Architecture (delivered)
-- **Frontend**: Next.js 14 App Router (TS, Tailwind, ShadCN-style primitives, Zustand, TanStack Query, Recharts, Sonner) on port 3000.
-- **Backend**: FastAPI on port 8001 — all `/api/*` routes (auth, menu, orders, inventory, analytics, payment, AI waiter SSE).
-- **Database**: MongoDB via Motor; document models with idempotent seed.
-- **Auth**: HS256 JWT + RBAC (customer/admin/kitchen/counter), client `RoleGuard` redirects.
-- **AI Waiter**: Claude Sonnet (4.5) via `emergentintegrations` library, streamed as SSE.
-- **Payments**: Mock `/api/payment/intent` — drop-in Stripe later.
-- **Data layer**: Repository pattern in `server.py`; swap MongoDB → Supabase by replacing the data functions, contracts unchanged.
+## User Personas
+- **Guest diner** — no account needed, optional name + phone. Browses the Mehfil menu, chats/talks to MehfilAI, taps to order.
+- **Owner / Admin** — manages live Menu (Add/Edit/Delete + image upload), Inventory, Orders, Revenue.
+- **Kitchen / Counter** — existing roles (unchanged).
 
-## 3. User Personas
-- **Diner / Customer** — wants quick browsing, conversational AI help, instant payment, live tracking.
-- **Owner / Manager** — wants KPIs, sales charts, menu/inventory control, customer cohorts.
-- **Kitchen Staff** — glanceable queue with timers, one-tap status update.
-- **Counter Staff** — public-screen token board + hand-over flow.
+## Implemented (Feb 2026)
+### Customer-side (Mehfil royal theme — scoped via `.mehfil` body class)
+- ✅ **Menu redesign** (`/customer/menu`) — 8 numbered Chapters left-sidebar nav, dark-royal aesthetic, flip-card dish details, image + name + price + ADD layout, search, bestseller/spicy badges, floating cart pill. Polls `/api/menu` every 8s so admin edits reflect live.
+- ✅ **AI Waiter Dock** with **3 modes**:
+  - **Explore** — searchable category-filtered list, tap-to-add.
+  - **Chat** — SSE streaming via Claude Sonnet (Emergent LLM key). System prompt instructs AI to emit `<recommend>Dish 1|Dish 2</recommend>` block parsed into **Tap-and-Order recommendation cards**.
+  - **Talk (Voice)** — browser MediaRecorder → `POST /api/ai-waiter/transcribe` (OpenAI Whisper) → AI chat → `POST /api/ai-waiter/speak` (OpenAI TTS, voice="nova") → audio playback. Mute toggle in header.
+- ✅ **Guest login** (`/auth/login`) — dual-tab UI: "I'm a Guest" (default, optional name/phone) and "Mehfil Staff" (legacy email/password). Guest creates a 30-day JWT via `POST /api/auth/guest`.
 
-## 4. Core Requirements (static)
-- Single Next.js codebase, four portals, shared component library, shared auth, shared DB layer.
-- Visual warmth (clay/cream) for customer & admin; high-contrast dark for kitchen & counter.
-- AI Waiter as a signature dockable widget.
-- Mock-first payments and data; swappable without UI changes.
+### Owner / Admin (neutral SmartDine Operations theme — intentionally unchanged per user)
+- ✅ **Menu CRUD** (`/admin/menu`) — Add/Edit/Delete dishes via modal editor with tabs for image URL vs file upload (uploads served from `/api/uploads/<filename>`). Available toggle, tags, prep time. Confirm-dialog on delete.
+- ✅ **Inventory CRUD** (`/admin/inventory`) — Add/Edit/Delete ingredients, inline quantity edit on blur, low-stock flag.
+- ✅ **RoleGuard hydration race fix** — admin deep-links/refresh no longer bounce to login when zustand-persist is mid-rehydration.
 
-## 5. What's been implemented (Jan 17, 2026)
-- ✅ Next.js scaffold + Tailwind + custom typography (Space Grotesk / Manrope / Anton / JetBrains Mono).
-- ✅ FastAPI backend with idempotent seed (4 users, 8 menu items, 8 inventory items).
-- ✅ Customer: landing, menu (filterable), cart, checkout, mock payment, token confirmation, live tracking.
-- ✅ AI Waiter dock with SSE streaming, session-persisted history.
-- ✅ Admin: dashboard KPIs + revenue chart, orders w/ status mgmt, revenue analytics (7d/30d), inventory editor, menu CRUD toggle, customer analytics.
-- ✅ Kitchen KDS: live queue with elapsed timers, late ticket pulse, START/READY actions.
-- ✅ Counter: split-screen Preparing/Ready board with massive tokens + SERVED action.
-- ✅ JWT login + role-based redirect + `RoleGuard` component.
-- ✅ Notifications saved per order on status change.
-- ✅ Testing: 22/22 backend pytest pass + full frontend journey via Playwright (all 4 portals).
+### Backend (FastAPI)
+- ✅ `POST /api/auth/guest` — lightweight guest JWT issuance.
+- ✅ `POST /api/upload/image` — admin multipart upload (≤5MB, jpg/png/webp/gif), served via `/api/uploads/*` static mount.
+- ✅ `POST /api/menu`, `DELETE /api/menu/{id}` added (PATCH/GET already existed).
+- ✅ `POST /api/inventory`, `DELETE /api/inventory/{id}` added (PATCH/GET already existed).
+- ✅ `POST /api/ai-waiter/transcribe` — OpenAI Whisper STT via emergentintegrations.
+- ✅ `POST /api/ai-waiter/speak` — OpenAI TTS (tts-1, voice="nova") via emergentintegrations.
+- ✅ Updated MehfilAI system prompt to emit recommendation tag block.
 
-## 5a. Iteration 2 — Real Payments + In-tab Notifications (Jan 17, 2026)
-- ✅ **Real Stripe Checkout** integrated via `emergentintegrations.payments.stripe` (test key `sk_test_emergent`). Server-side amount recomputation prevents price tampering. Mock fallback preserved behind `STRIPE_ENABLED` env toggle.
-- ✅ New endpoints: `POST /api/payment/checkout/session`, `GET /api/payment/checkout/status/{id}` (idempotent order materialization on 'paid'), `POST /api/webhook/stripe`, `GET /api/payment/config`.
-- ✅ New `/customer/payment-return` page polls status post-Stripe redirect.
-- ✅ **Audio chime** (Web Audio API, no external assets) + **browser Notifications API** wired to:
-  - Kitchen: new orders trigger `new-order` chime + desktop notification (toggle `kitchen-toggle-sound`)
-  - Counter: orders entering `ready` trigger `ready` chime + desktop notification
-  - Customer Track: status transition to `ready` triggers chime + "Your order is ready!" notification (opt-in button `track-enable-notif`)
-- ✅ Testing: 29/29 backend pytest pass; frontend regression fixed (TrackPage Rules-of-Hooks bug found and patched in iteration_3).
+## Testing Status
+- Backend: **14/14 new Mehfil tests + 29/29 SmartDine regression tests PASS** (`/app/backend/tests/test_mehfil.py`, `/app/backend/tests/test_smartdine.py`).
+- Frontend: All critical flows verified — guest login, menu chapter nav, flip cards, add to cart, AI chat streaming, recommendation tap cards, admin menu CRUD with live propagation, admin inventory CRUD modal.
 
-## 5b. Pending / Deferred
-- ⏳ **Supabase data layer**: deferred. User provided anon+service keys, but the Python playbook requires a **Transaction Pooler URI** (`postgresql://postgres.[ref]:[pw]@aws-0-[region].pooler.supabase.com:6543/postgres`). Requested from user.
-- ⏳ **Real Web Push** (service worker + VAPID, works tab-closed): on backlog. In-tab Notifications shipped now.
+## 3rd-Party Integrations
+- **Emergent LLM Key** (`sk-emergent-…`) — Claude Sonnet 4.6 for chat, OpenAI Whisper for STT, OpenAI TTS for speech.
+- **Stripe** — placeholder (payments not wired; mock checkout currently).
 
-## 6. Backlog
-**P1**
-- Real Supabase adapter (auth + Postgres + Realtime channels replacing polling).
-- Real Stripe checkout integration.
-- Audio cue on new kitchen ticket / "ORDER UP" sound on counter ready.
-- Push/web-push notifications to guest devices when token ready.
+## Backlog (P1 → P3)
+- **P1** — Polish remaining customer pages (Cart, Checkout, Live Tracking, Token) with Mehfil branding + Framer Motion transitions.
+- **P2** — Web Push notifications for the customer Track page when status changes.
+- **P3** — Real Stripe checkout (replace mock payment, COD already works).
+- **P3** — Multi-language menu (English / Hindi / Urdu transliteration).
+- **P3** — Reservation flow under `/customer/reserve` (currently 404).
 
-**P2**
-- AI Waiter tool-calling: let Claude actually add items to the cart on request.
-- Multi-restaurant tenancy.
-- Menu CRUD (create/edit/delete + image upload), currently only toggle.
-- Order printing to thermal printer.
-- Daily report email to owner.
+## Credentials
+See `/app/memory/test_credentials.md`.
 
-**P3**
-- Loyalty / wallet.
-- Table-side QR ordering with table-mapped tokens.
-- Inventory auto-deduction from order line items.
-
-## 7. Next tasks
-1. Connect Supabase (when user provides URL + anon key).
-2. Replace mock payment with real Stripe (test key is already in env).
-3. Wire web-push to "Track" page so guests get notified hands-free.
+## Key Files
+- `/app/frontend/src/app/customer/menu/page.tsx`
+- `/app/frontend/src/components/customer/AIWaiterDock.tsx`
+- `/app/frontend/src/app/auth/login/page.tsx`
+- `/app/frontend/src/app/admin/menu/page.tsx`
+- `/app/frontend/src/app/admin/inventory/page.tsx`
+- `/app/frontend/src/components/shared/RoleGuard.tsx`
+- `/app/backend/server.py`
+- `/app/frontend/src/styles/mehfil.css`
