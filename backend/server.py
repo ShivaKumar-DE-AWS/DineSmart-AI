@@ -29,6 +29,8 @@ MONGO_URL = os.environ["MONGO_URL"]
 DB_NAME = os.environ["DB_NAME"]
 EMERGENT_LLM_KEY = os.environ.get("EMERGENT_LLM_KEY", "")
 JWT_SECRET = os.environ.get("JWT_SECRET", "smartdine-dev-secret-change-me")
+STRIPE_API_KEY = os.environ.get("STRIPE_API_KEY", "")
+STRIPE_ENABLED = os.environ.get("STRIPE_ENABLED", "false").lower() == "true" and bool(STRIPE_API_KEY)
 
 client = AsyncIOMotorClient(MONGO_URL)
 db = client[DB_NAME]
@@ -479,17 +481,21 @@ async def list_notifications(order_id: Optional[str] = None, limit: int = 50):
     return {"notifications": docs}
 
 # =========================================================
-# Payment (mock)
+# Payment — Stripe Checkout (real) with mock fallback toggle
 # =========================================================
 class PaymentReq(BaseModel):
     amount: float
     method: str = "mock_card"
     card_last4: Optional[str] = None
 
+class CheckoutSessionReq(BaseModel):
+    order_draft: OrderCreateReq          # what user wants to order
+    origin_url: str                      # frontend window.location.origin
+
 @app.post("/api/payment/intent")
 async def payment_intent(req: PaymentReq):
-    # Pretend to authorize and capture immediately
-    await asyncio.sleep(0.5)
+    """Legacy mock payment kept for tests / fallback."""
+    await asyncio.sleep(0.3)
     return {
         "intent_id": f"pi_mock_{uuid.uuid4().hex[:16]}",
         "status": "succeeded",
@@ -498,6 +504,189 @@ async def payment_intent(req: PaymentReq):
         "card_last4": req.card_last4 or "4242",
         "captured_at": now_iso(),
     }
+
+@app.get("/api/payment/config")
+async def payment_config():
+    return {"stripe_enabled": STRIPE_ENABLED, "provider": "stripe" if STRIPE_ENABLED else "mock"}
+
+@app.post("/api/payment/checkout/session")
+async def create_checkout_session(req: CheckoutSessionReq, request: Request):
+    """Create a Stripe Checkout session. Amount is computed server-side from the menu (prevents tampering)."""
+    if not req.order_draft.items:
+        raise HTTPException(status_code=400, detail="Empty cart")
+    # Recompute trusted amount from current menu prices
+    trusted_subtotal = 0.0
+    trusted_items = []
+    for line in req.order_draft.items:
+        m = await db.menu.find_one({"id": line.item_id}, {"_id": 0})
+        if not m:
+            raise HTTPException(status_code=400, detail=f"Unknown item {line.item_id}")
+        if not m.get("available", True):
+            raise HTTPException(status_code=400, detail=f"{m['name']} is not available")
+        trusted_subtotal += float(m["price"]) * int(line.qty)
+        trusted_items.append({"item_id": m["id"], "name": m["name"], "price": float(m["price"]), "qty": int(line.qty)})
+    trusted_tax = round(trusted_subtotal * TAX_RATE, 2)
+    trusted_total = round(trusted_subtotal + trusted_tax, 2)
+
+    # Create a draft order record (pending payment)
+    draft_id = str(uuid.uuid4())
+    draft = {
+        "id": draft_id,
+        "customer_name": req.order_draft.customer_name,
+        "items": trusted_items,
+        "subtotal": trusted_subtotal,
+        "tax": trusted_tax,
+        "total": trusted_total,
+        "payment_method": "stripe",
+        "notes": req.order_draft.notes,
+        "created_at": now_iso(),
+    }
+    await db.order_drafts.insert_one(draft)
+
+    if not STRIPE_ENABLED:
+        # MOCK MODE — instantly mark paid and create real order
+        order = await _materialize_order_from_draft(draft_id, payment_method="mock_card", session_id=f"mock_{uuid.uuid4().hex[:12]}")
+        return {"mode": "mock", "session_id": None, "url": None, "order_id": order["id"]}
+
+    # REAL Stripe Checkout
+    try:
+        from emergentintegrations.payments.stripe.checkout import StripeCheckout, CheckoutSessionRequest
+        success_url = f"{req.origin_url}/customer/payment-return?session_id={{CHECKOUT_SESSION_ID}}"
+        cancel_url = f"{req.origin_url}/customer/cart"
+        webhook_url = f"{str(request.base_url).rstrip('/')}/api/webhook/stripe"
+        stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
+
+        checkoutrequest = CheckoutSessionRequest(
+            amount=float(trusted_total),
+            currency="inr",
+            success_url=success_url,
+            cancel_url=cancel_url,
+            metadata={"draft_id": draft_id, "customer_name": req.order_draft.customer_name},
+        )
+        session = await stripe_checkout.create_checkout_session(checkoutrequest)
+
+        # Record initial payment transaction
+        await db.payment_transactions.insert_one({
+            "id": str(uuid.uuid4()),
+            "session_id": session.session_id,
+            "draft_id": draft_id,
+            "amount": trusted_total,
+            "currency": "inr",
+            "status": "initiated",
+            "payment_status": "pending",
+            "metadata": {"customer_name": req.order_draft.customer_name},
+            "created_at": now_iso(),
+            "updated_at": now_iso(),
+        })
+        return {"mode": "stripe", "session_id": session.session_id, "url": session.url, "order_id": None}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Stripe error: {e}")
+
+async def _materialize_order_from_draft(draft_id: str, payment_method: str, session_id: Optional[str] = None) -> Dict[str, Any]:
+    """Convert a draft into a real order with token (idempotent on draft_id)."""
+    # Idempotent: if order already created for this draft, return existing
+    existing = await db.orders.find_one({"draft_id": draft_id}, {"_id": 0})
+    if existing:
+        return existing
+    draft = await db.order_drafts.find_one({"id": draft_id}, {"_id": 0})
+    if not draft:
+        raise HTTPException(status_code=404, detail="Draft order not found")
+    token = await next_token()
+    max_prep = 0
+    for i in draft["items"]:
+        m = await db.menu.find_one({"id": i["item_id"]}, {"prep_time_min": 1})
+        if m: max_prep = max(max_prep, m.get("prep_time_min", 10))
+    eta = (datetime.now(timezone.utc) + timedelta(minutes=max(max_prep, 8))).isoformat()
+    order = {
+        "id": str(uuid.uuid4()),
+        "draft_id": draft_id,
+        "token": token,
+        "customer_name": draft["customer_name"],
+        "items": draft["items"],
+        "subtotal": draft["subtotal"],
+        "tax": draft["tax"],
+        "total": draft["total"],
+        "status": "confirmed",
+        "created_at": now_iso(),
+        "updated_at": now_iso(),
+        "estimated_ready_at": eta,
+        "payment_method": payment_method,
+        "stripe_session_id": session_id,
+        "notes": draft.get("notes"),
+    }
+    await db.orders.insert_one(order)
+    await db.notifications.insert_one({
+        "id": str(uuid.uuid4()),
+        "order_id": order["id"],
+        "type": "order_update",
+        "title": f"Order {token} confirmed",
+        "body": f"Estimated ready in ~{max(max_prep, 8)} min.",
+        "read": False,
+        "created_at": now_iso(),
+    })
+    return order
+
+@app.get("/api/payment/checkout/status/{session_id}")
+async def checkout_status(session_id: str, request: Request):
+    """Frontend polls this after Stripe redirect. Idempotently materializes the order on first 'paid' read."""
+    if not STRIPE_ENABLED:
+        raise HTTPException(status_code=400, detail="Stripe not enabled")
+    tx = await db.payment_transactions.find_one({"session_id": session_id}, {"_id": 0})
+    if not tx:
+        raise HTTPException(status_code=404, detail="Unknown session")
+
+    try:
+        from emergentintegrations.payments.stripe.checkout import StripeCheckout
+        webhook_url = f"{str(request.base_url).rstrip('/')}/api/webhook/stripe"
+        stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
+        status_obj = await stripe_checkout.get_checkout_status(session_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Stripe status error: {e}")
+
+    new_payment_status = status_obj.payment_status
+    new_status = status_obj.status
+    update = {"payment_status": new_payment_status, "status": new_status, "updated_at": now_iso()}
+    await db.payment_transactions.update_one({"session_id": session_id}, {"$set": update})
+
+    order_id = None
+    if new_payment_status == "paid" and tx.get("payment_status") != "paid":
+        order = await _materialize_order_from_draft(tx["draft_id"], payment_method="stripe", session_id=session_id)
+        order_id = order["id"]
+        await db.payment_transactions.update_one({"session_id": session_id}, {"$set": {"order_id": order_id}})
+    elif tx.get("order_id"):
+        order_id = tx["order_id"]
+
+    return {
+        "session_id": session_id,
+        "status": new_status,
+        "payment_status": new_payment_status,
+        "amount_total": status_obj.amount_total,
+        "currency": status_obj.currency,
+        "order_id": order_id,
+    }
+
+@app.post("/api/webhook/stripe")
+async def stripe_webhook(request: Request):
+    if not STRIPE_ENABLED:
+        return {"ok": True, "skipped": "stripe disabled"}
+    try:
+        from emergentintegrations.payments.stripe.checkout import StripeCheckout
+        body = await request.body()
+        sig = request.headers.get("Stripe-Signature", "")
+        webhook_url = f"{str(request.base_url).rstrip('/')}/api/webhook/stripe"
+        stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
+        evt = await stripe_checkout.handle_webhook(body, sig)
+        if evt.payment_status == "paid":
+            tx = await db.payment_transactions.find_one({"session_id": evt.session_id}, {"_id": 0})
+            if tx and tx.get("payment_status") != "paid":
+                await db.payment_transactions.update_one(
+                    {"session_id": evt.session_id},
+                    {"$set": {"payment_status": "paid", "status": "complete", "updated_at": now_iso()}}
+                )
+                await _materialize_order_from_draft(tx["draft_id"], payment_method="stripe", session_id=evt.session_id)
+        return {"ok": True}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
 
 # =========================================================
 # AI Waiter — Streaming SSE via emergentintegrations + Claude Sonnet

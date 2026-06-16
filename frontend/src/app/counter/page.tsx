@@ -3,6 +3,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { Order } from "@/types";
 import { Check } from "lucide-react";
+import { useEffect, useRef } from "react";
+import { playChime, notify } from "@/lib/notify";
 
 export default function CounterPage() {
   const qc = useQueryClient();
@@ -14,6 +16,19 @@ export default function CounterPage() {
 
   const preparing = (data?.orders || []).filter((o) => ["confirmed", "preparing"].includes(o.status));
   const ready = (data?.orders || []).filter((o) => o.status === "ready");
+
+  // Chime + notification when a new order becomes ready
+  const readyIdsRef = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    const ids = new Set(ready.map((o) => o.id));
+    if (readyIdsRef.current === null) { readyIdsRef.current = ids; return; }
+    const fresh = ready.filter((o) => !readyIdsRef.current!.has(o.id));
+    if (fresh.length) {
+      playChime("ready");
+      for (const o of fresh) notify(`ORDER UP · ${o.token}`, `${o.customer_name} — please collect`);
+    }
+    readyIdsRef.current = ids;
+  }, [ready]);
 
   return (
     <div className="h-screen grid grid-cols-2 gap-0">

@@ -177,6 +177,101 @@ def test_payment_intent(s):
     assert j["intent_id"].startswith("pi_mock_")
     assert abs(j["amount"] - 540.5) < 0.01
 
+# ---------- Payment (Stripe Checkout) ----------
+def test_payment_config(s):
+    r = s.get(f"{API}/payment/config")
+    assert r.status_code == 200
+    j = r.json()
+    assert j["stripe_enabled"] is True
+    assert j["provider"] == "stripe"
+
+@pytest.fixture(scope="session")
+def stripe_session(s):
+    menu = s.get(f"{API}/menu").json()["items"]
+    payload = {
+        "order_draft": {
+            "customer_name": "TEST_Stripe",
+            "items": [
+                {"item_id": menu[0]["id"], "name": menu[0]["name"], "price": menu[0]["price"], "qty": 2},
+                {"item_id": menu[2]["id"], "name": menu[2]["name"], "price": menu[2]["price"], "qty": 1},
+            ],
+            "payment_method": "stripe",
+        },
+        "origin_url": "https://dine-unified.preview.emergentagent.com",
+    }
+    r = s.post(f"{API}/payment/checkout/session", json=payload)
+    assert r.status_code == 200, r.text
+    return r.json(), payload, menu
+
+def test_create_checkout_session(stripe_session):
+    j, _, _ = stripe_session
+    assert j["mode"] == "stripe"
+    assert isinstance(j["session_id"], str) and j["session_id"].startswith("cs_test_")
+    assert j["url"].startswith("https://checkout.stripe.com")
+    assert j["order_id"] is None
+
+def test_checkout_session_invalid_item(s):
+    payload = {
+        "order_draft": {
+            "customer_name": "TEST_BadItem",
+            "items": [{"item_id": "not-a-real-id", "name": "x", "price": 100.0, "qty": 1}],
+            "payment_method": "stripe",
+        },
+        "origin_url": "https://dine-unified.preview.emergentagent.com",
+    }
+    r = s.post(f"{API}/payment/checkout/session", json=payload)
+    assert r.status_code == 400
+
+def test_checkout_session_empty(s):
+    payload = {
+        "order_draft": {
+            "customer_name": "TEST_Empty",
+            "items": [],
+            "payment_method": "stripe",
+        },
+        "origin_url": "https://dine-unified.preview.emergentagent.com",
+    }
+    r = s.post(f"{API}/payment/checkout/session", json=payload)
+    assert r.status_code == 400
+
+def test_checkout_status_unpaid(s, stripe_session):
+    j, _, _ = stripe_session
+    sid = j["session_id"]
+    r = s.get(f"{API}/payment/checkout/status/{sid}")
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["session_id"] == sid
+    # Fresh session should NOT be paid yet
+    assert body["payment_status"] in ("unpaid", "pending", "open", "no_payment_required")
+    assert body["payment_status"] != "paid"
+    assert body.get("order_id") in (None, "")
+
+def test_checkout_status_unknown_session(s):
+    r = s.get(f"{API}/payment/checkout/status/cs_test_does_not_exist_xyz")
+    assert r.status_code == 404
+
+def test_server_recomputes_amount(s, stripe_session):
+    """Verify server uses menu prices, not frontend-supplied prices (anti-tamper)."""
+    _, payload, menu = stripe_session
+    # Tamper with prices
+    tampered = json.loads(json.dumps(payload))
+    for it in tampered["order_draft"]["items"]:
+        it["price"] = 0.01
+    r = s.post(f"{API}/payment/checkout/session", json=tampered)
+    assert r.status_code == 200, r.text
+    j = r.json()
+    assert j["mode"] == "stripe"
+    # The session was still created with the trusted (menu) amount — we can't read it directly,
+    # but verify status returns a valid amount that is NOT 0.02 worth (i.e., server didn't honor the tampered prices).
+    rs = s.get(f"{API}/payment/checkout/status/{j['session_id']}")
+    assert rs.status_code == 200
+    amt = rs.json().get("amount_total")
+    # amount_total from Stripe is in smallest currency unit (paise). Expected total ≈ menu prices * qty * 1.05
+    expected_total_paise = round(((menu[0]["price"] * 2 + menu[2]["price"] * 1) * 1.05) * 100)
+    # Allow 2 paise rounding diff
+    assert amt is not None
+    assert abs(int(amt) - expected_total_paise) <= 2, f"Server amount {amt} != trusted {expected_total_paise}"
+
 # ---------- AI Waiter ----------
 def test_ai_waiter_stream(s):
     session_id = f"TEST_{uuid.uuid4().hex[:8]}"

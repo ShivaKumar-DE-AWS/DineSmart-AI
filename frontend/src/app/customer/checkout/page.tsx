@@ -1,52 +1,59 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/stores/cart";
 import { formatCurrency } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
-import { Lock, CreditCard } from "lucide-react";
+import { Lock, CreditCard, ExternalLink } from "lucide-react";
 
 export default function CheckoutPage() {
   const router = useRouter();
   const cart = useCart();
   const [name, setName] = useState("");
-  const [card, setCard] = useState("4242 4242 4242 4242");
   const [submitting, setSubmitting] = useState(false);
+  const [stripeEnabled, setStripeEnabled] = useState<boolean | null>(null);
   const subtotal = cart.subtotal();
   const tax = Math.round(subtotal * 0.05);
   const total = subtotal + tax;
 
+  useEffect(() => {
+    api<{ stripe_enabled: boolean }>("/api/payment/config")
+      .then((c) => setStripeEnabled(c.stripe_enabled))
+      .catch(() => setStripeEnabled(false));
+  }, []);
+
   const submit = async () => {
-    if (!name.trim()) {
-      toast.error("Please enter your name");
-      return;
-    }
-    if (cart.items.length === 0) {
-      toast.error("Your cart is empty");
-      return;
-    }
+    if (!name.trim()) { toast.error("Please enter your name"); return; }
+    if (cart.items.length === 0) { toast.error("Your cart is empty"); return; }
     setSubmitting(true);
     try {
-      // 1) Payment intent (mock)
-      const pay = await api<any>("/api/payment/intent", {
-        method: "POST",
-        body: JSON.stringify({ amount: total, method: "mock_card", card_last4: card.slice(-4) }),
-      });
-      if (pay.status !== "succeeded") throw new Error("Payment failed");
-      // 2) Create order
-      const order = await api<any>("/api/orders", {
-        method: "POST",
-        body: JSON.stringify({
+      const payload = {
+        order_draft: {
           customer_name: name,
           items: cart.items.map((i) => ({ item_id: i.item_id, name: i.name, price: i.price, qty: i.qty })),
-          payment_method: "mock_card",
-        }),
-      });
-      cart.clear();
-      toast.success("Order placed!");
-      router.push(`/customer/token/${order.id}`);
+          payment_method: "stripe",
+        },
+        origin_url: window.location.origin,
+      };
+      const res = await api<{ mode: string; url?: string; session_id?: string; order_id?: string }>(
+        "/api/payment/checkout/session",
+        { method: "POST", body: JSON.stringify(payload) }
+      );
+
+      if (res.mode === "stripe" && res.url) {
+        // Persist draft customer name for cart-clear after return
+        sessionStorage.setItem("sd_pending_cart_clear", "1");
+        window.location.href = res.url;  // redirect to Stripe Checkout
+      } else if (res.order_id) {
+        // Mock path
+        cart.clear();
+        toast.success("Order placed!");
+        router.push(`/customer/token/${res.order_id}`);
+      } else {
+        throw new Error("Unexpected payment response");
+      }
     } catch (e: any) {
       toast.error(e.message || "Checkout failed");
     } finally {
@@ -66,9 +73,16 @@ export default function CheckoutPage() {
           </section>
           <section className="bg-white border border-bone rounded-2xl p-6">
             <h2 className="font-heading text-xl mb-4 flex items-center gap-2"><CreditCard className="h-5 w-5" /> Payment</h2>
-            <label className="block text-sm font-medium mb-1.5">Card number (mock — any value works)</label>
-            <Input data-testid="checkout-card" value={card} onChange={(e) => setCard(e.target.value)} placeholder="4242 4242 4242 4242" className="font-mono" />
-            <div className="mt-3 text-xs text-stone flex items-center gap-1.5"><Lock className="h-3 w-3" /> This is a mock checkout. No real charge is made.</div>
+            {stripeEnabled === true && (
+              <div className="text-sm text-stone leading-relaxed">
+                <p>You'll be redirected to Stripe to complete payment securely. After confirmation, you'll be returned with your token.</p>
+                <p className="mt-2 text-xs text-stone/80">Use Stripe test card <span className="font-mono">4242 4242 4242 4242</span>, any future expiry, any CVC.</p>
+              </div>
+            )}
+            {stripeEnabled === false && (
+              <div className="text-sm text-stone">Mock payment — instant confirmation. No real charge.</div>
+            )}
+            <div className="mt-3 text-xs text-stone flex items-center gap-1.5"><Lock className="h-3 w-3" /> Payments are processed by Stripe in test mode.</div>
           </section>
         </div>
 
@@ -88,8 +102,9 @@ export default function CheckoutPage() {
             <div className="flex justify-between"><span className="text-stone">Tax</span><span>{formatCurrency(tax)}</span></div>
             <div className="flex justify-between font-heading text-lg font-semibold mt-3"><span>Total</span><span>{formatCurrency(total)}</span></div>
           </div>
-          <button onClick={submit} disabled={submitting} data-testid="place-order-btn" className="mt-6 w-full bg-clay text-white rounded-full px-6 py-3.5 font-medium hover:bg-clay-dark disabled:opacity-50 transition">
-            {submitting ? "Processing…" : `Pay ${formatCurrency(total)}`}
+          <button onClick={submit} disabled={submitting || stripeEnabled === null} data-testid="place-order-btn" className="mt-6 w-full bg-clay text-white rounded-full px-6 py-3.5 font-medium hover:bg-clay-dark disabled:opacity-50 transition inline-flex items-center justify-center gap-2">
+            {stripeEnabled && <ExternalLink className="h-4 w-4" />}
+            {submitting ? "Processing…" : stripeEnabled ? `Pay ${formatCurrency(total)} with Stripe` : `Pay ${formatCurrency(total)}`}
           </button>
         </aside>
       </div>

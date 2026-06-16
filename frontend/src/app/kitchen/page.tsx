@@ -1,10 +1,11 @@
 "use client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { Clock, ChefHat, CheckCheck } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Clock, ChefHat, CheckCheck, Bell, BellOff } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import type { Order } from "@/types";
 import { toast } from "sonner";
+import { playChime, ensureNotificationPermission, notify } from "@/lib/notify";
 
 function elapsed(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
@@ -25,6 +26,33 @@ export default function KitchenPage() {
   const [tick, setTick] = useState(0);
   useEffect(() => { const t = setInterval(() => setTick((n) => n + 1), 1000); return () => clearInterval(t); }, []);
 
+  // Audio + browser notifications when a NEW order arrives in the queue
+  const knownIdsRef = useRef<Set<string> | null>(null);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  useEffect(() => {
+    if (!data) return;
+    const ids = new Set((data.orders || []).filter((o) => o.status === "confirmed").map((o) => o.id));
+    if (knownIdsRef.current === null) {
+      knownIdsRef.current = ids;          // first load — don't alert
+      return;
+    }
+    const fresh: Order[] = [];
+    for (const o of data.orders || []) {
+      if (o.status === "confirmed" && !knownIdsRef.current.has(o.id)) fresh.push(o);
+    }
+    if (fresh.length && soundEnabled) {
+      playChime("new-order");
+      for (const o of fresh) notify(`New order · ${o.token}`, `${o.customer_name} — ${o.items.length} item${o.items.length>1?"s":""}`);
+    }
+    knownIdsRef.current = ids;
+  }, [data, soundEnabled]);
+
+  const requestPerm = async () => {
+    const p = await ensureNotificationPermission();
+    if (p === "granted") { setSoundEnabled(true); toast.success("Notifications enabled"); playChime("new-order"); }
+    else toast.error("Notifications denied — enable in browser settings");
+  };
+
   return (
     <div>
       <div className="flex items-end justify-between mb-4 px-2">
@@ -32,7 +60,20 @@ export default function KitchenPage() {
           <p className="uppercase tracking-[0.3em] text-xs text-zinc-500">Kitchen display</p>
           <h1 className="font-heading text-3xl tracking-tight">Live queue · <span className="text-alert">{queue.length}</span> active</h1>
         </div>
-        <div className="text-xs text-zinc-500">Updates every 3s</div>
+        <div className="flex items-center gap-3">
+          <button
+            data-testid="kitchen-toggle-sound"
+            onClick={() => setSoundEnabled((s) => !s)}
+            className={`flex items-center gap-2 px-3 py-2 rounded-md text-xs uppercase tracking-wider border ${soundEnabled ? "border-ready/40 text-ready" : "border-zinc-700 text-zinc-500"}`}
+          >
+            {soundEnabled ? <Bell className="h-3.5 w-3.5" /> : <BellOff className="h-3.5 w-3.5" />}
+            {soundEnabled ? "Sound on" : "Sound off"}
+          </button>
+          <button data-testid="kitchen-enable-notif" onClick={requestPerm} className="text-xs uppercase tracking-wider text-zinc-400 hover:text-white">
+            Enable browser alerts
+          </button>
+          <div className="text-xs text-zinc-500">Updates every 3s</div>
+        </div>
       </div>
 
       {queue.length === 0 && (
