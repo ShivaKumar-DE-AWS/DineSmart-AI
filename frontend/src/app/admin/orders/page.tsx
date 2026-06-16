@@ -34,8 +34,8 @@ export default function AdminOrders() {
         </select>
       </div>
 
-      <div className="bg-white border border-bone rounded-2xl overflow-hidden">
-        <table className="w-full text-sm" data-testid="admin-orders-table">
+      <div className="bg-white border border-bone rounded-2xl overflow-x-auto">
+        <table className="w-full min-w-[700px] text-sm" data-testid="admin-orders-table">
           <thead className="bg-cream border-b border-bone text-stone uppercase text-xs tracking-wider">
             <tr>
               <th className="text-left px-4 py-3">Token</th>

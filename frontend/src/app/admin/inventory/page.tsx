@@ -31,16 +31,16 @@ export default function AdminInventory() {
 
   return (
     <div data-testid="admin-inventory-page">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 md:mb-8">
         <div>
           <p className="uppercase tracking-[0.3em] text-xs text-stone mb-2">Operations</p>
-          <h1 className="font-heading text-4xl tracking-tight">Inventory</h1>
+          <h1 className="font-heading text-3xl md:text-4xl tracking-tight">Inventory</h1>
           <p className="text-sm text-stone mt-1">{items.length} ingredients · {lowCount > 0 ? <span className="text-alert font-medium">{lowCount} below reorder level</span> : "all healthy"}</p>
         </div>
         <button
           data-testid="add-inv-btn"
           onClick={() => setEditing({ ...empty })}
-          className="bg-ink text-cream rounded-full px-5 py-2.5 text-sm font-medium hover:bg-clay transition inline-flex items-center gap-2"
+          className="bg-ink text-cream rounded-full px-5 py-2.5 text-sm font-medium hover:bg-clay transition inline-flex items-center justify-center gap-2 self-start sm:self-auto"
         >
           <Plus className="h-4 w-4" /> Add ingredient
         </button>
@@ -48,8 +48,8 @@ export default function AdminInventory() {
 
       {isLoading && <div className="text-stone">Loading inventory…</div>}
 
-      <div className="bg-white border border-bone rounded-2xl overflow-hidden">
-        <table className="w-full text-sm" data-testid="inventory-table">
+      <div className="bg-white border border-bone rounded-2xl overflow-x-auto">
+        <table className="w-full min-w-[600px] text-sm" data-testid="inventory-table">
           <thead className="bg-cream border-b border-bone text-stone uppercase text-xs tracking-wider">
             <tr>
               <th className="text-left px-4 py-3">Item</th>

@@ -1234,6 +1234,9 @@ video {
 .top-\[3\.6rem\] {
   top: 3.6rem;
 }
+.left-0 {
+  left: 0px;
+}
 .-z-10 {
   z-index: -10;
 }
@@ -1601,6 +1604,15 @@ video {
 .min-w-0 {
   min-width: 0px;
 }
+.min-w-\[600px\] {
+  min-width: 600px;
+}
+.min-w-\[480px\] {
+  min-width: 480px;
+}
+.min-w-\[700px\] {
+  min-width: 700px;
+}
 .max-w-2xl {
   max-width: 42rem;
 }
@@ -1642,6 +1654,9 @@ video {
 }
 .max-w-\[120px\] {
   max-width: 120px;
+}
+.max-w-\[85vw\] {
+  max-width: 85vw;
 }
 .flex-1 {
   flex: 1 1 0%;
@@ -3172,6 +3187,14 @@ h1, h2, h3, h4, h5, h6 { font-family: var(--font-heading), system-ui, sans-serif
     justify-content: flex-end;
   }
 
+  .sm\:justify-between {
+    justify-content: space-between;
+  }
+
+  .sm\:self-auto {
+    align-self: auto;
+  }
+
   .sm\:rounded-3xl {
     border-radius: 1.5rem;
   }
@@ -3193,6 +3216,10 @@ h1, h2, h3, h4, h5, h6 { font-family: var(--font-heading), system-ui, sans-serif
 
   .md\:col-span-1 {
     grid-column: span 1 / span 1;
+  }
+
+  .md\:mb-8 {
+    margin-bottom: 2rem;
   }
 
   .md\:block {
@@ -3243,6 +3270,10 @@ h1, h2, h3, h4, h5, h6 { font-family: var(--font-heading), system-ui, sans-serif
     padding: 2.25rem;
   }
 
+  .md\:p-6 {
+    padding: 1.5rem;
+  }
+
   .md\:px-10 {
     padding-left: 2.5rem;
     padding-right: 2.5rem;
@@ -3256,6 +3287,16 @@ h1, h2, h3, h4, h5, h6 { font-family: var(--font-heading), system-ui, sans-serif
   .md\:px-5 {
     padding-left: 1.25rem;
     padding-right: 1.25rem;
+  }
+
+  .md\:px-6 {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+
+  .md\:py-24 {
+    padding-top: 6rem;
+    padding-bottom: 6rem;
   }
 
   .md\:pl-12 {
@@ -3360,6 +3401,10 @@ h1, h2, h3, h4, h5, h6 { font-family: var(--font-heading), system-ui, sans-serif
     display: block;
   }
 
+  .lg\:flex {
+    display: flex;
+  }
+
   .lg\:hidden {
     display: none;
   }
@@ -3382,6 +3427,10 @@ h1, h2, h3, h4, h5, h6 { font-family: var(--font-heading), system-ui, sans-serif
 
   .lg\:grid-cols-\[220px_1fr\] {
     grid-template-columns: 220px 1fr;
+  }
+
+  .lg\:p-8 {
+    padding: 2rem;
   }
 
   .lg\:px-20 {

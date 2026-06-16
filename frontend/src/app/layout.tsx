@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Manrope, Space_Grotesk, Anton, JetBrains_Mono, Cinzel, Cormorant_Garamond } from "next/font/google";
 import "@/styles/globals.css";
 import "@/styles/mehfil.css";
@@ -17,6 +17,13 @@ const editorial = Cormorant_Garamond({ subsets: ["latin"], weight: ["400", "500"
 export const metadata: Metadata = {
   title: "Mehfil — Hyderabad's Original Biryani Experience",
   description: "Since 2006. Authentic Hyderabadi dum biryani, royal kebabs and Nizami sweets — now powered by AI dining.",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  themeColor: "#5C0E1B",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

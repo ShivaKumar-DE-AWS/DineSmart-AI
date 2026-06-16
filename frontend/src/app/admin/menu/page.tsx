@@ -55,16 +55,16 @@ export default function AdminMenu() {
 
   return (
     <div data-testid="admin-menu-page">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 md:mb-8">
         <div>
           <p className="uppercase tracking-[0.3em] text-xs text-stone mb-2">Menu</p>
-          <h1 className="font-heading text-4xl tracking-tight">Manage menu</h1>
+          <h1 className="font-heading text-3xl md:text-4xl tracking-tight">Manage menu</h1>
           <p className="text-sm text-stone mt-1">{items.length} dishes · changes reflect live on the customer site within seconds.</p>
         </div>
         <button
           data-testid="add-dish-btn"
           onClick={() => setEditing({ ...empty })}
-          className="bg-ink text-cream rounded-full px-5 py-2.5 text-sm font-medium hover:bg-clay transition inline-flex items-center gap-2"
+          className="bg-ink text-cream rounded-full px-5 py-2.5 text-sm font-medium hover:bg-clay transition inline-flex items-center justify-center gap-2 self-start sm:self-auto"
         >
           <Plus className="h-4 w-4" /> Add dish
         </button>

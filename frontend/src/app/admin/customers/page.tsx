@@ -28,7 +28,8 @@ export default function AdminCustomers() {
 
       <div className="bg-white border border-bone rounded-2xl overflow-hidden">
         <h2 className="font-heading text-xl p-6 pb-4">Top customers by revenue</h2>
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[480px] text-sm">
           <thead className="bg-cream border-y border-bone text-stone uppercase text-xs tracking-wider">
             <tr><th className="text-left px-4 py-3">Name</th><th className="text-left px-4 py-3">Orders</th><th className="text-left px-4 py-3">Revenue</th></tr>
           </thead>
@@ -45,6 +46,7 @@ export default function AdminCustomers() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

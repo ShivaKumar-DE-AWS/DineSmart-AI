@@ -84,7 +84,7 @@ export default function MehfilHome() {
       {/* ============================================================
           SECTION 2 — OUR STORY (TIMELINE)
       ============================================================ */}
-      <section className="py-24 px-6 max-w-6xl mx-auto" data-testid="section-story">
+      <section className="py-14 md:py-24 px-5 md:px-6 max-w-6xl mx-auto" data-testid="section-story">
         <SectionTag>Since 2006</SectionTag>
         <motion.h2 initial="hidden" whileInView="show" viewport={{ once: true }} variants={fadeUp} className="font-royal text-4xl md:text-6xl text-center text-[#8A1A2A] tracking-wide">
           A Legacy <span className="font-editorial italic font-normal mehfil-gold-gradient">of taste</span>
@@ -120,7 +120,7 @@ export default function MehfilHome() {
       {/* ============================================================
           SECTION 3 — WHY PEOPLE LOVE MEHFIL
       ============================================================ */}
-      <section className="py-24 px-6 max-w-7xl mx-auto" data-testid="section-why">
+      <section className="py-14 md:py-24 px-5 md:px-6 max-w-7xl mx-auto" data-testid="section-why">
         <SectionTag>Why Hyderabad chose us</SectionTag>
         <h2 className="font-royal text-4xl md:text-5xl text-center text-[#8A1A2A]">A table where memories are <span className="font-editorial italic mehfil-gold-gradient">cooked</span></h2>
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-5 mt-14">
@@ -144,7 +144,7 @@ export default function MehfilHome() {
       {/* ============================================================
           SECTION 4 — AI WAITER EXPERIENCE
       ============================================================ */}
-      <section className="py-24 mehfil-royal-bg text-[#FAF5EC]" data-testid="section-ai-waiter">
+      <section className="py-14 md:py-24 mehfil-royal-bg text-[#FAF5EC]" data-testid="section-ai-waiter">
         <div className="max-w-6xl mx-auto px-6 grid lg:grid-cols-2 items-center gap-16">
           <div>
             <div className="font-royal tracking-[0.3em] text-xs uppercase text-[#C9A348] mb-4">The Concierge</div>
@@ -183,7 +183,7 @@ export default function MehfilHome() {
       {/* ============================================================
           SECTION 5 — SIGNATURE DISHES
       ============================================================ */}
-      <section className="py-24 px-6 max-w-7xl mx-auto" data-testid="section-signature">
+      <section className="py-14 md:py-24 px-5 md:px-6 max-w-7xl mx-auto" data-testid="section-signature">
         <SectionTag>From the Royal Kitchen</SectionTag>
         <div className="flex items-end justify-between flex-wrap gap-4 mb-12">
           <h2 className="font-royal text-4xl md:text-5xl text-[#8A1A2A]">Signature <span className="font-editorial italic mehfil-gold-gradient">dishes</span></h2>
@@ -220,7 +220,7 @@ export default function MehfilHome() {
       {/* ============================================================
           SECTION 6 — MENU EXPERIENCE
       ============================================================ */}
-      <section className="py-24 px-6 max-w-5xl mx-auto text-center" data-testid="section-menu-cta">
+      <section className="py-14 md:py-24 px-5 md:px-6 max-w-5xl mx-auto text-center" data-testid="section-menu-cta">
         <SectionTag>The Menu</SectionTag>
         <h2 className="font-royal text-4xl md:text-5xl text-[#8A1A2A]">27 dishes. 8 categories. <span className="font-editorial italic mehfil-gold-gradient">One Hyderabad.</span></h2>
         <p className="font-editorial italic text-lg text-[#1A1106]/75 mt-6 max-w-2xl mx-auto leading-relaxed">
@@ -234,7 +234,7 @@ export default function MehfilHome() {
       {/* ============================================================
           SECTION 7 — ORDER FLOW
       ============================================================ */}
-      <section className="py-24 px-6 bg-[#F3EBD8]/40" data-testid="section-flow">
+      <section className="py-14 md:py-24 px-5 md:px-6 bg-[#F3EBD8]/40" data-testid="section-flow">
         <div className="max-w-7xl mx-auto">
           <SectionTag>Seven royal steps</SectionTag>
           <h2 className="font-royal text-4xl md:text-5xl text-center text-[#8A1A2A]">From craving to plate</h2>
@@ -263,7 +263,7 @@ export default function MehfilHome() {
       {/* ============================================================
           SECTION 8 + 9 — LIVE TRACKING + TOKEN
       ============================================================ */}
-      <section className="py-24 px-6 max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 items-center" data-testid="section-tracking-token">
+      <section className="py-14 md:py-24 px-5 md:px-6 max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 items-center" data-testid="section-tracking-token">
         <div>
           <SectionTag>Live tracking</SectionTag>
           <h2 className="font-royal text-4xl md:text-5xl text-[#8A1A2A]">Know <span className="font-editorial italic mehfil-gold-gradient">exactly</span> where your meal is</h2>
@@ -302,7 +302,7 @@ export default function MehfilHome() {
       {/* ============================================================
           SECTION 10 — PAYMENTS
       ============================================================ */}
-      <section className="py-24 px-6 bg-[#F3EBD8]/40" data-testid="section-payments">
+      <section className="py-14 md:py-24 px-5 md:px-6 bg-[#F3EBD8]/40" data-testid="section-payments">
         <div className="max-w-6xl mx-auto text-center">
           <SectionTag>Secure & instant</SectionTag>
           <h2 className="font-royal text-4xl md:text-5xl text-[#8A1A2A]">Pay <span className="font-editorial italic mehfil-gold-gradient">your way</span></h2>
@@ -322,7 +322,7 @@ export default function MehfilHome() {
       {/* ============================================================
           SECTION 11 — NOTIFICATIONS
       ============================================================ */}
-      <section className="py-24 px-6 max-w-6xl mx-auto" data-testid="section-notifications">
+      <section className="py-14 md:py-24 px-5 md:px-6 max-w-6xl mx-auto" data-testid="section-notifications">
         <SectionTag>Always in the loop</SectionTag>
         <h2 className="font-royal text-4xl md:text-5xl text-[#8A1A2A] text-center">We&apos;ll <span className="font-editorial italic mehfil-gold-gradient">ping you</span></h2>
         <div className="mt-14 grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -345,7 +345,7 @@ export default function MehfilHome() {
       {/* ============================================================
           SECTION 12 — REVIEWS
       ============================================================ */}
-      <section className="py-24 px-6 mehfil-paper" data-testid="section-reviews">
+      <section className="py-14 md:py-24 px-5 md:px-6 mehfil-paper" data-testid="section-reviews">
         <div className="max-w-6xl mx-auto">
           <SectionTag>Word of mouth</SectionTag>
           <h2 className="font-royal text-4xl md:text-5xl text-center text-[#8A1A2A]">What Hyderabad <span className="font-editorial italic mehfil-gold-gradient">whispers</span></h2>
@@ -372,7 +372,7 @@ export default function MehfilHome() {
       {/* ============================================================
           SECTION 13 — SPECIAL OFFERS
       ============================================================ */}
-      <section className="py-24 px-6 max-w-7xl mx-auto" data-testid="section-offers">
+      <section className="py-14 md:py-24 px-5 md:px-6 max-w-7xl mx-auto" data-testid="section-offers">
         <SectionTag>This week at Mehfil</SectionTag>
         <h2 className="font-royal text-4xl md:text-5xl text-[#8A1A2A] text-center">Royal <span className="font-editorial italic mehfil-gold-gradient">offers</span></h2>
         <div className="mt-14 grid md:grid-cols-3 gap-5">
@@ -396,7 +396,7 @@ export default function MehfilHome() {
       {/* ============================================================
           SECTION 14 — TABLE RESERVATION CTA
       ============================================================ */}
-      <section className="py-24 px-6 mehfil-royal-bg text-[#FAF5EC]" data-testid="section-reserve">
+      <section className="py-14 md:py-24 px-5 md:px-6 mehfil-royal-bg text-[#FAF5EC]" data-testid="section-reserve">
         <div className="max-w-4xl mx-auto text-center">
           <div className="font-royal tracking-[0.3em] uppercase text-xs text-[#C9A348]">Reservations</div>
           <h2 className="font-royal text-4xl md:text-6xl mt-4">Save a <span className="font-editorial italic mehfil-gold-gradient">corner</span> of the mehfil</h2>
@@ -412,7 +412,7 @@ export default function MehfilHome() {
       {/* ============================================================
           SECTION 15 — APP TEASER
       ============================================================ */}
-      <section className="py-24 px-6 max-w-6xl mx-auto" data-testid="section-app">
+      <section className="py-14 md:py-24 px-5 md:px-6 max-w-6xl mx-auto" data-testid="section-app">
         <SectionTag>Coming soon</SectionTag>
         <h2 className="font-royal text-4xl md:text-5xl text-center text-[#8A1A2A]">Mehfil <span className="font-editorial italic mehfil-gold-gradient">in your pocket</span></h2>
         <div className="mt-12 grid md:grid-cols-3 gap-5">
