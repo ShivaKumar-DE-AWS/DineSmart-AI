@@ -6,7 +6,17 @@ import { useCart } from "@/stores/cart";
 import { formatCurrency } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
-import { Lock, CreditCard, ExternalLink, ArrowLeft, ScrollText, User2, ChefHat, Plus, Minus } from "lucide-react";
+import { Lock, CreditCard, ExternalLink, ArrowLeft, ScrollText, User2, ChefHat, Plus, Minus, Phone, Gift, Sparkles } from "lucide-react";
+
+interface CustomerProfile {
+  id: string;
+  code: string;
+  name: string;
+  phone?: string | null;
+  points: number;
+  lifetime_spend: number;
+  orders_count: number;
+}
 
 function renderPayLabel(submitting: boolean, stripeEnabled: boolean | null, total: number): string {
   if (submitting) return "Sending to the khansama…";
@@ -15,29 +25,20 @@ function renderPayLabel(submitting: boolean, stripeEnabled: boolean | null, tota
   return `Confirm & Pay ${amount}`;
 }
 
-// Common cooking preferences offered as one-tap chips per item
 const COOKING_CHIPS = [
-  "Less spicy",
-  "Extra spicy",
-  "Double masala",
-  "No onion",
-  "No garlic",
-  "Leg piece",
-  "Chest piece",
-  "Less oil",
-  "Less salt",
-  "Boneless",
-  "Extra raita",
-  "Serve hot",
+  "Less spicy", "Extra spicy", "Double masala", "No onion", "No garlic",
+  "Leg piece", "Chest piece", "Less oil", "Less salt", "Boneless", "Extra raita", "Serve hot",
 ];
 
 export default function CheckoutPage() {
   const router = useRouter();
   const cart = useCart();
   const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
   const [generalNotes, setGeneralNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [stripeEnabled, setStripeEnabled] = useState<boolean | null>(null);
+  const [profile, setProfile] = useState<CustomerProfile | null>(null);
   const subtotal = cart.subtotal();
   const tax = Math.round(subtotal * 0.05);
   const total = subtotal + tax;
@@ -47,6 +48,25 @@ export default function CheckoutPage() {
       .then((c) => setStripeEnabled(c.stripe_enabled))
       .catch(() => setStripeEnabled(false));
   }, []);
+
+  // Lookup customer by phone after a small debounce
+  useEffect(() => {
+    const cleaned = phone.replace(/\D/g, "");
+    if (cleaned.length < 10) { setProfile(null); return; }
+    const handle = setTimeout(async () => {
+      try {
+        const res = await api<{ customer: CustomerProfile | null }>("/api/customers/lookup", {
+          method: "POST",
+          body: JSON.stringify({ phone }),
+        });
+        if (res.customer) {
+          setProfile(res.customer);
+          if (!name.trim()) setName(res.customer.name);
+        } else { setProfile(null); }
+      } catch { /* ignore */ }
+    }, 500);
+    return () => clearTimeout(handle);
+  }, [phone, name]);
 
   const toggleChip = (item_id: string, chip: string) => {
     const line = cart.items.find((i) => i.item_id === item_id);
@@ -60,18 +80,16 @@ export default function CheckoutPage() {
   };
 
   const submit = async () => {
-    if (!name.trim()) { toast.error("Please share your name so we can address you properly"); return; }
+    if (!name.trim()) { toast.error("Please share your name — every mehfil starts with a name."); return; }
     if (cart.items.length === 0) { toast.error("Your thali is empty"); return; }
     setSubmitting(true);
     try {
       const payload = {
         order_draft: {
-          customer_name: name,
+          customer_name: name.trim(),
+          customer_phone: phone.trim() || undefined,
           items: cart.items.map((i) => ({
-            item_id: i.item_id,
-            name: i.name,
-            price: i.price,
-            qty: i.qty,
+            item_id: i.item_id, name: i.name, price: i.price, qty: i.qty,
             notes: i.notes?.trim() || undefined,
           })),
           payment_method: "stripe",
@@ -80,10 +98,8 @@ export default function CheckoutPage() {
         origin_url: window.location.origin,
       };
       const res = await api<{ mode: string; url?: string; session_id?: string; order_id?: string }>(
-        "/api/payment/checkout/session",
-        { method: "POST", body: JSON.stringify(payload) }
+        "/api/payment/checkout/session", { method: "POST", body: JSON.stringify(payload) },
       );
-
       if (res.mode === "stripe" && res.url) {
         sessionStorage.setItem("sd_pending_cart_clear", "1");
         window.location.href = res.url;
@@ -119,22 +135,57 @@ export default function CheckoutPage() {
         <div className="lg:col-span-2 space-y-5">
           <section className="mehfil-card rounded-2xl p-6" data-testid="checkout-details">
             <div className="mehfil-divider mb-4"><span className="font-royal tracking-[0.3em] text-[10px] uppercase">Your details</span></div>
-            <label className="block">
-              <span className="font-royal tracking-wider uppercase text-[10px] text-[#8A6A1B]">Your name</span>
-              <div className="mt-1.5 flex items-center bg-white border border-[#C9A348]/30 rounded-full px-4">
-                <User2 className="h-4 w-4 text-[#8A1A2A]" />
-                <input
-                  data-testid="checkout-name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Ananya Sharma"
-                  className="flex-1 bg-transparent px-3 py-3 text-sm outline-none font-editorial"
-                />
+            <div className="grid sm:grid-cols-2 gap-4">
+              <label className="block">
+                <span className="font-royal tracking-wider uppercase text-[10px] text-[#8A6A1B]">Your name <span className="text-[#8A1A2A]">*</span></span>
+                <div className="mt-1.5 flex items-center bg-white border border-[#C9A348]/30 rounded-full px-4">
+                  <User2 className="h-4 w-4 text-[#8A1A2A]" />
+                  <input
+                    data-testid="checkout-name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. Ananya Sharma"
+                    required
+                    className="flex-1 bg-transparent px-3 py-3 text-sm outline-none font-editorial"
+                  />
+                </div>
+              </label>
+              <label className="block">
+                <span className="font-royal tracking-wider uppercase text-[10px] text-[#8A6A1B]">Phone <span className="font-editorial italic normal-case text-[#1A1106]/50">(optional — earn points)</span></span>
+                <div className="mt-1.5 flex items-center bg-white border border-[#C9A348]/30 rounded-full px-4">
+                  <Phone className="h-4 w-4 text-[#8A1A2A]" />
+                  <input
+                    data-testid="checkout-phone"
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="+91 90000 12345"
+                    className="flex-1 bg-transparent px-3 py-3 text-sm outline-none font-editorial"
+                  />
+                </div>
+              </label>
+            </div>
+            {profile && (
+              <div className="mt-4 bg-[#FAF5EC] border border-[#C9A348]/40 rounded-xl p-4 flex items-center gap-4" data-testid="checkout-loyalty">
+                <div className="h-12 w-12 rounded-full bg-gradient-to-br from-[#DDB85C] to-[#8A6A1B] flex items-center justify-center shadow-md">
+                  <Sparkles className="h-5 w-5 text-[#5C0E1B]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-royal text-sm text-[#8A1A2A]">Welcome back, {profile.name}</div>
+                  <div className="font-editorial italic text-[11px] text-[#1A1106]/70 mt-0.5">
+                    Member <span className="font-royal text-[#8A6A1B]">{profile.code}</span> · {profile.orders_count} visits · {profile.points} mehfil points
+                  </div>
+                </div>
+                <Gift className="h-5 w-5 text-[#C9A348] shrink-0" />
               </div>
-            </label>
+            )}
+            {!profile && phone.replace(/\D/g, "").length >= 10 && (
+              <div className="mt-4 text-[11px] text-[#1A1106]/55 font-editorial italic" data-testid="checkout-new-member">
+                A new mehfil member will be welcomed — your unique code arrives with your token.
+              </div>
+            )}
           </section>
 
-          {/* Per-item cooking instructions */}
           <section className="mehfil-card rounded-2xl p-6" data-testid="checkout-cooking-instructions">
             <div className="mehfil-divider mb-4"><span className="font-royal tracking-[0.3em] text-[10px] uppercase flex items-center gap-1.5"><ChefHat className="h-3 w-3" /> Cooking instructions</span></div>
             <p className="font-editorial italic text-xs text-[#1A1106]/65 mb-5 leading-relaxed">

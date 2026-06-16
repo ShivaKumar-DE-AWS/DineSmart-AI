@@ -1,12 +1,24 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Bell, BellOff } from "lucide-react";
+import { Bell, BellOff, CalendarClock, Users } from "lucide-react";
 import { api } from "@/lib/api";
 import type { Order } from "@/types";
 import { toast } from "sonner";
 import { playChime, ensureNotificationPermission, notify } from "@/lib/notify";
 import { KitchenTicket } from "@/components/kitchen/KitchenTicket";
+
+interface Reservation {
+  id: string;
+  name: string;
+  phone: string;
+  date: string;
+  time: string;
+  guests: number;
+  notes?: string | null;
+  status: string;
+  admin_note?: string | null;
+}
 
 function elapsed(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
@@ -38,6 +50,14 @@ export default function KitchenPage() {
   }, [mut, data]);
 
   const queue = (data?.orders || []).filter((o) => ["confirmed", "preparing"].includes(o.status));
+
+  // Today's reservations
+  const { data: resData } = useQuery({
+    queryKey: ["kds-reservations"],
+    queryFn: () => api<{ reservations: Reservation[] }>("/api/reservations/today"),
+    refetchInterval: 30_000,
+  });
+  const reservations = resData?.reservations || [];
 
   // Re-render every second for live timers
   const [, setTick] = useState(0);
@@ -129,6 +149,48 @@ export default function KitchenPage() {
           />
         ))}
       </div>
+
+      {/* Today's reservations panel */}
+      <section className="mt-10" data-testid="kds-reservations">
+        <div className="flex items-end justify-between mb-3 px-2">
+          <div>
+            <p className="uppercase tracking-[0.3em] text-xs text-zinc-500">Tonight&apos;s mehfil</p>
+            <h2 className="font-heading text-2xl tracking-tight inline-flex items-center gap-2">
+              <CalendarClock className="h-5 w-5 text-warn" />
+              Reservations today · <span className="text-warn">{reservations.length}</span>
+            </h2>
+          </div>
+          <div className="text-xs text-zinc-500">Updates every 30s</div>
+        </div>
+        {reservations.length === 0 ? (
+          <div className="bg-graphite border border-slate rounded-md p-10 text-center text-zinc-500" data-testid="kds-res-empty">
+            No reservations on the books for today.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            {reservations.map((r) => (
+              <div key={r.id} className="bg-graphite border border-slate rounded-md p-4" data-testid={`kds-res-${r.id}`}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="font-display text-3xl text-white leading-none">{r.time}</div>
+                  <div className="flex items-center gap-1 text-warn font-bold"><Users className="h-4 w-4" /> {r.guests}</div>
+                </div>
+                <div className="text-sm text-white font-medium">{r.name}</div>
+                <div className="text-[11px] text-zinc-500 mt-0.5">{r.phone}</div>
+                {r.notes && (
+                  <div className="mt-2 bg-warn/10 border border-warn/30 text-warn text-[11px] px-2 py-1 rounded">
+                    {r.notes}
+                  </div>
+                )}
+                <div className={`mt-2 inline-block text-[10px] uppercase tracking-wider px-2 py-0.5 rounded ${
+                  r.status === "confirmed" ? "bg-ready/20 text-ready border border-ready/40"
+                  : r.status === "seated" ? "bg-zinc-700 text-zinc-300"
+                  : "bg-warn/20 text-warn border border-warn/40"
+                }`}>{r.status}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }

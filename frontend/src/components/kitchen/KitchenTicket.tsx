@@ -33,14 +33,24 @@ function KitchenTicketImpl({ order, elapsed, isLate, onStart, onReady }: Props) 
           <div className="text-[10px] uppercase text-zinc-500 tracking-wider">elapsed</div>
         </div>
       </div>
-      <div className="text-xs uppercase tracking-wider text-zinc-500 mb-1">{order.customer_name}</div>
-      <div className="space-y-1 mb-4">
+      <div className="text-xs uppercase tracking-wider text-zinc-500 mb-1">{order.customer_name}{order.customer_code ? <span className="ml-2 text-zinc-600 lowercase">{order.customer_code}</span> : null}</div>
+      <div className="space-y-1.5 mb-4">
         {order.items.map((i) => (
-          <div key={`${order.id}-${i.item_id}`} className="flex justify-between text-sm">
-            <span className="text-white">
-              <span className="text-alert font-bold mr-1">{i.qty}×</span>
-              {i.name}
-            </span>
+          <div key={`${order.id}-${i.item_id}`} className="text-sm">
+            <div className="flex justify-between">
+              <span className="text-white">
+                <span className="text-alert font-bold mr-1">{i.qty}×</span>
+                {i.name}
+              </span>
+            </div>
+            {i.notes && (
+              <div
+                className="ml-5 mt-0.5 text-[11px] uppercase tracking-wider font-bold text-warn bg-warn/10 border border-warn/30 rounded px-1.5 py-0.5 inline-block"
+                data-testid={`kds-note-${order.token}-${i.item_id}`}
+              >
+                {i.notes}
+              </div>
+            )}
           </div>
         ))}
       </div>

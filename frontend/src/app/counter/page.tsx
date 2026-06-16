@@ -66,6 +66,14 @@ export default function CounterPage() {
             <div key={o.id} className="bg-ready text-coal rounded-md p-6 flex flex-col" data-testid={`counter-ready-${o.token}`}>
               <div className="font-display text-7xl leading-none">{o.token}</div>
               <div className="text-sm uppercase tracking-wider font-bold mt-2">{o.customer_name}</div>
+              {(o.items.some((i) => i.notes) || o.notes) && (
+                <div className="mt-2 space-y-1 text-[11px] text-coal/80" data-testid={`counter-notes-${o.token}`}>
+                  {o.items.filter((i) => i.notes).map((i) => (
+                    <div key={i.item_id} className="bg-coal/10 border border-coal/25 rounded px-2 py-0.5"><span className="font-bold">{i.qty}× {i.name}:</span> {i.notes}</div>
+                  ))}
+                  {o.notes && <div className="bg-coal/10 border border-coal/25 rounded px-2 py-0.5"><span className="font-bold">Note:</span> {o.notes}</div>}
+                </div>
+              )}
               <button
                 data-testid={`counter-serve-${o.token}`}
                 onClick={() => mut.mutate({ id: o.id })}

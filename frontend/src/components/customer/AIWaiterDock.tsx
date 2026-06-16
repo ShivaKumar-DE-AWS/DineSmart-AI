@@ -10,6 +10,24 @@ import { toast } from "sonner";
 import type { MenuItem } from "@/types";
 
 type Mode = "explore" | "chat" | "voice";
+type Lang = "auto" | "en" | "hi" | "te" | "ur" | "ta" | "mr";
+type Tone = "friendly" | "formal" | "playful" | "poetic";
+const LANGS: { code: Lang; label: string }[] = [
+  { code: "auto", label: "Auto" },
+  { code: "en",   label: "English" },
+  { code: "hi",   label: "हिन्दी" },
+  { code: "ur",   label: "اردو" },
+  { code: "te",   label: "తెలుగు" },
+  { code: "ta",   label: "தமிழ்" },
+  { code: "mr",   label: "मराठी" },
+];
+const TONES: { code: Tone; label: string }[] = [
+  { code: "friendly", label: "Friendly" },
+  { code: "formal",   label: "Formal" },
+  { code: "playful",  label: "Playful" },
+  { code: "poetic",   label: "Poetic" },
+];
+
 interface Msg { id: string; role: "user" | "assistant"; content: string; recs?: MenuItem[] }
 
 function makeId(): string { return `m_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`; }
@@ -58,6 +76,8 @@ function extractRecommendations(content: string): { clean: string; names: string
 export function AIWaiterDock() {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>("chat");
+  const [language, setLanguage] = useState<Lang>("auto");
+  const [tone, setTone] = useState<Tone>("friendly");
   const [messages, setMessages] = useState<Msg[]>([INITIAL_GREETING]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
@@ -188,7 +208,7 @@ export function AIWaiterDock() {
       const res = await fetch(apiUrl("/api/ai-waiter/chat"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ session_id: getSessionId(), message: text }),
+        body: JSON.stringify({ session_id: getSessionId(), message: text, language, tone }),
       });
       if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
       const reader = res.body.getReader();
@@ -213,7 +233,7 @@ export function AIWaiterDock() {
     } finally {
       setStreaming(false);
     }
-  }, [streaming, appendAssistantDelta, replaceLastAssistant, finalizeLastAssistant]);
+  }, [streaming, appendAssistantDelta, replaceLastAssistant, finalizeLastAssistant, language, tone]);
 
   // Voice
   const startRecording = useCallback(async () => {
@@ -231,7 +251,8 @@ export function AIWaiterDock() {
         try {
           const fd = new FormData();
           fd.append("file", blob, "voice.webm");
-          fd.append("language", "en");
+          // Whisper language hint — only ISO codes work, "auto" means omit
+          fd.append("language", language === "auto" ? "" : language);
           const r = await fetch(apiUrl("/api/ai-waiter/transcribe"), { method: "POST", body: fd });
           if (!r.ok) throw new Error(`STT ${r.status}`);
           const j = await r.json() as { text: string };
@@ -250,7 +271,7 @@ export function AIWaiterDock() {
       const err = e as Error;
       toast.error(`Microphone unavailable: ${err.message}`);
     }
-  }, [sendText]);
+  }, [sendText, language]);
 
   const stopRecording = useCallback(() => {
     const rec = mediaRecorderRef.current;
@@ -341,6 +362,10 @@ export function AIWaiterDock() {
 
             {mode === "chat" && (
               <ChatPane
+                language={language}
+                setLanguage={setLanguage}
+                tone={tone}
+                setTone={setTone}
                 messages={messages}
                 streaming={streaming}
                 scrollRef={scrollRef}
@@ -375,8 +400,11 @@ export function AIWaiterDock() {
 // CHAT PANE — Mehfil Concierge (dark royal, suggestion chips, tap-and-order)
 // =====================================================================
 function ChatPane({
+  language, setLanguage, tone, setTone,
   messages, streaming, scrollRef, input, setInput, sendText, trayChips, onTapChip,
 }: {
+  language: Lang; setLanguage: (l: Lang) => void;
+  tone: Tone; setTone: (t: Tone) => void;
   messages: Msg[];
   streaming: boolean;
   scrollRef: React.RefObject<HTMLDivElement>;
@@ -389,8 +417,30 @@ function ChatPane({
   const cart = useCart();
   return (
     <div className="flex-1 flex flex-col overflow-hidden text-[#FAF5EC]" data-testid="ai-chat-pane">
+      {/* Tone + Language selectors */}
+      <div className="px-4 pt-3 flex items-center gap-2 border-b border-[#C9A348]/15 pb-3" data-testid="chat-controls">
+        <div className="flex-1 grid grid-cols-2 gap-2">
+          <select
+            data-testid="chat-tone-select"
+            value={tone}
+            onChange={(e) => setTone(e.target.value as Tone)}
+            className="bg-[#1A0F12] text-[#FAF5EC] text-[11px] font-royal tracking-[0.15em] uppercase border border-[#C9A348]/30 rounded-full px-3 py-1.5 outline-none cursor-pointer"
+          >
+            {TONES.map((t) => <option key={t.code} value={t.code} className="bg-[#1A0F12]">{t.label}</option>)}
+          </select>
+          <select
+            data-testid="chat-language-select"
+            value={language}
+            onChange={(e) => setLanguage(e.target.value as Lang)}
+            className="bg-[#1A0F12] text-[#FAF5EC] text-[11px] font-royal tracking-[0.15em] uppercase border border-[#C9A348]/30 rounded-full px-3 py-1.5 outline-none cursor-pointer"
+          >
+            {LANGS.map((l) => <option key={l.code} value={l.code} className="bg-[#1A0F12]">{l.label}</option>)}
+          </select>
+        </div>
+      </div>
+
       {/* Your tray ribbon */}
-      <div className="px-5 pt-4 pb-3 border-b border-[#C9A348]/15 flex items-center justify-between" data-testid="chat-tray-ribbon">
+      <div className="px-5 pt-3 pb-3 border-b border-[#C9A348]/15 flex items-center justify-between" data-testid="chat-tray-ribbon">
         <div>
           <div className="font-royal tracking-[0.3em] uppercase text-[10px] text-[#C9A348]">Your tray</div>
           <div className="font-editorial italic text-[11px] text-[#FAF5EC]/60 mt-1">

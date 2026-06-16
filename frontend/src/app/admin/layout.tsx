@@ -2,13 +2,14 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { LayoutDashboard, ShoppingBag, LineChart, Boxes, UtensilsCrossed, Users, LogOut, Sparkles, Menu as MenuIcon, X } from "lucide-react";
+import { LayoutDashboard, ShoppingBag, LineChart, Boxes, UtensilsCrossed, Users, CalendarClock, LogOut, Sparkles, Menu as MenuIcon, X } from "lucide-react";
 import { RoleGuard } from "@/components/shared/RoleGuard";
 import { useSession } from "@/stores/session";
 
 const nav = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true, testid: "admin-nav-dashboard" },
   { href: "/admin/orders", label: "Orders", icon: ShoppingBag, testid: "admin-nav-orders" },
+  { href: "/admin/reservations", label: "Reservations", icon: CalendarClock, testid: "admin-nav-reservations" },
   { href: "/admin/revenue", label: "Revenue", icon: LineChart, testid: "admin-nav-revenue" },
   { href: "/admin/inventory", label: "Inventory", icon: Boxes, testid: "admin-nav-inventory" },
   { href: "/admin/menu", label: "Menu", icon: UtensilsCrossed, testid: "admin-nav-menu" },

@@ -150,6 +150,7 @@ class CartItemModel(BaseModel):
 
 class OrderCreateReq(BaseModel):
     customer_name: str
+    customer_phone: Optional[str] = None
     items: List[CartItemModel]
     payment_method: str = "mock_card"
     notes: Optional[str] = None
@@ -167,6 +168,12 @@ class InventoryItemModel(BaseModel):
 class ChatReq(BaseModel):
     session_id: str
     message: str
+    language: Optional[str] = "auto"   # auto | en | hi | te | ur | mr | ta
+    tone: Optional[str] = "friendly"   # friendly | formal | playful | poetic
+
+class ReservationStatusUpdate(BaseModel):
+    status: str  # requested | confirmed | seated | cancelled
+    note: Optional[str] = None
 
 # =========================================================
 # Token & ID utilities
@@ -639,9 +646,13 @@ async def _validate_and_price_draft(req_draft: OrderCreateReq) -> Dict[str, Any]
 async def _save_order_draft(req_draft: OrderCreateReq, priced: Dict[str, Any]) -> str:
     """Persist a pending-payment draft and return its id."""
     draft_id = str(uuid.uuid4())
+    customer = await _find_or_create_customer(req_draft.customer_name, req_draft.customer_phone)
     await db.order_drafts.insert_one({
         "id": draft_id,
         "customer_name": req_draft.customer_name,
+        "customer_phone": req_draft.customer_phone,
+        "customer_id": customer["id"],
+        "customer_code": customer["code"],
         "items": priced["items"],
         "subtotal": priced["subtotal"],
         "tax": priced["tax"],
@@ -707,6 +718,58 @@ async def create_checkout_session(req: CheckoutSessionReq, request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Stripe error: {e}")
 
+def _customer_code() -> str:
+    """Short, memorable, base-32 customer code: M-AB12CD."""
+    import secrets
+    alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # no confusing 0/1/I/O
+    return "M-" + "".join(secrets.choice(alphabet) for _ in range(6))
+
+async def _find_or_create_customer(name: str, phone: Optional[str]) -> Dict[str, Any]:
+    """Find a customer by phone (preferred) or by name. Create if missing. Returns the customer doc."""
+    name_clean = (name or "").strip()
+    phone_clean = (phone or "").strip() or None
+    query: Optional[Dict[str, Any]] = None
+    if phone_clean:
+        query = {"phone": phone_clean}
+    elif name_clean:
+        query = {"name": name_clean, "phone": None}
+    if query:
+        existing = await db.customers.find_one(query, {"_id": 0})
+        if existing:
+            return existing
+    # Create a new profile
+    # Ensure unique code (collision space ~10^9, but defensive loop)
+    code = _customer_code()
+    while await db.customers.find_one({"code": code}):
+        code = _customer_code()
+    doc = {
+        "id": str(uuid.uuid4()),
+        "code": code,
+        "name": name_clean or "Mehfil Guest",
+        "phone": phone_clean,
+        "points": 0,
+        "lifetime_spend": 0.0,
+        "orders_count": 0,
+        "created_at": now_iso(),
+        "last_order_at": None,
+    }
+    await db.customers.insert_one(doc)
+    return doc
+
+async def _on_order_paid(order: Dict[str, Any]) -> None:
+    """Credit loyalty points + update customer aggregates. Called when an order materializes (i.e. paid)."""
+    customer_id = order.get("customer_id")
+    if not customer_id:
+        return
+    points_earned = int(order["total"] // 100)  # 1 point per ₹100 spent
+    await db.customers.update_one(
+        {"id": customer_id},
+        {
+            "$inc": {"points": points_earned, "orders_count": 1, "lifetime_spend": float(order["total"])},
+            "$set": {"last_order_at": now_iso()},
+        },
+    )
+
 async def _materialize_order_from_draft(draft_id: str, payment_method: str, session_id: Optional[str] = None) -> Dict[str, Any]:
     """Convert a draft into a real order with token (idempotent on draft_id)."""
     # Idempotent: if order already created for this draft, return existing
@@ -727,6 +790,9 @@ async def _materialize_order_from_draft(draft_id: str, payment_method: str, sess
         "draft_id": draft_id,
         "token": token,
         "customer_name": draft["customer_name"],
+        "customer_phone": draft.get("customer_phone"),
+        "customer_id": draft.get("customer_id"),
+        "customer_code": draft.get("customer_code"),
         "items": draft["items"],
         "subtotal": draft["subtotal"],
         "tax": draft["tax"],
@@ -740,6 +806,7 @@ async def _materialize_order_from_draft(draft_id: str, payment_method: str, sess
         "notes": draft.get("notes"),
     }
     await db.orders.insert_one(order)
+    await _on_order_paid(order)
     await db.notifications.insert_one({
         "id": str(uuid.uuid4()),
         "order_id": order["id"],
@@ -819,7 +886,7 @@ async def stripe_webhook(request: Request):
 # =========================================================
 # AI Waiter — Streaming SSE via emergentintegrations + Claude Sonnet
 # =========================================================
-async def _build_waiter_system_prompt() -> str:
+async def _build_waiter_system_prompt(language: str = "auto", tone: str = "friendly") -> str:
     """Compose the system prompt with the current menu inlined."""
     menu_docs = await db.menu.find(
         {"available": True},
@@ -830,17 +897,42 @@ async def _build_waiter_system_prompt() -> str:
         + (f" [tags: {', '.join(m.get('tags') or [])}]" if m.get('tags') else "")
         for m in menu_docs
     )
+
+    lang_map = {
+        "auto":  "Detect the guest's language from their message and reply in the SAME language. If they mix Hindi/Urdu and English (Hinglish), reply in matching natural Hinglish.",
+        "en":    "Always reply in warm, slightly poetic English.",
+        "hi":    "Always reply in Hindi (हिन्दी, Devanagari script). Use respectful 'aap'. Keep dish names in their original English form so they match the menu (e.g. Chicken Dum Biryani).",
+        "ur":    "Always reply in Urdu (اردو, Nastaliq script). Use respectful 'aap'. Keep dish names in their original English form.",
+        "te":    "Always reply in Telugu (తెలుగు script). Keep dish names in their original English form.",
+        "ta":    "Always reply in Tamil (தமிழ் script). Keep dish names in their original English form.",
+        "mr":    "Always reply in Marathi (मराठी, Devanagari script). Keep dish names in their original English form.",
+    }
+    tone_map = {
+        "friendly":  "Warm, attentive, like an old family waiter who remembers your last visit. Sprinkle one tasteful Hyderabadi word per reply ('aadab', 'shukriya', 'subhanallah', 'wallah').",
+        "formal":    "Refined, restrained, like a Taj concierge. Address the guest as 'sir' or 'madam'.",
+        "playful":   "Playful, lightly teasing, like a young brother who knows the menu by heart. Use one tasteful pun where it fits.",
+        "poetic":    "Speak in lyrical, Urdu-flavoured English — short shayari-style cadences. Compare flavours to memories.",
+    }
+    lang_rule = lang_map.get(language, lang_map["auto"])
+    tone_rule = tone_map.get(tone, tone_map["friendly"])
+
     return (
-        "You are MehfilAI, the AI sommelier-waiter at Mehfil Restaurant — Hyderabad's original biryani experience since 2006. "
-        "Channel warm Hyderabadi hospitality: greet guests with grace, speak in 2–4 sentences, and never push. "
-        "Recommend ONLY from this menu. If asked about Hyderabadi heritage, share a brief delicious fact (e.g. dum biryani's Nizami origins, qubani ka meetha's royal lineage). "
-        "Suggest classic pairings: biryani + raita + qubani; tandoori chicken + butter naan; chai with double ka meetha. "
-        "When you recommend dishes, ALWAYS finish your message with a hidden recommendation block on its own line, "
-        "exactly in this format (use 1 to 4 EXACT dish names from the menu): "
-        "<recommend>Chicken Dum Biryani|Qubani Ka Meetha</recommend>. "
-        "Do not include the recommend tag if you are not recommending any specific dish. "
-        "Keep the rest of your reply natural and conversational — never mention the tag.\n\n"
-        f"MENU:\n{menu_block}"
+        "You are MehfilAI — also called Zaria — the live AI sommelier-waiter at Mehfil Restaurant in Hyderabad. "
+        "You are NOT a chatbot. You are a real human waiter on shift, taking orders, suggesting dishes, remembering preferences within this conversation. "
+        "Behave like a humanoid waiter: greet the guest, ask one short clarifying question per turn when needed (spice level, veg/non-veg, group size), confirm orders before adding, and small-talk briefly when the guest is casual. "
+        f"\n\nLANGUAGE RULE: {lang_rule}"
+        f"\nTONE RULE: {tone_rule}"
+        "\n\nCONVERSATION STYLE: 1–4 short sentences. Vary your openings — never start two replies the same way. Use natural fillers a real waiter uses ('of course', 'right away', 'good choice', 'bilkul', 'ji haan'). Mirror the guest's energy. If the guest is short, you are short. If they want stories, share one delicious sentence of Hyderabadi food lore (Nizam-era biryani, Paradise's qubani, the legend of haleem in Ramadan)."
+        "\n\nORDER FLOW:"
+        "\n- Always recommend ONLY from the live menu below."
+        "\n- When the guest asks for a category (e.g. 'show me starters', 'kuch veg dikhao'), recommend 2–4 best dishes from that category."
+        "\n- When you suggest dishes, ALWAYS END your message with a hidden recommendation block on its OWN LAST LINE in this EXACT format, using 1–4 EXACT dish names copied verbatim from the menu (English spelling): "
+        "<recommend>Chicken Dum Biryani|Qubani Ka Meetha</recommend>"
+        "\n- Omit the recommend tag if you are not recommending any specific dish (e.g. just chit-chat or answering a non-order question)."
+        "\n- Never describe or apologise for the recommend tag — guests do not see it."
+        "\n- If the guest already added items to their tray and asks for pairings, suggest dishes that pair well with what they already have."
+        "\n\nFORBIDDEN: do not invent dishes, prices, calories or allergens that aren't in the menu. Do not break character. Do not say you are an AI or a language model."
+        f"\n\nLIVE MENU (only recommend from these):\n{menu_block}"
     )
 
 def _make_waiter_stream(session_id: str, message: str, system_prompt: str):
@@ -874,7 +966,7 @@ async def ai_waiter(req: ChatReq):
     if not EMERGENT_LLM_KEY:
         raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY missing")
 
-    system_prompt = await _build_waiter_system_prompt()
+    system_prompt = await _build_waiter_system_prompt(language=req.language or "auto", tone=req.tone or "friendly")
     await db.chat_messages.insert_one({
         "session_id": req.session_id, "role": "user", "content": req.message, "created_at": now_iso(),
     })
@@ -893,7 +985,7 @@ async def ai_history(session_id: str):
 
 # ---------- Speech-to-Text (Whisper) ----------
 @app.post("/api/ai-waiter/transcribe")
-async def ai_transcribe(file: UploadFile = File(...), language: str = Form("en")):
+async def ai_transcribe(file: UploadFile = File(...), language: str = Form("")):
     """Transcribe a user's spoken audio (webm/wav/mp3) to text via Whisper."""
     if not EMERGENT_LLM_KEY:
         raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY missing")
@@ -908,7 +1000,10 @@ async def ai_transcribe(file: UploadFile = File(...), language: str = Form("en")
         # Whisper needs a file-like object with a name attribute
         bio = io.BytesIO(raw)
         bio.name = file.filename or "audio.webm"
-        resp = await stt.transcribe(file=bio, model="whisper-1", response_format="json", language=language)
+        kwargs: Dict[str, Any] = {"file": bio, "model": "whisper-1", "response_format": "json"}
+        if language and language.strip():
+            kwargs["language"] = language.strip()
+        resp = await stt.transcribe(**kwargs)
         text = getattr(resp, "text", None) or (resp.get("text") if isinstance(resp, dict) else "")
         return {"text": text or ""}
     except HTTPException:
@@ -972,6 +1067,58 @@ async def create_reservation(req: ReservationReq):
 async def list_reservations(limit: int = 100):
     docs = await db.reservations.find({}, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(limit)
     return {"reservations": docs}
+
+@app.get("/api/reservations/today")
+async def reservations_today():
+    """Today's reservations (kitchen + counter can read without admin token)."""
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    docs = await db.reservations.find(
+        {"date": today, "status": {"$ne": "cancelled"}},
+        {"_id": 0},
+    ).sort("time", 1).to_list(200)
+    return {"reservations": docs}
+
+@app.patch("/api/reservations/{res_id}/status", dependencies=[Depends(require_roles("admin"))])
+async def update_reservation_status(res_id: str, body: ReservationStatusUpdate):
+    allowed = {"requested", "confirmed", "seated", "cancelled"}
+    if body.status not in allowed:
+        raise HTTPException(status_code=400, detail=f"status must be one of {sorted(allowed)}")
+    update_doc: Dict[str, Any] = {"status": body.status, "updated_at": now_iso()}
+    if body.note is not None:
+        update_doc["admin_note"] = body.note.strip()
+    res = await db.reservations.update_one({"id": res_id}, {"$set": update_doc})
+    if res.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Reservation not found")
+    doc = await db.reservations.find_one({"id": res_id}, {"_id": 0})
+    return {"ok": True, "reservation": doc}
+
+# =========================================================
+# Customer directory & loyalty
+# =========================================================
+@app.get("/api/customers", dependencies=[Depends(require_roles("admin"))])
+async def list_customers(limit: int = 500):
+    """Full customer directory with loyalty stats."""
+    docs = await db.customers.find({}, {"_id": 0}).sort("last_order_at", -1).limit(limit).to_list(limit)
+    return {"customers": docs}
+
+class CustomerLookupReq(BaseModel):
+    phone: Optional[str] = None
+    name: Optional[str] = None
+
+@app.post("/api/customers/lookup")
+async def lookup_customer(req: CustomerLookupReq):
+    """Public: look up an existing customer by phone or name (used by checkout to surface loyalty)."""
+    phone = (req.phone or "").strip() or None
+    name = (req.name or "").strip() or None
+    q: Optional[Dict[str, Any]] = None
+    if phone:
+        q = {"phone": phone}
+    elif name:
+        q = {"name": name}
+    if not q:
+        return {"customer": None}
+    doc = await db.customers.find_one(q, {"_id": 0})
+    return {"customer": doc}
 
 # =========================================================
 # Web Push notifications (VAPID)

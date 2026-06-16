@@ -73,13 +73,23 @@ export default function TokenPage() {
         <div className="flex items-center justify-between mb-4">
           <div className="mehfil-divider flex-1"><span className="font-royal tracking-[0.3em] text-[10px] uppercase">The feast</span></div>
         </div>
-        <div className="space-y-1.5 text-sm">
+        <div className="space-y-2 text-sm">
           {order.items.map((i) => (
-            <div key={i.item_id} className="flex justify-between">
-              <span className="font-editorial text-[#1A1106]/80">{i.qty}× {i.name}</span>
-              <span className="font-royal text-[#8A1A2A]">{formatCurrency(i.qty * i.price)}</span>
+            <div key={i.item_id} className="border-b border-[#C9A348]/15 pb-2 last:border-0">
+              <div className="flex justify-between">
+                <span className="font-editorial text-[#1A1106]/85">{i.qty}× {i.name}</span>
+                <span className="font-royal text-[#8A1A2A]">{formatCurrency(i.qty * i.price)}</span>
+              </div>
+              {i.notes && (
+                <div className="font-editorial italic text-[11px] text-[#8A6A1B] mt-0.5" data-testid={`token-note-${i.item_id}`}>↳ {i.notes}</div>
+              )}
             </div>
           ))}
+          {order.notes && (
+            <div className="mt-3 bg-[#C9A348]/10 border border-[#C9A348]/30 rounded-lg px-3 py-2 text-[12px] text-[#8A6A1B] font-editorial italic" data-testid="token-general-note">
+              For the whole order: {order.notes}
+            </div>
+          )}
           <div className="border-t border-[#C9A348]/30 my-3" />
           <div className="flex justify-between"><span className="text-[#1A1106]/60 font-editorial italic">Subtotal</span><span className="font-royal text-[#8A1A2A]">{formatCurrency(order.subtotal)}</span></div>
           <div className="flex justify-between"><span className="text-[#1A1106]/60 font-editorial italic">Tax</span><span className="font-royal text-[#8A1A2A]">{formatCurrency(order.tax)}</span></div>
@@ -88,6 +98,14 @@ export default function TokenPage() {
             <span className="font-royal text-xl text-[#8A1A2A]">{formatCurrency(order.total)}</span>
           </div>
         </div>
+        {order.customer_code && (
+          <div className="mt-4 bg-[#FAF5EC] border border-[#C9A348]/30 rounded-xl p-3 flex items-center gap-3" data-testid="token-customer-code">
+            <Sparkles className="h-4 w-4 text-[#C9A348]" />
+            <div className="font-editorial italic text-[12px] text-[#1A1106]/75">
+              Mehfil member <span className="font-royal text-[#8A6A1B] tracking-wider not-italic">{order.customer_code}</span> — save this for points &amp; offers.
+            </div>
+          </div>
+        )}
         <button onClick={copyId} className="mt-5 text-[10px] font-royal tracking-[0.2em] uppercase text-[#8A1A2A]/70 hover:text-[#8A1A2A] inline-flex items-center gap-1.5">
           <Copy className="h-3 w-3" /> Order ID {order.id.slice(0, 8)}…
         </button>
