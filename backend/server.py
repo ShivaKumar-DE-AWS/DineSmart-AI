@@ -509,15 +509,13 @@ async def payment_intent(req: PaymentReq):
 async def payment_config():
     return {"stripe_enabled": STRIPE_ENABLED, "provider": "stripe" if STRIPE_ENABLED else "mock"}
 
-@app.post("/api/payment/checkout/session")
-async def create_checkout_session(req: CheckoutSessionReq, request: Request):
-    """Create a Stripe Checkout session. Amount is computed server-side from the menu (prevents tampering)."""
-    if not req.order_draft.items:
+async def _validate_and_price_draft(req_draft: OrderCreateReq) -> Dict[str, Any]:
+    """Validate items against current menu and recompute trusted totals server-side."""
+    if not req_draft.items:
         raise HTTPException(status_code=400, detail="Empty cart")
-    # Recompute trusted amount from current menu prices
     trusted_subtotal = 0.0
-    trusted_items = []
-    for line in req.order_draft.items:
+    trusted_items: List[Dict[str, Any]] = []
+    for line in req_draft.items:
         m = await db.menu.find_one({"id": line.item_id}, {"_id": 0})
         if not m:
             raise HTTPException(status_code=400, detail=f"Unknown item {line.item_id}")
@@ -527,58 +525,76 @@ async def create_checkout_session(req: CheckoutSessionReq, request: Request):
         trusted_items.append({"item_id": m["id"], "name": m["name"], "price": float(m["price"]), "qty": int(line.qty)})
     trusted_tax = round(trusted_subtotal * TAX_RATE, 2)
     trusted_total = round(trusted_subtotal + trusted_tax, 2)
+    return {"items": trusted_items, "subtotal": trusted_subtotal, "tax": trusted_tax, "total": trusted_total}
 
-    # Create a draft order record (pending payment)
+async def _save_order_draft(req_draft: OrderCreateReq, priced: Dict[str, Any]) -> str:
+    """Persist a pending-payment draft and return its id."""
     draft_id = str(uuid.uuid4())
-    draft = {
+    await db.order_drafts.insert_one({
         "id": draft_id,
-        "customer_name": req.order_draft.customer_name,
-        "items": trusted_items,
-        "subtotal": trusted_subtotal,
-        "tax": trusted_tax,
-        "total": trusted_total,
+        "customer_name": req_draft.customer_name,
+        "items": priced["items"],
+        "subtotal": priced["subtotal"],
+        "tax": priced["tax"],
+        "total": priced["total"],
         "payment_method": "stripe",
-        "notes": req.order_draft.notes,
+        "notes": req_draft.notes,
         "created_at": now_iso(),
-    }
-    await db.order_drafts.insert_one(draft)
+    })
+    return draft_id
+
+async def _create_stripe_session(draft_id: str, total: float, customer_name: str, origin_url: str, base_url: str):
+    """Create a real Stripe Checkout session and record the initial payment transaction."""
+    from emergentintegrations.payments.stripe.checkout import StripeCheckout, CheckoutSessionRequest
+    success_url = f"{origin_url}/customer/payment-return?session_id={{CHECKOUT_SESSION_ID}}"
+    cancel_url = f"{origin_url}/customer/cart"
+    webhook_url = f"{base_url.rstrip('/')}/api/webhook/stripe"
+    stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
+
+    checkoutrequest = CheckoutSessionRequest(
+        amount=float(total),
+        currency="inr",
+        success_url=success_url,
+        cancel_url=cancel_url,
+        metadata={"draft_id": draft_id, "customer_name": customer_name},
+    )
+    session = await stripe_checkout.create_checkout_session(checkoutrequest)
+    await db.payment_transactions.insert_one({
+        "id": str(uuid.uuid4()),
+        "session_id": session.session_id,
+        "draft_id": draft_id,
+        "amount": total,
+        "currency": "inr",
+        "status": "initiated",
+        "payment_status": "pending",
+        "metadata": {"customer_name": customer_name},
+        "created_at": now_iso(),
+        "updated_at": now_iso(),
+    })
+    return session
+
+@app.post("/api/payment/checkout/session")
+async def create_checkout_session(req: CheckoutSessionReq, request: Request):
+    """Create a Stripe Checkout session. Amount is computed server-side from the menu (prevents tampering)."""
+    priced = await _validate_and_price_draft(req.order_draft)
+    draft_id = await _save_order_draft(req.order_draft, priced)
 
     if not STRIPE_ENABLED:
         # MOCK MODE — instantly mark paid and create real order
         order = await _materialize_order_from_draft(draft_id, payment_method="mock_card", session_id=f"mock_{uuid.uuid4().hex[:12]}")
         return {"mode": "mock", "session_id": None, "url": None, "order_id": order["id"]}
 
-    # REAL Stripe Checkout
     try:
-        from emergentintegrations.payments.stripe.checkout import StripeCheckout, CheckoutSessionRequest
-        success_url = f"{req.origin_url}/customer/payment-return?session_id={{CHECKOUT_SESSION_ID}}"
-        cancel_url = f"{req.origin_url}/customer/cart"
-        webhook_url = f"{str(request.base_url).rstrip('/')}/api/webhook/stripe"
-        stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
-
-        checkoutrequest = CheckoutSessionRequest(
-            amount=float(trusted_total),
-            currency="inr",
-            success_url=success_url,
-            cancel_url=cancel_url,
-            metadata={"draft_id": draft_id, "customer_name": req.order_draft.customer_name},
+        session = await _create_stripe_session(
+            draft_id=draft_id,
+            total=priced["total"],
+            customer_name=req.order_draft.customer_name,
+            origin_url=req.origin_url,
+            base_url=str(request.base_url),
         )
-        session = await stripe_checkout.create_checkout_session(checkoutrequest)
-
-        # Record initial payment transaction
-        await db.payment_transactions.insert_one({
-            "id": str(uuid.uuid4()),
-            "session_id": session.session_id,
-            "draft_id": draft_id,
-            "amount": trusted_total,
-            "currency": "inr",
-            "status": "initiated",
-            "payment_status": "pending",
-            "metadata": {"customer_name": req.order_draft.customer_name},
-            "created_at": now_iso(),
-            "updated_at": now_iso(),
-        })
         return {"mode": "stripe", "session_id": session.session_id, "url": session.url, "order_id": None}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Stripe error: {e}")
 
@@ -635,6 +651,7 @@ async def checkout_status(session_id: str, request: Request):
     if not tx:
         raise HTTPException(status_code=404, detail="Unknown session")
 
+    status_obj = None
     try:
         from emergentintegrations.payments.stripe.checkout import StripeCheckout
         webhook_url = f"{str(request.base_url).rstrip('/')}/api/webhook/stripe"
@@ -642,6 +659,8 @@ async def checkout_status(session_id: str, request: Request):
         status_obj = await stripe_checkout.get_checkout_status(session_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Stripe status error: {e}")
+    if status_obj is None:
+        raise HTTPException(status_code=500, detail="Stripe status unavailable")
 
     new_payment_status = status_obj.payment_status
     new_status = status_obj.status
@@ -691,21 +710,18 @@ async def stripe_webhook(request: Request):
 # =========================================================
 # AI Waiter — Streaming SSE via emergentintegrations + Claude Sonnet
 # =========================================================
-@app.post("/api/ai-waiter/chat")
-async def ai_waiter(req: ChatReq):
-    """Streams Claude's response as SSE. Session-scoped chat history maintained server-side."""
-    if not EMERGENT_LLM_KEY:
-        raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY missing")
-
-    # Load menu summary to feed as context (cap to keep token use light)
-    menu_docs = await db.menu.find({"available": True}, {"_id": 0, "name": 1, "description": 1, "price": 1, "category": 1, "tags": 1}).to_list(60)
+async def _build_waiter_system_prompt() -> str:
+    """Compose the system prompt with the current menu inlined."""
+    menu_docs = await db.menu.find(
+        {"available": True},
+        {"_id": 0, "name": 1, "description": 1, "price": 1, "category": 1, "tags": 1},
+    ).to_list(60)
     menu_block = "\n".join(
         f"- {m['name']} ({m['category']}) — ₹{int(m['price'])}: {m['description']}"
         + (f" [tags: {', '.join(m.get('tags') or [])}]" if m.get('tags') else "")
         for m in menu_docs
     )
-
-    system_prompt = (
+    return (
         "You are SmartWaiter, the AI sommelier-waiter at SmartDine. "
         "Be concise (2–4 sentences max per reply), warm, witty, and never pushy. "
         "Recommend from THIS menu only; do not invent items. "
@@ -714,41 +730,43 @@ async def ai_waiter(req: ChatReq):
         f"MENU:\n{menu_block}"
     )
 
-    # Persist user message
-    await db.chat_messages.insert_one({
-        "session_id": req.session_id, "role": "user", "content": req.message, "created_at": now_iso(),
-    })
-
-    # Load short rolling history (last 12 messages)
-    history = await db.chat_messages.find(
-        {"session_id": req.session_id}, {"_id": 0, "role": 1, "content": 1}
-    ).sort("created_at", -1).limit(12).to_list(12)
-    history.reverse()
-
+def _make_waiter_stream(session_id: str, message: str, system_prompt: str):
+    """Return an async generator that yields SSE 'data:' lines for the chat reply."""
     async def event_gen():
         try:
             from emergentintegrations.llm.chat import LlmChat, UserMessage, TextDelta, StreamDone
             chat = LlmChat(
                 api_key=EMERGENT_LLM_KEY,
-                session_id=req.session_id,
+                session_id=session_id,
                 system_message=system_prompt,
             ).with_model("anthropic", "claude-sonnet-4-6")
-            # Replay prior assistant + user turns so Claude has context (excluding the just-saved user msg which we send fresh)
-            # We send only the latest user message; emergentintegrations handles session-level memory, but we also feed lite context inline.
             full = ""
-            async for ev in chat.stream_message(UserMessage(text=req.message)):
+            async for ev in chat.stream_message(UserMessage(text=message)):
                 if isinstance(ev, TextDelta):
                     full += ev.content
                     yield f"data: {json.dumps({'delta': ev.content})}\n\n"
                 elif isinstance(ev, StreamDone):
                     break
             await db.chat_messages.insert_one({
-                "session_id": req.session_id, "role": "assistant", "content": full, "created_at": now_iso(),
+                "session_id": session_id, "role": "assistant", "content": full, "created_at": now_iso(),
             })
             yield f"data: {json.dumps({'done': True})}\n\n"
         except Exception as e:
             yield f"data: {json.dumps({'error': str(e)})}\n\n"
+    return event_gen
 
+@app.post("/api/ai-waiter/chat")
+async def ai_waiter(req: ChatReq):
+    """Streams Claude's response as SSE. Session-scoped chat history maintained server-side."""
+    if not EMERGENT_LLM_KEY:
+        raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY missing")
+
+    system_prompt = await _build_waiter_system_prompt()
+    await db.chat_messages.insert_one({
+        "session_id": req.session_id, "role": "user", "content": req.message, "created_at": now_iso(),
+    })
+
+    event_gen = _make_waiter_stream(req.session_id, req.message, system_prompt)
     return StreamingResponse(
         event_gen(),
         media_type="text/event-stream",

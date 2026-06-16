@@ -182,7 +182,7 @@ def test_payment_config(s):
     r = s.get(f"{API}/payment/config")
     assert r.status_code == 200
     j = r.json()
-    assert j["stripe_enabled"] is True
+    assert j["stripe_enabled"] == True
     assert j["provider"] == "stripe"
 
 @pytest.fixture(scope="session")

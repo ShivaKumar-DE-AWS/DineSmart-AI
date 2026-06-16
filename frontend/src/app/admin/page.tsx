@@ -5,6 +5,13 @@ import { formatCurrency } from "@/lib/utils";
 import { TrendingUp, ShoppingBag, Receipt, AlertTriangle } from "lucide-react";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 
+// Static chart styling — extracted to avoid creating new objects on every render
+const CHART_GRID_STROKE = "#E2DFD8";
+const CHART_TICK = { fontSize: 11, fill: "#5C5C5C" };
+const CHART_TOOLTIP_STYLE = { borderRadius: 12, border: "1px solid #E2DFD8" };
+const CHART_MARGIN = { top: 10, right: 20, left: -10, bottom: 0 };
+const formatDayShort = (d: string) => d.slice(5);
+
 export default function AdminDashboard() {
   const { data: dash } = useQuery({ queryKey: ["admin-dashboard"], queryFn: () => api<any>("/api/analytics/dashboard"), refetchInterval: 10000 });
   const { data: rev } = useQuery({ queryKey: ["admin-revenue"], queryFn: () => api<any>("/api/analytics/revenue?days=7"), refetchInterval: 30000 });
@@ -46,11 +53,11 @@ export default function AdminDashboard() {
           <h2 className="font-heading text-xl mb-4">Revenue · last 7 days</h2>
           <div className="h-72" data-testid="revenue-chart">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={rev?.series || []} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E2DFD8" />
-                <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#5C5C5C" }} tickFormatter={(d) => d.slice(5)} />
-                <YAxis tick={{ fontSize: 11, fill: "#5C5C5C" }} />
-                <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #E2DFD8" }} />
+              <LineChart data={rev?.series || []} margin={CHART_MARGIN}>
+                <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_STROKE} />
+                <XAxis dataKey="date" tick={CHART_TICK} tickFormatter={formatDayShort} />
+                <YAxis tick={CHART_TICK} />
+                <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
                 <Line type="monotone" dataKey="revenue" stroke="#C84B31" strokeWidth={2.5} dot={{ r: 3 }} />
               </LineChart>
             </ResponsiveContainer>

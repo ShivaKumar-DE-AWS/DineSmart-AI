@@ -8,6 +8,13 @@ import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { Lock, CreditCard, ExternalLink } from "lucide-react";
 
+function renderPayLabel(submitting: boolean, stripeEnabled: boolean | null, total: number): string {
+  if (submitting) return "Processing…";
+  const amount = formatCurrency(total);
+  if (stripeEnabled) return `Pay ${amount} with Stripe`;
+  return `Pay ${amount}`;
+}
+
 export default function CheckoutPage() {
   const router = useRouter();
   const cart = useCart();
@@ -104,7 +111,7 @@ export default function CheckoutPage() {
           </div>
           <button onClick={submit} disabled={submitting || stripeEnabled === null} data-testid="place-order-btn" className="mt-6 w-full bg-clay text-white rounded-full px-6 py-3.5 font-medium hover:bg-clay-dark disabled:opacity-50 transition inline-flex items-center justify-center gap-2">
             {stripeEnabled && <ExternalLink className="h-4 w-4" />}
-            {submitting ? "Processing…" : stripeEnabled ? `Pay ${formatCurrency(total)} with Stripe` : `Pay ${formatCurrency(total)}`}
+            {renderPayLabel(submitting, stripeEnabled, total)}
           </button>
         </aside>
       </div>

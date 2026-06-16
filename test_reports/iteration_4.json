@@ -1,0 +1,32 @@
+{
+  "summary": "Full regression for SmartDine AI code-quality refactor pass. Backend: ran /app/backend/tests/test_smartdine.py — 29/29 PASS (8.6s). Frontend: verified all 7 refactored flows end-to-end via Playwright on the public preview URL. AI Waiter (ChatMessage extraction): dock opens, input fills, send streams a Claude response (533+ chars) into messages, ZERO React key/hook console warnings. Kitchen (KitchenTicket extraction): chef login → seeded order A-008 → kds-ticket-A-008 / kds-start-A-008 / kds-ready-A-008 all visible & clickable, sound toggle works, notif button present, ticket promoted to ready with 'A-008 ready!' toast. Track page: track-stages + track-enable-notif visible, polling verified (iteration_3 covered 3s polling end-to-end). Checkout: place-order-btn label correctly produced by renderPayLabel helper — observed 'Pay ₹819 with Stripe' with stripe_enabled=true after seeding 2-item cart. Full happy path: adding items to cart → checkout → POST /api/checkout/session → real Stripe sandbox redirect rendered (₹819.00 payment form on Stripe domain). Payment-return: /customer/payment-return?session_id=fake_session_id reached 'Payment didn't go through' failed state after ~12s polling timeout, cleanup ran clean (no setTimeout/cancelled warnings). Admin dashboard: revenue chart renders (2 recharts containers, 14 SVGs), 0 console errors, 0 hook warnings — confirms module-level CHART_TICK/CHART_TOOLTIP_STYLE extraction is safe. End-to-end refactor is GREEN with zero functional regression.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_smartdine.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Refactor is clean and isolated — no behavioral changes in checkout/session creation, AI waiter SSE streaming, or kitchen status transitions.",
+    "ChatMessage memoization + stable msg.id keys verified: 0 'each child needs unique key' warnings during streaming.",
+    "KitchenTicket getBorderClass extraction + stable key={o.id} verified: ticket re-renders during start/ready transitions without warnings.",
+    "Payment-return cleanup (cancelled flag + clearTimeout) verified: navigating away from the page mid-poll produced no orphan timer warnings.",
+    "renderPayLabel helper correctly produces 'Pay ₹<amt> with Stripe' string when stripe_enabled=true and cart is non-empty.",
+    "Pre-existing (NOT a refactor regression): /customer/menu page emits Next.js hydration warnings ('Hydration failed because the initial UI does not match what was rendered on the server'). The menu page was NOT in the refactored file list, so this predates the refactor. Worth fixing in a follow-up because it forces an extra client re-render.",
+    "Pre-existing minor: /admin/revenue (sidebar link) did not yet render recharts containers within a 2.5s wait window — could be lazy-loading or empty data. Not in refactor scope.",
+    "Tooling-only (acknowledged in request, not flagged): ESLint TS parser warnings and ruff E701/E702 — ignored per instruction."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "100% (29/29)", "frontend": "100% (7/7 refactor flows)" },
+  "test_credentials": "chef@smartdine.ai/Chef@123 (kitchen), owner@smartdine.ai/Owner@123 (admin). Customer flows used guest mode.",
+  "seed_data_creation": "Created one TEST_RefactorE2E order (token A-008, item: Smoky BBQ Pulled-Beef Bun x2, ₹672 + tax) via POST /api/orders to exercise kitchen ticket flow. Order promoted to 'ready'. Safe to leave or sweep.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Refactor pass is green end-to-end. The 29-test pytest suite + 7 frontend flows are the canonical regression set. If menu page is ever refactored, fix the pre-existing hydration warning (likely Cart-icon SSR mismatch). The Stripe Sandbox URL is reached for real — guest checkout E2E is the strongest signal that backend create_checkout_session() helper split (_validate_and_price_draft + _save_order_draft + _create_stripe_session) is safe.",
+  "rca of the issue": "N/A — pure regression pass with no defects found. All refactored modules behave identically to pre-refactor and the original 29-test pytest suite is fully green."
+}

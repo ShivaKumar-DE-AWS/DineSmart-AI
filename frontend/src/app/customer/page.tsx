@@ -14,7 +14,7 @@ export default function CustomerHome() {
             <h1 className="font-heading text-5xl sm:text-6xl md:text-7xl leading-[0.95] tracking-tight" data-testid="customer-hero-title">
               Hungry?<br />
               <span className="italic font-light text-clay">Talk to us</span>,<br />
-              we'll handle the rest.
+              we&apos;ll handle the rest.
             </h1>
             <p className="mt-8 text-lg text-stone max-w-xl leading-relaxed">
               Browse a hand-crafted menu, get recommendations from our AI sommelier, pay in seconds and watch your order race through our kitchen — live.
@@ -45,7 +45,7 @@ export default function CustomerHome() {
                   <div className="text-xs text-stone">always at your table</div>
                 </div>
               </div>
-              <p className="mt-3 text-sm text-ink/80 leading-relaxed">"Pairing tonight? The truffle pizza loves a yuzu lemonade — trust me."</p>
+              <p className="mt-3 text-sm text-ink/80 leading-relaxed">&ldquo;Pairing tonight? The truffle pizza loves a yuzu lemonade — trust me.&rdquo;</p>
             </div>
           </div>
         </div>

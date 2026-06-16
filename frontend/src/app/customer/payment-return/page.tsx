@@ -1,9 +1,12 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { useCart } from "@/stores/cart";
 import { Loader2, XCircle } from "lucide-react";
+
+const POLL_INTERVAL_MS = 1500;
+const MAX_POLL_ATTEMPTS = 8;
 
 export default function PaymentReturn() {
   const router = useRouter();
@@ -12,32 +15,45 @@ export default function PaymentReturn() {
   const sessionId = params.get("session_id");
   const [status, setStatus] = useState<"checking" | "success" | "failed" | "expired">("checking");
   const [message, setMessage] = useState("Confirming your payment with Stripe…");
+  const cartRef = useRef(cart);
+  cartRef.current = cart;          // always have latest cart without re-running effect
 
   useEffect(() => {
     if (!sessionId) { setStatus("failed"); setMessage("Missing session id."); return; }
+
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
     let attempts = 0;
+
     const poll = async () => {
       attempts += 1;
       try {
         const res = await api<{ payment_status: string; status: string; order_id?: string }>(
           `/api/payment/checkout/status/${sessionId}`
         );
+        if (cancelled) return;
         if (res.payment_status === "paid" && res.order_id) {
-          cart.clear();
+          cartRef.current.clear();
           setStatus("success");
           router.replace(`/customer/token/${res.order_id}`);
           return;
         }
-        if (res.status === "expired") { setStatus("expired"); setMessage("Payment session expired."); return; }
-        if (attempts < 8) setTimeout(poll, 1500);
+        if (res.status === "expired") {
+          setStatus("expired"); setMessage("Payment session expired."); return;
+        }
+        if (attempts < MAX_POLL_ATTEMPTS) timer = setTimeout(poll, POLL_INTERVAL_MS);
         else { setStatus("failed"); setMessage("Could not confirm payment. Please contact support."); }
-      } catch (e: any) {
-        if (attempts < 8) setTimeout(poll, 1500);
-        else { setStatus("failed"); setMessage(e.message || "Payment check failed"); }
+      } catch (err: any) {
+        if (cancelled) return;
+        console.warn("[payment-return] status poll failed:", err);
+        if (attempts < MAX_POLL_ATTEMPTS) timer = setTimeout(poll, POLL_INTERVAL_MS);
+        else { setStatus("failed"); setMessage(err.message || "Payment check failed"); }
       }
     };
     poll();
-  }, [sessionId, router, cart]);
+
+    return () => { cancelled = true; if (timer) clearTimeout(timer); };
+  }, [sessionId, router]);
 
   return (
     <div className="px-6 py-24 max-w-md mx-auto text-center" data-testid="payment-return">

@@ -4,6 +4,13 @@ import { api } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
 import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 
+const CHART_GRID_STROKE = "#E2DFD8";
+const CHART_TICK_SM = { fontSize: 10, fill: "#5C5C5C" };
+const CHART_TICK = { fontSize: 11, fill: "#5C5C5C" };
+const CHART_TOOLTIP_STYLE = { borderRadius: 12, border: "1px solid #E2DFD8" };
+const BAR_RADIUS: [number, number, number, number] = [6, 6, 0, 0];
+const formatDayShort = (d: string) => d.slice(5);
+
 export default function AdminRevenue() {
   const { data: w } = useQuery({ queryKey: ["rev-7"], queryFn: () => api<any>("/api/analytics/revenue?days=7") });
   const { data: m } = useQuery({ queryKey: ["rev-30"], queryFn: () => api<any>("/api/analytics/revenue?days=30") });
@@ -32,11 +39,11 @@ export default function AdminRevenue() {
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={m?.series || []}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E2DFD8" />
-              <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#5C5C5C" }} tickFormatter={(d) => d.slice(5)} />
-              <YAxis tick={{ fontSize: 11, fill: "#5C5C5C" }} />
-              <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #E2DFD8" }} />
-              <Bar dataKey="revenue" fill="#C84B31" radius={[6, 6, 0, 0]} />
+              <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_STROKE} />
+              <XAxis dataKey="date" tick={CHART_TICK_SM} tickFormatter={formatDayShort} />
+              <YAxis tick={CHART_TICK} />
+              <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+              <Bar dataKey="revenue" fill="#C84B31" radius={BAR_RADIUS} />
             </BarChart>
           </ResponsiveContainer>
         </div>

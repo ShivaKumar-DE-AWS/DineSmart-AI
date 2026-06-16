@@ -1,41 +1,89 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Sparkles, Send, X, Loader2 } from "lucide-react";
 import { apiUrl } from "@/lib/api";
+import { ChatMessage } from "./ChatMessage";
 
-interface ChatMessage { role: "user" | "assistant"; content: string; }
+interface Msg { id: string; role: "user" | "assistant"; content: string; }
+
+function makeId(): string { return `m_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`; }
 
 function getSessionId(): string {
   if (typeof window === "undefined") return "anon";
   let sid = localStorage.getItem("sd_ai_session");
-  if (!sid) { sid = `s_${Date.now()}_${Math.random().toString(36).slice(2,8)}`; localStorage.setItem("sd_ai_session", sid); }
+  if (!sid) {
+    sid = `s_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    localStorage.setItem("sd_ai_session", sid);
+  }
   return sid;
+}
+
+const INITIAL_GREETING: Msg = {
+  id: "greeting",
+  role: "assistant",
+  content: "Hi! I'm SmartWaiter. Tell me what you're craving and I'll find the perfect match from tonight's menu.",
+};
+
+/** Parses an SSE buffer and returns parsed payloads + leftover buffer. */
+function parseSseChunk(buffer: string): { payloads: any[]; rest: string } {
+  const lines = buffer.split("\n\n");
+  const rest = lines.pop() || "";
+  const payloads: any[] = [];
+  for (const line of lines) {
+    if (!line.startsWith("data:")) continue;
+    try {
+      payloads.push(JSON.parse(line.slice(5).trim()));
+    } catch (parseErr) {
+      console.warn("[ai-waiter] bad SSE payload:", line, parseErr);
+    }
+  }
+  return { payloads, rest };
 }
 
 export function AIWaiterDock() {
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: "assistant", content: "Hi! I'm SmartWaiter. Tell me what you're craving and I'll find the perfect match from tonight's menu." }
-  ]);
+  const [messages, setMessages] = useState<Msg[]>([INITIAL_GREETING]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Listen for external "open" requests (e.g. hero CTA button on /customer)
   useEffect(() => {
     const onOpen = () => setOpen(true);
-    window.addEventListener("open-ai-waiter", onOpen as any);
-    return () => window.removeEventListener("open-ai-waiter", onOpen as any);
+    window.addEventListener("open-ai-waiter", onOpen as EventListener);
+    return () => window.removeEventListener("open-ai-waiter", onOpen as EventListener);
   }, []);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, streaming]);
 
-  const send = async () => {
+  const appendAssistantDelta = useCallback((delta: string) => {
+    setMessages((m) => {
+      const copy = [...m];
+      const last = copy[copy.length - 1];
+      copy[copy.length - 1] = { ...last, content: last.content + delta };
+      return copy;
+    });
+  }, []);
+
+  const replaceLastAssistant = useCallback((content: string) => {
+    setMessages((m) => {
+      const copy = [...m];
+      copy[copy.length - 1] = { ...copy[copy.length - 1], content };
+      return copy;
+    });
+  }, []);
+
+  const send = useCallback(async () => {
     const text = input.trim();
     if (!text || streaming) return;
     setInput("");
-    setMessages((m) => [...m, { role: "user", content: text }, { role: "assistant", content: "" }]);
+    setMessages((m) => [
+      ...m,
+      { id: makeId(), role: "user", content: text },
+      { id: makeId(), role: "assistant", content: "" },
+    ]);
     setStreaming(true);
     try {
       const res = await fetch(apiUrl("/api/ai-waiter/chat"), {
@@ -44,6 +92,7 @@ export function AIWaiterDock() {
         body: JSON.stringify({ session_id: getSessionId(), message: text }),
       });
       if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
+
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
@@ -51,38 +100,20 @@ export function AIWaiterDock() {
         const { done, value } = await reader.read();
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n\n");
-        buffer = lines.pop() || "";
-        for (const line of lines) {
-          if (!line.startsWith("data:")) continue;
-          try {
-            const payload = JSON.parse(line.slice(5).trim());
-            if (payload.delta) {
-              setMessages((m) => {
-                const copy = [...m];
-                copy[copy.length - 1] = { role: "assistant", content: copy[copy.length - 1].content + payload.delta };
-                return copy;
-              });
-            } else if (payload.error) {
-              setMessages((m) => {
-                const copy = [...m];
-                copy[copy.length - 1] = { role: "assistant", content: `Sorry, I couldn't think clearly there — ${payload.error}` };
-                return copy;
-              });
-            }
-          } catch {}
+        const { payloads, rest } = parseSseChunk(buffer);
+        buffer = rest;
+        for (const payload of payloads) {
+          if (payload.delta) appendAssistantDelta(payload.delta);
+          else if (payload.error) replaceLastAssistant(`Sorry, I couldn't think clearly there — ${payload.error}`);
         }
       }
     } catch (e: any) {
-      setMessages((m) => {
-        const copy = [...m];
-        copy[copy.length - 1] = { role: "assistant", content: `Connection issue: ${e.message}` };
-        return copy;
-      });
+      console.error("[ai-waiter] stream failed:", e);
+      replaceLastAssistant(`Connection issue: ${e.message}`);
     } finally {
       setStreaming(false);
     }
-  };
+  }, [input, streaming, appendAssistantDelta, replaceLastAssistant]);
 
   return (
     <>
@@ -117,12 +148,13 @@ export function AIWaiterDock() {
             </header>
 
             <div ref={scrollRef} className="flex-1 overflow-y-auto p-5 space-y-4 scrollbar-thin" data-testid="ai-waiter-messages">
-              {messages.map((m, i) => (
-                <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-                  <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${m.role === "user" ? "bg-ink text-cream rounded-br-sm" : "bg-cream text-ink rounded-bl-sm"}`}>
-                    {m.content || (streaming && i === messages.length - 1 ? <Loader2 className="h-4 w-4 animate-spin" /> : null)}
-                  </div>
-                </div>
+              {messages.map((m, idx) => (
+                <ChatMessage
+                  key={m.id}
+                  role={m.role}
+                  content={m.content}
+                  isStreaming={streaming && idx === messages.length - 1 && m.role === "assistant"}
+                />
               ))}
             </div>
 

@@ -1,7 +1,10 @@
 {
-  "/page": "app/page.js",
-  "/admin/orders/page": "app/admin/orders/page.js",
+  "/auth/login/page": "app/auth/login/page.js",
+  "/kitchen/page": "app/kitchen/page.js",
+  "/customer/track/[orderId]/page": "app/customer/track/[orderId]/page.js",
   "/customer/checkout/page": "app/customer/checkout/page.js",
   "/customer/payment-return/page": "app/customer/payment-return/page.js",
-  "/customer/track/[orderId]/page": "app/customer/track/[orderId]/page.js"
+  "/customer/menu/page": "app/customer/menu/page.js",
+  "/admin/page": "app/admin/page.js",
+  "/admin/revenue/page": "app/admin/revenue/page.js"
 }

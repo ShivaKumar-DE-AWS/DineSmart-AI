@@ -28,8 +28,10 @@ export function playChime(variant: "new-order" | "ready" = "new-order") {
       osc.start(now + tone.t);
       osc.stop(now + tone.t + 0.3);
     }
-    setTimeout(() => ctx.close().catch(() => {}), 1200);
-  } catch {}
+    setTimeout(() => ctx.close().catch((err) => console.warn("[notify] AudioContext close failed:", err)), 1200);
+  } catch (err) {
+    console.warn("[notify] playChime failed:", err);
+  }
 }
 
 /** Asks for browser Notification permission (no-op on server, idempotent). */
@@ -45,5 +47,7 @@ export function notify(title: string, body?: string, options: NotificationOption
   if (Notification.permission !== "granted") return;
   try {
     new Notification(title, { body, icon: "/favicon.ico", badge: "/favicon.ico", ...options });
-  } catch {}
+  } catch (err) {
+    console.warn("[notify] Notification constructor failed:", err);
+  }
 }
