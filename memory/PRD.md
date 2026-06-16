@@ -36,6 +36,20 @@ Unify two repos (customer site + DineSmart-OS) into a single Next.js application
 - ✅ Notifications saved per order on status change.
 - ✅ Testing: 22/22 backend pytest pass + full frontend journey via Playwright (all 4 portals).
 
+## 5a. Iteration 2 — Real Payments + In-tab Notifications (Jan 17, 2026)
+- ✅ **Real Stripe Checkout** integrated via `emergentintegrations.payments.stripe` (test key `sk_test_emergent`). Server-side amount recomputation prevents price tampering. Mock fallback preserved behind `STRIPE_ENABLED` env toggle.
+- ✅ New endpoints: `POST /api/payment/checkout/session`, `GET /api/payment/checkout/status/{id}` (idempotent order materialization on 'paid'), `POST /api/webhook/stripe`, `GET /api/payment/config`.
+- ✅ New `/customer/payment-return` page polls status post-Stripe redirect.
+- ✅ **Audio chime** (Web Audio API, no external assets) + **browser Notifications API** wired to:
+  - Kitchen: new orders trigger `new-order` chime + desktop notification (toggle `kitchen-toggle-sound`)
+  - Counter: orders entering `ready` trigger `ready` chime + desktop notification
+  - Customer Track: status transition to `ready` triggers chime + "Your order is ready!" notification (opt-in button `track-enable-notif`)
+- ✅ Testing: 29/29 backend pytest pass; frontend regression fixed (TrackPage Rules-of-Hooks bug found and patched in iteration_3).
+
+## 5b. Pending / Deferred
+- ⏳ **Supabase data layer**: deferred. User provided anon+service keys, but the Python playbook requires a **Transaction Pooler URI** (`postgresql://postgres.[ref]:[pw]@aws-0-[region].pooler.supabase.com:6543/postgres`). Requested from user.
+- ⏳ **Real Web Push** (service worker + VAPID, works tab-closed): on backlog. In-tab Notifications shipped now.
+
 ## 6. Backlog
 **P1**
 - Real Supabase adapter (auth + Postgres + Realtime channels replacing polling).
