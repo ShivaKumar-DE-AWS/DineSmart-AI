@@ -1,77 +1,435 @@
 "use client";
 import Link from "next/link";
-import { ArrowRight, Sparkles, Star, Timer, Award } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { useQuery } from "@tanstack/react-query";
+import { motion } from "framer-motion";
+import {
+  Sparkles, ChefHat, Heart, Award, Flame, Users, Timer, MessageCircleHeart,
+  Mic, ArrowRight, Crown, Utensils, ScanLine, CreditCard, Bell,
+  Truck, Apple, Smartphone, Quote, Star, Phone, MapPin, ShieldCheck, Wallet
+} from "lucide-react";
+import { api } from "@/lib/api";
+import { useCart } from "@/stores/cart";
+import { formatCurrency } from "@/lib/utils";
+import { toast } from "sonner";
+import { MehfilLogo } from "@/components/customer/MehfilLogo";
+import type { MenuItem } from "@/types";
 
-export default function CustomerHome() {
+const fadeUp = {
+  hidden: { opacity: 0, y: 24 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.7, ease: "easeOut" } },
+};
+
+function SectionTag({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="mehfil-divider mb-6">
+      <span className="font-royal tracking-[0.4em] text-xs uppercase">{children}</span>
+    </div>
+  );
+}
+
+export default function MehfilHome() {
+  const cart = useCart();
+  const { data: menuData } = useQuery({ queryKey: ["menu"], queryFn: () => api<{ items: MenuItem[] }>("/api/menu") });
+  const items = menuData?.items ?? [];
+
+  const signature = items.filter((i) => ["Biryani", "Tandoori", "Starters", "Sweets"].includes(i.category)).slice(0, 8);
+
+  const openAI = () => window.dispatchEvent(new CustomEvent("open-ai-waiter"));
+
   return (
     <div>
-      {/* HERO */}
-      <section className="relative px-6 md:px-12 lg:px-20 pt-12 md:pt-20 pb-16 overflow-hidden">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center max-w-7xl mx-auto">
-          <div className="lg:col-span-7 animate-fade-up">
-            <Badge variant="clay" className="mb-6" data-testid="hero-tag">Now serving — AI Waiter</Badge>
-            <h1 className="font-heading text-5xl sm:text-6xl md:text-7xl leading-[0.95] tracking-tight" data-testid="customer-hero-title">
-              Hungry?<br />
-              <span className="italic font-light text-clay">Talk to us</span>,<br />
-              we&apos;ll handle the rest.
-            </h1>
-            <p className="mt-8 text-lg text-stone max-w-xl leading-relaxed">
-              Browse a hand-crafted menu, get recommendations from our AI sommelier, pay in seconds and watch your order race through our kitchen — live.
+      {/* ============================================================
+          SECTION 1 — HERO
+      ============================================================ */}
+      <section className="relative overflow-hidden pt-8 pb-20" data-testid="section-hero">
+        <div className="absolute inset-0 -z-10">
+          <div className="absolute inset-0 mehfil-paper" />
+          {/* floating biryani thalis */}
+          <div className="absolute top-24 -left-10 w-44 h-44 rounded-full bg-cover bg-center mehfil-float opacity-60 shadow-2xl" style={{ backgroundImage: "url(https://images.unsplash.com/photo-1633945274405-b6c8069047b0?w=600&q=80)" }} />
+          <div className="absolute top-60 -right-10 w-52 h-52 rounded-full bg-cover bg-center mehfil-float-delay opacity-60 shadow-2xl" style={{ backgroundImage: "url(https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?w=600&q=80)" }} />
+          <div className="absolute bottom-20 left-10 w-32 h-32 rounded-full bg-cover bg-center mehfil-float opacity-40 shadow-xl" style={{ backgroundImage: "url(https://images.unsplash.com/photo-1567171466295-4afa63d45416?w=400&q=80)" }} />
+        </div>
+
+        <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={fadeUp} className="max-w-5xl mx-auto text-center px-6 pt-10">
+          <MehfilLogo size="lg" withTagline />
+          <div className="mt-6 inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#C9A348]/40 bg-[#C9A348]/10">
+            <Sparkles className="h-3.5 w-3.5 text-[#C9A348]" />
+            <span className="font-royal tracking-[0.2em] uppercase text-xs text-[#8A6A1B]">Now powered by AI Dining</span>
+          </div>
+
+          <p className="font-editorial italic text-xl md:text-2xl text-[#5C0E1B]/80 mt-10 max-w-2xl mx-auto leading-relaxed">
+            &ldquo;Where every grain of basmati carries the perfume of saffron and the soul of old Hyderabad.&rdquo;
+          </p>
+
+          <div className="mt-10 flex flex-wrap gap-3 justify-center">
+            <Link href="/customer/menu" data-testid="hero-explore-menu" className="mehfil-btn-royal rounded-full px-8 py-3.5 text-sm tracking-[0.2em] uppercase font-royal inline-flex items-center gap-2">
+              Explore Menu <ArrowRight className="h-4 w-4" />
+            </Link>
+            <button onClick={openAI} data-testid="hero-talk-ai" className="mehfil-btn-gold rounded-full px-8 py-3.5 text-sm tracking-[0.2em] uppercase font-royal inline-flex items-center gap-2">
+              <Sparkles className="h-4 w-4" /> Talk to AI Waiter
+            </button>
+            <Link href="/customer/menu" data-testid="hero-order-now" className="rounded-full px-8 py-3.5 text-sm tracking-[0.2em] uppercase font-royal border border-[#8A1A2A] text-[#8A1A2A] hover:bg-[#8A1A2A] hover:text-[#FAF5EC] transition-colors inline-flex items-center gap-2">
+              Order Now
+            </Link>
+          </div>
+
+          <div className="mt-16 flex flex-wrap justify-center gap-x-10 gap-y-3 text-xs uppercase tracking-[0.25em] text-[#5C0E1B]/70 font-royal">
+            <span className="inline-flex items-center gap-2"><Star className="h-3.5 w-3.5 text-[#C9A348]" /> 4.8 · 12K+ reviews</span>
+            <span className="inline-flex items-center gap-2"><Crown className="h-3.5 w-3.5 text-[#C9A348]" /> Times Food Award 2024</span>
+            <span className="inline-flex items-center gap-2"><Timer className="h-3.5 w-3.5 text-[#C9A348]" /> Avg. ready in 18 min</span>
+          </div>
+        </motion.div>
+      </section>
+
+      {/* ============================================================
+          SECTION 2 — OUR STORY (TIMELINE)
+      ============================================================ */}
+      <section className="py-24 px-6 max-w-6xl mx-auto" data-testid="section-story">
+        <SectionTag>Since 2006</SectionTag>
+        <motion.h2 initial="hidden" whileInView="show" viewport={{ once: true }} variants={fadeUp} className="font-royal text-4xl md:text-6xl text-center text-[#8A1A2A] tracking-wide">
+          A Legacy <span className="font-editorial italic font-normal mehfil-gold-gradient">of taste</span>
+        </motion.h2>
+        <p className="font-editorial text-lg md:text-xl text-[#1A1106]/75 text-center mt-6 max-w-3xl mx-auto italic leading-relaxed">
+          From a single kitchen in old Hyderabad to a family of restaurants and now an AI-powered dining house — Mehfil&apos;s journey has always begun with one ingredient: love.
+        </p>
+
+        <div className="mt-20 relative">
+          <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-[#C9A348] to-transparent hidden md:block" />
+          {[
+            { year: "2006", title: "The First Mehfil", desc: "A single tandoor and one biryani recipe — opened in the by-lanes of old Hyderabad.", img: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=900&q=80" },
+            { year: "2010", title: "Expansion", desc: "Three outlets across Hyderabad. The dum biryani earns its first city-wide following.", img: "https://images.unsplash.com/photo-1551782450-a2132b4ba21d?w=900&q=80" },
+            { year: "2015", title: "Signature Recognition", desc: "Times Food Awards: Best Hyderabadi Biryani. The Nizami sweets win their own column.", img: "https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?w=900&q=80" },
+            { year: "2020", title: "Modern Dining", desc: "A new flagship — heritage architecture, modern service, contactless ordering.", img: "https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?w=900&q=80" },
+            { year: "2026", title: "AI-Powered Dining", desc: "MehfilAI joins the family — recommending pairings, remembering preferences, never sleeping.", img: "https://images.unsplash.com/photo-1633945274405-b6c8069047b0?w=900&q=80" },
+          ].map((t, idx) => (
+            <motion.div key={t.year} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-80px" }} variants={fadeUp} className={`relative grid md:grid-cols-2 gap-10 items-center my-16 ${idx % 2 ? "md:[direction:rtl]" : ""}`} data-testid={`timeline-${t.year}`}>
+              <div className={`${idx % 2 ? "md:[direction:ltr] md:pl-12" : "md:pr-12"}`}>
+                <div className="font-royal mehfil-gold-gradient text-6xl md:text-7xl tracking-tight">{t.year}</div>
+                <h3 className="font-royal text-2xl md:text-3xl text-[#8A1A2A] mt-3">{t.title}</h3>
+                <p className="font-editorial italic text-lg text-[#1A1106]/75 mt-4 leading-relaxed">{t.desc}</p>
+              </div>
+              <div className={`${idx % 2 ? "md:[direction:ltr]" : ""}`}>
+                <div className="aspect-[4/3] rounded-lg bg-cover bg-center shadow-2xl border border-[#C9A348]/30" style={{ backgroundImage: `url(${t.img})` }} />
+              </div>
+              <div className="absolute left-1/2 -translate-x-1/2 h-3 w-3 rounded-full bg-[#C9A348] hidden md:block mehfil-glow" />
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      {/* ============================================================
+          SECTION 3 — WHY PEOPLE LOVE MEHFIL
+      ============================================================ */}
+      <section className="py-24 px-6 max-w-7xl mx-auto" data-testid="section-why">
+        <SectionTag>Why Hyderabad chose us</SectionTag>
+        <h2 className="font-royal text-4xl md:text-5xl text-center text-[#8A1A2A]">A table where memories are <span className="font-editorial italic mehfil-gold-gradient">cooked</span></h2>
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-5 mt-14">
+          {[
+            { icon: Crown, t: "Authentic Hyderabadi", d: "Recipes guarded since the Nizam era — dum cooked, never rushed." },
+            { icon: Heart, t: "Fresh, Always", d: "Spices stone-ground daily, meats sourced morning-fresh." },
+            { icon: Users, t: "Family Friendly", d: "Big tables, big platters, big welcomes — bring the whole crew." },
+            { icon: ChefHat, t: "Signature Recipes", d: "Eight signatures, twelve heritage classics, zero shortcuts." },
+            { icon: Flame, t: "Fast Service", d: "Avg. 18-minute prep on biryani — without compromising the dum." },
+            { icon: Sparkles, t: "AI Waiter", d: "Your personal sommelier — chat, ask, order, track. All in one place." },
+          ].map((f) => (
+            <motion.div key={f.t} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className="mehfil-card rounded-lg p-6 hover:-translate-y-1 transition-all" data-testid={`why-card-${f.t.toLowerCase().replace(/\s+/g, "-")}`}>
+              <f.icon className="h-7 w-7 text-[#C9A348]" />
+              <h3 className="font-royal text-lg text-[#8A1A2A] mt-4">{f.t}</h3>
+              <p className="font-editorial text-base text-[#1A1106]/75 mt-2 leading-relaxed">{f.d}</p>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      {/* ============================================================
+          SECTION 4 — AI WAITER EXPERIENCE
+      ============================================================ */}
+      <section className="py-24 mehfil-royal-bg text-[#FAF5EC]" data-testid="section-ai-waiter">
+        <div className="max-w-6xl mx-auto px-6 grid lg:grid-cols-2 items-center gap-16">
+          <div>
+            <div className="font-royal tracking-[0.3em] text-xs uppercase text-[#C9A348] mb-4">The Concierge</div>
+            <h2 className="font-royal text-4xl md:text-6xl leading-tight">Meet <span className="font-editorial italic mehfil-gold-gradient">MehfilAI</span> — Waiter</h2>
+            <p className="font-editorial text-lg md:text-xl text-[#FAF5EC]/80 mt-6 italic leading-relaxed">
+              Our AI Waiter is your personal sommelier. She discovers dishes for you, customises meals, places orders and tracks every step — in the warm voice of Hyderabad.
             </p>
             <div className="mt-10 flex flex-wrap gap-3">
-              <Link href="/customer/menu" data-testid="hero-see-menu" className="inline-flex items-center gap-2 bg-ink text-cream rounded-full px-7 py-3.5 text-sm font-medium hover:bg-ink/85 transition">
-                Browse the menu <ArrowRight className="h-4 w-4" />
-              </Link>
-              <button data-testid="hero-ask-ai" onClick={() => window.dispatchEvent(new CustomEvent("open-ai-waiter"))} className="inline-flex items-center gap-2 border border-ink/20 text-ink rounded-full px-7 py-3.5 text-sm font-medium hover:bg-ink/5 transition">
-                <Sparkles className="h-4 w-4" /> Ask the AI Waiter
+              <button onClick={openAI} data-testid="ai-section-chat" className="mehfil-btn-gold rounded-full px-7 py-3.5 text-sm tracking-[0.2em] uppercase font-royal inline-flex items-center gap-2">
+                <Sparkles className="h-4 w-4" /> Chat with AI Waiter
+              </button>
+              <button onClick={openAI} data-testid="ai-section-voice" className="rounded-full px-7 py-3.5 text-sm tracking-[0.2em] uppercase font-royal border border-[#C9A348]/50 text-[#FAF5EC] hover:bg-[#C9A348]/10 inline-flex items-center gap-2">
+                <Mic className="h-4 w-4" /> Voice Assistant
               </button>
             </div>
-            <div className="mt-12 flex flex-wrap gap-8 text-sm">
-              <div className="flex items-center gap-2"><Star className="h-4 w-4 text-clay" /> 4.8 · 2,400+ reviews</div>
-              <div className="flex items-center gap-2"><Timer className="h-4 w-4 text-clay" /> Avg ready in 12 min</div>
-              <div className="flex items-center gap-2"><Award className="h-4 w-4 text-clay" /> Chef-curated</div>
-            </div>
           </div>
-          <div className="lg:col-span-5 relative">
-            <div className="aspect-[4/5] rounded-3xl overflow-hidden bg-cover bg-center shadow-2xl" style={{ backgroundImage: "url(https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1200&q=85)" }} />
-            <div className="absolute -bottom-6 -left-6 bg-white rounded-2xl p-5 shadow-xl border border-bone max-w-xs">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-clay flex items-center justify-center">
-                  <Sparkles className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <div className="font-heading font-semibold leading-tight">SmartWaiter</div>
-                  <div className="text-xs text-stone">always at your table</div>
-                </div>
+
+          <div className="relative">
+            <div className="relative mx-auto h-72 w-72 md:h-96 md:w-96">
+              <div className="absolute inset-0 rounded-full mehfil-glow bg-[#C9A348]/30 blur-3xl" />
+              <div className="absolute inset-6 rounded-full bg-gradient-to-br from-[#DDB85C] via-[#C9A348] to-[#8A6A1B] flex items-center justify-center shadow-2xl">
+                <Sparkles className="h-24 w-24 text-[#5C0E1B]" />
               </div>
-              <p className="mt-3 text-sm text-ink/80 leading-relaxed">&ldquo;Pairing tonight? The truffle pizza loves a yuzu lemonade — trust me.&rdquo;</p>
+            </div>
+            <div className="mt-8 mx-auto max-w-md bg-[#FAF5EC] text-[#1A1106] rounded-2xl p-5 shadow-2xl border border-[#C9A348]/30">
+              <div className="text-xs uppercase tracking-[0.2em] font-royal text-[#8A1A2A]">Example Conversation</div>
+              <div className="mt-3 text-sm space-y-2 font-editorial italic">
+                <div className="bg-[#F3EBD8] rounded-xl rounded-br-sm px-3 py-2 ml-auto max-w-[80%] text-right">&ldquo;I want spicy chicken biryani.&rdquo;</div>
+                <div className="bg-[#8A1A2A] text-[#FAF5EC] rounded-xl rounded-bl-sm px-3 py-2 max-w-[85%]">&ldquo;Our signature Dum Biryani with Apollo Fish on the side. Finish with Double Ka Meetha?&rdquo;</div>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* HOW IT WORKS */}
-      <section className="px-6 md:px-12 lg:px-20 py-20 max-w-7xl mx-auto">
-        <h2 className="font-heading text-3xl md:text-5xl tracking-tight mb-12">From craving to plate — in four taps.</h2>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      {/* ============================================================
+          SECTION 5 — SIGNATURE DISHES
+      ============================================================ */}
+      <section className="py-24 px-6 max-w-7xl mx-auto" data-testid="section-signature">
+        <SectionTag>From the Royal Kitchen</SectionTag>
+        <div className="flex items-end justify-between flex-wrap gap-4 mb-12">
+          <h2 className="font-royal text-4xl md:text-5xl text-[#8A1A2A]">Signature <span className="font-editorial italic mehfil-gold-gradient">dishes</span></h2>
+          <Link href="/customer/menu" data-testid="sig-see-full" className="font-royal tracking-[0.2em] uppercase text-xs text-[#8A1A2A] hover:text-[#C9A348] inline-flex items-center gap-1">See full menu <ArrowRight className="h-3 w-3" /></Link>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {signature.map((item) => {
+            const inCart = cart.items.find((i) => i.item_id === item.id);
+            return (
+              <motion.div key={item.id} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className="mehfil-card rounded-lg overflow-hidden group flex flex-col" data-testid={`sig-${item.id}`}>
+                <div className="aspect-[4/3] bg-cover bg-center group-hover:scale-105 transition-transform duration-500" style={{ backgroundImage: `url(${item.image_url})` }} />
+                {item.tags?.includes("bestseller") && (
+                  <div className="absolute m-3 px-2.5 py-1 rounded-full bg-[#C9A348] text-[#1A1106] text-[10px] font-royal tracking-wider uppercase">Bestseller</div>
+                )}
+                <div className="p-5 flex-1 flex flex-col">
+                  <h3 className="font-royal text-lg text-[#8A1A2A] leading-tight">{item.name}</h3>
+                  <p className="font-editorial italic text-sm text-[#1A1106]/70 mt-1.5 line-clamp-2 flex-1">{item.description}</p>
+                  <div className="flex items-center justify-between mt-4 pt-4 border-t border-[#E7DFCB]">
+                    <span className="font-royal text-xl text-[#8A1A2A]">{formatCurrency(item.price)}</span>
+                    {inCart ? (
+                      <span className="text-xs font-royal tracking-wider uppercase text-[#C9A348]">In cart × {inCart.qty}</span>
+                    ) : (
+                      <button data-testid={`sig-add-${item.id}`} onClick={() => { cart.add(item); toast.success(`${item.name} added`); }} className="mehfil-btn-royal rounded-full text-xs px-4 py-2 tracking-wider uppercase font-royal">Add</button>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* ============================================================
+          SECTION 6 — MENU EXPERIENCE
+      ============================================================ */}
+      <section className="py-24 px-6 max-w-5xl mx-auto text-center" data-testid="section-menu-cta">
+        <SectionTag>The Menu</SectionTag>
+        <h2 className="font-royal text-4xl md:text-5xl text-[#8A1A2A]">27 dishes. 8 categories. <span className="font-editorial italic mehfil-gold-gradient">One Hyderabad.</span></h2>
+        <p className="font-editorial italic text-lg text-[#1A1106]/75 mt-6 max-w-2xl mx-auto leading-relaxed">
+          Search, filter by veg/non-veg, dive into biryanis, starters, tandoori, curries, breads, rice, traditional sweets and beverages.
+        </p>
+        <Link href="/customer/menu" data-testid="menu-cta-explore" className="mt-10 inline-flex items-center gap-2 mehfil-btn-royal rounded-full px-9 py-4 text-sm tracking-[0.2em] uppercase font-royal">
+          Explore Full Menu <ArrowRight className="h-4 w-4" />
+        </Link>
+      </section>
+
+      {/* ============================================================
+          SECTION 7 — ORDER FLOW
+      ============================================================ */}
+      <section className="py-24 px-6 bg-[#F3EBD8]/40" data-testid="section-flow">
+        <div className="max-w-7xl mx-auto">
+          <SectionTag>Seven royal steps</SectionTag>
+          <h2 className="font-royal text-4xl md:text-5xl text-center text-[#8A1A2A]">From craving to plate</h2>
+          <div className="mt-16 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+            {[
+              { icon: ScanLine, label: "Scan QR" },
+              { icon: Sparkles, label: "Talk to AI Waiter" },
+              { icon: Utensils, label: "Customize" },
+              { icon: CreditCard, label: "Pay Securely" },
+              { icon: Crown, label: "Get Token" },
+              { icon: Timer, label: "Track Live" },
+              { icon: Truck, label: "Pickup or Dine" },
+            ].map((s, i) => (
+              <div key={s.label} className="text-center" data-testid={`flow-step-${i + 1}`}>
+                <div className="relative h-16 w-16 mx-auto rounded-full border-2 border-[#C9A348] bg-[#FAF5EC] flex items-center justify-center">
+                  <s.icon className="h-6 w-6 text-[#8A1A2A]" />
+                  <div className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-[#8A1A2A] text-[#FAF5EC] text-xs font-royal flex items-center justify-center">{i + 1}</div>
+                </div>
+                <div className="mt-3 font-royal tracking-wider uppercase text-xs text-[#1A1106]">{s.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ============================================================
+          SECTION 8 + 9 — LIVE TRACKING + TOKEN
+      ============================================================ */}
+      <section className="py-24 px-6 max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 items-center" data-testid="section-tracking-token">
+        <div>
+          <SectionTag>Live tracking</SectionTag>
+          <h2 className="font-royal text-4xl md:text-5xl text-[#8A1A2A]">Know <span className="font-editorial italic mehfil-gold-gradient">exactly</span> where your meal is</h2>
+          <div className="mt-10 space-y-3">
+            {[
+              { l: "Order Received", done: true },
+              { l: "Preparing", done: true },
+              { l: "Cooking on Dum", done: true, active: true },
+              { l: "Ready for Pickup", done: false },
+              { l: "Delivered", done: false },
+            ].map((s) => (
+              <div key={s.l} className="flex items-center gap-3" data-testid={`track-demo-${s.l.replace(/\s+/g, "-").toLowerCase()}`}>
+                <div className={`h-9 w-9 rounded-full flex items-center justify-center ${s.done ? "bg-[#8A1A2A] text-[#FAF5EC]" : "bg-[#E7DFCB] text-[#1A1106]/40"} ${s.active ? "mehfil-glow" : ""}`}>
+                  {s.done ? "✓" : "·"}
+                </div>
+                <div className={`font-royal tracking-wider uppercase text-sm ${s.done ? "text-[#8A1A2A]" : "text-[#1A1106]/40"}`}>{s.l}</div>
+              </div>
+            ))}
+          </div>
+          <p className="font-editorial italic text-base text-[#1A1106]/70 mt-8">Est. ready in <span className="text-[#8A1A2A] not-italic font-medium">8 minutes</span> · we&apos;ll ping you the moment it&apos;s out.</p>
+        </div>
+
+        <div>
+          <SectionTag>Your token</SectionTag>
+          <div className="mehfil-token-card rounded-2xl p-10 text-center shadow-2xl">
+            <div className="font-royal tracking-[0.3em] uppercase text-xs text-[#C9A348]">Mehfil Token</div>
+            <div className="font-royal text-[#FAF5EC] mt-2 text-7xl md:text-9xl tracking-tight">M-102</div>
+            <div className="mehfil-divider my-6"><span className="text-xs font-royal tracking-wider uppercase text-[#C9A348]">Estimated wait</span></div>
+            <div className="font-royal text-[#FAF5EC] text-3xl">~ 8 minutes</div>
+            <div className="font-editorial italic text-[#FAF5EC]/70 mt-2">Counter 02 · Banjara Hills</div>
+            <div className="mt-6 px-4 py-2 inline-block rounded-full border border-[#C9A348]/40 text-[#C9A348] text-xs tracking-[0.2em] uppercase font-royal">Cooking on Dum</div>
+          </div>
+        </div>
+      </section>
+
+      {/* ============================================================
+          SECTION 10 — PAYMENTS
+      ============================================================ */}
+      <section className="py-24 px-6 bg-[#F3EBD8]/40" data-testid="section-payments">
+        <div className="max-w-6xl mx-auto text-center">
+          <SectionTag>Secure & instant</SectionTag>
+          <h2 className="font-royal text-4xl md:text-5xl text-[#8A1A2A]">Pay <span className="font-editorial italic mehfil-gold-gradient">your way</span></h2>
+          <p className="font-editorial italic text-lg text-[#1A1106]/75 mt-6 max-w-2xl mx-auto">Every major method — UPI, cards, wallets, cash. Encrypted end-to-end by Stripe.</p>
+
+          <div className="mt-12 grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3 max-w-5xl mx-auto" data-testid="payment-methods">
+            {["UPI", "PhonePe", "Google Pay", "Paytm", "Razorpay", "Visa / Master", "Cash"].map((p) => (
+              <div key={p} className="mehfil-card rounded-lg py-4 px-3 flex items-center justify-center font-royal tracking-wider uppercase text-xs text-[#8A1A2A]">{p}</div>
+            ))}
+          </div>
+          <div className="mt-10 inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-[#FAF5EC] border border-[#C9A348]/40 text-xs font-royal tracking-[0.2em] uppercase text-[#8A6A1B]">
+            <ShieldCheck className="h-4 w-4 text-[#C9A348]" /> PCI-DSS · 256-bit TLS · Stripe Secured
+          </div>
+        </div>
+      </section>
+
+      {/* ============================================================
+          SECTION 11 — NOTIFICATIONS
+      ============================================================ */}
+      <section className="py-24 px-6 max-w-6xl mx-auto" data-testid="section-notifications">
+        <SectionTag>Always in the loop</SectionTag>
+        <h2 className="font-royal text-4xl md:text-5xl text-[#8A1A2A] text-center">We&apos;ll <span className="font-editorial italic mehfil-gold-gradient">ping you</span></h2>
+        <div className="mt-14 grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {[
-            { n: "01", t: "Browse", d: "Visual menu with prep times and tags." },
-            { n: "02", t: "Ask", d: "Chat with the AI sommelier for picks." },
-            { n: "03", t: "Pay", d: "One-tap checkout, instant token." },
-            { n: "04", t: "Track", d: "Watch your token across the kitchen." },
-          ].map((s) => (
-            <div key={s.n} className="border border-bone rounded-2xl p-7 bg-white hover:border-clay transition" data-testid={`step-${s.n}`}>
-              <div className="font-mono text-clay text-sm tracking-wider">{s.n}</div>
-              <div className="font-heading text-2xl mt-3 tracking-tight">{s.t}</div>
-              <p className="text-stone mt-2 text-sm">{s.d}</p>
+            { t: "Order Accepted", d: "Confirmed by the counter in seconds." },
+            { t: "Preparing", d: "Brisket roasting, biryani layering — chef is on it." },
+            { t: "Ready", d: "A gentle chime tells you to walk over." },
+            { t: "Delivered", d: "Bon appétit. Tap to rate or reorder." },
+          ].map((n) => (
+            <div key={n.t} className="mehfil-card rounded-lg p-6" data-testid={`notif-${n.t.toLowerCase()}`}>
+              <Bell className="h-6 w-6 text-[#C9A348]" />
+              <h3 className="font-royal text-lg text-[#8A1A2A] mt-4">{n.t}</h3>
+              <p className="font-editorial italic text-sm text-[#1A1106]/70 mt-2">{n.d}</p>
             </div>
           ))}
         </div>
-        <div className="mt-12 text-center">
-          <Link href="/customer/menu" data-testid="bottom-menu-cta" className="inline-flex items-center gap-2 bg-clay text-white rounded-full px-8 py-4 text-base font-medium hover:bg-clay-dark transition">
-            See full menu <ArrowRight className="h-4 w-4" />
+        <p className="font-editorial italic text-center text-[#1A1106]/60 mt-8 text-sm">Via browser push today · SMS & WhatsApp arriving soon</p>
+      </section>
+
+      {/* ============================================================
+          SECTION 12 — REVIEWS
+      ============================================================ */}
+      <section className="py-24 px-6 mehfil-paper" data-testid="section-reviews">
+        <div className="max-w-6xl mx-auto">
+          <SectionTag>Word of mouth</SectionTag>
+          <h2 className="font-royal text-4xl md:text-5xl text-center text-[#8A1A2A]">What Hyderabad <span className="font-editorial italic mehfil-gold-gradient">whispers</span></h2>
+          <div className="mt-14 grid md:grid-cols-3 gap-5">
+            {[
+              { name: "Asma R.", role: "Banjara Hills · 8 visits", text: "Twenty years in Hyderabad — Mehfil is still the most authentic dum I've eaten outside my mother's kitchen. The qubani is poetry." },
+              { name: "Rohit M.", role: "Family of 6", text: "Booked their family pack for a birthday. AI Waiter remembered we ordered last time and suggested the same combo — uncanny and lovely." },
+              { name: "Priya K.", role: "Foodie · IG 80K", text: "Apollo fish that audibly crackles. Saffron biryani with mirchi salan that argues sweetly with you. Five stars." },
+            ].map((r) => (
+              <motion.div key={r.name} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mehfil-card rounded-lg p-6" data-testid={`review-${r.name.split(" ")[0].toLowerCase()}`}>
+                <Quote className="h-7 w-7 text-[#C9A348]" />
+                <p className="font-editorial italic text-base text-[#1A1106]/85 mt-4 leading-relaxed">&ldquo;{r.text}&rdquo;</p>
+                <div className="mt-5 flex items-center gap-1 text-[#C9A348]">
+                  {[...Array(5)].map((_, i) => <Star key={i} className="h-3.5 w-3.5 fill-current" />)}
+                </div>
+                <div className="mt-3 font-royal tracking-wider uppercase text-xs text-[#8A1A2A]">{r.name}</div>
+                <div className="font-editorial italic text-xs text-[#1A1106]/60">{r.role}</div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ============================================================
+          SECTION 13 — SPECIAL OFFERS
+      ============================================================ */}
+      <section className="py-24 px-6 max-w-7xl mx-auto" data-testid="section-offers">
+        <SectionTag>This week at Mehfil</SectionTag>
+        <h2 className="font-royal text-4xl md:text-5xl text-[#8A1A2A] text-center">Royal <span className="font-editorial italic mehfil-gold-gradient">offers</span></h2>
+        <div className="mt-14 grid md:grid-cols-3 gap-5">
+          {[
+            { tag: "Family Pack", title: "Biryani for 4 + 2 Sweets", desc: "Save ₹240. Available 7 days.", img: "https://images.unsplash.com/photo-1589302168068-964664d93dc0?w=800&q=80" },
+            { tag: "Weekend Spl.", title: "Apollo Fish + Sweet Lassi", desc: "Saturdays & Sundays only.", img: "https://images.unsplash.com/photo-1535400875775-32eb96cefd1e?w=800&q=80" },
+            { tag: "AI Pick", title: "Tandoori Trio + Naan", desc: "Curated by MehfilAI based on tonight&apos;s rush.", img: "https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?w=800&q=80" },
+          ].map((o) => (
+            <div key={o.title} className="relative rounded-lg overflow-hidden mehfil-card group" data-testid={`offer-${o.tag.toLowerCase().replace(/\s+/g, "-")}`}>
+              <div className="aspect-[4/3] bg-cover bg-center group-hover:scale-105 transition-transform duration-500" style={{ backgroundImage: `url(${o.img})` }} />
+              <div className="p-5">
+                <div className="font-royal tracking-[0.2em] uppercase text-xs text-[#C9A348]">{o.tag}</div>
+                <h3 className="font-royal text-xl text-[#8A1A2A] mt-2">{o.title}</h3>
+                <p className="font-editorial italic text-sm text-[#1A1106]/70 mt-2">{o.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ============================================================
+          SECTION 14 — TABLE RESERVATION CTA
+      ============================================================ */}
+      <section className="py-24 px-6 mehfil-royal-bg text-[#FAF5EC]" data-testid="section-reserve">
+        <div className="max-w-4xl mx-auto text-center">
+          <div className="font-royal tracking-[0.3em] uppercase text-xs text-[#C9A348]">Reservations</div>
+          <h2 className="font-royal text-4xl md:text-6xl mt-4">Save a <span className="font-editorial italic mehfil-gold-gradient">corner</span> of the mehfil</h2>
+          <p className="font-editorial italic text-lg md:text-xl text-[#FAF5EC]/80 mt-6 max-w-2xl mx-auto leading-relaxed">
+            We hold tables for guests who plan ahead — choose your evening, party size and any special note for the chef.
+          </p>
+          <Link href="/customer/reserve" data-testid="reserve-cta" className="mt-10 inline-flex items-center gap-2 mehfil-btn-gold rounded-full px-9 py-4 text-sm tracking-[0.2em] uppercase font-royal">
+            Reserve a Table <ArrowRight className="h-4 w-4" />
           </Link>
+        </div>
+      </section>
+
+      {/* ============================================================
+          SECTION 15 — APP TEASER
+      ============================================================ */}
+      <section className="py-24 px-6 max-w-6xl mx-auto" data-testid="section-app">
+        <SectionTag>Coming soon</SectionTag>
+        <h2 className="font-royal text-4xl md:text-5xl text-center text-[#8A1A2A]">Mehfil <span className="font-editorial italic mehfil-gold-gradient">in your pocket</span></h2>
+        <div className="mt-12 grid md:grid-cols-3 gap-5">
+          {[
+            { t: "Customer App", d: "Order, track, reorder favourites in one tap.", icon: Smartphone },
+            { t: "Restaurant App", d: "Owner dashboard — anywhere in the world.", icon: Crown },
+            { t: "Kitchen App", d: "Tablet-first KDS for our chefs.", icon: ChefHat },
+          ].map((a) => (
+            <div key={a.t} className="mehfil-card rounded-lg p-7 text-center" data-testid={`app-${a.t.toLowerCase().replace(/\s+/g, "-")}`}>
+              <a.icon className="h-9 w-9 mx-auto text-[#C9A348]" />
+              <h3 className="font-royal text-xl text-[#8A1A2A] mt-4">{a.t}</h3>
+              <p className="font-editorial italic text-sm text-[#1A1106]/70 mt-2">{a.d}</p>
+              <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#E7DFCB] text-[10px] font-royal tracking-[0.2em] uppercase text-[#8A6A1B]">
+                <Apple className="h-3 w-3" /> coming 2026
+              </div>
+            </div>
+          ))}
         </div>
       </section>
     </div>

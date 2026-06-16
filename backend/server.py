@@ -186,14 +186,48 @@ def clean(doc: Dict[str, Any]) -> Dict[str, Any]:
 # Seed data
 # =========================================================
 SEED_MENU = [
-    {"name": "Smoky BBQ Pulled-Beef Bun", "description": "Slow-braised brisket, charred onion jam, brioche.", "price": 320, "category": "Mains", "image_url": "https://images.unsplash.com/photo-1550547660-d9450f859349?w=800&q=80", "prep_time_min": 14, "tags": ["bestseller"]},
-    {"name": "Truffle Mushroom Pizza", "description": "24-hour fermented sourdough, wild mushrooms, white truffle oil.", "price": 460, "category": "Mains", "image_url": "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800&q=80", "prep_time_min": 18, "tags": ["vegetarian"]},
-    {"name": "Saffron Butter Chicken", "description": "Tandoor charred, kashmiri saffron tomato gravy, naan.", "price": 380, "category": "Mains", "image_url": "https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=800&q=80", "prep_time_min": 16, "tags": ["spicy"]},
-    {"name": "Crispy Halloumi Bowl", "description": "Charred halloumi, pomegranate, freekeh, mint yogurt.", "price": 340, "category": "Bowls", "image_url": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&q=80", "prep_time_min": 10, "tags": ["vegetarian", "healthy"]},
-    {"name": "Sea Salt Caramel Cheesecake", "description": "Burnt basque base, fleur de sel caramel, smoked almond.", "price": 220, "category": "Desserts", "image_url": "https://images.unsplash.com/photo-1567171466295-4afa63d45416?w=800&q=80", "prep_time_min": 5, "tags": ["popular"]},
-    {"name": "Chocolate Hazelnut Tart", "description": "70% dark ganache, candied hazelnut, gold leaf.", "price": 240, "category": "Desserts", "image_url": "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?w=800&q=80", "prep_time_min": 5, "tags": []},
-    {"name": "House Iced Latte", "description": "Single-origin Ethiopian, vanilla cold foam.", "price": 180, "category": "Drinks", "image_url": "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=800&q=80", "prep_time_min": 4, "tags": []},
-    {"name": "Yuzu Lemonade", "description": "Cold-pressed yuzu, basil, honey, sparkling.", "price": 160, "category": "Drinks", "image_url": "https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=800&q=80", "prep_time_min": 3, "tags": ["refreshing"]},
+    # ===== HYDERABADI BIRYANI (Signature) =====
+    {"name": "Chicken Dum Biryani", "description": "Slow-cooked basmati layered with kashmiri masala chicken, saffron and mint — Mehfil's signature since 2006.", "price": 280, "category": "Biryani", "image_url": "https://images.unsplash.com/photo-1633945274405-b6c8069047b0?w=900&q=85", "prep_time_min": 18, "tags": ["bestseller", "signature"]},
+    {"name": "Mutton Dum Biryani", "description": "Hand-stretched mutton, brown onions, kewra water — sealed and dum cooked.", "price": 360, "category": "Biryani", "image_url": "https://images.unsplash.com/photo-1701579231378-3726490a407b?w=900&q=85", "prep_time_min": 22, "tags": ["spicy", "premium"]},
+    {"name": "Family Pack Biryani", "description": "Serves 4 — choose chicken or mutton, comes with mirchi ka salan, raita & qubani.", "price": 1400, "category": "Biryani", "image_url": "https://images.unsplash.com/photo-1589302168068-964664d93dc0?w=900&q=85", "prep_time_min": 28, "tags": ["family", "value"]},
+    {"name": "Veg Dum Biryani", "description": "Garden vegetables, basmati, fried onions, ghee — fully vegetarian dum.", "price": 220, "category": "Biryani", "image_url": "https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?w=900&q=85", "prep_time_min": 16, "tags": ["vegetarian"]},
+
+    # ===== STARTERS =====
+    {"name": "Chicken 65", "description": "Andhra-style fried chicken bites with curry leaves, green chilli and yogurt marinade.", "price": 190, "category": "Starters", "image_url": "https://images.unsplash.com/photo-1626777553635-c75c8d537304?w=900&q=85", "prep_time_min": 10, "tags": ["bestseller", "spicy"]},
+    {"name": "Apollo Fish", "description": "Hyderabad's iconic crisp-fried fish in red chilli & coriander glaze.", "price": 200, "category": "Starters", "image_url": "https://images.unsplash.com/photo-1535400875775-32eb96cefd1e?w=900&q=85", "prep_time_min": 12, "tags": ["spicy"]},
+    {"name": "Chicken Majestic", "description": "Deep-fried chicken strips tossed with chilli, yogurt and royal cumin.", "price": 210, "category": "Starters", "image_url": "https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?w=900&q=85", "prep_time_min": 11, "tags": ["popular"]},
+    {"name": "Paneer Tikka", "description": "Cottage cheese cubes marinated in hung curd, charred in tandoor.", "price": 180, "category": "Starters", "image_url": "https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?w=900&q=85", "prep_time_min": 10, "tags": ["vegetarian"]},
+
+    # ===== TANDOORI =====
+    {"name": "Tandoori Chicken (Full)", "description": "Whole chicken marinated overnight in yogurt, garam masala, kashmiri red.", "price": 480, "category": "Tandoori", "image_url": "https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?w=900&q=85", "prep_time_min": 18, "tags": ["signature"]},
+    {"name": "Chicken Tikka", "description": "Boneless tandoor-charred chicken with smoked yogurt & saffron.", "price": 240, "category": "Tandoori", "image_url": "https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?w=900&q=85", "prep_time_min": 12, "tags": ["popular"]},
+    {"name": "Mutton Seekh Kebab", "description": "Minced mutton, ginger, mint, raw papaya — skewered and fired.", "price": 280, "category": "Tandoori", "image_url": "https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?w=900&q=85", "prep_time_min": 14, "tags": []},
+
+    # ===== CURRIES =====
+    {"name": "Hyderabadi Chicken", "description": "House special curry — tomato, kasuri methi, fried onion gravy.", "price": 230, "category": "Curries", "image_url": "https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=900&q=85", "prep_time_min": 14, "tags": ["popular"]},
+    {"name": "Mutton Rogan Josh", "description": "Kashmiri-inflected mutton in a deep red onion-ratan jot gravy.", "price": 320, "category": "Curries", "image_url": "https://images.unsplash.com/photo-1631452180519-c014fe946bc7?w=900&q=85", "prep_time_min": 18, "tags": []},
+    {"name": "Paneer Butter Masala", "description": "Tomato-cashew velouté, fenugreek, paneer cubes.", "price": 220, "category": "Curries", "image_url": "https://images.unsplash.com/photo-1631452180519-c014fe946bc7?w=900&q=85", "prep_time_min": 12, "tags": ["vegetarian"]},
+    {"name": "Dal Makhani", "description": "Black urad slow-simmered with cream, butter and smoked tomato.", "price": 180, "category": "Curries", "image_url": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=900&q=85", "prep_time_min": 10, "tags": ["vegetarian"]},
+
+    # ===== BREADS =====
+    {"name": "Butter Naan", "description": "Soft tandoor-baked flatbread brushed with cultured butter.", "price": 45, "category": "Breads", "image_url": "https://images.unsplash.com/photo-1626776877729-3bd96bf38904?w=900&q=85", "prep_time_min": 4, "tags": []},
+    {"name": "Garlic Naan", "description": "Naan crusted with roasted garlic & coriander.", "price": 55, "category": "Breads", "image_url": "https://images.unsplash.com/photo-1626776877729-3bd96bf38904?w=900&q=85", "prep_time_min": 4, "tags": []},
+    {"name": "Tandoori Roti", "description": "Whole-wheat fired in clay tandoor.", "price": 25, "category": "Breads", "image_url": "https://images.unsplash.com/photo-1626776877729-3bd96bf38904?w=900&q=85", "prep_time_min": 3, "tags": []},
+
+    # ===== RICE & NOODLES =====
+    {"name": "Mehfil Special Fried Rice", "description": "House mix-meat fried rice with crispy garlic & schezwan twist.", "price": 240, "category": "Rice & Noodles", "image_url": "https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=900&q=85", "prep_time_min": 10, "tags": ["chef-special"]},
+    {"name": "Chicken Schezwan Noodles", "description": "Wok-fired hakka noodles with chilli garlic schezwan.", "price": 180, "category": "Rice & Noodles", "image_url": "https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=900&q=85", "prep_time_min": 8, "tags": []},
+
+    # ===== TRADITIONAL HYDERABADI SWEETS =====
+    {"name": "Double Ka Meetha", "description": "Saffron-soaked bread pudding, condensed milk, slivered pistachio — Hyderabad classic.", "price": 120, "category": "Sweets", "image_url": "https://images.unsplash.com/photo-1567171466295-4afa63d45416?w=900&q=85", "prep_time_min": 4, "tags": ["bestseller", "heritage"]},
+    {"name": "Qubani Ka Meetha", "description": "Apricot compote with malai cream — Nizami royal dessert.", "price": 140, "category": "Sweets", "image_url": "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?w=900&q=85", "prep_time_min": 4, "tags": ["heritage"]},
+    {"name": "Kaddu Ki Kheer", "description": "Sweet pumpkin slow-cooked in cardamom milk with almonds.", "price": 110, "category": "Sweets", "image_url": "https://images.unsplash.com/photo-1567171466295-4afa63d45416?w=900&q=85", "prep_time_min": 4, "tags": []},
+    {"name": "Gulab Jamun", "description": "Khoya dumplings in warm rose-cardamom syrup.", "price": 90, "category": "Sweets", "image_url": "https://images.unsplash.com/photo-1567171466295-4afa63d45416?w=900&q=85", "prep_time_min": 3, "tags": []},
+
+    # ===== BEVERAGES =====
+    {"name": "Sweet Lassi", "description": "Chilled yogurt blended with rose & cardamom.", "price": 90, "category": "Beverages", "image_url": "https://images.unsplash.com/photo-1546039907-7fa05f864c02?w=900&q=85", "prep_time_min": 3, "tags": ["refreshing"]},
+    {"name": "Masala Chai", "description": "Black tea boiled with ginger, cardamom, cloves.", "price": 40, "category": "Beverages", "image_url": "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=900&q=85", "prep_time_min": 3, "tags": []},
+    {"name": "Fresh Lime Soda", "description": "Lime, salt, sugar, soda — sweet+salt mix.", "price": 60, "category": "Beverages", "image_url": "https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=900&q=85", "prep_time_min": 2, "tags": ["refreshing"]},
 ]
 
 SEED_INVENTORY = [
@@ -722,11 +756,11 @@ async def _build_waiter_system_prompt() -> str:
         for m in menu_docs
     )
     return (
-        "You are SmartWaiter, the AI sommelier-waiter at SmartDine. "
-        "Be concise (2–4 sentences max per reply), warm, witty, and never pushy. "
-        "Recommend from THIS menu only; do not invent items. "
-        "If the guest asks about price, dietary tags, prep time or pairings, answer briefly. "
-        "If the guest is ready to order, instruct them: \"Tap any dish on the menu page to add it to your cart — I'll keep great company while you decide.\"\n\n"
+        "You are MehfilAI, the AI sommelier-waiter at Mehfil Restaurant — Hyderabad's original biryani experience since 2006. "
+        "Channel warm Hyderabadi hospitality: greet guests with grace, speak in 2–4 sentences, and never push. "
+        "Recommend ONLY from this menu. If asked about Hyderabadi heritage, share a brief delicious fact (e.g. dum biryani's Nizami origins, qubani ka meetha's royal lineage). "
+        "Suggest classic pairings: biryani + raita + qubani; tandoori chicken + butter naan; chai with double ka meetha. "
+        "If the guest is ready to order, instruct: \"Tap any dish on the menu to add it — I'll keep you company while you choose.\"\n\n"
         f"MENU:\n{menu_block}"
     )
 
@@ -777,3 +811,37 @@ async def ai_waiter(req: ChatReq):
 async def ai_history(session_id: str):
     msgs = await db.chat_messages.find({"session_id": session_id}, {"_id": 0}).sort("created_at", 1).to_list(200)
     return {"messages": msgs}
+
+# =========================================================
+# Reservations
+# =========================================================
+class ReservationReq(BaseModel):
+    name: str
+    phone: str
+    date: str   # YYYY-MM-DD
+    time: str   # HH:MM
+    guests: int
+    notes: Optional[str] = None
+
+@app.post("/api/reservations")
+async def create_reservation(req: ReservationReq):
+    if req.guests < 1 or req.guests > 30:
+        raise HTTPException(status_code=400, detail="Guests must be between 1 and 30")
+    doc = {
+        "id": str(uuid.uuid4()),
+        "name": req.name.strip(),
+        "phone": req.phone.strip(),
+        "date": req.date,
+        "time": req.time,
+        "guests": req.guests,
+        "notes": (req.notes or "").strip() or None,
+        "status": "requested",
+        "created_at": now_iso(),
+    }
+    await db.reservations.insert_one(doc)
+    return {"ok": True, "reservation_id": doc["id"], "status": "requested"}
+
+@app.get("/api/reservations", dependencies=[Depends(require_roles("admin"))])
+async def list_reservations(limit: int = 100):
+    docs = await db.reservations.find({}, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(limit)
+    return {"reservations": docs}

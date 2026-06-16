@@ -1,0 +1,149 @@
+/**
+ * MEHFIL theme — scoped to customer routes via the .mehfil class on <html>/<body>.
+ * Royal red, deep maroon, luxury gold, cream white. Heritage Hyderabad mood.
+ */
+
+.mehfil {
+  --background: 36 33% 96%;        /* cream */
+  --foreground: 0 0% 8%;
+  --card: 0 0% 100%;
+  --card-foreground: 0 0% 8%;
+  --primary: 354 70% 32%;          /* royal red */
+  --primary-foreground: 36 33% 96%;
+  --secondary: 41 75% 45%;         /* luxury gold */
+  --secondary-foreground: 0 0% 8%;
+  --muted: 36 25% 92%;
+  --muted-foreground: 0 0% 36%;
+  --accent: 25 86% 56%;            /* warm amber */
+  --accent-foreground: 0 0% 100%;
+  --destructive: 4 100% 50%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 36 22% 84%;
+  --input: 36 22% 84%;
+  --ring: 354 70% 32%;
+  --radius: 0.5rem;
+
+  --mehfil-cream: #FAF5EC;
+  --mehfil-cream-2: #F3EBD8;
+  --mehfil-bone: #E7DFCB;
+  --mehfil-gold: #C9A348;
+  --mehfil-gold-soft: #DDB85C;
+  --mehfil-amber: #E78B1F;
+  --mehfil-royal: #8A1A2A;
+  --mehfil-deep: #5C0E1B;
+  --mehfil-ink: #1A1106;
+
+  background: var(--mehfil-cream);
+  color: var(--mehfil-ink);
+}
+
+/* Royal serif headings — Cinzel for display, Cormorant Garamond for editorial */
+.mehfil h1, .mehfil h2, .mehfil h3, .mehfil h4, .mehfil .font-royal {
+  font-family: var(--font-royal), "Cinzel", Georgia, serif;
+  letter-spacing: 0.01em;
+}
+.mehfil .font-editorial {
+  font-family: var(--font-editorial), Georgia, serif;
+  letter-spacing: 0.005em;
+}
+.mehfil body, .mehfil p, .mehfil button, .mehfil input, .mehfil .font-body {
+  font-family: var(--font-body), system-ui, sans-serif;
+}
+
+/* Mehfil-specific decoration */
+.mehfil-gold-gradient {
+  background: linear-gradient(135deg, #DDB85C 0%, #C9A348 45%, #8A6A1B 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+.mehfil-divider {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  color: var(--mehfil-gold);
+}
+.mehfil-divider::before, .mehfil-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--mehfil-gold), transparent);
+}
+
+.mehfil-card {
+  background: #fff;
+  border: 1px solid var(--mehfil-bone);
+  box-shadow: 0 1px 0 rgba(0,0,0,0.02);
+}
+
+.mehfil-paper {
+  background:
+    radial-gradient(circle at 10% 10%, rgba(201,163,72,0.06), transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(138,26,42,0.05), transparent 50%),
+    var(--mehfil-cream);
+}
+
+.mehfil-royal-bg {
+  background:
+    radial-gradient(ellipse at top, rgba(201,163,72,0.25), transparent 60%),
+    linear-gradient(180deg, #5C0E1B 0%, #2A0710 100%);
+}
+
+@keyframes mehfilGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(201,163,72,0.4); }
+  50% { box-shadow: 0 0 0 18px rgba(201,163,72,0); }
+}
+.mehfil-glow {
+  animation: mehfilGlow 2.2s ease-in-out infinite;
+}
+
+@keyframes mehfilFloat {
+  0%, 100% { transform: translateY(0px) rotate(-2deg); }
+  50% { transform: translateY(-14px) rotate(2deg); }
+}
+.mehfil-float { animation: mehfilFloat 6s ease-in-out infinite; }
+.mehfil-float-delay { animation: mehfilFloat 6s ease-in-out infinite; animation-delay: -3s; }
+
+@keyframes mehfilShimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.mehfil-shimmer {
+  background: linear-gradient(110deg, transparent 40%, rgba(201,163,72,0.35) 50%, transparent 60%);
+  background-size: 200% 100%;
+  animation: mehfilShimmer 3s linear infinite;
+}
+
+.mehfil-btn-royal {
+  background: linear-gradient(180deg, #A92133 0%, #8A1A2A 100%);
+  color: #FAF5EC;
+  border: 1px solid rgba(201,163,72,0.5);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 8px 20px -10px rgba(138,26,42,0.5);
+}
+.mehfil-btn-royal:hover {
+  background: linear-gradient(180deg, #B83042 0%, #921E2F 100%);
+}
+
+.mehfil-btn-gold {
+  background: linear-gradient(180deg, #DDB85C 0%, #C9A348 100%);
+  color: #1A1106;
+  border: 1px solid rgba(138,106,27,0.4);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), 0 8px 20px -10px rgba(201,163,72,0.5);
+}
+.mehfil-btn-gold:hover {
+  filter: brightness(1.05);
+}
+
+.mehfil-token-card {
+  background: radial-gradient(circle at 30% 20%, rgba(201,163,72,0.18), transparent 55%),
+              linear-gradient(180deg, #5C0E1B 0%, #2A0710 100%);
+  border: 1px solid rgba(201,163,72,0.5);
+  color: #FAF5EC;
+}
+
+.mehfil ::selection {
+  background: #C9A348;
+  color: #1A1106;
+}
