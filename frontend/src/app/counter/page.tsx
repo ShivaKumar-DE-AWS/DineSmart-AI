@@ -64,7 +64,14 @@ export default function CounterPage() {
         <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 auto-rows-min gap-4 overflow-y-auto scrollbar-thin" data-testid="counter-ready">
           {ready.map((o) => (
             <div key={o.id} className="bg-ready text-coal rounded-md p-6 flex flex-col" data-testid={`counter-ready-${o.token}`}>
-              <div className="font-display text-7xl leading-none">{o.token}</div>
+              <div className="flex items-center justify-between mb-1">
+                <div className="font-display text-7xl leading-none">{o.token}</div>
+                {o.table_number != null && (
+                  <div className="bg-coal text-ready px-3 py-1.5 rounded-md font-bold text-base" data-testid={`counter-table-${o.token}`}>
+                    T{o.table_number}
+                  </div>
+                )}
+              </div>
               <div className="text-sm uppercase tracking-wider font-bold mt-2">{o.customer_name}</div>
               {(o.items.some((i) => i.notes) || o.notes) && (
                 <div className="mt-2 space-y-1 text-[11px] text-coal/80" data-testid={`counter-notes-${o.token}`}>

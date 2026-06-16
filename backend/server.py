@@ -154,6 +154,8 @@ class OrderCreateReq(BaseModel):
     items: List[CartItemModel]
     payment_method: str = "mock_card"
     notes: Optional[str] = None
+    table_number: Optional[int] = None
+    table_session_id: Optional[str] = None
 
 class OrderStatusUpdate(BaseModel):
     status: str
@@ -659,6 +661,8 @@ async def _save_order_draft(req_draft: OrderCreateReq, priced: Dict[str, Any]) -
         "total": priced["total"],
         "payment_method": "stripe",
         "notes": req_draft.notes,
+        "table_number": req_draft.table_number,
+        "table_session_id": req_draft.table_session_id,
         "created_at": now_iso(),
     })
     return draft_id
@@ -793,6 +797,8 @@ async def _materialize_order_from_draft(draft_id: str, payment_method: str, sess
         "customer_phone": draft.get("customer_phone"),
         "customer_id": draft.get("customer_id"),
         "customer_code": draft.get("customer_code"),
+        "table_number": draft.get("table_number"),
+        "table_session_id": draft.get("table_session_id"),
         "items": draft["items"],
         "subtotal": draft["subtotal"],
         "tax": draft["tax"],
@@ -1105,6 +1111,19 @@ class CustomerLookupReq(BaseModel):
     phone: Optional[str] = None
     name: Optional[str] = None
 
+class TableModel(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    number: int
+    capacity: int = 4
+    qr_token: str = Field(default_factory=lambda: uuid.uuid4().hex[:12])
+    is_active: bool = True
+    created_at: str = Field(default_factory=now_iso)
+
+class TableScanReq(BaseModel):
+    qr_token: str
+    customer_name: Optional[str] = None
+    customer_phone: Optional[str] = None
+
 @app.post("/api/customers/lookup")
 async def lookup_customer(req: CustomerLookupReq):
     """Public: look up an existing customer by phone or name (used by checkout to surface loyalty)."""
@@ -1119,6 +1138,120 @@ async def lookup_customer(req: CustomerLookupReq):
         return {"customer": None}
     doc = await db.customers.find_one(q, {"_id": 0})
     return {"customer": doc}
+
+# =========================================================
+# Tables, QR codes & live table sessions (10-min hold)
+# =========================================================
+TABLE_SESSION_TTL_SECONDS = 10 * 60
+
+@app.get("/api/tables", dependencies=[Depends(require_roles("admin"))])
+async def list_tables():
+    """List all tables (admin)."""
+    docs = await db.tables.find({}, {"_id": 0}).sort("number", 1).to_list(500)
+    # Attach current live session info if any
+    out: List[Dict[str, Any]] = []
+    now = datetime.now(timezone.utc)
+    for t in docs:
+        sess = await db.table_sessions.find_one({"table_id": t["id"], "status": "live"}, {"_id": 0})
+        live = None
+        if sess:
+            exp = datetime.fromisoformat(sess["expires_at"].replace("Z", "+00:00"))
+            if exp > now:
+                live = {"id": sess["id"], "expires_at": sess["expires_at"], "customer_name": sess.get("customer_name")}
+            else:
+                # Auto-expire stale session
+                await db.table_sessions.update_one({"id": sess["id"]}, {"$set": {"status": "expired"}})
+        out.append({**t, "live_session": live})
+    return {"tables": out}
+
+@app.post("/api/tables", dependencies=[Depends(require_roles("admin"))])
+async def create_table(payload: TableModel):
+    if payload.number <= 0:
+        raise HTTPException(status_code=400, detail="Table number must be positive")
+    exists = await db.tables.find_one({"number": payload.number})
+    if exists:
+        raise HTTPException(status_code=400, detail=f"Table {payload.number} already exists")
+    doc = payload.model_dump()
+    await db.tables.insert_one(doc)
+    return doc
+
+@app.delete("/api/tables/{table_id}", dependencies=[Depends(require_roles("admin"))])
+async def delete_table(table_id: str):
+    await db.tables.delete_one({"id": table_id})
+    await db.table_sessions.delete_many({"table_id": table_id})
+    return {"ok": True}
+
+@app.post("/api/tables/{table_id}/regenerate-qr", dependencies=[Depends(require_roles("admin"))])
+async def regenerate_table_qr(table_id: str):
+    new_token = uuid.uuid4().hex[:12]
+    res = await db.tables.update_one({"id": table_id}, {"$set": {"qr_token": new_token}})
+    if res.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Table not found")
+    return {"qr_token": new_token}
+
+@app.post("/api/tables/scan")
+async def scan_table(req: TableScanReq):
+    """Public: a guest scanned the QR. Returns table info + starts/refreshes a 10-min live session."""
+    token = (req.qr_token or "").strip()
+    if not token:
+        raise HTTPException(status_code=400, detail="qr_token required")
+    table = await db.tables.find_one({"qr_token": token, "is_active": True}, {"_id": 0})
+    if not table:
+        raise HTTPException(status_code=404, detail="Invalid or inactive table QR")
+    now = datetime.now(timezone.utc)
+    expires_at = (now + timedelta(seconds=TABLE_SESSION_TTL_SECONDS)).isoformat()
+    # Reuse an existing live session if still valid; otherwise create a fresh one
+    existing = await db.table_sessions.find_one({"table_id": table["id"], "status": "live"}, {"_id": 0})
+    if existing:
+        try:
+            old_exp = datetime.fromisoformat(existing["expires_at"].replace("Z", "+00:00"))
+        except Exception:
+            old_exp = now
+        if old_exp > now:
+            # Refresh the 10-min hold on each scan
+            await db.table_sessions.update_one(
+                {"id": existing["id"]},
+                {"$set": {
+                    "expires_at": expires_at,
+                    "customer_name": (req.customer_name or existing.get("customer_name") or "").strip() or None,
+                    "customer_phone": (req.customer_phone or existing.get("customer_phone") or "").strip() or None,
+                    "last_scan_at": now.isoformat(),
+                }},
+            )
+            existing.update({"expires_at": expires_at})
+            return {"table": table, "session": existing}
+        # else fall through to create new
+        await db.table_sessions.update_one({"id": existing["id"]}, {"$set": {"status": "expired"}})
+
+    session = {
+        "id": str(uuid.uuid4()),
+        "table_id": table["id"],
+        "table_number": table["number"],
+        "started_at": now.isoformat(),
+        "expires_at": expires_at,
+        "last_scan_at": now.isoformat(),
+        "status": "live",
+        "customer_name": (req.customer_name or "").strip() or None,
+        "customer_phone": (req.customer_phone or "").strip() or None,
+    }
+    await db.table_sessions.insert_one(session)
+    return {"table": table, "session": session}
+
+@app.get("/api/tables/session/{session_id}")
+async def get_table_session(session_id: str):
+    """Public: query a session's status — frontend uses this to count down."""
+    sess = await db.table_sessions.find_one({"id": session_id}, {"_id": 0})
+    if not sess:
+        raise HTTPException(status_code=404, detail="Session not found")
+    now = datetime.now(timezone.utc)
+    try:
+        exp = datetime.fromisoformat(sess["expires_at"].replace("Z", "+00:00"))
+    except Exception:
+        exp = now
+    if sess["status"] == "live" and exp <= now:
+        await db.table_sessions.update_one({"id": session_id}, {"$set": {"status": "expired"}})
+        sess["status"] = "expired"
+    return {"session": sess}
 
 # =========================================================
 # Web Push notifications (VAPID)

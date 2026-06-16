@@ -33,7 +33,15 @@ function KitchenTicketImpl({ order, elapsed, isLate, onStart, onReady }: Props) 
           <div className="text-[10px] uppercase text-zinc-500 tracking-wider">elapsed</div>
         </div>
       </div>
-      <div className="text-xs uppercase tracking-wider text-zinc-500 mb-1">{order.customer_name}{order.customer_code ? <span className="ml-2 text-zinc-600 lowercase">{order.customer_code}</span> : null}</div>
+      <div className="text-xs uppercase tracking-wider text-zinc-500 mb-1 flex items-center gap-2">
+        {order.table_number != null && (
+          <span className="bg-warn text-coal px-2 py-0.5 rounded font-bold text-[11px]" data-testid={`kds-table-${order.token}`}>
+            TABLE {order.table_number}
+          </span>
+        )}
+        <span>{order.customer_name}</span>
+        {order.customer_code ? <span className="text-zinc-600 lowercase">{order.customer_code}</span> : null}
+      </div>
       <div className="space-y-1.5 mb-4">
         {order.items.map((i) => (
           <div key={`${order.id}-${i.item_id}`} className="text-sm">

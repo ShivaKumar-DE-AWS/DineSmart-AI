@@ -1,11 +1,12 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { ShoppingBag, Menu as MenuIcon, X } from "lucide-react";
 import { useCart } from "@/stores/cart";
 import { AIWaiterDock } from "@/components/customer/AIWaiterDock";
 import { MehfilLogo } from "@/components/customer/MehfilLogo";
+import { TableSessionGuard } from "@/components/customer/TableSessionGuard";
 
 const NAV = [
   { href: "/customer", label: "Home", testid: "nav-home" },
@@ -39,6 +40,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
 
   return (
     <div className="mehfil min-h-screen mehfil-paper">
+      <Suspense fallback={null}><TableSessionGuard /></Suspense>
       <header className={`sticky top-0 z-40 transition-all duration-300 ${scrolled ? "bg-[#FAF5EC]/90 backdrop-blur-md border-b border-[#E7DFCB]" : "bg-transparent"}`}>
         <div className="max-w-7xl mx-auto px-5 md:px-10 py-3 flex items-center justify-between gap-4">
           <MehfilLogo size="sm" />

@@ -3,10 +3,11 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useCart } from "@/stores/cart";
+import { useTable } from "@/stores/table";
 import { formatCurrency } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
-import { Lock, CreditCard, ExternalLink, ArrowLeft, ScrollText, User2, ChefHat, Plus, Minus, Phone, Gift, Sparkles } from "lucide-react";
+import { Lock, CreditCard, ExternalLink, ArrowLeft, ScrollText, User2, ChefHat, Plus, Minus, Phone, Gift, Sparkles, MapPin } from "lucide-react";
 
 interface CustomerProfile {
   id: string;
@@ -33,6 +34,7 @@ const COOKING_CHIPS = [
 export default function CheckoutPage() {
   const router = useRouter();
   const cart = useCart();
+  const table = useTable((s) => s.session);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [generalNotes, setGeneralNotes] = useState("");
@@ -276,6 +278,12 @@ export default function CheckoutPage() {
 
         <aside className="mehfil-card rounded-2xl p-6 h-fit lg:sticky lg:top-24" data-testid="checkout-summary">
           <div className="mehfil-divider mb-4"><span className="font-royal tracking-[0.3em] text-[10px] uppercase flex items-center gap-1.5"><ScrollText className="h-3 w-3" /> The bill</span></div>
+          {table && (
+            <div className="mb-4 flex items-center gap-2 bg-[#8A1A2A]/10 border border-[#8A1A2A]/30 rounded-xl px-3 py-2" data-testid="checkout-table-badge">
+              <MapPin className="h-4 w-4 text-[#8A1A2A]" />
+              <div className="font-royal tracking-wider uppercase text-[11px] text-[#8A1A2A]">Dining at Table {table.table_number}</div>
+            </div>
+          )}
           <div className="space-y-2.5 text-sm mb-4 max-h-72 overflow-y-auto pr-1">
             {cart.items.map((i) => (
               <div key={i.item_id} className="border-b border-[#C9A348]/15 pb-2 last:border-0">
