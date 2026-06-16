@@ -433,7 +433,7 @@ async def update_status(order_id: str, body: OrderStatusUpdate, user=Depends(req
     if res.matched_count == 0:
         raise HTTPException(status_code=404, detail="Order not found")
     order = await db.orders.find_one({"id": order_id}, {"_id": 0})
-    # notification
+    # notification (in-app log)
     await db.notifications.insert_one({
         "id": str(uuid.uuid4()),
         "order_id": order_id,
@@ -443,6 +443,19 @@ async def update_status(order_id: str, body: OrderStatusUpdate, user=Depends(req
         "read": False,
         "created_at": now_iso(),
     })
+    # Web Push to subscribers — friendly messages per stage
+    stage_messages = {
+        "confirmed": ("Your order is confirmed", "Our khansama is gathering the spices."),
+        "preparing": ("Your dum is on the fire", "The biryani begins its slow journey."),
+        "ready": (f"Token {order['token']} is ready", "Collect from the counter — bring your appetite."),
+        "served": ("Enjoy your mehfil", "Tag us with #MehfilMoments — bon appétit."),
+        "cancelled": ("Order cancelled", "We&apos;re sorry — please reach the counter for help."),
+    }
+    title, push_body = stage_messages.get(body.status, (f"Order {order['token']}", f"Status: {body.status}"))
+    try:
+        await send_push_to_order(order_id, title, push_body, {"status": body.status, "token": order["token"]})
+    except Exception:
+        pass  # never let push errors break status update
     return order
 
 # =========================================================
@@ -956,3 +969,77 @@ async def create_reservation(req: ReservationReq):
 async def list_reservations(limit: int = 100):
     docs = await db.reservations.find({}, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(limit)
     return {"reservations": docs}
+
+# =========================================================
+# Web Push notifications (VAPID)
+# =========================================================
+VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY", "")
+VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY", "")
+VAPID_CONTACT = os.environ.get("VAPID_CONTACT", "mailto:hello@mehfil.in")
+
+class PushSubscription(BaseModel):
+    endpoint: str
+    keys: Dict[str, str]
+    order_id: Optional[str] = None  # so we know which order to ping for
+
+@app.get("/api/push/vapid-public-key")
+async def push_vapid_public_key():
+    return {"key": VAPID_PUBLIC_KEY}
+
+@app.post("/api/push/subscribe")
+async def push_subscribe(sub: PushSubscription):
+    if not sub.endpoint or "auth" not in sub.keys or "p256dh" not in sub.keys:
+        raise HTTPException(status_code=400, detail="Invalid subscription")
+    doc = {
+        "id": str(uuid.uuid4()),
+        "endpoint": sub.endpoint,
+        "keys": sub.keys,
+        "order_id": sub.order_id,
+        "created_at": now_iso(),
+    }
+    # Upsert by endpoint+order_id so we don't double-send
+    await db.push_subscriptions.update_one(
+        {"endpoint": sub.endpoint, "order_id": sub.order_id},
+        {"$set": doc},
+        upsert=True,
+    )
+    return {"ok": True}
+
+async def send_push_to_order(order_id: str, title: str, body: str, data: Optional[Dict[str, Any]] = None) -> Dict[str, int]:
+    """Send a Web Push to every subscriber registered for this order. Cleans up expired endpoints."""
+    if not VAPID_PRIVATE_KEY:
+        return {"sent": 0, "removed": 0, "skipped": True}
+    try:
+        from pywebpush import webpush, WebPushException  # type: ignore
+    except ImportError:
+        return {"sent": 0, "removed": 0, "skipped": True}
+
+    subs = await db.push_subscriptions.find({"order_id": order_id}, {"_id": 0}).to_list(500)
+    payload = json.dumps({"title": title, "body": body, "data": data or {}, "order_id": order_id})
+    sent = 0
+    removed = 0
+    for s in subs:
+        try:
+            webpush(
+                subscription_info={"endpoint": s["endpoint"], "keys": s["keys"]},
+                data=payload,
+                vapid_private_key=VAPID_PRIVATE_KEY,
+                vapid_claims={"sub": VAPID_CONTACT},
+            )
+            sent += 1
+        except WebPushException as e:
+            # 404/410 — endpoint dead; remove
+            code = getattr(getattr(e, "response", None), "status_code", 0)
+            if code in (404, 410):
+                await db.push_subscriptions.delete_one({"endpoint": s["endpoint"]})
+                removed += 1
+        except Exception:
+            # Network or other transient — leave subscription in place
+            pass
+    return {"sent": sent, "removed": removed}
+
+@app.post("/api/push/test/{order_id}")
+async def push_test(order_id: str):
+    """Dev helper: fire a test push to all subscribers of this order."""
+    result = await send_push_to_order(order_id, "Mehfil test", "Push is alive and well 🌹", {"test": True})
+    return result
