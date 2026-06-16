@@ -1,9 +1,3 @@
 {
-  "/auth/login/page": "app/auth/login/page.js",
-  "/page": "app/page.js",
-  "/customer/menu/page": "app/customer/menu/page.js",
-  "/admin/page": "app/admin/page.js",
-  "/customer/page": "app/customer/page.js",
-  "/customer/cart/page": "app/customer/cart/page.js",
-  "/customer/checkout/page": "app/customer/checkout/page.js"
+  "/page": "app/page.js"
 }
