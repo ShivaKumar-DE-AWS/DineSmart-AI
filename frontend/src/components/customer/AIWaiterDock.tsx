@@ -45,7 +45,7 @@ function getSessionId(): string {
 const INITIAL_GREETING: Msg = {
   id: "greeting",
   role: "assistant",
-  content: "Aadab. I'm MehfilAI — your personal sommelier. Tell me what you're craving, ask for tonight's special, or simply say 'surprise me.'",
+  content: "Welcome to Mehfil Exclusive! 🙏 I'm your personal waiter tonight. Tell me what you're craving — veg, non-veg, something spicy? Or just say 'surprise me' and I'll curate a perfect meal for you!",
 };
 
 const QUICK_PROMPTS = [
