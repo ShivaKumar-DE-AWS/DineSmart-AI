@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Sparkles, Send, X, Loader2, Mic, MessageSquare, BookOpen, Plus, Minus, Square, Volume2, VolumeX, ArrowRight } from "lucide-react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { api, apiUrl } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
@@ -48,12 +49,7 @@ const INITIAL_GREETING: Msg = {
   content: "Welcome to Mehfil Exclusive! 🙏 I'm your personal waiter tonight. Tell me what you're craving — veg, non-veg, something spicy? Or just say 'surprise me' and I'll curate a perfect meal for you!",
 };
 
-const QUICK_PROMPTS = [
-  "What's your signature dish?",
-  "Suggest a pairing",
-  "Build me a meal for 2",
-  "Something not too spicy",
-];
+
 
 function parseSseChunk(buffer: string): { payloads: { delta?: string; error?: string; done?: boolean }[]; rest: string } {
   const lines = buffer.split("\n\n");
@@ -94,6 +90,7 @@ export function AIWaiterDock() {
   const audioChunksRef = useRef<Blob[]>([]);
   const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
   const cart = useCart();
+  const router = useRouter();
 
   // Draggable AI Waiter button state
   const [dockPos, setDockPos] = useState({ x: -1, y: -1 }); // -1 = use CSS default
@@ -331,6 +328,25 @@ export function AIWaiterDock() {
 
   const trayChips = latestRecs.length > 0 ? latestRecs : defaultRecChips;
 
+  const dynamicPrompts = useMemo(() => {
+    const items = cart.items;
+    if (items.length === 0) {
+      return [
+        "What's your signature dish?",
+        "Suggest a pairing",
+        "Build me a meal for 2",
+        "Something not too spicy",
+      ];
+    }
+    const firstItem = items[0].item.name;
+    return [
+      `What goes well with ${firstItem}?`,
+      "Suggest a dessert",
+      "Add a refreshing drink",
+      "That's all, bill please",
+    ];
+  }, [cart.items]);
+
   return (
     <>
       {!open && dockPos.x >= 0 && (
@@ -540,7 +556,7 @@ function ChatPane({
           </div>
         )}
         <div className="flex flex-wrap gap-2">
-          {QUICK_PROMPTS.map((q) => (
+          {dynamicPrompts.map((q) => (
             <button
               key={q}
               data-testid={`chip-quick-${q.replace(/\W+/g, "-").toLowerCase()}`}
@@ -552,13 +568,16 @@ function ChatPane({
             </button>
           ))}
           {cart.count() > 0 && (
-            <Link
-              href="/customer/checkout"
+            <button
+              onClick={() => {
+                setOpen(false);
+                router.push("/customer/checkout");
+              }}
               data-testid="chip-checkout"
-              className="inline-flex items-center gap-1.5 rounded-full mehfil-btn-gold px-4 py-1.5 text-[10px] font-royal tracking-[0.18em] uppercase"
+              className="inline-flex items-center gap-1.5 rounded-full mehfil-btn-gold px-4 py-1.5 text-[10px] font-royal tracking-[0.18em] uppercase cursor-pointer"
             >
               <ArrowRight className="h-3 w-3" /> Checkout
-            </Link>
+            </button>
           )}
         </div>
       </div>

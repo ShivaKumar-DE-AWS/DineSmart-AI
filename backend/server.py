@@ -1019,7 +1019,15 @@ def _make_waiter_stream(session_id: str, message: str, system_prompt: str):
 async def ai_waiter(req: ChatReq):
     """Streams Claude's response as SSE. Session-scoped chat history maintained server-side."""
     if not EMERGENT_LLM_KEY:
-        raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY missing")
+        async def mock_event_gen():
+            mock_text = "I'm currently operating in offline demo mode since my AI brain is disconnected. I can still take your order manually from the menu!"
+            yield f"data: {json.dumps({'delta': mock_text})}\n\n"
+            yield f"data: {json.dumps({'done': True})}\n\n"
+        return StreamingResponse(
+            mock_event_gen(),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no", "Connection": "keep-alive"},
+        )
 
     system_prompt = await _build_waiter_system_prompt(language=req.language or "auto", tone=req.tone or "friendly")
     await db.chat_messages.insert_one({
