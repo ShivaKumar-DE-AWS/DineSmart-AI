@@ -274,32 +274,41 @@ SEED_USERS = [
 
 @app.on_event("startup")
 async def seed_db():
-    # menu
-    if await db.menu.count_documents({}) == 0:
-        for m in SEED_MENU:
-            doc = MenuItemModel(**m).model_dump()
-            await db.menu.insert_one(doc)
-    # inventory
-    if await db.inventory.count_documents({}) == 0:
-        for i in SEED_INVENTORY:
-            doc = InventoryItemModel(**i).model_dump()
-            await db.inventory.insert_one(doc)
-    # users
-    for u in SEED_USERS:
-        existing = await db.users.find_one({"email": u["email"]})
-        if not existing:
-            await db.users.insert_one({
-                "id": str(uuid.uuid4()),
-                "email": u["email"],
-                "name": u["name"],
-                "role": u["role"],
-                "password_hash": hash_password(u["password"]),
-                "created_at": now_iso(),
-            })
+    try:
+        # menu
+        if await db.menu.count_documents({}) == 0:
+            for m in SEED_MENU:
+                doc = MenuItemModel(**m).model_dump()
+                await db.menu.insert_one(doc)
+        # inventory
+        if await db.inventory.count_documents({}) == 0:
+            for i in SEED_INVENTORY:
+                doc = InventoryItemModel(**i).model_dump()
+                await db.inventory.insert_one(doc)
+        # users
+        for u in SEED_USERS:
+            existing = await db.users.find_one({"email": u["email"]})
+            if not existing:
+                await db.users.insert_one({
+                    "id": str(uuid.uuid4()),
+                    "email": u["email"],
+                    "name": u["name"],
+                    "role": u["role"],
+                    "password_hash": hash_password(u["password"]),
+                    "created_at": now_iso(),
+                })
+        print("[startup] Database seeded successfully")
+    except Exception as e:
+        print(f"[startup] WARNING: Database seed failed: {e}")
+        print("[startup] App will continue — DB operations may fail until connection is restored")
 
 # =========================================================
 # Health
 # =========================================================
+@app.get("/")
+async def root():
+    return {"status": "ok", "service": "smartdine-ai", "docs": "/docs"}
+
 @app.get("/api/health")
 async def health():
     return {"status": "ok", "service": "smartdine-ai", "time": now_iso()}
