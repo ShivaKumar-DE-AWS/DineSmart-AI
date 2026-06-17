@@ -27,3 +27,4 @@ typer>=0.9.0
 # emergentintegrations==0.2.0  # Optional: platform-specific, not on PyPI
 pywebpush==2.3.0
 py-vapid==1.9.4
+certifi>=2024.0.0

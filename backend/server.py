@@ -25,6 +25,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 import io
 import re
 import mimetypes
+import certifi
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
@@ -36,7 +37,7 @@ JWT_SECRET = os.environ.get("JWT_SECRET", "smartdine-dev-secret-change-me")
 STRIPE_API_KEY = os.environ.get("STRIPE_API_KEY", "")
 STRIPE_ENABLED = os.environ.get("STRIPE_ENABLED", "false").lower() == "true" and bool(STRIPE_API_KEY)
 
-client = AsyncIOMotorClient(MONGO_URL)
+client = AsyncIOMotorClient(MONGO_URL, tlsCAFile=certifi.where())
 db = client[DB_NAME]
 
 app = FastAPI(title="SmartDine AI API", version="1.0.0")
