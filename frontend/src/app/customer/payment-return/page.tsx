@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { useCart } from "@/stores/cart";
@@ -8,7 +8,7 @@ import { Loader2, XCircle } from "lucide-react";
 const POLL_INTERVAL_MS = 1500;
 const MAX_POLL_ATTEMPTS = 8;
 
-export default function PaymentReturn() {
+function PaymentReturnContent() {
   const router = useRouter();
   const params = useSearchParams();
   const cart = useCart();
@@ -75,5 +75,18 @@ export default function PaymentReturn() {
         </>
       )}
     </div>
+  );
+}
+
+export default function PaymentReturn() {
+  return (
+    <Suspense fallback={
+      <div className="px-6 py-24 max-w-md mx-auto text-center">
+        <Loader2 className="h-10 w-10 animate-spin text-clay mx-auto mb-4" />
+        <h1 className="font-heading text-3xl tracking-tight">Loading payment status…</h1>
+      </div>
+    }>
+      <PaymentReturnContent />
+    </Suspense>
   );
 }
