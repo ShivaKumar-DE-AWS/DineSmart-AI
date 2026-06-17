@@ -95,6 +95,38 @@ export function AIWaiterDock() {
   const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
   const cart = useCart();
 
+  // Draggable AI Waiter button state
+  const [dockPos, setDockPos] = useState({ x: -1, y: -1 }); // -1 = use CSS default
+  const dragRef = useRef({ dragging: false, startX: 0, startY: 0, startPosX: 0, startPosY: 0, moved: false });
+
+  useEffect(() => {
+    // Initialize position to bottom-right on mount
+    if (dockPos.x === -1) {
+      setDockPos({ x: window.innerWidth - 200, y: window.innerHeight - 80 });
+    }
+  }, [dockPos.x]);
+
+  const handleDragStart = (clientX: number, clientY: number) => {
+    dragRef.current = { dragging: true, startX: clientX, startY: clientY, startPosX: dockPos.x, startPosY: dockPos.y, moved: false };
+  };
+  const handleDragMove = (clientX: number, clientY: number) => {
+    if (!dragRef.current.dragging) return;
+    const dx = clientX - dragRef.current.startX;
+    const dy = clientY - dragRef.current.startY;
+    if (Math.abs(dx) > 5 || Math.abs(dy) > 5) dragRef.current.moved = true;
+    if (!dragRef.current.moved) return;
+    const newX = Math.max(0, Math.min(window.innerWidth - 180, dragRef.current.startPosX + dx));
+    const newY = Math.max(0, Math.min(window.innerHeight - 56, dragRef.current.startPosY + dy));
+    setDockPos({ x: newX, y: newY });
+  };
+  const handleDragEnd = () => {
+    const wasDrag = dragRef.current.moved;
+    dragRef.current.dragging = false;
+    dragRef.current.moved = false;
+    if (!wasDrag) setOpen(true); // tap = open
+  };
+
+
   const { data: menuData } = useQuery({
     queryKey: ["menu"],
     queryFn: () => api<{ items: MenuItem[] }>("/api/menu"),
@@ -301,15 +333,24 @@ export function AIWaiterDock() {
 
   return (
     <>
-      {!open && (
-        <button
+      {!open && dockPos.x >= 0 && (
+        <div
           data-testid="ai-waiter-dock-btn"
-          onClick={() => setOpen(true)}
-          className="fixed bottom-6 right-6 z-40 mehfil-btn-royal rounded-full pl-4 pr-5 py-3.5 shadow-2xl flex items-center gap-2 group hover:-translate-y-1 transition-all"
+          className="fixed z-40 touch-none select-none cursor-grab active:cursor-grabbing"
+          style={{ left: dockPos.x, top: dockPos.y }}
+          onMouseDown={(e) => { e.preventDefault(); handleDragStart(e.clientX, e.clientY); }}
+          onTouchStart={(e) => { const t = e.touches[0]; handleDragStart(t.clientX, t.clientY); }}
+          onMouseMove={(e) => handleDragMove(e.clientX, e.clientY)}
+          onTouchMove={(e) => { const t = e.touches[0]; handleDragMove(t.clientX, t.clientY); }}
+          onMouseUp={handleDragEnd}
+          onMouseLeave={() => { if (dragRef.current.dragging) handleDragEnd(); }}
+          onTouchEnd={handleDragEnd}
         >
-          <Sparkles className="h-5 w-5 text-[#C9A348] group-hover:rotate-12 transition" />
-          <span className="font-royal tracking-wider uppercase text-xs">MehfilAI Waiter</span>
-        </button>
+          <div className="mehfil-btn-royal rounded-full pl-4 pr-5 py-3.5 shadow-2xl flex items-center gap-2 group hover:-translate-y-0.5 transition-transform">
+            <Sparkles className="h-5 w-5 text-[#C9A348] group-hover:rotate-12 transition" />
+            <span className="font-royal tracking-wider uppercase text-xs">MehfilAI Waiter</span>
+          </div>
+        </div>
       )}
 
       {open && (
