@@ -1011,36 +1011,47 @@ def _make_waiter_stream(session_id: str, message: str, system_prompt: str):
             for doc in history_docs:
                 role = "user" if doc["role"] == "user" else "model"
                 history.append({"role": role, "parts": [doc["content"]]})
-                
-            model = genai.GenerativeModel(
-                model_name="gemini-1.5-flash", 
-                system_instruction=system_prompt
-            )
-            chat = model.start_chat(history=history)
             
             # Use a queue to bridge sync streaming → async generator
             q: queue.Queue = queue.Queue()
             SENTINEL = object()
 
             def _stream_in_thread():
-                try:
-                    response = chat.send_message(message, stream=True)
-                    for chunk in response:
-                        if chunk.text:
-                            q.put(chunk.text)
-                except Exception as e:
-                    q.put(e)
-                finally:
-                    q.put(SENTINEL)
+                # Try models in order of preference (free tier compatibility)
+                models_to_try = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
+                for model_name in models_to_try:
+                    try:
+                        model = genai.GenerativeModel(
+                            model_name=model_name, 
+                            system_instruction=system_prompt
+                        )
+                        chat_obj = model.start_chat(history=history)
+                        response = chat_obj.send_message(message, stream=True)
+                        for chunk in response:
+                            if chunk.text:
+                                q.put(chunk.text)
+                        # Success — break out of the model loop
+                        q.put(SENTINEL)
+                        return
+                    except Exception as e:
+                        err_str = str(e).lower()
+                        if "quota" in err_str or "rate" in err_str or "not found" in err_str or "not supported" in err_str:
+                            continue  # Try the next model
+                        else:
+                            q.put(e)
+                            q.put(SENTINEL)
+                            return
+                # All models failed
+                q.put(Exception("All Gemini models exhausted their quota. Please try again in a minute."))
+                q.put(SENTINEL)
 
             thread = threading.Thread(target=_stream_in_thread, daemon=True)
             thread.start()
 
             full = ""
             while True:
-                # Non-blocking poll so we don't freeze the event loop
                 try:
-                    item = await asyncio.to_thread(q.get, timeout=30)
+                    item = await asyncio.to_thread(q.get, timeout=60)
                 except Exception:
                     break
                 if item is SENTINEL:
@@ -1108,18 +1119,31 @@ async def ai_transcribe(file: UploadFile = File(...), language: str = Form("")):
         import google.generativeai as genai
         import asyncio
         genai.configure(api_key=GEMINI_API_KEY)
-        model = genai.GenerativeModel('gemini-1.5-flash')
         
-        prompt = "You are an expert transcriber. Transcribe the following audio exactly as spoken. Do not add any extra text, translation, or commentary."
+        prompt = "You are an expert transcriber. Transcribe the following audio exactly as spoken. Output ONLY the transcribed text, nothing else."
         if language and language.strip() and language.strip() != "auto":
             prompt += f" The expected language might be {language}."
-            
-        response = await asyncio.to_thread(
-            model.generate_content,
-            [prompt, {"mime_type": file.content_type or "audio/webm", "data": raw}]
-        )
-        text = response.text.strip() if response and response.text else ""
-        return {"text": text}
+        
+        audio_part = {"mime_type": file.content_type or "audio/webm", "data": raw}
+        
+        models_to_try = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
+        for model_name in models_to_try:
+            try:
+                model = genai.GenerativeModel(model_name)
+                response = await asyncio.to_thread(
+                    model.generate_content,
+                    [prompt, audio_part]
+                )
+                text = response.text.strip() if response and response.text else ""
+                return {"text": text}
+            except Exception as inner_e:
+                err_str = str(inner_e).lower()
+                if "quota" in err_str or "rate" in err_str or "not found" in err_str or "not supported" in err_str:
+                    continue
+                raise
+        raise HTTPException(status_code=429, detail="All models at quota limit. Try again shortly.")
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Transcription failed: {e}")
 
