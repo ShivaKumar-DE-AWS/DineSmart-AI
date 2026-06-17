@@ -329,7 +329,7 @@ export function AIWaiterDock() {
   const trayChips = latestRecs.length > 0 ? latestRecs : defaultRecChips;
 
   const dynamicPrompts = useMemo(() => {
-    const items = cart.items;
+    const items = cart.items || [];
     if (items.length === 0) {
       return [
         "What's your signature dish?",
@@ -338,7 +338,7 @@ export function AIWaiterDock() {
         "Something not too spicy",
       ];
     }
-    const firstItem = items[0].item.name;
+    const firstItem = items[0].name;
     return [
       `What goes well with ${firstItem}?`,
       "Suggest a dessert",
