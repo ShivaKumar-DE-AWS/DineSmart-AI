@@ -57,7 +57,7 @@ export default function MenuPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-5 md:px-10 pt-10 pb-24" data-testid="menu-page">
+    <div className="max-w-7xl mx-auto px-4 md:px-10 pt-10 pb-24 overflow-x-hidden" data-testid="menu-page">
       {/* Hero */}
       <div className="text-center mb-12">
         <div className="mehfil-divider mb-4 max-w-xs mx-auto"><span className="font-royal tracking-[0.4em] text-xs uppercase">The royal menu</span></div>
@@ -110,27 +110,35 @@ export default function MenuPage() {
         <div>
           {isLoading && <div className="text-[#1A1106]/60 font-editorial italic" data-testid="menu-loading">Unveiling the menu…</div>}
 
-          {/* Mobile chapter pill scroller */}
-          <div className="lg:hidden -mx-5 px-5 mb-8 overflow-x-auto" data-testid="menu-chapters-mobile">
-            <div className="flex gap-2 w-max pb-1">
-              {categories.map((c, idx) => (
+          {/* Mobile category filter pills — sticky below header */}
+          <div className="lg:hidden -mx-4 px-4 mb-6 overflow-x-auto sticky top-0 z-20 bg-[#FAF5EC] py-3 border-b border-[#E7DFCB]/60" data-testid="menu-chapters-mobile">
+            <div className="flex gap-2 w-max pb-0.5">
+              {categories.map((c) => (
                 <button
                   key={c}
-                  onClick={() => scrollTo(c)}
-                  className={`whitespace-nowrap rounded-full px-4 py-2 text-[11px] font-royal tracking-[0.2em] uppercase border transition ${
+                  onClick={() => setActiveCat(c)}
+                  className={`whitespace-nowrap rounded-full px-4 py-2 text-[11px] font-royal tracking-[0.15em] uppercase border transition-all ${
                     activeCat === c
-                      ? "bg-[#8A1A2A] text-[#FAF5EC] border-[#8A1A2A]"
-                      : "bg-[#FAF5EC] text-[#8A1A2A] border-[#C9A348]/40"
+                      ? "bg-[#8A1A2A] text-[#FAF5EC] border-[#8A1A2A] shadow-md"
+                      : "bg-white text-[#1A1106] border-[#E7DFCB] hover:border-[#8A1A2A]/40"
                   }`}
                 >
-                  <span className="text-[#C9A348] mr-2">{String(idx + 1).padStart(2, "0")}</span>{c}
+                  {c}
                 </button>
               ))}
             </div>
           </div>
 
-          {categories.map((c, ci) => (
-            <section key={c} id={`chapter-${c}`} className="mb-16 scroll-mt-24" data-testid={`chapter-section-${c}`}>
+          {categories.map((c, ci) => {
+            // On mobile, only show the active category
+            const isMobileVisible = activeCat === c;
+            return (
+            <section
+              key={c}
+              id={`chapter-${c}`}
+              className={`mb-16 scroll-mt-24 ${!isMobileVisible ? 'hidden lg:block' : ''}`}
+              data-testid={`chapter-section-${c}`}
+            >
               <div className="flex items-end gap-4 mb-6">
                 <div className="font-royal text-5xl text-[#C9A348]/40 leading-none tabular-nums">{String(ci + 1).padStart(2, "0")}</div>
                 <div className="flex-1">
@@ -182,8 +190,8 @@ export default function MenuPage() {
                       </div>
 
                       {/* Right: Image + ADD button */}
-                      <div className="relative flex-shrink-0 w-[120px] flex flex-col items-center">
-                        <div className="w-[120px] h-[120px] rounded-xl overflow-hidden shadow-md bg-[#F3EBD8]">
+                      <div className="relative flex-shrink-0 w-28 flex flex-col items-center">
+                        <div className="w-28 h-28 rounded-xl overflow-hidden shadow-md bg-[#F3EBD8]">
                           {item.image_url ? (
                             <img
                               src={item.image_url}
@@ -347,7 +355,8 @@ export default function MenuPage() {
                 })}
               </div>
             </section>
-          ))}
+          );
+          })}
 
           {!isLoading && filtered.length === 0 && (
             <div className="text-center py-20 font-editorial italic text-[#1A1106]/60" data-testid="menu-empty">
