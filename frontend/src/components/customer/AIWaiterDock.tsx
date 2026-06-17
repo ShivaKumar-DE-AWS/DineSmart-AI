@@ -438,6 +438,11 @@ export function AIWaiterDock() {
                 sendText={sendText}
                 trayChips={trayChips}
                 onTapChip={addToTray}
+                dynamicPrompts={dynamicPrompts}
+                onCheckout={() => {
+                  setOpen(false);
+                  router.push("/customer/checkout");
+                }}
               />
             )}
 
@@ -467,6 +472,7 @@ export function AIWaiterDock() {
 function ChatPane({
   language, setLanguage, tone, setTone,
   messages, streaming, scrollRef, input, setInput, sendText, trayChips, onTapChip,
+  dynamicPrompts, onCheckout
 }: {
   language: Lang; setLanguage: (l: Lang) => void;
   tone: Tone; setTone: (t: Tone) => void;
@@ -478,6 +484,8 @@ function ChatPane({
   sendText: (t: string) => void;
   trayChips: MenuItem[];
   onTapChip: (it: MenuItem) => void;
+  dynamicPrompts: string[];
+  onCheckout: () => void;
 }) {
   const cart = useCart();
   return (
@@ -569,10 +577,7 @@ function ChatPane({
           ))}
           {cart.count() > 0 && (
             <button
-              onClick={() => {
-                setOpen(false);
-                router.push("/customer/checkout");
-              }}
+              onClick={onCheckout}
               data-testid="chip-checkout"
               className="inline-flex items-center gap-1.5 rounded-full mehfil-btn-gold px-4 py-1.5 text-[10px] font-royal tracking-[0.18em] uppercase cursor-pointer"
             >
