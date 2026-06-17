@@ -1013,7 +1013,7 @@ def _make_waiter_stream(session_id: str, message: str, system_prompt: str):
                 history.append({"role": role, "parts": [doc["content"]]})
                 
             model = genai.GenerativeModel(
-                model_name="gemini-2.0-flash", 
+                model_name="gemini-1.5-flash", 
                 system_instruction=system_prompt
             )
             chat = model.start_chat(history=history)
@@ -1046,7 +1046,10 @@ def _make_waiter_stream(session_id: str, message: str, system_prompt: str):
                 if item is SENTINEL:
                     break
                 if isinstance(item, Exception):
-                    yield f"data: {json.dumps({'error': str(item)})}\n\n"
+                    err_msg = str(item)
+                    if "quota" in err_msg.lower() or "rate" in err_msg.lower():
+                        err_msg = "I'm a bit overwhelmed right now — please try again in a moment!"
+                    yield f"data: {json.dumps({'error': err_msg})}\n\n"
                     return
                 full += item
                 yield f"data: {json.dumps({'delta': item})}\n\n"
