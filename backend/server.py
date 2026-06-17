@@ -32,7 +32,7 @@ load_dotenv(ROOT_DIR / ".env")
 
 MONGO_URL = os.environ["MONGO_URL"]
 DB_NAME = os.environ["DB_NAME"]
-EMERGENT_LLM_KEY = os.environ.get("EMERGENT_LLM_KEY", "")
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 JWT_SECRET = os.environ.get("JWT_SECRET", "smartdine-dev-secret-change-me")
 STRIPE_API_KEY = os.environ.get("STRIPE_API_KEY", "")
 STRIPE_ENABLED = os.environ.get("STRIPE_ENABLED", "false").lower() == "true" and bool(STRIPE_API_KEY)
@@ -994,19 +994,31 @@ def _make_waiter_stream(session_id: str, message: str, system_prompt: str):
     """Return an async generator that yields SSE 'data:' lines for the chat reply."""
     async def event_gen():
         try:
-            from emergentintegrations.llm.chat import LlmChat, UserMessage, TextDelta, StreamDone
-            chat = LlmChat(
-                api_key=EMERGENT_LLM_KEY,
-                session_id=session_id,
-                system_message=system_prompt,
-            ).with_model("anthropic", "claude-sonnet-4-6")
+            import google.generativeai as genai
+            import asyncio
+            genai.configure(api_key=GEMINI_API_KEY)
+            
+            # Fetch history to maintain context
+            history_docs = await db.chat_messages.find({"session_id": session_id}).sort("created_at", 1).to_list(None)
+            history = []
+            for doc in history_docs:
+                role = "user" if doc["role"] == "user" else "model"
+                history.append({"role": role, "parts": [doc["content"]]})
+                
+            model = genai.GenerativeModel(
+                model_name="gemini-1.5-flash", 
+                system_instruction=system_prompt
+            )
+            chat = model.start_chat(history=history)
+            
+            # Use asyncio.to_thread for the sync blocking call
+            response = await asyncio.to_thread(chat.send_message, message, stream=True)
             full = ""
-            async for ev in chat.stream_message(UserMessage(text=message)):
-                if isinstance(ev, TextDelta):
-                    full += ev.content
-                    yield f"data: {json.dumps({'delta': ev.content})}\n\n"
-                elif isinstance(ev, StreamDone):
-                    break
+            for chunk in response:
+                if chunk.text:
+                    full += chunk.text
+                    yield f"data: {json.dumps({'delta': chunk.text})}\n\n"
+                    
             await db.chat_messages.insert_one({
                 "session_id": session_id, "role": "assistant", "content": full, "created_at": now_iso(),
             })
@@ -1017,10 +1029,10 @@ def _make_waiter_stream(session_id: str, message: str, system_prompt: str):
 
 @app.post("/api/ai-waiter/chat")
 async def ai_waiter(req: ChatReq):
-    """Streams Claude's response as SSE. Session-scoped chat history maintained server-side."""
-    if not EMERGENT_LLM_KEY:
+    """Streams Gemini's response as SSE. Session-scoped chat history maintained server-side."""
+    if not GEMINI_API_KEY:
         async def mock_event_gen():
-            mock_text = "I'm currently operating in offline demo mode since my AI brain is disconnected. I can still take your order manually from the menu!"
+            mock_text = "I'm currently operating in offline demo mode since my Gemini brain is disconnected. I can still take your order manually from the menu!"
             yield f"data: {json.dumps({'delta': mock_text})}\n\n"
             yield f"data: {json.dumps({'done': True})}\n\n"
         return StreamingResponse(
@@ -1050,29 +1062,7 @@ async def ai_history(session_id: str):
 @app.post("/api/ai-waiter/transcribe")
 async def ai_transcribe(file: UploadFile = File(...), language: str = Form("")):
     """Transcribe a user's spoken audio (webm/wav/mp3) to text via Whisper."""
-    if not EMERGENT_LLM_KEY:
-        raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY missing")
-    raw = await file.read()
-    if not raw:
-        raise HTTPException(status_code=400, detail="Empty audio")
-    if len(raw) > 25 * 1024 * 1024:
-        raise HTTPException(status_code=400, detail="Audio too large (max 25MB)")
-    try:
-        from emergentintegrations.llm.openai import OpenAISpeechToText
-        stt = OpenAISpeechToText(api_key=EMERGENT_LLM_KEY)
-        # Whisper needs a file-like object with a name attribute
-        bio = io.BytesIO(raw)
-        bio.name = file.filename or "audio.webm"
-        kwargs: Dict[str, Any] = {"file": bio, "model": "whisper-1", "response_format": "json"}
-        if language and language.strip():
-            kwargs["language"] = language.strip()
-        resp = await stt.transcribe(**kwargs)
-        text = getattr(resp, "text", None) or (resp.get("text") if isinstance(resp, dict) else "")
-        return {"text": text or ""}
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Transcription failed: {e}")
+    raise HTTPException(status_code=501, detail="Voice input is currently disabled. (Requires an active STT integration).")
 
 # ---------- Text-to-Speech (TTS) ----------
 class TTSReq(BaseModel):
@@ -1082,20 +1072,7 @@ class TTSReq(BaseModel):
 @app.post("/api/ai-waiter/speak")
 async def ai_speak(req: TTSReq):
     """Convert MehfilAI text to mp3 audio."""
-    if not EMERGENT_LLM_KEY:
-        raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY missing")
-    clean_text = req.text.strip()[:4000]
-    if not clean_text:
-        raise HTTPException(status_code=400, detail="Empty text")
-    try:
-        from emergentintegrations.llm.openai import OpenAITextToSpeech
-        tts = OpenAITextToSpeech(api_key=EMERGENT_LLM_KEY)
-        audio = await tts.generate_speech(text=clean_text, model="tts-1", voice=req.voice, response_format="mp3")
-        return Response(content=audio, media_type="audio/mpeg")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"TTS failed: {e}")
+    raise HTTPException(status_code=501, detail="Voice output is currently disabled. (Requires an active TTS integration).")
 
 # =========================================================
 # Reservations
