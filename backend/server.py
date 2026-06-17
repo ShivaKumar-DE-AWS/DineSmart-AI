@@ -211,21 +211,21 @@ def clean(doc: Dict[str, Any]) -> Dict[str, Any]:
 # =========================================================
 SEED_MENU = [
     # ===== HYDERABADI BIRYANI (Signature) =====
-    {"name": "Chicken Dum Biryani", "description": "Slow-cooked basmati layered with kashmiri masala chicken, saffron and mint — Mehfil's signature since 2006.", "price": 280, "category": "Biryani", "image_url": "https://images.unsplash.com/photo-1633945274405-b6c8069047b0?w=600&q=80", "prep_time_min": 18, "tags": ["bestseller", "signature", "non-veg"]},
-    {"name": "Mutton Dum Biryani", "description": "Hand-stretched mutton, brown onions, kewra water — sealed and dum cooked.", "price": 360, "category": "Biryani", "image_url": "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=600&q=80", "prep_time_min": 22, "tags": ["spicy", "premium", "non-veg"]},
+    {"name": "Chicken Dum Biryani", "description": "Slow-cooked basmati layered with kashmiri masala chicken, saffron and mint — Mehfil's signature since 2006.", "price": 280, "category": "Biryani", "image_url": "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=600&q=80", "prep_time_min": 18, "tags": ["bestseller", "signature", "non-veg"]},
+    {"name": "Mutton Dum Biryani", "description": "Hand-stretched mutton, brown onions, kewra water — sealed and dum cooked.", "price": 360, "category": "Biryani", "image_url": "https://images.unsplash.com/photo-1642821373181-696a54913e93?w=600&q=80", "prep_time_min": 22, "tags": ["spicy", "premium", "non-veg"]},
     {"name": "Family Pack Biryani", "description": "Serves 4 — choose chicken or mutton, comes with mirchi ka salan, raita & qubani.", "price": 1400, "category": "Biryani", "image_url": "https://images.unsplash.com/photo-1589302168068-964664d93dc0?w=600&q=80", "prep_time_min": 28, "tags": ["family", "value", "non-veg"]},
     {"name": "Veg Dum Biryani", "description": "Garden vegetables, basmati, fried onions, ghee — fully vegetarian dum.", "price": 220, "category": "Biryani", "image_url": "https://images.unsplash.com/photo-1645177628172-a94c1f96e6db?w=600&q=80", "prep_time_min": 16, "tags": ["veg"]},
 
     # ===== STARTERS =====
     {"name": "Chicken 65", "description": "Andhra-style fried chicken bites with curry leaves, green chilli and yogurt marinade.", "price": 190, "category": "Starters", "image_url": "https://images.unsplash.com/photo-1610057099443-fde6c99db9e1?w=600&q=80", "prep_time_min": 10, "tags": ["bestseller", "spicy", "non-veg"]},
-    {"name": "Apollo Fish", "description": "Hyderabad's iconic crisp-fried fish in red chilli & coriander glaze.", "price": 200, "category": "Starters", "image_url": "https://images.unsplash.com/photo-1580217593608-61931cefc821?w=600&q=80", "prep_time_min": 12, "tags": ["spicy", "non-veg"]},
-    {"name": "Chicken Majestic", "description": "Deep-fried chicken strips tossed with chilli, yogurt and royal cumin.", "price": 210, "category": "Starters", "image_url": "https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?w=600&q=80", "prep_time_min": 11, "tags": ["popular", "non-veg"]},
-    {"name": "Paneer Tikka", "description": "Cottage cheese cubes marinated in hung curd, charred in tandoor.", "price": 180, "category": "Starters", "image_url": "https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?w=600&q=80", "prep_time_min": 10, "tags": ["veg"]},
+    {"name": "Apollo Fish", "description": "Hyderabad's iconic crisp-fried fish in red chilli & coriander glaze.", "price": 200, "category": "Starters", "image_url": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&q=80", "prep_time_min": 12, "tags": ["spicy", "non-veg"]},
+    {"name": "Chicken Majestic", "description": "Deep-fried chicken strips tossed with chilli, yogurt and royal cumin.", "price": 210, "category": "Starters", "image_url": "https://images.unsplash.com/photo-1562967914-608f82629710?w=600&q=80", "prep_time_min": 11, "tags": ["popular", "non-veg"]},
+    {"name": "Paneer Tikka", "description": "Cottage cheese cubes marinated in hung curd, charred in tandoor.", "price": 180, "category": "Starters", "image_url": "https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?w=600&q=80", "prep_time_min": 10, "tags": ["veg"]},
 
     # ===== TANDOORI =====
-    {"name": "Tandoori Chicken (Full)", "description": "Whole chicken marinated overnight in yogurt, garam masala, kashmiri red.", "price": 480, "category": "Tandoori", "image_url": "https://images.unsplash.com/photo-1610057099431-d73a1c9d2f2f?w=600&q=80", "prep_time_min": 18, "tags": ["signature", "non-veg"]},
+    {"name": "Tandoori Chicken (Full)", "description": "Whole chicken marinated overnight in yogurt, garam masala, kashmiri red.", "price": 480, "category": "Tandoori", "image_url": "https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?w=600&q=80", "prep_time_min": 18, "tags": ["signature", "non-veg"]},
     {"name": "Chicken Tikka", "description": "Boneless tandoor-charred chicken with smoked yogurt & saffron.", "price": 240, "category": "Tandoori", "image_url": "https://images.unsplash.com/photo-1628294895950-9805252327bc?w=600&q=80", "prep_time_min": 12, "tags": ["popular", "non-veg"]},
-    {"name": "Mutton Seekh Kebab", "description": "Minced mutton, ginger, mint, raw papaya — skewered and fired.", "price": 280, "category": "Tandoori", "image_url": "https://images.unsplash.com/photo-1529006557810-274b9b2fc783?w=600&q=80", "prep_time_min": 14, "tags": ["non-veg"]},
+    {"name": "Mutton Seekh Kebab", "description": "Minced mutton, ginger, mint, raw papaya — skewered and fired.", "price": 280, "category": "Tandoori", "image_url": "https://images.unsplash.com/photo-1603360946369-dc9bb6258143?w=600&q=80", "prep_time_min": 14, "tags": ["non-veg"]},
 
     # ===== CURRIES =====
     {"name": "Hyderabadi Chicken", "description": "House special curry — tomato, kasuri methi, fried onion gravy.", "price": 230, "category": "Curries", "image_url": "https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=600&q=80", "prep_time_min": 14, "tags": ["popular", "non-veg"]},
@@ -243,8 +243,8 @@ SEED_MENU = [
     {"name": "Chicken Schezwan Noodles", "description": "Wok-fired hakka noodles with chilli garlic schezwan.", "price": 180, "category": "Rice & Noodles", "image_url": "https://images.unsplash.com/photo-1585032226651-759b368d7246?w=600&q=80", "prep_time_min": 8, "tags": ["non-veg"]},
 
     # ===== TRADITIONAL HYDERABADI SWEETS =====
-    {"name": "Double Ka Meetha", "description": "Saffron-soaked bread pudding, condensed milk, slivered pistachio — Hyderabad classic.", "price": 120, "category": "Sweets", "image_url": "https://images.unsplash.com/photo-1666190064285-94e23aeab06a?w=600&q=80", "prep_time_min": 4, "tags": ["bestseller", "heritage", "veg"]},
-    {"name": "Qubani Ka Meetha", "description": "Apricot compote with malai cream — Nizami royal dessert.", "price": 140, "category": "Sweets", "image_url": "https://images.unsplash.com/photo-1551024506-0bccd828d307?w=600&q=80", "prep_time_min": 4, "tags": ["heritage", "veg"]},
+    {"name": "Double Ka Meetha", "description": "Saffron-soaked bread pudding, condensed milk, slivered pistachio — Hyderabad classic.", "price": 120, "category": "Sweets", "image_url": "https://images.unsplash.com/photo-1551024506-0bccd828d307?w=600&q=80", "prep_time_min": 4, "tags": ["bestseller", "heritage", "veg"]},
+    {"name": "Qubani Ka Meetha", "description": "Apricot compote with malai cream — Nizami royal dessert.", "price": 140, "category": "Sweets", "image_url": "https://images.unsplash.com/photo-1587314168485-3236d6710814?w=600&q=80", "prep_time_min": 4, "tags": ["heritage", "veg"]},
     {"name": "Kaddu Ki Kheer", "description": "Sweet pumpkin slow-cooked in cardamom milk with almonds.", "price": 110, "category": "Sweets", "image_url": "https://images.unsplash.com/photo-1488477181946-6428a0291777?w=600&q=80", "prep_time_min": 4, "tags": ["veg"]},
     {"name": "Gulab Jamun", "description": "Khoya dumplings in warm rose-cardamom syrup.", "price": 90, "category": "Sweets", "image_url": "https://images.unsplash.com/photo-1666865968793-2ae70f3e0e1c?w=600&q=80", "prep_time_min": 3, "tags": ["veg"]},
 
@@ -280,7 +280,11 @@ async def seed_db():
             doc = MenuItemModel(**m).model_dump()
             existing = await db.menu.find_one({"name": doc["name"]})
             if existing:
-                await db.menu.update_one({"name": doc["name"]}, {"$set": {"image_url": doc["image_url"], "tags": doc["tags"]}})
+                await db.menu.update_one({"name": doc["name"]}, {"$set": {
+                    "image_url": doc["image_url"], "tags": doc["tags"],
+                    "description": doc["description"], "price": doc["price"],
+                    "category": doc["category"], "prep_time_min": doc.get("prep_time_min"),
+                }})
             else:
                 await db.menu.insert_one(doc)
         # inventory
