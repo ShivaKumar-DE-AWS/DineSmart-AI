@@ -15,8 +15,25 @@ const royal = Cinzel({ subsets: ["latin"], weight: ["400", "600", "700"], variab
 const editorial = Cormorant_Garamond({ subsets: ["latin"], weight: ["400", "500", "600", "700"], style: ["normal", "italic"], variable: "--font-editorial", display: "swap" });
 
 export const metadata: Metadata = {
-  title: "Mehfil — Hyderabad's Original Biryani Experience",
-  description: "Since 2006. Authentic Hyderabadi dum biryani, royal kebabs and Nizami sweets — now powered by AI dining.",
+  title: "SmartDine AI — AI-Powered Dining Experience",
+  description: "SmartDine AI transforms restaurant dining with AI-powered ordering, smart menu recommendations, kitchen automation and real-time order tracking.",
+  icons: {
+    icon: "/favicon.png",
+    apple: "/favicon.png",
+  },
+  openGraph: {
+    title: "SmartDine AI — AI-Powered Dining Experience",
+    description: "SmartDine AI transforms restaurant dining with AI-powered ordering, smart menu recommendations, kitchen automation and real-time order tracking.",
+    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "SmartDine AI Logo" }],
+    siteName: "SmartDine AI",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "SmartDine AI — AI-Powered Dining Experience",
+    description: "AI-powered restaurant management with smart ordering, real-time kitchen display and customer insights.",
+    images: ["/og-image.png"],
+  },
 };
 
 export const viewport: Viewport = {
