@@ -26,10 +26,26 @@ function renderPayLabel(submitting: boolean, stripeEnabled: boolean | null, tota
   return `Confirm & Pay ${amount}`;
 }
 
-const COOKING_CHIPS = [
-  "Less spicy", "Extra spicy", "Double masala", "No onion", "No garlic",
-  "Leg piece", "Chest piece", "Less oil", "Less salt", "Boneless", "Extra raita", "Serve hot",
-];
+// Context-aware cooking chips based on item category
+const CHIPS_BY_TYPE: Record<string, string[]> = {
+  "meat": ["Less spicy", "Extra spicy", "Double masala", "No onion", "No garlic", "Leg piece", "Chest piece", "Less oil", "Boneless", "Extra raita", "Serve hot"],
+  "veg": ["Less spicy", "Extra spicy", "No onion", "No garlic", "Less oil", "Less salt", "Extra raita", "Serve hot"],
+  "bread": ["Extra butter", "No butter", "Well done", "Soft"],
+  "sweets": ["Less sweet", "Extra cream", "No nuts", "Warm", "Chilled", "Extra saffron"],
+  "beverages": ["Less sugar", "No sugar", "Extra ice", "No ice", "Warm", "Chilled"],
+  "rice_noodles": ["Less spicy", "Extra spicy", "No onion", "Less oil", "Extra saucy", "Serve hot"],
+};
+function getChipsForItem(name: string, category?: string): string[] {
+  const cat = (category || "").toLowerCase();
+  if (cat.includes("sweet")) return CHIPS_BY_TYPE.sweets;
+  if (cat.includes("beverage")) return CHIPS_BY_TYPE.beverages;
+  if (cat.includes("bread")) return CHIPS_BY_TYPE.bread;
+  if (cat.includes("rice") || cat.includes("noodle")) return CHIPS_BY_TYPE.rice_noodles;
+  const nm = name.toLowerCase();
+  if (nm.includes("paneer") || nm.includes("dal") || nm.includes("veg")) return CHIPS_BY_TYPE.veg;
+  return CHIPS_BY_TYPE.meat;
+}
+
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -215,7 +231,7 @@ export default function CheckoutPage() {
                       </div>
                     </div>
                     <div className="flex flex-wrap gap-1.5 mb-3" data-testid={`cook-chips-${line.item_id}`}>
-                      {COOKING_CHIPS.map((c) => {
+                      {getChipsForItem(line.name).map((c) => {
                         const active = selected.includes(c.toLowerCase());
                         return (
                           <button
