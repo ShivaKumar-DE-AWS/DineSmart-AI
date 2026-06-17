@@ -996,28 +996,56 @@ def _make_waiter_stream(session_id: str, message: str, system_prompt: str):
         try:
             import google.generativeai as genai
             import asyncio
+            import queue
+            import threading
+
             genai.configure(api_key=GEMINI_API_KEY)
             
             # Fetch history to maintain context
-            history_docs = await db.chat_messages.find({"session_id": session_id}).sort("created_at", 1).to_list(None)
+            history_docs = await db.chat_messages.find({"session_id": session_id}).sort("created_at", 1).to_list(50)
             history = []
             for doc in history_docs:
                 role = "user" if doc["role"] == "user" else "model"
                 history.append({"role": role, "parts": [doc["content"]]})
                 
             model = genai.GenerativeModel(
-                model_name="gemini-1.5-flash", 
+                model_name="gemini-2.0-flash", 
                 system_instruction=system_prompt
             )
             chat = model.start_chat(history=history)
             
-            # Use asyncio.to_thread for the sync blocking call
-            response = await asyncio.to_thread(chat.send_message, message, stream=True)
+            # Use a queue to bridge sync streaming → async generator
+            q: queue.Queue = queue.Queue()
+            SENTINEL = object()
+
+            def _stream_in_thread():
+                try:
+                    response = chat.send_message(message, stream=True)
+                    for chunk in response:
+                        if chunk.text:
+                            q.put(chunk.text)
+                except Exception as e:
+                    q.put(e)
+                finally:
+                    q.put(SENTINEL)
+
+            thread = threading.Thread(target=_stream_in_thread, daemon=True)
+            thread.start()
+
             full = ""
-            for chunk in response:
-                if chunk.text:
-                    full += chunk.text
-                    yield f"data: {json.dumps({'delta': chunk.text})}\n\n"
+            while True:
+                # Non-blocking poll so we don't freeze the event loop
+                try:
+                    item = await asyncio.to_thread(q.get, timeout=30)
+                except Exception:
+                    break
+                if item is SENTINEL:
+                    break
+                if isinstance(item, Exception):
+                    yield f"data: {json.dumps({'error': str(item)})}\n\n"
+                    return
+                full += item
+                yield f"data: {json.dumps({'delta': item})}\n\n"
                     
             await db.chat_messages.insert_one({
                 "session_id": session_id, "role": "assistant", "content": full, "created_at": now_iso(),
