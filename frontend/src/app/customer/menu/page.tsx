@@ -140,7 +140,107 @@ export default function MenuPage() {
                 <div className="h-px flex-1 bg-gradient-to-r from-[#C9A348]/40 to-transparent hidden md:block" />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6" data-testid={`menu-grid-${c}`}>
+              {/* ========== MOBILE: Swiggy-style horizontal list ========== */}
+              <div className="lg:hidden divide-y divide-[#E7DFCB]" data-testid={`menu-list-${c}`}>
+                {(grouped[c] || []).map((item) => {
+                  const inCart = cart.items.find((i) => i.item_id === item.id);
+                  return (
+                    <div
+                      key={item.id}
+                      className="flex gap-4 py-5"
+                      data-testid={`menu-item-mobile-${item.id}`}
+                    >
+                      {/* Left: Item details */}
+                      <div className="flex-1 min-w-0 flex flex-col justify-between">
+                        {/* Tags row */}
+                        <div className="flex items-center gap-2 mb-1.5">
+                          {item.tags?.includes("veg") && (
+                            <span className="inline-flex items-center justify-center h-4 w-4 border border-green-600 rounded-sm">
+                              <span className="h-2 w-2 rounded-full bg-green-600" />
+                            </span>
+                          )}
+                          {item.tags?.includes("non-veg") && (
+                            <span className="inline-flex items-center justify-center h-4 w-4 border border-red-600 rounded-sm">
+                              <span className="h-2 w-2 rounded-full bg-red-600" />
+                            </span>
+                          )}
+                          {item.tags?.includes("bestseller") && (
+                            <span className="flex items-center gap-1 text-[10px] font-semibold text-[#C9A348] uppercase tracking-wider">
+                              <Sparkles className="h-3 w-3" /> Bestseller
+                            </span>
+                          )}
+                          {item.tags?.includes("spicy") && (
+                            <span className="flex items-center gap-1 text-[10px] font-semibold text-orange-600 uppercase tracking-wider">
+                              <Flame className="h-3 w-3" /> Spicy
+                            </span>
+                          )}
+                        </div>
+
+                        <h3 className="font-royal text-base text-[#1A1106] leading-snug">{item.name}</h3>
+                        <span className="font-royal text-base text-[#1A1106] mt-1.5">{formatCurrency(item.price)}</span>
+                        <p className="font-editorial italic text-xs text-[#1A1106]/60 mt-2 line-clamp-2 leading-relaxed pr-2">{item.description}</p>
+                      </div>
+
+                      {/* Right: Image + ADD button */}
+                      <div className="relative flex-shrink-0 w-[120px] flex flex-col items-center">
+                        <div className="w-[120px] h-[120px] rounded-xl overflow-hidden shadow-md bg-[#F3EBD8]">
+                          {item.image_url ? (
+                            <img
+                              src={item.image_url}
+                              alt={item.name}
+                              className="w-full h-full object-cover"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-[#C9A348]/60">
+                              <BookOpen className="h-8 w-8" />
+                            </div>
+                          )}
+                        </div>
+                        {/* ADD / Qty button overlaid at bottom of image */}
+                        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2">
+                          {inCart ? (
+                            <div
+                              className="flex items-center gap-0 bg-[#5C0E1B] text-[#FAF5EC] rounded-lg shadow-lg overflow-hidden"
+                              data-testid={`qty-control-mobile-${item.id}`}
+                            >
+                              <button
+                                onClick={() => cart.setQty(item.id, inCart.qty - 1)}
+                                data-testid={`qty-dec-mobile-${item.id}`}
+                                className="h-9 w-9 flex items-center justify-center hover:bg-[#8A1A2A] active:bg-[#8A1A2A] transition"
+                              >
+                                <Minus className="h-3.5 w-3.5" />
+                              </button>
+                              <span className="px-2 font-royal text-sm font-bold min-w-[24px] text-center" data-testid={`qty-val-mobile-${item.id}`}>
+                                {inCart.qty}
+                              </span>
+                              <button
+                                onClick={() => cart.setQty(item.id, inCart.qty + 1)}
+                                data-testid={`qty-inc-mobile-${item.id}`}
+                                className="h-9 w-9 flex items-center justify-center hover:bg-[#8A1A2A] active:bg-[#8A1A2A] transition"
+                              >
+                                <Plus className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              data-testid={`add-to-cart-mobile-${item.id}`}
+                              onClick={() => { cart.add(item); toast.success(`${item.name} added to your thali`); }}
+                              className="bg-white text-[#5C0E1B] border border-[#E7DFCB] rounded-lg px-7 py-2 text-sm font-royal font-bold tracking-wider uppercase shadow-lg hover:shadow-xl active:scale-95 transition-all"
+                            >
+                              ADD
+                              <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-[#5C0E1B] text-white text-[10px] flex items-center justify-center font-bold">+</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* ========== DESKTOP: Original flip-card grid ========== */}
+              <div className="hidden lg:grid grid-cols-2 xl:grid-cols-3 gap-6" data-testid={`menu-grid-${c}`}>
                 {(grouped[c] || []).map((item) => {
                   const inCart = cart.items.find((i) => i.item_id === item.id);
                   const isFlipped = !!flipped[item.id];
