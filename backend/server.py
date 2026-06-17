@@ -37,7 +37,12 @@ JWT_SECRET = os.environ.get("JWT_SECRET", "smartdine-dev-secret-change-me")
 STRIPE_API_KEY = os.environ.get("STRIPE_API_KEY", "")
 STRIPE_ENABLED = os.environ.get("STRIPE_ENABLED", "false").lower() == "true" and bool(STRIPE_API_KEY)
 
-client = AsyncIOMotorClient(MONGO_URL, tlsCAFile=certifi.where())
+client = AsyncIOMotorClient(
+    MONGO_URL,
+    tls=True,
+    tlsCAFile=certifi.where(),
+    serverSelectionTimeoutMS=30000,
+)
 db = client[DB_NAME]
 
 app = FastAPI(title="SmartDine AI API", version="1.0.0")
