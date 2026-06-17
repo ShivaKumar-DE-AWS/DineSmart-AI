@@ -1061,8 +1061,32 @@ async def ai_history(session_id: str):
 # ---------- Speech-to-Text (Whisper) ----------
 @app.post("/api/ai-waiter/transcribe")
 async def ai_transcribe(file: UploadFile = File(...), language: str = Form("")):
-    """Transcribe a user's spoken audio (webm/wav/mp3) to text via Whisper."""
-    raise HTTPException(status_code=501, detail="Voice input is currently disabled. (Requires an active STT integration).")
+    """Transcribe a user's spoken audio (webm/wav/mp3) to text via Gemini 1.5 Flash."""
+    if not GEMINI_API_KEY:
+        raise HTTPException(status_code=500, detail="GEMINI_API_KEY missing")
+    raw = await file.read()
+    if not raw:
+        raise HTTPException(status_code=400, detail="Empty audio")
+    if len(raw) > 20 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Audio too large (max 20MB)")
+    try:
+        import google.generativeai as genai
+        import asyncio
+        genai.configure(api_key=GEMINI_API_KEY)
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        
+        prompt = "You are an expert transcriber. Transcribe the following audio exactly as spoken. Do not add any extra text, translation, or commentary."
+        if language and language.strip() and language.strip() != "auto":
+            prompt += f" The expected language might be {language}."
+            
+        response = await asyncio.to_thread(
+            model.generate_content,
+            [prompt, {"mime_type": file.content_type or "audio/webm", "data": raw}]
+        )
+        text = response.text.strip() if response and response.text else ""
+        return {"text": text}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Transcription failed: {e}")
 
 # ---------- Text-to-Speech (TTS) ----------
 class TTSReq(BaseModel):
@@ -1071,8 +1095,24 @@ class TTSReq(BaseModel):
 
 @app.post("/api/ai-waiter/speak")
 async def ai_speak(req: TTSReq):
-    """Convert MehfilAI text to mp3 audio."""
-    raise HTTPException(status_code=501, detail="Voice output is currently disabled. (Requires an active TTS integration).")
+    """Convert MehfilAI text to mp3 audio via edge-tts."""
+    clean_text = req.text.strip()[:4000]
+    if not clean_text:
+        raise HTTPException(status_code=400, detail="Empty text")
+    try:
+        import edge_tts
+        # Neerja is a warm Indian female English voice that handles Hinglish well.
+        voice = "en-IN-NeerjaNeural" 
+        communicate = edge_tts.Communicate(clean_text, voice)
+        
+        audio_data = bytearray()
+        async for chunk in communicate.stream():
+            if chunk["type"] == "audio":
+                audio_data.extend(chunk["data"])
+                
+        return Response(content=bytes(audio_data), media_type="audio/mpeg")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"TTS failed: {e}")
 
 # =========================================================
 # Reservations
