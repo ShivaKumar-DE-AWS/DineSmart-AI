@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Mail, Lock, ArrowRight, Loader2, Store } from "lucide-react";
+import { Sparkles, Mail, Lock, ArrowRight, Loader2, Store, Phone, Users, Utensils, Link as LinkIcon } from "lucide-react";
 import { api } from "@/lib/api";
 import { useSession } from "@/stores/session";
 import { toast } from "sonner";
@@ -50,9 +50,25 @@ export default function SaaSAuthPage() {
     }
   };
 
-  const handleRegister = async (e: React.FormEvent) => {
+  const handleRequestAccess = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    toast.info("Registration is currently in private beta. Please contact sales.");
+    setBusy(true);
+    const formData = new FormData(e.currentTarget);
+    // Disable captcha for AJAX
+    formData.append("_captcha", "false");
+    try {
+      await fetch("https://formsubmit.co/ajax/shivakumar.nalu@gmail.com", {
+        method: "POST",
+        body: formData,
+        headers: { 'Accept': 'application/json' }
+      });
+      toast.success("Request sent successfully! We will create your portal and email you.");
+      setTab("login");
+    } catch (err) {
+      toast.error("Failed to send request. Please try again.");
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -82,12 +98,12 @@ export default function SaaSAuthPage() {
             <span className="text-electric-blue ml-1">AI</span>
           </div>
           <h1 className="font-heading text-3xl text-white mb-2">
-            {tab === "login" ? "Welcome back" : "Create your restaurant"}
+            {tab === "login" ? "Welcome back" : "Request Access"}
           </h1>
           <p className="text-stone text-sm">
             {tab === "login" 
               ? "Sign in to manage your AI-powered restaurant."
-              : "Start your 14-day free trial today."}
+              : "Request a custom portal tailored for your restaurant."}
           </p>
         </div>
 
@@ -108,7 +124,7 @@ export default function SaaSAuthPage() {
                 tab === "register" ? "bg-white/10 text-white shadow-sm" : "text-stone hover:text-white"
               }`}
             >
-              Start Trial
+              Request Access
             </button>
           </div>
 
@@ -171,72 +187,62 @@ export default function SaaSAuthPage() {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -10 }}
                 transition={{ duration: 0.2 }}
-                onSubmit={handleRegister}
-                className="space-y-5"
+                onSubmit={handleRequestAccess}
+                className="space-y-4"
               >
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-stone pl-1">Full Name</label>
-                  <input 
-                    type="text" 
-                    value={regName}
-                    onChange={(e) => setRegName(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white placeholder:text-stone focus:outline-none focus:ring-2 focus:ring-clay/50 focus:border-clay/50 transition"
-                    placeholder="John Doe"
-                    required
-                  />
+                  <label className="text-xs font-medium text-stone pl-1">Full Name</label>
+                  <input type="text" name="Full Name" className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 px-4 text-white text-sm placeholder:text-stone focus:outline-none focus:ring-2 focus:ring-clay/50" placeholder="John Doe" required />
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-stone pl-1">Restaurant Name</label>
+                  <label className="text-xs font-medium text-stone pl-1">Restaurant Name</label>
                   <div className="relative">
                     <Store className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone" />
-                    <input 
-                      type="text" 
-                      value={regRestaurantName}
-                      onChange={(e) => setRegRestaurantName(e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder:text-stone focus:outline-none focus:ring-2 focus:ring-clay/50 focus:border-clay/50 transition"
-                      placeholder="The Golden Plate"
-                      required
-                    />
+                    <input type="text" name="Restaurant Name" className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-11 pr-4 text-white text-sm placeholder:text-stone focus:outline-none focus:ring-2 focus:ring-clay/50" placeholder="The Golden Plate" required />
                   </div>
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-stone pl-1">Work Email</label>
+                  <label className="text-xs font-medium text-stone pl-1">Phone Number</label>
                   <div className="relative">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone" />
-                    <input 
-                      type="email" 
-                      value={regEmail}
-                      onChange={(e) => setRegEmail(e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder:text-stone focus:outline-none focus:ring-2 focus:ring-clay/50 focus:border-clay/50 transition"
-                      placeholder="john@goldenplate.com"
-                      required
-                    />
+                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone" />
+                    <input type="tel" name="Phone Number" className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-11 pr-4 text-white text-sm placeholder:text-stone focus:outline-none focus:ring-2 focus:ring-clay/50" placeholder="+1 (555) 000-0000" required />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-stone pl-1">Number of Tables</label>
+                    <div className="relative">
+                      <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone" />
+                      <input type="number" name="Number of Tables" className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-11 pr-4 text-white text-sm placeholder:text-stone focus:outline-none focus:ring-2 focus:ring-clay/50" placeholder="15" required />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-stone pl-1">Cuisine / Menu Type</label>
+                    <div className="relative">
+                      <Utensils className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone" />
+                      <input type="text" name="Cuisine / Menu Type" className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-11 pr-4 text-white text-sm placeholder:text-stone focus:outline-none focus:ring-2 focus:ring-clay/50" placeholder="Italian, Cafe..." required />
+                    </div>
                   </div>
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-stone pl-1">Password</label>
+                  <label className="text-xs font-medium text-stone pl-1">Logo / Theme / Example Website</label>
                   <div className="relative">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone" />
-                    <input 
-                      type="password" 
-                      value={regPassword}
-                      onChange={(e) => setRegPassword(e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder:text-stone focus:outline-none focus:ring-2 focus:ring-clay/50 focus:border-clay/50 transition"
-                      placeholder="••••••••"
-                      required
-                    />
+                    <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone" />
+                    <input type="text" name="Logo or Example Website" className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-11 pr-4 text-white text-sm placeholder:text-stone focus:outline-none focus:ring-2 focus:ring-clay/50" placeholder="URL or brief description" />
                   </div>
                 </div>
 
                 <button
                   type="submit"
                   disabled={busy}
-                  className="w-full bg-clay hover:bg-clay-dark text-white font-semibold rounded-xl py-3.5 transition flex items-center justify-center gap-2 mt-2 shadow-lg shadow-clay/20"
+                  className="w-full bg-clay hover:bg-clay-dark text-white font-semibold rounded-xl py-3 transition flex items-center justify-center gap-2 mt-4 shadow-lg shadow-clay/20"
                 >
-                  {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : "Start 14-Day Free Trial"}
+                  {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : "Request Custom Portal"}
                 </button>
               </motion.form>
             )}
