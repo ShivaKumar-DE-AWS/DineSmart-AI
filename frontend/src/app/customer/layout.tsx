@@ -11,7 +11,8 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useTable } from "@/stores/table";
 import { Order } from "@/types";
-
+import { toast } from "sonner";
+import { useRef } from "react";
 const NAV = [
   { href: "/customer", label: "Home", testid: "nav-home" },
   { href: "/customer/menu", label: "Menu", testid: "nav-menu" },
@@ -34,6 +35,20 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
   });
   const sessionOrders = sessionOrdersData?.orders ?? [];
   const activeOrders = sessionOrders.filter((o) => !["delivered", "cancelled"].includes(o.status));
+
+  // Global order stage notifications
+  const prevStatuses = useRef<Record<string, string>>({});
+  useEffect(() => {
+    sessionOrders.forEach((o) => {
+      const prev = prevStatuses.current[o.id];
+      if (prev && prev !== o.status) {
+        if (o.status === "preparing") toast.success(`Order ${o.token} is now preparing!`);
+        else if (o.status === "ready") toast.success(`Order ${o.token} is ready for pickup!`);
+        else if (o.status === "served") toast.success(`Order ${o.token} has been served. Enjoy!`);
+      }
+      prevStatuses.current[o.id] = o.status;
+    });
+  }, [sessionOrders]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
