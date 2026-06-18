@@ -45,12 +45,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     for (const n of unread) {
       if (!notifiedSet.has(n.id)) {
         notifiedSet.add(n.id);
-        toast.info(n.message || `Table calling for staff!`, {
+        const tId = toast.info(n.message || `Table calling for staff!`, {
           icon: '🛎️',
           duration: 15000,
           action: {
             label: 'Mark Resolved',
-            onClick: () => markReadMut.mutate(n.id)
+            onClick: () => {
+              markReadMut.mutate(n.id);
+              toast.dismiss(tId);
+            }
           }
         });
       }

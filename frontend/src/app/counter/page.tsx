@@ -50,12 +50,15 @@ export default function CounterPage() {
       if (!notifiedSet.has(n.id)) {
         notifiedSet.add(n.id);
         playChime("ready");
-        toast.info(n.message || `Table calling for staff!`, {
+        const tId = toast.info(n.message || `Table calling for staff!`, {
           icon: '🛎️',
           duration: 15000,
           action: {
             label: 'Mark Resolved',
-            onClick: () => markReadMut.mutate(n.id)
+            onClick: () => {
+              markReadMut.mutate(n.id);
+              toast.dismiss(tId);
+            }
           }
         });
       }
