@@ -63,7 +63,12 @@ export default function TokenPage() {
             {order.token}
           </motion.div>
           <div className="mehfil-divider mt-4 max-w-[120px] mx-auto" />
-          <p className="font-editorial italic text-[#FAF5EC]/80 mt-4">
+          {order.table_number && (
+            <p className="font-royal uppercase text-[12px] tracking-widest text-[#C9A348] mt-3">
+              Table {order.table_number}
+            </p>
+          )}
+          <p className="font-editorial italic text-[#FAF5EC]/80 mt-2">
             Ready by <span className="font-royal text-[#C9A348] tracking-wider" data-testid="token-eta">{fmtTime(order.estimated_ready_at)}</span>
           </p>
         </div>

@@ -59,7 +59,9 @@ export default function TrackLanding() {
                   <div className="absolute top-0 right-0 w-20 h-20 bg-[#8A1A2A]/5 rounded-bl-[3rem] -z-10 group-hover:scale-110 transition-transform duration-500" />
                   <div className="flex justify-between items-start mb-4">
                     <div>
-                      <div className="font-royal tracking-widest text-[10px] uppercase text-[#8A6A1B] mb-1">Token</div>
+                      <div className="font-royal tracking-widest text-[10px] uppercase text-[#8A6A1B] mb-1">
+                        Token {order.table_number ? `· Table ${order.table_number}` : ''}
+                      </div>
                       <div className="font-royal text-3xl text-[#8A1A2A] tracking-tight">{order.token}</div>
                     </div>
                     <div className={`px-3 py-1.5 rounded-full text-[10px] font-royal tracking-wider uppercase border ${isActive ? 'bg-[#C9A348]/10 border-[#C9A348]/50 text-[#8A6A1B]' : 'bg-gray-100 border-gray-200 text-gray-500'}`}>

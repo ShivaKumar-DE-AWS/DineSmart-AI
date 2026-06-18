@@ -73,10 +73,15 @@ export default function TrackPage() {
     <div className="max-w-3xl mx-auto px-5 md:px-10 py-12" data-testid="track-page">
       <div className="text-center mb-8">
         <div className="mehfil-divider mb-3 max-w-xs mx-auto"><span className="font-royal tracking-[0.4em] text-[10px] uppercase">Live tracking</span></div>
-        <h1 className="font-royal text-4xl md:text-5xl text-[#8A1A2A] tracking-wide">
+        <h1 className="font-royal text-4xl md:text-5xl text-[#8A1A2A] tracking-wide mb-2">
           Token <span className="font-editorial italic mehfil-gold-gradient">{order.token}</span>
         </h1>
-        <p className="font-editorial italic text-sm text-[#1A1106]/70 mt-2">Updates every three heartbeats.</p>
+        {order.table_number && (
+          <div className="inline-block bg-[#C9A348]/10 border border-[#C9A348]/30 rounded-full px-4 py-1.5 font-royal tracking-[0.2em] uppercase text-xs text-[#C9A348] mb-3">
+            Table {order.table_number}
+          </div>
+        )}
+        <p className="font-editorial italic text-sm text-[#1A1106]/70 mt-1">Updates every three heartbeats.</p>
       </div>
 
       {!isCancelled && pushState !== "subscribed" && pushState !== "unsupported" && (
