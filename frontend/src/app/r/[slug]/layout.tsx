@@ -12,16 +12,17 @@ import { api } from "@/lib/api";
 import { useTable } from "@/stores/table";
 import { Order } from "@/types";
 import { toast } from "sonner";
-const NAV = [
-  { href: "/customer", label: "Home", testid: "nav-home" },
-  { href: "/customer/menu", label: "Menu", testid: "nav-menu" },
-  { href: "/customer/reserve", label: "Reserve", testid: "nav-reserve" },
-  { href: "/customer/track", label: "Track", testid: "nav-track" },
-];
-
 export default function CustomerLayout({ children }: { children: React.ReactNode }) {
   const params = useParams();
   const slug = params?.slug as string;
+
+  const NAV = [
+    { href: `/r/${slug}`, label: "Home", testid: "nav-home" },
+    { href: `/r/${slug}/menu`, label: "Menu", testid: "nav-menu" },
+    { href: `/r/${slug}/reserve`, label: "Reserve", testid: "nav-reserve" },
+    { href: `/r/${slug}/track`, label: "Track", testid: "nav-track" },
+    { href: `/r/${slug}/login`, label: "Staff Login", testid: "nav-staff" },
+  ];
 
   const path = usePathname();
   const cartCount = useCart((s) => s.count());

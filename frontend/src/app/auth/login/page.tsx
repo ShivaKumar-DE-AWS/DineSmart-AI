@@ -38,7 +38,7 @@ export default function SaaSAuthPage() {
       });
       setSession(res.user, res.token);
       toast.success(`Welcome back, ${res.user.name}`);
-      const dest = res.user.role === "admin" ? "/admin"
+      const dest = res.user.role === "admin" ? "/r/mehfil-hyderabad"
         : res.user.role === "kitchen" ? "/kitchen"
         : res.user.role === "counter" ? "/counter"
         : "/customer";
