@@ -336,12 +336,23 @@ async def seed_db():
             for i in SEED_INVENTORY:
                 doc = InventoryItemModel(**i).model_dump()
                 await db.inventory.insert_one(doc)
+        # restaurants
+        if await db.restaurants.count_documents({}) == 0:
+            await db.restaurants.insert_one({
+                "id": "rest_mehfil_001",
+                "name": "Mehfil",
+                "slug": "mehfil-hyderabad",
+                "plan": "trial",
+                "created_at": now_iso()
+            })
+
         # users
         for u in SEED_USERS:
             existing = await db.users.find_one({"email": u["email"]})
             if not existing:
                 await db.users.insert_one({
                     "id": str(uuid.uuid4()),
+                    "restaurant_id": "rest_mehfil_001",
                     "email": u["email"],
                     "name": u["name"],
                     "role": u["role"],

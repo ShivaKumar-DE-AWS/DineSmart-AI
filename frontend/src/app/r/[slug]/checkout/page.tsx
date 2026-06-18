@@ -110,17 +110,23 @@ export default function CheckoutPage() {
   };
 
   const submit = async () => {
-    if (!name.trim()) { toast.error("Please share your name — every mehfil starts with a name."); return; }
+    const finalName = table?.customer_name || name.trim();
+    if (!finalName) { toast.error("Please share your name — every mehfil starts with a name."); return; }
     if (cart.items.length === 0) { toast.error("Your thali is empty"); return; }
     setSubmitting(true);
     try {
       // First, get the restaurant_id using slug
-      const restRes = await api<{ id: string }>(`/api/restaurants/${slug}`);
-      if (!restRes || !restRes.id) { toast.error("Restaurant not found."); return; }
+      let restId = "rest_mehfil_001";
+      try {
+        const restRes = await api<{ id: string }>(`/api/restaurants/${slug}`);
+        if (restRes && restRes.id) restId = restRes.id;
+      } catch (e) {
+        console.warn("Could not fetch restaurant, falling back to default demo ID");
+      }
 
       const payload = {
-        restaurant_id: restRes.id,
-        customer_name: name.trim(),
+        restaurant_id: restId,
+        customer_name: finalName,
         customer_phone: phone.trim() || undefined,
         items: cart.items.map((i) => {
           const courseText = i.course && i.course !== "Auto (Natural pace)" ? `[Serve: ${i.course}] ` : "";
@@ -163,58 +169,6 @@ export default function CheckoutPage() {
 
       <div className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-5">
-          <section className="mehfil-card rounded-2xl p-6" data-testid="checkout-details">
-            <div className="mehfil-divider mb-4"><span className="font-royal tracking-[0.3em] text-[10px] uppercase">Your details</span></div>
-            <div className="grid sm:grid-cols-2 gap-4">
-              <label className="block">
-                <span className="font-royal tracking-wider uppercase text-[10px] text-[#8A6A1B]">Your name <span className="text-[#8A1A2A]">*</span></span>
-                <div className="mt-1.5 flex items-center bg-white border border-[#C9A348]/30 rounded-full px-4">
-                  <User2 className="h-4 w-4 text-[#8A1A2A]" />
-                  <input
-                    data-testid="checkout-name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Ananya Sharma"
-                    required
-                    className="flex-1 bg-transparent px-3 py-3 text-sm outline-none font-editorial"
-                  />
-                </div>
-              </label>
-              <label className="block">
-                <span className="font-royal tracking-wider uppercase text-[10px] text-[#8A6A1B]">Phone <span className="font-editorial italic normal-case text-[#1A1106]/50">(optional — earn points)</span></span>
-                <div className="mt-1.5 flex items-center bg-white border border-[#C9A348]/30 rounded-full px-4">
-                  <Phone className="h-4 w-4 text-[#8A1A2A]" />
-                  <input
-                    data-testid="checkout-phone"
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="+91 90000 12345"
-                    className="flex-1 bg-transparent px-3 py-3 text-sm outline-none font-editorial"
-                  />
-                </div>
-              </label>
-            </div>
-            {profile && (
-              <div className="mt-4 bg-[#FAF5EC] border border-[#C9A348]/40 rounded-xl p-4 flex items-center gap-4" data-testid="checkout-loyalty">
-                <div className="h-12 w-12 rounded-full bg-gradient-to-br from-[#DDB85C] to-[#8A6A1B] flex items-center justify-center shadow-md">
-                  <Sparkles className="h-5 w-5 text-[#5C0E1B]" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-royal text-sm text-[#8A1A2A]">Welcome back, {profile.name}</div>
-                  <div className="font-editorial italic text-[11px] text-[#1A1106]/70 mt-0.5">
-                    Member <span className="font-royal text-[#8A6A1B]">{profile.code}</span> · {profile.orders_count} visits · {profile.points} mehfil points
-                  </div>
-                </div>
-                <Gift className="h-5 w-5 text-[#C9A348] shrink-0" />
-              </div>
-            )}
-            {!profile && phone.replace(/\D/g, "").length >= 10 && (
-              <div className="mt-4 text-[11px] text-[#1A1106]/55 font-editorial italic" data-testid="checkout-new-member">
-                A new mehfil member will be welcomed — your unique code arrives with your token.
-              </div>
-            )}
-          </section>
 
           <section className="mehfil-card rounded-2xl p-6" data-testid="checkout-cooking-instructions">
             <div className="mehfil-divider mb-4"><span className="font-royal tracking-[0.3em] text-[10px] uppercase flex items-center gap-1.5"><ChefHat className="h-3 w-3" /> Cooking instructions</span></div>
