@@ -47,7 +47,7 @@ function getSessionId(): string {
 const INITIAL_GREETING: Msg = {
   id: "greeting",
   role: "assistant",
-  content: "Welcome to Mehfil! I am your AI waiter. Please tap the gold microphone button below to start speaking, and tap it again when you're finished.",
+  content: "Namaste! I'm your AI Waiter here at Mehfil. I can help you explore the menu, recommend dishes based on your cravings, or add items to your cart. Feel free to type or tap the microphone to speak with me!",
 };
 
 

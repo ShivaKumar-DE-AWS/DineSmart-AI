@@ -3,8 +3,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { Order } from "@/types";
 import { Check } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { playChime, notify } from "@/lib/notify";
+import { toast } from "sonner";
 
 export default function CounterPage() {
   const qc = useQueryClient();
@@ -29,6 +30,37 @@ export default function CounterPage() {
     }
     readyIdsRef.current = ids;
   }, [ready]);
+  // Active Notifications (Staff calls)
+  const { data: notifsData } = useQuery({
+    queryKey: ["counter-notifications"],
+    queryFn: () => api<{ notifications: any[] }>("/api/notifications"),
+    refetchInterval: 3000,
+  });
+
+  const markReadMut = useMutation({
+    mutationFn: (n_id: string) => api(`/api/notifications/${n_id}/read`, { method: "POST" }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["counter-notifications"] }); },
+  });
+
+  const [notifiedSet] = useState(() => new Set<string>());
+
+  useEffect(() => {
+    const unread = (notifsData?.notifications || []).filter((n: any) => !n.read_at && n.type === "call_staff");
+    for (const n of unread) {
+      if (!notifiedSet.has(n.id)) {
+        notifiedSet.add(n.id);
+        playChime("ready");
+        toast.info(n.message || `Table calling for staff!`, {
+          icon: '🛎️',
+          duration: 15000,
+          action: {
+            label: 'Mark Resolved',
+            onClick: () => markReadMut.mutate(n.id)
+          }
+        });
+      }
+    }
+  }, [notifsData, notifiedSet, markReadMut]);
 
   return (
     <div className="h-screen grid grid-cols-2 gap-0">

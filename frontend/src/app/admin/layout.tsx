@@ -5,6 +5,9 @@ import { useEffect, useState } from "react";
 import { LayoutDashboard, ShoppingBag, LineChart, Boxes, UtensilsCrossed, Users, CalendarClock, QrCode, LogOut, Sparkles, Menu as MenuIcon, X } from "lucide-react";
 import { RoleGuard } from "@/components/shared/RoleGuard";
 import { useSession } from "@/stores/session";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+import { toast } from "sonner";
 
 const nav = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true, testid: "admin-nav-dashboard" },
@@ -22,6 +25,37 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const { user, clear } = useSession();
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  const qc = useQueryClient();
+  const { data: notifsData } = useQuery({
+    queryKey: ["admin-notifications"],
+    queryFn: () => api<{ notifications: any[] }>("/api/notifications"),
+    refetchInterval: 5000,
+  });
+
+  const markReadMut = useMutation({
+    mutationFn: (n_id: string) => api(`/api/notifications/${n_id}/read`, { method: "POST" }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-notifications"] }); },
+  });
+
+  const [notifiedSet] = useState(() => new Set<string>());
+
+  useEffect(() => {
+    const unread = (notifsData?.notifications || []).filter((n: any) => !n.read_at && n.type === "call_staff");
+    for (const n of unread) {
+      if (!notifiedSet.has(n.id)) {
+        notifiedSet.add(n.id);
+        toast.info(n.message || `Table calling for staff!`, {
+          icon: '🛎️',
+          duration: 15000,
+          action: {
+            label: 'Mark Resolved',
+            onClick: () => markReadMut.mutate(n.id)
+          }
+        });
+      }
+    }
+  }, [notifsData, notifiedSet, markReadMut]);
 
   // Close drawer on route change
   useEffect(() => { setDrawerOpen(false); }, [path]);
