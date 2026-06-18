@@ -37,13 +37,29 @@ export default function AdminInventory() {
           <h1 className="font-heading text-3xl md:text-4xl tracking-tight">Inventory</h1>
           <p className="text-sm text-stone mt-1">{items.length} ingredients · {lowCount > 0 ? <span className="text-alert font-medium">{lowCount} below reorder level</span> : "all healthy"}</p>
         </div>
-        <button
-          data-testid="add-inv-btn"
-          onClick={() => setEditing({ ...empty })}
-          className="bg-ink text-cream rounded-full px-5 py-2.5 text-sm font-medium hover:bg-clay transition inline-flex items-center justify-center gap-2 self-start sm:self-auto"
-        >
-          <Plus className="h-4 w-4" /> Add ingredient
-        </button>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <button
+            onClick={async () => {
+              try {
+                await api("/api/inventory/seed-demo", { method: "POST" });
+                qc.invalidateQueries({ queryKey: ["inventory"] });
+                toast.success("Demo data seeded!");
+              } catch (e) {
+                toast.error("Failed to seed demo data");
+              }
+            }}
+            className="bg-stone/20 text-ink rounded-full px-5 py-2.5 text-sm font-medium hover:bg-stone/30 transition inline-flex items-center justify-center gap-2"
+          >
+            Seed Demo Data
+          </button>
+          <button
+            data-testid="add-inv-btn"
+            onClick={() => setEditing({ ...empty })}
+            className="bg-ink text-cream rounded-full px-5 py-2.5 text-sm font-medium hover:bg-clay transition inline-flex items-center justify-center gap-2"
+          >
+            <Plus className="h-4 w-4" /> Add ingredient
+          </button>
+        </div>
       </div>
 
       {isLoading && <div className="text-stone">Loading inventory…</div>}

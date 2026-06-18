@@ -609,6 +609,47 @@ async def list_inventory():
     items = await db.inventory.find({}, {"_id": 0}).to_list(500)
     return {"items": items}
 
+@app.post("/api/inventory/seed-demo", dependencies=[Depends(require_roles("admin"))])
+async def seed_inventory_demo():
+    """Seed the database with mock inventory and assign recipes to all menu items."""
+    inventory = await db.inventory.find().to_list(length=None)
+    if not inventory:
+        mock_inv = [
+            {"id": "inv_chicken", "name": "Raw Chicken", "unit": "kg", "qty": 50.0, "min_qty": 10.0},
+            {"id": "inv_rice", "name": "Basmati Rice", "unit": "kg", "qty": 100.0, "min_qty": 20.0},
+            {"id": "inv_paneer", "name": "Paneer", "unit": "kg", "qty": 30.0, "min_qty": 5.0},
+            {"id": "inv_flour", "name": "Flour", "unit": "kg", "qty": 20.0, "min_qty": 5.0},
+            {"id": "inv_onion", "name": "Onions", "unit": "kg", "qty": 40.0, "min_qty": 10.0},
+            {"id": "inv_tomato", "name": "Tomatoes", "unit": "kg", "qty": 35.0, "min_qty": 10.0},
+            {"id": "inv_spices", "name": "Mixed Spices", "unit": "g", "qty": 5000.0, "min_qty": 1000.0},
+        ]
+        await db.inventory.insert_many(mock_inv)
+    
+    menu = await db.menu.find().to_list(length=None)
+    for item in menu:
+        recipe = []
+        name = item.get("name", "").lower()
+        
+        # Add spices and onion/tomato to everything
+        recipe.append({"ingredient_id": "inv_spices", "qty_required": 10.0})
+        recipe.append({"ingredient_id": "inv_onion", "qty_required": 0.1})
+        recipe.append({"ingredient_id": "inv_tomato", "qty_required": 0.1})
+        
+        if "chicken" in name:
+            recipe.append({"ingredient_id": "inv_chicken", "qty_required": 0.2})
+        if "biryani" in name or "rice" in name:
+            recipe.append({"ingredient_id": "inv_rice", "qty_required": 0.25})
+        if "paneer" in name:
+            recipe.append({"ingredient_id": "inv_paneer", "qty_required": 0.15})
+        if "naan" in name or "roti" in name:
+            recipe.append({"ingredient_id": "inv_flour", "qty_required": 0.1})
+            
+        await db.menu.update_one(
+            {"id": item["id"]},
+            {"$set": {"recipe": recipe}}
+        )
+    return {"message": "Demo data seeded successfully"}
+
 @app.post("/api/inventory", dependencies=[Depends(require_roles("admin"))])
 async def create_inventory_item(item: InventoryItemModel):
     await db.inventory.insert_one(item.model_dump())

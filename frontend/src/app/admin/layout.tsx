@@ -14,7 +14,7 @@ const nav = [
   { href: "/admin/orders", label: "Orders", icon: ShoppingBag, testid: "admin-nav-orders" },
   { href: "/admin/reservations", label: "Reservations", icon: CalendarClock, testid: "admin-nav-reservations" },
   { href: "/admin/tables", label: "Tables & QR", icon: QrCode, testid: "admin-nav-tables" },
-  { href: "/admin/revenue", label: "Revenue", icon: LineChart, testid: "admin-nav-revenue" },
+  { href: "/admin/revenue", label: "Analytics & Revenue", icon: LineChart, testid: "admin-nav-revenue" },
   { href: "/admin/inventory", label: "Inventory", icon: Boxes, testid: "admin-nav-inventory" },
   { href: "/admin/menu", label: "Menu", icon: UtensilsCrossed, testid: "admin-nav-menu" },
   { href: "/admin/customers", label: "Customers", icon: Users, testid: "admin-nav-customers" },
