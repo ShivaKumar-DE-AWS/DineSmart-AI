@@ -21,7 +21,7 @@ def login(s, email, password):
 
 @pytest.fixture(scope="session")
 def admin(s):
-    return login(s, "owner@smartdine.ai", "Owner@123")
+    return login(s, "mehfil@smartdine.ai", "Owner@123")
 
 @pytest.fixture(scope="session")
 def chef(s):
@@ -48,7 +48,7 @@ def test_health(s):
 # ---------- Auth ----------
 def test_login_admin_role(admin):
     assert admin["user"]["role"] == "admin"
-    assert admin["user"]["email"] == "owner@smartdine.ai"
+    assert admin["user"]["email"] == "mehfil@smartdine.ai"
     assert isinstance(admin["token"], str) and len(admin["token"]) > 20
 
 def test_login_kitchen_role(chef):
@@ -61,7 +61,7 @@ def test_login_customer_role(guest):
     assert guest["user"]["role"] == "customer"
 
 def test_login_bad(s):
-    r = s.post(f"{API}/auth/login", json={"email": "owner@smartdine.ai", "password": "wrong"})
+    r = s.post(f"{API}/auth/login", json={"email": "mehfil@smartdine.ai", "password": "wrong"})
     assert r.status_code == 401
 
 def test_me_with_token(s, admin):

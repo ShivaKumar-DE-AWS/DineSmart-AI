@@ -310,7 +310,7 @@ SEED_INVENTORY = [
 ]
 
 SEED_USERS = [
-    {"email": "owner@smartdine.ai", "password": "Owner@123", "name": "Restaurant Owner", "role": "admin"},
+    {"email": "mehfil@smartdine.ai", "password": "Owner@123", "name": "Restaurant Owner", "role": "admin"},
     {"email": "chef@smartdine.ai", "password": "Chef@123", "name": "Head Chef", "role": "kitchen"},
     {"email": "counter@smartdine.ai", "password": "Counter@123", "name": "Counter Staff", "role": "counter"},
     {"email": "guest@smartdine.ai", "password": "Guest@123", "name": "Demo Customer", "role": "customer"},
