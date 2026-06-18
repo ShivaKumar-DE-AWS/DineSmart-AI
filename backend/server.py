@@ -310,10 +310,10 @@ SEED_INVENTORY = [
 ]
 
 SEED_USERS = [
-    {"email": "mehfil@smartdine.ai", "password": "Owner@123", "name": "Restaurant Owner", "role": "admin"},
-    {"email": "chef@smartdine.ai", "password": "Chef@123", "name": "Head Chef", "role": "kitchen"},
-    {"email": "counter@smartdine.ai", "password": "Counter@123", "name": "Counter Staff", "role": "counter"},
-    {"email": "guest@smartdine.ai", "password": "Guest@123", "name": "Demo Customer", "role": "customer"},
+    {"email": "admin-mehfil@smartdine.ai", "password": "Owner@123", "name": "Restaurant Owner", "role": "admin"},
+    {"email": "kitchen-mehfil@smartdine.ai", "password": "Chef@123", "name": "Head Chef", "role": "kitchen"},
+    {"email": "counter-mehfil@smartdine.ai", "password": "Counter@123", "name": "Counter Staff", "role": "counter"},
+    {"email": "guest-mehfil@smartdine.ai", "password": "Guest@123", "name": "Demo Customer", "role": "customer"},
 ]
 
 @app.on_event("startup")

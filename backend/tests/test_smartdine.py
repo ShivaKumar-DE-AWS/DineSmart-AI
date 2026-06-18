@@ -21,19 +21,20 @@ def login(s, email, password):
 
 @pytest.fixture(scope="session")
 def admin(s):
-    return login(s, "mehfil@smartdine.ai", "Owner@123")
+    return login(s, "admin-mehfil@smartdine.ai", "Owner@123")
 
 @pytest.fixture(scope="session")
 def chef(s):
-    return login(s, "chef@smartdine.ai", "Chef@123")
+    return login(s, "kitchen-mehfil@smartdine.ai", "Chef@123")
 
 @pytest.fixture(scope="session")
 def counter(s):
-    return login(s, "counter@smartdine.ai", "Counter@123")
+    return login(s, "counter-mehfil@smartdine.ai", "Counter@123")
 
 @pytest.fixture(scope="session")
 def guest(s):
-    return login(s, "guest@smartdine.ai", "Guest@123")
+    return login(s, "guest-mehfil@smartdine.ai", "Guest@123")
+
 
 def hdr(tok):
     return {"Authorization": f"Bearer {tok}"}
@@ -48,7 +49,7 @@ def test_health(s):
 # ---------- Auth ----------
 def test_login_admin_role(admin):
     assert admin["user"]["role"] == "admin"
-    assert admin["user"]["email"] == "mehfil@smartdine.ai"
+    assert admin["user"]["email"] == "admin-mehfil@smartdine.ai"
     assert isinstance(admin["token"], str) and len(admin["token"]) > 20
 
 def test_login_kitchen_role(chef):
@@ -61,7 +62,7 @@ def test_login_customer_role(guest):
     assert guest["user"]["role"] == "customer"
 
 def test_login_bad(s):
-    r = s.post(f"{API}/auth/login", json={"email": "mehfil@smartdine.ai", "password": "wrong"})
+    r = s.post(f"{API}/auth/login", json={"email": "admin-mehfil@smartdine.ai", "password": "wrong"})
     assert r.status_code == 401
 
 def test_me_with_token(s, admin):

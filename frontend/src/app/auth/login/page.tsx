@@ -18,8 +18,7 @@ export default function SaaSAuthPage() {
   const [tab, setTab] = useState<Tab>("login");
   const [busy, setBusy] = useState(false);
 
-  // Login state
-  const [email, setEmail] = useState("mehfil@smartdine.ai");
+  const [email, setEmail] = useState("admin-mehfil@smartdine.ai");
   const [password, setPassword] = useState("Owner@123");
 
   // Registration state
@@ -248,11 +247,11 @@ export default function SaaSAuthPage() {
           <div className="mt-8 bg-white/5 border border-white/10 rounded-2xl p-4 text-xs text-stone space-y-2 backdrop-blur-md">
             <div className="font-semibold text-white mb-2">Demo Credentials:</div>
             <div className="grid grid-cols-2 gap-2">
-              <div><span className="text-white">Admin:</span> mehfil@smartdine.ai</div>
+              <div><span className="text-white">Admin:</span> admin-mehfil@smartdine.ai</div>
               <div><span className="text-white">Pass:</span> Owner@123</div>
-              <div><span className="text-white">Kitchen:</span> chef@smartdine.ai</div>
+              <div><span className="text-white">Kitchen:</span> kitchen-mehfil@smartdine.ai</div>
               <div><span className="text-white">Pass:</span> Chef@123</div>
-              <div><span className="text-white">Counter:</span> counter@smartdine.ai</div>
+              <div><span className="text-white">Counter:</span> counter-mehfil@smartdine.ai</div>
               <div><span className="text-white">Pass:</span> Counter@123</div>
             </div>
           </div>

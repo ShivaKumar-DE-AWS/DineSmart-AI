@@ -25,7 +25,7 @@ export default function LoginPage() {
   const [gPhone, setGPhone] = useState("");
 
   // Staff fields
-  const [email, setEmail] = useState("mehfil@smartdine.ai");
+  const [email, setEmail] = useState("admin-mehfil@smartdine.ai");
   const [password, setPassword] = useState("Owner@123");
 
   const continueAsGuest = async () => {
@@ -183,9 +183,9 @@ export default function LoginPage() {
               </button>
               <div className="mt-5 text-[10px] text-[#1A1106]/55 space-y-1 font-royal tracking-wider uppercase">
                 <div className="font-semibold text-[#8A6A1B]">Seeded staff</div>
-                <div>mehfil@smartdine.ai / Owner@123 — Admin</div>
-                <div>chef@smartdine.ai / Chef@123 — Kitchen</div>
-                <div>counter@smartdine.ai / Counter@123 — Counter</div>
+                <div>admin-mehfil@smartdine.ai / Owner@123 — Admin</div>
+                <div>kitchen-mehfil@smartdine.ai / Chef@123 — Kitchen</div>
+                <div>counter-mehfil@smartdine.ai / Counter@123 — Counter</div>
               </div>
             </form>
           )}

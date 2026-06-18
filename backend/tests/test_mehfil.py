@@ -36,7 +36,7 @@ def s():
 
 @pytest.fixture(scope="module")
 def admin_tok(s):
-    r = s.post(f"{API}/auth/login", json={"email": "mehfil@smartdine.ai", "password": "Owner@123"})
+    r = s.post(f"{API}/auth/login", json={"email": "admin-mehfil@smartdine.ai", "password": "Owner@123"})
     assert r.status_code == 200, r.text
     return r.json()["token"]
 
