@@ -23,7 +23,7 @@ function customerOrigin(): string {
 }
 
 function tableQrUrl(token: string): string {
-  return `${customerOrigin()}/customer?t=${token}`;
+  return `${customerOrigin()}/r/mehfil-hyderabad?t=${token}`;
 }
 
 export default function AdminTables() {

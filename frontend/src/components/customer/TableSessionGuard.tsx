@@ -45,12 +45,12 @@ export function TableSessionGuard() {
       setSession(res.session);
       toast.success(`Welcome to Table ${res.table.number}, ${guestName.trim()}!`);
       setQrToken(null);
-      router.replace(path || "/customer", { scroll: false });
+      router.replace(path || "/r/mehfil-hyderabad", { scroll: false });
     } catch (e) {
       const err = e as Error;
       toast.error(err.message || "Invalid table QR");
       setQrToken(null);
-      router.replace(path || "/customer", { scroll: false });
+      router.replace(path || "/r/mehfil-hyderabad", { scroll: false });
     } finally {
       setScanning(false);
     }
