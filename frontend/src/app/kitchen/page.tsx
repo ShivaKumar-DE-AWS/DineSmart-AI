@@ -64,7 +64,7 @@ export default function KitchenPage() {
     queryFn: () => api<{ notifications: any[] }>("/api/notifications"),
     refetchInterval: 3000,
   });
-  const notifications = notifsData?.notifications || [];
+  const notifications = (notifsData?.notifications || []).filter(n => n.type === "staff_call" && !n.read);
 
   const markReadMut = useMutation({
     mutationFn: (n_id: string) => api(`/api/notifications/${n_id}/read`, { method: "POST" }),

@@ -45,7 +45,7 @@ export default function CounterPage() {
   const [notifiedSet] = useState(() => new Set<string>());
 
   useEffect(() => {
-    const unread = (notifsData?.notifications || []).filter((n: any) => !n.read_at && n.type === "call_staff");
+    const unread = (notifsData?.notifications || []).filter((n: any) => !n.read && n.type === "staff_call");
     for (const n of unread) {
       if (!notifiedSet.has(n.id)) {
         notifiedSet.add(n.id);
