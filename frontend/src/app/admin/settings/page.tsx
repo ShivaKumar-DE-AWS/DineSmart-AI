@@ -1,0 +1,173 @@
+"use client";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+import { toast } from "sonner";
+import { Save, UserCog, Key, Settings, Palette, Type, Link as LinkIcon } from "lucide-react";
+
+export default function AdminSettings() {
+  const qc = useQueryClient();
+
+  const { data: settings, isLoading: loadingSettings } = useQuery({
+    queryKey: ["admin-settings"],
+    queryFn: () => api<any>("/api/admin/settings"),
+  });
+
+  const { data: staffData, isLoading: loadingStaff } = useQuery({
+    queryKey: ["admin-staff"],
+    queryFn: () => api<{ staff: any[] }>("/api/admin/staff"),
+  });
+
+  // Settings State
+  const [name, setName] = useState(settings?.name || "");
+  const [tagline, setTagline] = useState(settings?.tagline || "");
+  const [primaryColor, setPrimaryColor] = useState(settings?.primary_color || "#8A1A2A");
+  const [secondaryColor, setSecondaryColor] = useState(settings?.secondary_color || "#C9A348");
+  const [logoUrl, setLogoUrl] = useState(settings?.logo_url || "");
+
+  // Update effect to prefill from fetched data
+  useEffect(() => {
+    if (settings) {
+      setName(settings.name || "");
+      setTagline(settings.tagline || "");
+      setPrimaryColor(settings.primary_color || "#8A1A2A");
+      setSecondaryColor(settings.secondary_color || "#C9A348");
+      setLogoUrl(settings.logo_url || "");
+    }
+  }, [settings]);
+
+  const updateSettings = useMutation({
+    mutationFn: (data: any) => api("/api/admin/settings", { method: "PUT", body: JSON.stringify(data) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-settings"] });
+      toast.success("Brand settings updated successfully");
+    },
+    onError: (e: Error) => toast.error(e.message || "Failed to update settings"),
+  });
+
+  const handleSaveSettings = () => {
+    updateSettings.mutate({ name, tagline, primary_color: primaryColor, secondary_color: secondaryColor, logo_url: logoUrl });
+  };
+
+  return (
+    <div className="max-w-4xl space-y-8">
+      <div>
+        <h1 className="text-3xl font-heading font-semibold text-ink">Brand & Staff Settings</h1>
+        <p className="text-stone mt-1">Manage your restaurant identity and staff access.</p>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-8">
+        <section className="bg-white border border-bone rounded-2xl p-6 shadow-sm">
+          <div className="flex items-center gap-2 mb-6">
+            <Palette className="h-5 w-5 text-ink" />
+            <h2 className="text-xl font-heading font-semibold text-ink">Brand Appearance</h2>
+          </div>
+          
+          <div className="space-y-4">
+            <label className="block">
+              <span className="text-sm font-medium text-stone block mb-1">Restaurant Name</span>
+              <div className="flex items-center gap-2 bg-cream border border-bone rounded-xl px-3 py-2">
+                <Type className="h-4 w-4 text-stone" />
+                <input value={name} onChange={e => setName(e.target.value)} className="bg-transparent outline-none flex-1 text-ink" />
+              </div>
+            </label>
+
+            <label className="block">
+              <span className="text-sm font-medium text-stone block mb-1">Tagline</span>
+              <div className="flex items-center gap-2 bg-cream border border-bone rounded-xl px-3 py-2">
+                <Type className="h-4 w-4 text-stone" />
+                <input value={tagline} onChange={e => setTagline(e.target.value)} placeholder="e.g. Turn Every Meal Into A Memory" className="bg-transparent outline-none flex-1 text-ink" />
+              </div>
+            </label>
+
+            <label className="block">
+              <span className="text-sm font-medium text-stone block mb-1">Logo URL</span>
+              <div className="flex items-center gap-2 bg-cream border border-bone rounded-xl px-3 py-2">
+                <LinkIcon className="h-4 w-4 text-stone" />
+                <input value={logoUrl} onChange={e => setLogoUrl(e.target.value)} placeholder="https://..." className="bg-transparent outline-none flex-1 text-ink" />
+              </div>
+            </label>
+
+            <div className="grid grid-cols-2 gap-4">
+              <label className="block">
+                <span className="text-sm font-medium text-stone block mb-1">Primary Color</span>
+                <div className="flex items-center gap-2">
+                  <input type="color" value={primaryColor} onChange={e => setPrimaryColor(e.target.value)} className="h-8 w-8 rounded cursor-pointer" />
+                  <span className="text-sm text-ink">{primaryColor}</span>
+                </div>
+              </label>
+
+              <label className="block">
+                <span className="text-sm font-medium text-stone block mb-1">Secondary Color</span>
+                <div className="flex items-center gap-2">
+                  <input type="color" value={secondaryColor} onChange={e => setSecondaryColor(e.target.value)} className="h-8 w-8 rounded cursor-pointer" />
+                  <span className="text-sm text-ink">{secondaryColor}</span>
+                </div>
+              </label>
+            </div>
+            
+            <button onClick={handleSaveSettings} disabled={updateSettings.isPending} className="mt-4 w-full bg-ink text-cream font-medium rounded-xl px-4 py-2 hover:opacity-90 flex items-center justify-center gap-2">
+              <Save className="h-4 w-4" /> Save Brand Settings
+            </button>
+          </div>
+        </section>
+
+        <section className="bg-white border border-bone rounded-2xl p-6 shadow-sm">
+          <div className="flex items-center gap-2 mb-6">
+            <UserCog className="h-5 w-5 text-ink" />
+            <h2 className="text-xl font-heading font-semibold text-ink">Staff Access</h2>
+          </div>
+
+          <div className="space-y-6">
+            {loadingStaff ? (
+              <div className="text-stone text-sm">Loading staff...</div>
+            ) : staffData?.staff?.length === 0 ? (
+              <div className="text-stone text-sm italic">No staff accounts found.</div>
+            ) : (
+              staffData?.staff?.map((s) => (
+                <StaffRow key={s.id} staff={s} />
+              ))
+            )}
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function StaffRow({ staff }: { staff: any }) {
+  const qc = useQueryClient();
+  const [name, setName] = useState(staff.name);
+  const [password, setPassword] = useState("");
+
+  const updateStaff = useMutation({
+    mutationFn: (data: any) => api("/api/admin/staff", { method: "POST", body: JSON.stringify({ ...data, id: staff.id, role: staff.role }) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-staff"] });
+      toast.success(`${staff.role} credentials updated`);
+      setPassword("");
+    },
+    onError: (e: Error) => toast.error(e.message || "Update failed"),
+  });
+
+  return (
+    <div className="border-b border-bone pb-4 last:border-0 last:pb-0">
+      <div className="flex items-center justify-between mb-2">
+        <span className="font-medium text-ink capitalize">{staff.role}</span>
+        <span className="text-xs text-stone">{staff.email}</span>
+      </div>
+      <div className="space-y-3">
+        <input value={name} onChange={e => setName(e.target.value)} placeholder="Display Name" className="w-full bg-cream border border-bone rounded-xl px-3 py-1.5 text-sm outline-none text-ink" />
+        <div className="flex gap-2">
+          <div className="flex items-center gap-2 bg-cream border border-bone rounded-xl px-3 py-1.5 flex-1">
+            <Key className="h-3 w-3 text-stone" />
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="New Password (leave blank to keep)" className="bg-transparent outline-none flex-1 text-sm text-ink" />
+          </div>
+          <button onClick={() => updateStaff.mutate({ name, password: password || undefined })} className="bg-bone text-ink font-medium text-xs px-3 rounded-xl hover:bg-stone/20">
+            Update
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

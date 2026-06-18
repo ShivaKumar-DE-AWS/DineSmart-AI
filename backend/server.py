@@ -1860,3 +1860,66 @@ async def push_test(order_id: str):
     """Dev helper: fire a test push to all subscribers of this order."""
     result = await send_push_to_order(order_id, "Mehfil test", "Push is alive and well 🌹", {"test": True})
     return result
+
+# =========================================================
+# Admin Settings & Branding
+# =========================================================
+class SettingsUpdateReq(BaseModel):
+    name: Optional[str] = None
+    tagline: Optional[str] = None
+    primary_color: Optional[str] = None
+    secondary_color: Optional[str] = None
+    logo_url: Optional[str] = None
+
+@app.get("/api/admin/settings", dependencies=[Depends(require_roles("admin"))])
+async def get_admin_settings(user=Depends(require_user)):
+    rest = await db.restaurants.find_one({"id": user["restaurant_id"]}, {"_id": 0})
+    if not rest:
+        raise HTTPException(status_code=404, detail="Restaurant not found")
+    return rest
+
+@app.put("/api/admin/settings", dependencies=[Depends(require_roles("admin"))])
+async def update_admin_settings(req: SettingsUpdateReq, user=Depends(require_user)):
+    update_data = req.model_dump(exclude_unset=True)
+    if not update_data:
+        return {"status": "success", "message": "No changes"}
+    
+    await db.restaurants.update_one(
+        {"id": user["restaurant_id"]},
+        {"$set": update_data}
+    )
+    return {"status": "success"}
+
+class StaffUpdateReq(BaseModel):
+    id: Optional[str] = None
+    role: str
+    name: str
+    password: Optional[str] = None
+
+@app.get("/api/admin/staff", dependencies=[Depends(require_roles("admin"))])
+async def get_admin_staff(user=Depends(require_user)):
+    staff = await db.users.find(
+        {"restaurant_id": user["restaurant_id"], "role": {"$in": ["kitchen", "counter"]}},
+        {"_id": 0, "password_hash": 0}
+    ).to_list(100)
+    return {"staff": staff}
+
+@app.post("/api/admin/staff", dependencies=[Depends(require_roles("admin"))])
+async def update_admin_staff(req: StaffUpdateReq, user=Depends(require_user)):
+    if req.role not in {"kitchen", "counter"}:
+        raise HTTPException(status_code=400, detail="Invalid role")
+        
+    update_data = {"name": req.name}
+    if req.password:
+        update_data["password_hash"] = hash_password(req.password)
+        
+    if req.id:
+        # Update existing
+        await db.users.update_one(
+            {"id": req.id, "restaurant_id": user["restaurant_id"]},
+            {"$set": update_data}
+        )
+    else:
+        raise HTTPException(status_code=400, detail="ID required")
+        
+    return {"status": "success"}

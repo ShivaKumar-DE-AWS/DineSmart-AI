@@ -19,6 +19,7 @@ const nav = [
   { href: "/admin/inventory", label: "Inventory", icon: Boxes, testid: "admin-nav-inventory" },
   { href: "/admin/menu", label: "Menu", icon: UtensilsCrossed, testid: "admin-nav-menu" },
   { href: "/admin/customers", label: "Customers", icon: Users, testid: "admin-nav-customers" },
+  { href: "/admin/settings", label: "Brand & Staff Settings", icon: Sparkles, testid: "admin-nav-settings" },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
