@@ -998,45 +998,48 @@ def _make_waiter_stream(session_id: str, message: str, system_prompt: str):
     """Return an async generator that yields SSE 'data:' lines for the chat reply."""
     async def event_gen():
         try:
-            import google.generativeai as genai
+            from google import genai
+            from google.genai import types as genai_types
             import asyncio
             import queue
             import threading
 
-            genai.configure(api_key=GEMINI_API_KEY)
+            client = genai.Client(api_key=GEMINI_API_KEY)
             
             # Fetch history to maintain context
             history_docs = await db.chat_messages.find({"session_id": session_id}).sort("created_at", 1).to_list(50)
             history = []
             for doc in history_docs:
                 role = "user" if doc["role"] == "user" else "model"
-                history.append({"role": role, "parts": [doc["content"]]})
+                history.append(genai_types.Content(role=role, parts=[genai_types.Part(text=doc["content"])]))
             
-            # Use a queue to bridge sync streaming → async generator
+            # Use a queue to bridge sync streaming -> async generator
             q: queue.Queue = queue.Queue()
             SENTINEL = object()
 
             def _stream_in_thread():
-                # Try models in order of preference (free tier compatibility)
-                models_to_try = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
+                # Models verified to work on free tier (tested 2026-06-18)
+                models_to_try = ["gemini-3.1-flash-lite", "gemini-3-flash-preview", "gemini-2.5-flash-lite"]
                 for model_name in models_to_try:
                     try:
-                        model = genai.GenerativeModel(
-                            model_name=model_name, 
-                            system_instruction=system_prompt
+                        response = client.models.generate_content_stream(
+                            model=model_name,
+                            contents=[*[{"role": h.role, "parts": [{"text": h.parts[0].text}]} for h in history],
+                                      {"role": "user", "parts": [{"text": message}]}],
+                            config=genai_types.GenerateContentConfig(
+                                system_instruction=system_prompt,
+                            ),
                         )
-                        chat_obj = model.start_chat(history=history)
-                        response = chat_obj.send_message(message, stream=True)
                         for chunk in response:
                             if chunk.text:
                                 q.put(chunk.text)
-                        # Success — break out of the model loop
+                        # Success
                         q.put(SENTINEL)
                         return
                     except Exception as e:
                         err_str = str(e).lower()
-                        if "quota" in err_str or "rate" in err_str or "not found" in err_str or "not supported" in err_str:
-                            continue  # Try the next model
+                        if "quota" in err_str or "rate" in err_str or "not found" in err_str or "not supported" in err_str or "unavailable" in err_str:
+                            continue  # Try next model
                         else:
                             q.put(e)
                             q.put(SENTINEL)
@@ -1116,29 +1119,31 @@ async def ai_transcribe(file: UploadFile = File(...), language: str = Form("")):
     if len(raw) > 20 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="Audio too large (max 20MB)")
     try:
-        import google.generativeai as genai
+        from google import genai
+        from google.genai import types as genai_types
         import asyncio
-        genai.configure(api_key=GEMINI_API_KEY)
+        client = genai.Client(api_key=GEMINI_API_KEY)
         
         prompt = "You are an expert transcriber. Transcribe the following audio exactly as spoken. Output ONLY the transcribed text, nothing else."
         if language and language.strip() and language.strip() != "auto":
             prompt += f" The expected language might be {language}."
         
-        audio_part = {"mime_type": file.content_type or "audio/webm", "data": raw}
+        mime = file.content_type or "audio/webm"
         
-        models_to_try = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
+        # Models verified to work on free tier
+        models_to_try = ["gemini-3.1-flash-lite", "gemini-3-flash-preview", "gemini-2.5-flash-lite"]
         for model_name in models_to_try:
             try:
-                model = genai.GenerativeModel(model_name)
                 response = await asyncio.to_thread(
-                    model.generate_content,
-                    [prompt, audio_part]
+                    client.models.generate_content,
+                    model=model_name,
+                    contents=[prompt, genai_types.Part.from_bytes(data=raw, mime_type=mime)],
                 )
                 text = response.text.strip() if response and response.text else ""
                 return {"text": text}
             except Exception as inner_e:
                 err_str = str(inner_e).lower()
-                if "quota" in err_str or "rate" in err_str or "not found" in err_str or "not supported" in err_str:
+                if "quota" in err_str or "rate" in err_str or "not found" in err_str or "not supported" in err_str or "unavailable" in err_str:
                     continue
                 raise
         raise HTTPException(status_code=429, detail="All models at quota limit. Try again shortly.")
