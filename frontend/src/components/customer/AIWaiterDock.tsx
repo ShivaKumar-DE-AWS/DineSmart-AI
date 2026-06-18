@@ -46,7 +46,7 @@ function getSessionId(): string {
 const INITIAL_GREETING: Msg = {
   id: "greeting",
   role: "assistant",
-  content: "Welcome to Mehfil Exclusive! 🙏 I'm your personal waiter tonight. Tell me what you're craving — veg, non-veg, something spicy? Or just say 'surprise me' and I'll curate a perfect meal for you!",
+  content: "Welcome to Mehfil! I am your AI waiter. Please tap the gold microphone button below to start speaking, and tap it again when you're finished.",
 };
 
 
@@ -82,10 +82,12 @@ export function AIWaiterDock() {
   const [messages, setMessages] = useState<Msg[]>([INITIAL_GREETING]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
-  const [voiceState, setVoiceState] = useState<"idle" | "listening" | "thinking" | "speaking">("idle");
+  const [recording, setRecording] = useState(false);
+  const [voiceProcessing, setVoiceProcessing] = useState(false);
   const [ttsOn, setTtsOn] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const recognitionRef = useRef<any>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
   const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
   const cart = useCart();
   const router = useRouter();
@@ -192,34 +194,28 @@ export function AIWaiterDock() {
     });
   }, []);
 
-  const speakText = useCallback(async (text: string): Promise<void> => {
+  const speakText = useCallback(async (text: string) => {
     if (!ttsOn) return;
-    return new Promise(async (resolve) => {
-      try {
-        const res = await fetch(apiUrl("/api/ai-waiter/speak"), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text, voice: "nova" }),
-        });
-        if (!res.ok) throw new Error(`TTS ${res.status}`);
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        if (ttsAudioRef.current) {
-          ttsAudioRef.current.pause();
-        }
-        const audio = new Audio(url);
-        ttsAudioRef.current = audio;
-        audio.onended = () => { URL.revokeObjectURL(url); resolve(); };
-        audio.onerror = () => { URL.revokeObjectURL(url); resolve(); };
-        audio.play().catch((err) => {
-          console.warn("[ai-waiter] TTS playback blocked:", err);
-          resolve();
-        });
-      } catch (e) {
-        console.warn("[ai-waiter] TTS failed:", e);
-        resolve();
-      }
-    });
+    try {
+      const res = await fetch(apiUrl("/api/ai-waiter/speak"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, voice: "nova" }),
+      });
+      if (!res.ok) throw new Error(`TTS ${res.status}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      if (ttsAudioRef.current) ttsAudioRef.current.pause();
+      const audio = new Audio(url);
+      ttsAudioRef.current = audio;
+      audio.play().catch((err) => {
+        // Autoplay policies can block before a user gesture — non-fatal, just log
+        console.warn("[ai-waiter] TTS playback blocked:", err);
+      });
+      audio.onended = () => URL.revokeObjectURL(url);
+    } catch (e) {
+      console.warn("[ai-waiter] TTS failed:", e);
+    }
   }, [ttsOn]);
 
   const finalizeLastAssistant = useCallback((doSpeak: boolean) => {
@@ -235,8 +231,8 @@ export function AIWaiterDock() {
     });
   }, [resolveRecs, speakText]);
 
-  const sendText = useCallback(async (text: string, opts?: { speak?: boolean }): Promise<string> => {
-    if (!text.trim() || streaming) return "";
+  const sendText = useCallback(async (text: string, opts?: { speak?: boolean }) => {
+    if (!text.trim() || streaming) return;
     const speak = !!opts?.speak;
     setInput("");
     setMessages((m) => [
@@ -255,7 +251,6 @@ export function AIWaiterDock() {
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
-      let finalContent = "";
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -263,110 +258,63 @@ export function AIWaiterDock() {
         const { payloads, rest } = parseSseChunk(buffer);
         buffer = rest;
         for (const payload of payloads) {
-          if (payload.delta) { finalContent += payload.delta; appendAssistantDelta(payload.delta); }
-          else if (payload.error) { finalContent = `Sorry, I couldn't think clearly — ${payload.error}`; replaceLastAssistant(finalContent); }
+          if (payload.delta) appendAssistantDelta(payload.delta);
+          else if (payload.error) replaceLastAssistant(`Sorry, I couldn't think clearly — ${payload.error}`);
         }
       }
       finalizeLastAssistant(speak);
-      const { clean } = extractRecommendations(finalContent);
-      return clean;
     } catch (e) {
       const err = e as Error;
       console.error("[ai-waiter] stream failed:", err);
       replaceLastAssistant(`Connection issue: ${err.message}`);
-      finalizeLastAssistant(speak);
-      return "";
     } finally {
       setStreaming(false);
     }
   }, [streaming, appendAssistantDelta, replaceLastAssistant, finalizeLastAssistant, language, tone]);
 
-  // Voice Auto-Loop
-  const voiceStateRef = useRef<"idle" | "listening" | "thinking" | "speaking">(voiceState);
-  useEffect(() => { voiceStateRef.current = voiceState; }, [voiceState]);
-
-  const startListening = useCallback(() => {
-    if (typeof window === "undefined") return;
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      toast.error("Voice recognition not supported in this browser.");
-      return;
-    }
-    
-    if (recognitionRef.current) {
-      try { recognitionRef.current.stop(); } catch(e){}
-    }
-    
-    const rec = new SpeechRecognition();
-    rec.continuous = false;
-    rec.interimResults = false;
-    rec.lang = language === "auto" ? "en-IN" : language;
-    
-    rec.onstart = () => {
-       setVoiceState("listening");
-    };
-    
-    rec.onresult = async (e: any) => {
-      const transcript = e.results[0][0].transcript;
-      if (transcript.trim()) {
-        setVoiceState("thinking");
-        const reply = await sendText(transcript, { speak: false });
-        if (reply && voiceStateRef.current !== "idle") {
-          setVoiceState("speaking");
-          await speakText(reply);
-          if ((voiceStateRef.current as string) !== "idle") {
-             startListening(); // Re-open mic after speaking
-          }
-        }
-      }
-    };
-    
-    rec.onerror = (e: any) => {
-      if (e.error === "no-speech" && voiceStateRef.current === "listening") {
-        try { rec.start(); } catch(e){}
-      } else if (e.error !== "aborted") {
-        setVoiceState("idle");
-      }
-    };
-    
-    rec.onend = () => {
-      if (voiceStateRef.current === "listening") {
-         try { rec.start(); } catch(e){}
-      }
-    };
-    
+  // Voice
+  const startRecording = useCallback(async () => {
     try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mime = MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "";
+      const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+      audioChunksRef.current = [];
+      rec.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
+      rec.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(audioChunksRef.current, { type: mime || "audio/webm" });
+        if (blob.size < 800) { toast.info("Hold the mic a little longer."); return; }
+        setVoiceProcessing(true);
+        try {
+          const fd = new FormData();
+          fd.append("file", blob, "voice.webm");
+          // Whisper language hint — only ISO codes work, "auto" means omit
+          fd.append("language", language === "auto" ? "" : language);
+          const r = await fetch(apiUrl("/api/ai-waiter/transcribe"), { method: "POST", body: fd });
+          if (!r.ok) throw new Error(`STT ${r.status}`);
+          const j = await r.json() as { text: string };
+          const text = (j.text || "").trim();
+          if (!text) { toast.info("Didn't catch that — try once more."); return; }
+          await sendText(text, { speak: true });
+        } catch (e) {
+          const err = e as Error;
+          toast.error(`Voice failed: ${err.message}`);
+        } finally { setVoiceProcessing(false); }
+      };
       rec.start();
-      recognitionRef.current = rec;
+      mediaRecorderRef.current = rec;
+      setRecording(true);
     } catch (e) {
-      console.warn("Could not start rec:", e);
-      setVoiceState("idle");
+      const err = e as Error;
+      toast.error(`Microphone unavailable: ${err.message}`);
     }
-  }, [language, sendText, speakText]);
+  }, [sendText, language]);
 
-  const onStartLoop = async () => {
-     // User gesture triggers initial greeting audio play, unlocking autoplay policies
-     setVoiceState("speaking");
-     if (messages.length === 1 && messages[0].id === "greeting") {
-        await speakText(messages[0].content);
-     }
-     if (voiceStateRef.current !== "idle") {
-        startListening();
-     }
-  };
-
-  const onStopLoop = () => {
-     setVoiceState("idle");
-     if (recognitionRef.current) { try { recognitionRef.current.stop(); } catch(e){} }
-     if (ttsAudioRef.current) { ttsAudioRef.current.pause(); }
-  };
-  
-  useEffect(() => {
-    if (mode !== "voice") {
-       onStopLoop();
-    }
-  }, [mode]);
-
+  const stopRecording = useCallback(() => {
+    const rec = mediaRecorderRef.current;
+    if (rec && rec.state !== "inactive") rec.stop();
+    setRecording(false);
+  }, []);
 
   const addToTray = (it: MenuItem) => { cart.add(it); toast.success(`${it.name} added to your tray`); };
 
@@ -504,9 +452,10 @@ export function AIWaiterDock() {
                 streaming={streaming}
                 scrollRef={scrollRef}
                 onAdd={addToTray}
-                voiceState={voiceState}
-                onStartLoop={onStartLoop}
-                onStopLoop={onStopLoop}
+                recording={recording}
+                voiceProcessing={voiceProcessing}
+                startRecording={startRecording}
+                stopRecording={stopRecording}
               />
             )}
           </div>
@@ -669,12 +618,12 @@ function ChatPane({
 // VOICE PANE — recommendation cards still appear after voice replies
 // =====================================================================
 function VoicePane({
-  messages, streaming, scrollRef, onAdd, voiceState, onStartLoop, onStopLoop,
+  messages, streaming, scrollRef, onAdd, recording, voiceProcessing, startRecording, stopRecording,
 }: {
   messages: Msg[]; streaming: boolean; scrollRef: React.RefObject<HTMLDivElement>;
   onAdd: (it: MenuItem) => void;
-  voiceState: "idle" | "listening" | "thinking" | "speaking";
-  onStartLoop: () => void; onStopLoop: () => void;
+  recording: boolean; voiceProcessing: boolean;
+  startRecording: () => void; stopRecording: () => void;
 }) {
   return (
     <>
@@ -705,32 +654,20 @@ function VoicePane({
       </div>
       <div className="p-5 border-t border-[#E7DFCB] bg-[#FAF5EC]">
         <div className="flex flex-col items-center gap-2" data-testid="ai-voice-controls">
-          {voiceState === "idle" ? (
-             <button
-               onClick={onStartLoop}
-               className="h-16 w-16 rounded-full flex items-center justify-center shadow-2xl transition-all mehfil-btn-gold hover:-translate-y-1"
-             >
-               <Mic className="h-7 w-7 text-[#1A1106]" />
-             </button>
-          ) : (
-             <button
-               onClick={onStopLoop}
-               className={`h-16 w-16 rounded-full flex items-center justify-center shadow-2xl transition-all ${
-                 voiceState === "listening" ? "bg-[#8A1A2A] mehfil-glow" : 
-                 voiceState === "speaking" ? "bg-[#C9A348] animate-pulse" : 
-                 "bg-[#1A1106]"
-               }`}
-             >
-               {voiceState === "thinking" ? <Loader2 className="h-6 w-6 animate-spin text-[#FAF5EC]" /> :
-                voiceState === "speaking" ? <Volume2 className="h-6 w-6 text-[#FAF5EC]" /> :
-                <Square className="h-6 w-6 text-[#FAF5EC] fill-current" />}
-             </button>
-          )}
+          <button
+            data-testid={recording ? "ai-voice-stop" : "ai-voice-start"}
+            onClick={recording ? stopRecording : startRecording}
+            disabled={voiceProcessing || streaming}
+            className={`h-16 w-16 rounded-full flex items-center justify-center shadow-2xl transition-all ${
+              recording ? "bg-[#8A1A2A] mehfil-glow" : "mehfil-btn-gold"
+            } disabled:opacity-50`}
+          >
+            {voiceProcessing || streaming ? <Loader2 className="h-6 w-6 animate-spin text-[#FAF5EC]" /> :
+              recording ? <Square className="h-6 w-6 text-[#FAF5EC] fill-current" /> :
+              <Mic className="h-7 w-7 text-[#1A1106]" />}
+          </button>
           <div className="font-royal tracking-[0.2em] uppercase text-[10px] text-[#8A1A2A]">
-            {voiceState === "idle" ? "Tap to Start Conversation" :
-             voiceState === "listening" ? "Listening..." :
-             voiceState === "thinking" ? "Thinking..." :
-             "Speaking..."}
+            {voiceProcessing ? "Transcribing…" : recording ? "Listening… tap to send" : streaming ? "MehfilAI is thinking…" : "Tap & speak to MehfilAI"}
           </div>
           <div className="font-editorial italic text-[10px] text-[#1A1106]/50 text-center px-4">Try: &ldquo;Spicy biryani for two with a sweet finish&rdquo;</div>
         </div>
