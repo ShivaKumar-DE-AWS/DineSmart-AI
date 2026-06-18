@@ -74,6 +74,32 @@ function extractRecommendations(content: string): { clean: string; names: string
   return { clean: content.slice(0, m.index).trim(), names };
 }
 
+function extractActions(content: string): { clean: string; adds: {name: string, qty: number}[]; navs: string[] } {
+  let clean = content;
+  const adds: {name: string, qty: number}[] = [];
+  const navs: string[] = [];
+
+  const addRegex = /<add_to_cart>([^<]+)<\/add_to_cart>/gi;
+  let match;
+  while ((match = addRegex.exec(content)) !== null) {
+    const parts = match[1].split("|");
+    if (parts.length >= 2) {
+      adds.push({ name: parts[0].trim(), qty: parseInt(parts[1].trim(), 10) || 1 });
+    } else {
+      adds.push({ name: parts[0].trim(), qty: 1 });
+    }
+  }
+  clean = clean.replace(addRegex, "");
+
+  const navRegex = /<navigate>([^<]+)<\/navigate>/gi;
+  while ((match = navRegex.exec(content)) !== null) {
+    navs.push(match[1].trim());
+  }
+  clean = clean.replace(navRegex, "");
+
+  return { clean: clean.trim(), adds, navs };
+}
+
 export function AIWaiterDock() {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>("chat");
@@ -85,10 +111,14 @@ export function AIWaiterDock() {
   const [recording, setRecording] = useState(false);
   const [voiceProcessing, setVoiceProcessing] = useState(false);
   const [ttsOn, setTtsOn] = useState(true);
+  const [ttsPlaying, setTtsPlaying] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
+  const vadCtxRef = useRef<AudioContext | null>(null);
+  const vadStreamRef = useRef<MediaStream | null>(null);
+  const hasGreetedRef = useRef(false);
   const cart = useCart();
   const router = useRouter();
 
@@ -174,8 +204,18 @@ export function AIWaiterDock() {
     if (!open && ttsAudioRef.current) {
       ttsAudioRef.current.pause();
       ttsAudioRef.current = null;
+      setTtsPlaying(false);
     }
   }, [open]);
+
+  // Auto-greet when switching to Talk mode
+  useEffect(() => {
+    if (open && mode === "voice" && !hasGreetedRef.current) {
+      hasGreetedRef.current = true;
+      // Start streaming to true so VAD doesn't trigger until greeting ends
+      void speakText(INITIAL_GREETING.content);
+    }
+  }, [open, mode]);
 
   const appendAssistantDelta = useCallback((delta: string) => {
     setMessages((m) => {
@@ -208,28 +248,60 @@ export function AIWaiterDock() {
       if (ttsAudioRef.current) ttsAudioRef.current.pause();
       const audio = new Audio(url);
       ttsAudioRef.current = audio;
+      setTtsPlaying(true);
       audio.play().catch((err) => {
-        // Autoplay policies can block before a user gesture — non-fatal, just log
         console.warn("[ai-waiter] TTS playback blocked:", err);
+        setTtsPlaying(false);
       });
-      audio.onended = () => URL.revokeObjectURL(url);
+      audio.onended = () => {
+        URL.revokeObjectURL(url);
+        setTtsPlaying(false);
+      };
     } catch (e) {
       console.warn("[ai-waiter] TTS failed:", e);
+      setTtsPlaying(false);
     }
   }, [ttsOn]);
 
   const finalizeLastAssistant = useCallback((doSpeak: boolean) => {
+    let addsToRun: {name: string, qty: number}[] = [];
+    let navsToRun: string[] = [];
+    let cleanTextToSpeak = "";
+
     setMessages((m) => {
       const copy = [...m];
       const last = copy[copy.length - 1];
       if (!last || last.role !== "assistant") return copy;
       const { clean, names } = extractRecommendations(last.content);
+      const { clean: finalClean, adds, navs } = extractActions(clean);
       const recs = resolveRecs(names);
-      copy[copy.length - 1] = { ...last, content: clean, recs };
-      if (doSpeak && clean) void speakText(clean);
+      copy[copy.length - 1] = { ...last, content: finalClean, recs };
+      
+      cleanTextToSpeak = finalClean;
+      addsToRun = adds;
+      navsToRun = navs;
       return copy;
     });
-  }, [resolveRecs, speakText]);
+
+    if (doSpeak && cleanTextToSpeak) void speakText(cleanTextToSpeak);
+
+    if (addsToRun.length > 0) {
+      // Small timeout to ensure state settles
+      setTimeout(() => {
+        const itemsToAdd = resolveRecs(addsToRun.map(a => a.name));
+        itemsToAdd.forEach((item, idx) => {
+          cart.add(item, addsToRun[idx].qty);
+          toast.success(`AI added ${addsToRun[idx].qty}x ${item.name}`);
+        });
+      }, 100);
+    }
+
+    if (navsToRun.length > 0) {
+      setTimeout(() => {
+        router.push(navsToRun[navsToRun.length - 1]);
+      }, 500); // slight delay so AI speaking starts smoothly before routing
+    }
+  }, [resolveRecs, speakText, cart, router]);
 
   const sendText = useCallback(async (text: string, opts?: { speak?: boolean }) => {
     if (!text.trim() || streaming) return;
@@ -272,45 +344,121 @@ export function AIWaiterDock() {
     }
   }, [streaming, appendAssistantDelta, replaceLastAssistant, finalizeLastAssistant, language, tone]);
 
-  // Voice
-  const startRecording = useCallback(async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  // Continuous VAD Auto-Listen
+  useEffect(() => {
+    if (!open || mode !== "voice" || streaming || voiceProcessing || ttsPlaying) {
+      // Stop VAD if active
+      if (vadCtxRef.current) {
+        vadCtxRef.current.close().catch(() => {});
+        vadCtxRef.current = null;
+      }
+      if (vadStreamRef.current) {
+        vadStreamRef.current.getTracks().forEach(t => t.stop());
+        vadStreamRef.current = null;
+      }
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        mediaRecorderRef.current.stop();
+        audioChunksRef.current = []; 
+      }
+      setRecording(false);
+      return;
+    }
+
+    let isActive = true;
+    let silenceStart = 0;
+    let speaking = false;
+
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+      if (!isActive) { stream.getTracks().forEach(t => t.stop()); return; }
+      vadStreamRef.current = stream;
+
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      const ctx = new AudioCtx();
+      vadCtxRef.current = ctx;
+
+      const source = ctx.createMediaStreamSource(stream);
+      const analyser = ctx.createAnalyser();
+      analyser.minDecibels = -70; // sensitive for speech
+      analyser.smoothingTimeConstant = 0.2;
+      source.connect(analyser);
+
       const mime = MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "";
       const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
-      audioChunksRef.current = [];
+      mediaRecorderRef.current = rec;
       rec.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
+      
       rec.onstop = async () => {
-        stream.getTracks().forEach((t) => t.stop());
+        if (!isActive) return;
         const blob = new Blob(audioChunksRef.current, { type: mime || "audio/webm" });
-        if (blob.size < 800) { toast.info("Hold the mic a little longer."); return; }
+        audioChunksRef.current = [];
+        if (blob.size < 800) return; // Too short
+        
         setVoiceProcessing(true);
         try {
           const fd = new FormData();
           fd.append("file", blob, "voice.webm");
-          // Whisper language hint — only ISO codes work, "auto" means omit
           fd.append("language", language === "auto" ? "" : language);
           const r = await fetch(apiUrl("/api/ai-waiter/transcribe"), { method: "POST", body: fd });
           if (!r.ok) throw new Error(`STT ${r.status}`);
           const j = await r.json() as { text: string };
           const text = (j.text || "").trim();
-          if (!text) { toast.info("Didn't catch that — try once more."); return; }
-          await sendText(text, { speak: true });
+          if (text) {
+             void sendText(text, { speak: true });
+          }
         } catch (e) {
-          const err = e as Error;
-          toast.error(`Voice failed: ${err.message}`);
-        } finally { setVoiceProcessing(false); }
+          toast.error("Voice failed: " + (e as Error).message);
+        } finally {
+          setVoiceProcessing(false);
+        }
       };
-      rec.start();
-      mediaRecorderRef.current = rec;
-      setRecording(true);
-    } catch (e) {
-      const err = e as Error;
-      toast.error(`Microphone unavailable: ${err.message}`);
-    }
-  }, [sendText, language]);
 
+      const data = new Uint8Array(analyser.frequencyBinCount);
+      const check = () => {
+        if (!isActive) return;
+        analyser.getByteFrequencyData(data);
+        let sum = 0;
+        for (let i = 0; i < data.length; i++) sum += data[i];
+        const avg = sum / data.length;
+
+        if (avg > 5) { // speaking threshold
+          if (!speaking) {
+            speaking = true;
+            setRecording(true);
+            audioChunksRef.current = [];
+            rec.start();
+          }
+          silenceStart = 0;
+        } else { // silent
+          if (speaking) {
+            if (!silenceStart) silenceStart = Date.now();
+            else if (Date.now() - silenceStart > 1500) { // 1.5s silence = stop recording
+              speaking = false;
+              setRecording(false);
+              rec.stop(); 
+            }
+          }
+        }
+        requestAnimationFrame(check);
+      };
+      check();
+    }).catch(err => {
+      console.warn("[ai-waiter] Mic access denied", err);
+    });
+
+    return () => {
+      isActive = false;
+      if (vadCtxRef.current) vadCtxRef.current.close().catch(()=>{});
+      if (vadStreamRef.current) vadStreamRef.current.getTracks().forEach(t=>t.stop());
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+         mediaRecorderRef.current.stop();
+      }
+      setRecording(false);
+    };
+  }, [open, mode, streaming, voiceProcessing, ttsPlaying, language, sendText]);
+
+  const startRecording = useCallback(() => {}, []);
   const stopRecording = useCallback(() => {
+    // Allows user to manually force-stop VAD early by tapping the visualizer
     const rec = mediaRecorderRef.current;
     if (rec && rec.state !== "inactive") rec.stop();
     setRecording(false);
