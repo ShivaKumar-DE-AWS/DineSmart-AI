@@ -1,4 +1,4 @@
-// File: /app/frontend/src/app/customer/layout.tsx
+// File: C:\Users\Shiva Kumar\OneDrive\Documents\Dine Smart\DineSmart-AI\frontend\src\app\customer\layout.tsx
 import * as entry from '../../../../src/app/customer/layout.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

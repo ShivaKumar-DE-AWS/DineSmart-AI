@@ -1,8 +1,8 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState, Suspense } from "react";
-import { ShoppingBag, Menu as MenuIcon, X, ChefHat, ArrowRight } from "lucide-react";
+import { useEffect, useState, Suspense, useRef } from "react";
+import { ShoppingBag, Menu as MenuIcon, X, ChefHat, ArrowRight, BellRing } from "lucide-react";
 import { useCart } from "@/stores/cart";
 import { AIWaiterDock } from "@/components/customer/AIWaiterDock";
 import { MehfilLogo } from "@/components/customer/MehfilLogo";
@@ -12,7 +12,6 @@ import { api } from "@/lib/api";
 import { useTable } from "@/stores/table";
 import { Order } from "@/types";
 import { toast } from "sonner";
-import { useRef } from "react";
 const NAV = [
   { href: "/customer", label: "Home", testid: "nav-home" },
   { href: "/customer/menu", label: "Menu", testid: "nav-menu" },
@@ -57,6 +56,47 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // --- COLLABORATIVE CART SYNC ---
+  const cartItems = useCart(s => s.items);
+  const lastUpdatedBy = useCart(s => s.lastUpdatedBy);
+  const setCartItems = useCart(s => s.setItems);
+
+  useEffect(() => {
+    if (!session?.id) return;
+    const base = process.env.NEXT_PUBLIC_BACKEND_URL || "";
+    const es = new EventSource(`${base}/api/tables/${session.id}/cart/stream`);
+    es.onmessage = (e) => {
+      try {
+        const parsed = JSON.parse(e.data);
+        if (JSON.stringify(parsed) !== JSON.stringify(useCart.getState().items)) {
+          setCartItems(parsed);
+        }
+      } catch (err) {}
+    };
+    return () => es.close();
+  }, [session?.id, setCartItems]);
+
+  useEffect(() => {
+    if (session?.id && lastUpdatedBy === "local") {
+      api(`/api/tables/${session.id}/cart`, { method: "POST", body: JSON.stringify({ items: cartItems }) });
+    }
+  }, [cartItems, lastUpdatedBy, session?.id]);
+
+  // --- CALL STAFF ---
+  const [callingStaff, setCallingStaff] = useState(false);
+  const callStaff = async () => {
+    if (!session?.id) return;
+    try {
+      setCallingStaff(true);
+      await api(`/api/tables/${session.id}/call-staff`, { method: "POST" });
+      toast.success("Staff has been notified and will be with you shortly!");
+    } catch (err) {
+      toast.error("Failed to call staff.");
+    } finally {
+      setTimeout(() => setCallingStaff(false), 3000);
+    }
+  };
+
   // Re-set body class on customer routes (theme scope)
   useEffect(() => {
     document.documentElement.classList.add("mehfil");
@@ -81,6 +121,17 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
             ))}
           </nav>
           <div className="flex items-center gap-2">
+            {session && (
+              <button 
+                onClick={callStaff} 
+                disabled={callingStaff}
+                className="flex items-center justify-center h-[38px] w-[38px] md:h-auto md:w-auto md:px-4 md:py-2.5 text-xs font-royal tracking-widest uppercase border border-[#C9A348]/40 bg-[#FAF5EC] text-[#8A1A2A] rounded-full hover:bg-[#8A1A2A] hover:text-[#FAF5EC] transition-colors disabled:opacity-50"
+                title="Call Staff"
+              >
+                <BellRing className="h-4 w-4" />
+                <span className="hidden md:inline ml-2">Call Staff</span>
+              </button>
+            )}
             <Link href="/customer/cart" data-testid="cart-link" className="relative inline-flex items-center gap-2 mehfil-btn-royal px-4 md:px-5 py-2.5 rounded-full text-xs md:text-sm font-medium tracking-wider uppercase">
               <ShoppingBag className="h-4 w-4" />
               <span className="hidden sm:inline">Cart</span>
@@ -102,6 +153,18 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
                 {n.label}
               </Link>
             ))}
+            {session && (
+              <button 
+                onClick={callStaff} 
+                disabled={callingStaff}
+                className="w-full text-left px-5 py-4 text-sm tracking-[0.15em] uppercase font-royal text-[#8A1A2A] hover:bg-[#E7DFCB]/30 border-t border-[#E7DFCB]"
+              >
+                <div className="flex items-center gap-3">
+                  <BellRing className="h-4 w-4" />
+                  Call Staff
+                </div>
+              </button>
+            )}
           </div>
         )}
       </header>

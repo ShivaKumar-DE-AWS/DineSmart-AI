@@ -127,6 +127,7 @@ export default function CheckoutPage() {
           notes: generalNotes.trim() || undefined,
           table_session_id: table?.id || undefined,
           table_number: table?.table_number || undefined,
+          is_ai: cart.isAi,
         },
         origin_url: window.location.origin,
       };

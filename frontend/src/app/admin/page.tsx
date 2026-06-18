@@ -19,7 +19,7 @@ export default function AdminDashboard() {
   const kpis = [
     { label: "Revenue today", value: dash ? formatCurrency(dash.revenue_today) : "—", icon: TrendingUp, testid: "kpi-revenue" },
     { label: "Orders today", value: dash ? dash.orders_today : "—", icon: ShoppingBag, testid: "kpi-orders" },
-    { label: "Avg ticket", value: dash ? formatCurrency(dash.avg_ticket) : "—", icon: Receipt, testid: "kpi-avg-ticket" },
+    { label: "AI Influence", value: dash ? (dash.orders_today > 0 ? Math.round((dash.ai_orders_today / dash.orders_today) * 100) + "%" : "0%") : "—", icon: Receipt, testid: "kpi-ai" },
     { label: "Low stock items", value: dash ? dash.low_stock_count : "—", icon: AlertTriangle, testid: "kpi-low-stock" },
   ];
 

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { api, apiUrl } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
 import { useCart } from "@/stores/cart";
+import { useTable } from "@/stores/table";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import type { MenuItem } from "@/types";
@@ -121,6 +122,7 @@ export function AIWaiterDock() {
   const vadStreamRef = useRef<MediaStream | null>(null);
   const hasGreetedRef = useRef(false);
   const cart = useCart();
+  const { session } = useTable();
   const router = useRouter();
 
   // Draggable AI Waiter button state
@@ -289,6 +291,7 @@ export function AIWaiterDock() {
     if (addsToRun.length > 0) {
       // Small timeout to ensure state settles
       setTimeout(() => {
+        cart.setIsAi(true); // Flag the cart as touched by AI
         const itemsToAdd = resolveRecs(addsToRun.map(a => a.name));
         itemsToAdd.forEach((item, idx) => {
           cart.add(item, addsToRun[idx].qty);
@@ -318,7 +321,7 @@ export function AIWaiterDock() {
       const res = await fetch(apiUrl("/api/ai-waiter/chat"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ session_id: getSessionId(), message: text, language, tone }),
+        body: JSON.stringify({ session_id: session?.id || getSessionId(), message: text, language, tone }),
       });
       if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
       const reader = res.body.getReader();

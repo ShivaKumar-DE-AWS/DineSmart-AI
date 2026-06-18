@@ -27,6 +27,14 @@ import re
 import mimetypes
 import certifi
 
+# --- Cart Broadcast Broker ---
+cart_listeners: Dict[str, List[asyncio.Queue]] = {}
+
+def broadcast_cart(session_id: str, cart_data: Dict[str, Any]):
+    if session_id in cart_listeners:
+        for q in cart_listeners[session_id]:
+            q.put_nowait(cart_data)
+
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
 
@@ -124,6 +132,25 @@ def require_roles(*roles: str):
     return dep
 
 # =========================================================
+# Analytics
+# =========================================================
+@app.get("/api/analytics", dependencies=[Depends(require_roles("admin"))])
+async def get_analytics():
+    orders = await db.orders.find({"status": {"$nin": ["cancelled"]}}).to_list(1000)
+    
+    total_revenue = sum(o.get("total", 0) for o in orders)
+    ai_orders = sum(1 for o in orders if o.get("is_ai"))
+    manual_orders = len(orders) - ai_orders
+
+    return {
+        "total_revenue": total_revenue,
+        "total_orders": len(orders),
+        "ai_orders": ai_orders,
+        "manual_orders": manual_orders,
+        "recent_orders": orders[-10:]
+    }
+
+# =========================================================
 # Models
 # =========================================================
 class SignupReq(BaseModel):
@@ -162,6 +189,7 @@ class OrderCreateReq(BaseModel):
     notes: Optional[str] = None
     table_number: Optional[int] = None
     table_session_id: Optional[str] = None
+    is_ai: bool = False
 
 class OrderStatusUpdate(BaseModel):
     status: str
@@ -367,6 +395,79 @@ async def auth_guest(req: GuestReq):
     return {"token": token, "user": {"id": guest_id, "email": payload["email"], "name": name, "role": "customer", "phone": phone}}
 
 # =========================================================
+# Table Sessions & Collaborative Carts
+# =========================================================
+@app.post("/api/tables/{session_id}/call-staff")
+async def call_staff(session_id: str):
+    session = await db.table_sessions.find_one({"id": session_id})
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    await db.notifications.insert_one({
+        "id": str(uuid.uuid4()),
+        "order_id": None,
+        "type": "staff_call",
+        "title": f"Table {session['table_number']} needs assistance",
+        "body": "Customer requested staff",
+        "read": False,
+        "created_at": now_iso(),
+    })
+    return {"ok": True}
+
+@app.get("/api/notifications")
+async def get_notifications():
+    nots = await db.notifications.find({"read": False}).sort("created_at", -1).to_list(100)
+    for n in nots:
+        n.pop("_id", None)
+    return {"notifications": nots}
+
+@app.post("/api/notifications/{n_id}/read")
+async def mark_notification_read(n_id: str):
+    await db.notifications.update_one({"id": n_id}, {"$set": {"read": True}})
+    return {"ok": True}
+
+@app.post("/api/tables/{session_id}/cart")
+async def update_cart(session_id: str, request: Request):
+    data = await request.json()
+    items = data.get("items", [])
+    cart_data = {"session_id": session_id, "items": items, "updated_at": now_iso()}
+    await db.table_carts.update_one({"session_id": session_id}, {"$set": cart_data}, upsert=True)
+    broadcast_cart(session_id, items)
+    return {"ok": True}
+
+@app.get("/api/tables/{session_id}/cart/stream")
+async def stream_cart(session_id: str, req: Request):
+    async def stream():
+        q = asyncio.Queue()
+        if session_id not in cart_listeners:
+            cart_listeners[session_id] = []
+        cart_listeners[session_id].append(q)
+        
+        # Send initial state
+        initial = await db.table_carts.find_one({"session_id": session_id}, {"_id": 0})
+        if initial:
+            yield f"data: {json.dumps(initial['items'])}\n\n"
+        else:
+            yield f"data: []\n\n"
+            
+        try:
+            while True:
+                if await req.is_disconnected():
+                    break
+                try:
+                    new_items = await asyncio.wait_for(q.get(), timeout=15.0)
+                    yield f"data: {json.dumps(new_items)}\n\n"
+                except asyncio.TimeoutError:
+                    yield ": keep-alive\n\n"
+        finally:
+            if session_id in cart_listeners and q in cart_listeners[session_id]:
+                cart_listeners[session_id].remove(q)
+                if not cart_listeners[session_id]:
+                    del cart_listeners[session_id]
+
+    return StreamingResponse(stream(), media_type="text/event-stream")
+
+# =========================================================
 # Menu
 # =========================================================
 @app.get("/api/menu")
@@ -426,6 +527,7 @@ async def create_order(req: OrderCreateReq):
         "notes": req.notes,
         "table_number": req.table_number,
         "table_session_id": req.table_session_id,
+        "is_ai": getattr(req, "is_ai", False),
     }
     await db.orders.insert_one(order)
     # notification
@@ -565,9 +667,13 @@ async def dashboard():
     status_counts: Dict[str, int] = {}
     for o in orders_today:
         status_counts[o["status"]] = status_counts.get(o["status"], 0) + 1
+        
+    ai_orders = sum(1 for o in orders_today if o.get("is_ai"))
+    
     return {
         "revenue_today": round(revenue_today, 2),
         "orders_today": len(orders_today),
+        "ai_orders_today": ai_orders,
         "avg_ticket": round(avg_ticket, 2),
         "top_items": top_items,
         "low_stock_count": len(low_stock),
@@ -689,6 +795,7 @@ async def _save_order_draft(req_draft: OrderCreateReq, priced: Dict[str, Any]) -
         "notes": req_draft.notes,
         "table_number": req_draft.table_number,
         "table_session_id": req_draft.table_session_id,
+        "is_ai": getattr(req_draft, "is_ai", False),
         "created_at": now_iso(),
     })
     return draft_id
@@ -918,7 +1025,7 @@ async def stripe_webhook(request: Request):
 # =========================================================
 # AI Waiter — Streaming SSE via emergentintegrations + Claude Sonnet
 # =========================================================
-async def _build_waiter_system_prompt(language: str = "auto", tone: str = "friendly") -> str:
+async def _build_waiter_system_prompt(language: str = "auto", tone: str = "friendly", customer_name: str = None) -> str:
     """Compose the system prompt with the current live menu inlined."""
     menu_docs = await db.menu.find(
         {"available": True},
@@ -957,10 +1064,15 @@ async def _build_waiter_system_prompt(language: str = "auto", tone: str = "frien
     lang_rule = lang_map.get(language, lang_map["auto"])
     tone_rule = tone_map.get(tone, tone_map["friendly"])
 
+    tone_rule = tone_map.get(tone, tone_map["friendly"])
+
+    greeting_rule = f"You are serving a guest named '{customer_name}'. Greet them warmly by name and welcome them back if they seem like a returning customer!" if customer_name else "Greet the guest warmly."
+    upsell_rule = "Proactively upsell! If they order a main course (like Biryani or Curry), naturally suggest a pairing like Raita, Naan, or a refreshing beverage."
+
     return (
         "You are 'SmartDine AI Waiter' — the elite, professional, deeply hospitable live waiter at Mehfil Restaurant, Hyderabad. "
         "Your primary goal is to guide guests through a seamless, delightful conversational dining experience from greeting to payment."
-        "\n\n### 1. CORE OPERATIONAL RULES"
+        f"\n\n### 1. CORE OPERATIONAL RULES\n- **Personalization:** {greeting_rule}\n- **Proactive Up-selling:** {upsell_rule}"
         "\n- **Role Consistency:** You are a human professional waiter. NEVER break character. You are a real person."
         "\n- **Natural Voice-First Design:** You are speaking ALOUD to the customer! Keep your responses extremely short, conversational, and natural (1-2 very short sentences max). NEVER use bullet points, asterisks, bold text, or long lists. Speak exactly as a human waiter would talk. Do not sound robotic."
         "\n- **Multilingual Fluidity:** Seamlessly mirror the user's language. " + lang_rule
@@ -1083,7 +1195,7 @@ def _make_waiter_stream(session_id: str, message: str, system_prompt: str):
     return event_gen
 
 @app.post("/api/ai-waiter/chat")
-async def ai_waiter(req: ChatReq):
+async def ai_chat(req: ChatReq):
     """Streams Gemini's response as SSE. Session-scoped chat history maintained server-side."""
     if not GEMINI_API_KEY:
         async def mock_event_gen():
@@ -1096,7 +1208,14 @@ async def ai_waiter(req: ChatReq):
             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no", "Connection": "keep-alive"},
         )
 
-    system_prompt = await _build_waiter_system_prompt(language=req.language or "auto", tone=req.tone or "friendly")
+    session = await db.table_sessions.find_one({"id": req.session_id})
+    customer_name = session.get("customer_name") if session else None
+
+    system_prompt = await _build_waiter_system_prompt(
+        language=req.language or "auto", 
+        tone=req.tone or "friendly",
+        customer_name=customer_name
+    )
     await db.chat_messages.insert_one({
         "session_id": req.session_id, "role": "user", "content": req.message, "created_at": now_iso(),
     })

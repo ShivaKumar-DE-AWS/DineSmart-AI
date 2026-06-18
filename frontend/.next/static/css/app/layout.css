@@ -1,6 +1,6 @@
-/*!***************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************!*\
-  !*** css ./node_modules/next/dist/build/webpack/loaders/css-loader/src/index.js??ruleSet[1].rules[14].oneOf[2].use[1]!./node_modules/next/dist/build/webpack/loaders/next-font-loader/index.js??ruleSet[1].rules[14].oneOf[2].use[2]!./node_modules/next/font/google/target.css?{"path":"src/app/layout.tsx","import":"Space_Grotesk","arguments":[{"subsets":["latin"],"variable":"--font-heading","display":"swap"}],"variableName":"heading"} ***!
-  \***************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
+/*!*****************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/next/dist/build/webpack/loaders/css-loader/src/index.js??ruleSet[1].rules[14].oneOf[2].use[1]!./node_modules/next/dist/build/webpack/loaders/next-font-loader/index.js??ruleSet[1].rules[14].oneOf[2].use[2]!./node_modules/next/font/google/target.css?{"path":"src\\app\\layout.tsx","import":"Space_Grotesk","arguments":[{"subsets":["latin"],"variable":"--font-heading","display":"swap"}],"variableName":"heading"} ***!
+  \*****************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
 /* vietnamese */
 @font-face {
   font-family: '__Space_Grotesk_dd5b2f';
@@ -32,9 +32,9 @@
 }.__variable_dd5b2f {--font-heading: '__Space_Grotesk_dd5b2f', '__Space_Grotesk_Fallback_dd5b2f'
 }
 
-/*!***************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************!*\
-  !*** css ./node_modules/next/dist/build/webpack/loaders/css-loader/src/index.js??ruleSet[1].rules[14].oneOf[2].use[1]!./node_modules/next/dist/build/webpack/loaders/next-font-loader/index.js??ruleSet[1].rules[14].oneOf[2].use[2]!./node_modules/next/font/google/target.css?{"path":"src/app/layout.tsx","import":"Manrope","arguments":[{"subsets":["latin"],"variable":"--font-body","display":"swap"}],"variableName":"body"} ***!
-  \***************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
+/*!*****************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/next/dist/build/webpack/loaders/css-loader/src/index.js??ruleSet[1].rules[14].oneOf[2].use[1]!./node_modules/next/dist/build/webpack/loaders/next-font-loader/index.js??ruleSet[1].rules[14].oneOf[2].use[2]!./node_modules/next/font/google/target.css?{"path":"src\\app\\layout.tsx","import":"Manrope","arguments":[{"subsets":["latin"],"variable":"--font-body","display":"swap"}],"variableName":"body"} ***!
+  \*****************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
 /* cyrillic-ext */
 @font-face {
   font-family: '__Manrope_73ee6c';
@@ -93,9 +93,9 @@
 }.__variable_73ee6c {--font-body: '__Manrope_73ee6c', '__Manrope_Fallback_73ee6c'
 }
 
-/*!**********************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************!*\
-  !*** css ./node_modules/next/dist/build/webpack/loaders/css-loader/src/index.js??ruleSet[1].rules[14].oneOf[2].use[1]!./node_modules/next/dist/build/webpack/loaders/next-font-loader/index.js??ruleSet[1].rules[14].oneOf[2].use[2]!./node_modules/next/font/google/target.css?{"path":"src/app/layout.tsx","import":"Anton","arguments":[{"subsets":["latin"],"weight":"400","variable":"--font-display","display":"swap"}],"variableName":"display"} ***!
-  \**********************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
+/*!************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/next/dist/build/webpack/loaders/css-loader/src/index.js??ruleSet[1].rules[14].oneOf[2].use[1]!./node_modules/next/dist/build/webpack/loaders/next-font-loader/index.js??ruleSet[1].rules[14].oneOf[2].use[2]!./node_modules/next/font/google/target.css?{"path":"src\\app\\layout.tsx","import":"Anton","arguments":[{"subsets":["latin"],"weight":"400","variable":"--font-display","display":"swap"}],"variableName":"display"} ***!
+  \************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
 /* vietnamese */
 @font-face {
   font-family: '__Anton_ec6dc7';
@@ -127,9 +127,9 @@
 }.__variable_ec6dc7 {--font-display: '__Anton_ec6dc7', '__Anton_Fallback_ec6dc7'
 }
 
-/*!**********************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************!*\
-  !*** css ./node_modules/next/dist/build/webpack/loaders/css-loader/src/index.js??ruleSet[1].rules[14].oneOf[2].use[1]!./node_modules/next/dist/build/webpack/loaders/next-font-loader/index.js??ruleSet[1].rules[14].oneOf[2].use[2]!./node_modules/next/font/google/target.css?{"path":"src/app/layout.tsx","import":"JetBrains_Mono","arguments":[{"subsets":["latin"],"variable":"--font-mono","display":"swap"}],"variableName":"mono"} ***!
-  \**********************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
+/*!************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/next/dist/build/webpack/loaders/css-loader/src/index.js??ruleSet[1].rules[14].oneOf[2].use[1]!./node_modules/next/dist/build/webpack/loaders/next-font-loader/index.js??ruleSet[1].rules[14].oneOf[2].use[2]!./node_modules/next/font/google/target.css?{"path":"src\\app\\layout.tsx","import":"JetBrains_Mono","arguments":[{"subsets":["latin"],"variable":"--font-mono","display":"swap"}],"variableName":"mono"} ***!
+  \************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
 /* cyrillic-ext */
 @font-face {
   font-family: '__JetBrains_Mono_3c557b';
@@ -188,9 +188,9 @@
 }.__variable_3c557b {--font-mono: '__JetBrains_Mono_3c557b', '__JetBrains_Mono_Fallback_3c557b'
 }
 
-/*!*********************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************!*\
-  !*** css ./node_modules/next/dist/build/webpack/loaders/css-loader/src/index.js??ruleSet[1].rules[14].oneOf[2].use[1]!./node_modules/next/dist/build/webpack/loaders/next-font-loader/index.js??ruleSet[1].rules[14].oneOf[2].use[2]!./node_modules/next/font/google/target.css?{"path":"src/app/layout.tsx","import":"Cinzel","arguments":[{"subsets":["latin"],"weight":["400","600","700"],"variable":"--font-royal","display":"swap"}],"variableName":"royal"} ***!
-  \*********************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
+/*!***********************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/next/dist/build/webpack/loaders/css-loader/src/index.js??ruleSet[1].rules[14].oneOf[2].use[1]!./node_modules/next/dist/build/webpack/loaders/next-font-loader/index.js??ruleSet[1].rules[14].oneOf[2].use[2]!./node_modules/next/font/google/target.css?{"path":"src\\app\\layout.tsx","import":"Cinzel","arguments":[{"subsets":["latin"],"weight":["400","600","700"],"variable":"--font-royal","display":"swap"}],"variableName":"royal"} ***!
+  \***********************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
 /* latin-ext */
 @font-face {
   font-family: '__Cinzel_90c37a';
@@ -249,9 +249,9 @@
 }.__variable_90c37a {--font-royal: '__Cinzel_90c37a', '__Cinzel_Fallback_90c37a'
 }
 
-/*!***************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************!*\
-  !*** css ./node_modules/next/dist/build/webpack/loaders/css-loader/src/index.js??ruleSet[1].rules[14].oneOf[2].use[1]!./node_modules/next/dist/build/webpack/loaders/next-font-loader/index.js??ruleSet[1].rules[14].oneOf[2].use[2]!./node_modules/next/font/google/target.css?{"path":"src/app/layout.tsx","import":"Cormorant_Garamond","arguments":[{"subsets":["latin"],"weight":["400","500","600","700"],"style":["normal","italic"],"variable":"--font-editorial","display":"swap"}],"variableName":"editorial"} ***!
-  \***************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
+/*!*****************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/next/dist/build/webpack/loaders/css-loader/src/index.js??ruleSet[1].rules[14].oneOf[2].use[1]!./node_modules/next/dist/build/webpack/loaders/next-font-loader/index.js??ruleSet[1].rules[14].oneOf[2].use[2]!./node_modules/next/font/google/target.css?{"path":"src\\app\\layout.tsx","import":"Cormorant_Garamond","arguments":[{"subsets":["latin"],"weight":["400","500","600","700"],"style":["normal","italic"],"variable":"--font-editorial","display":"swap"}],"variableName":"editorial"} ***!
+  \*****************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
 /* cyrillic-ext */
 @font-face {
   font-family: '__Cormorant_Garamond_e9ff3d';
@@ -1153,6 +1153,9 @@ video {
 .-right-1 {
   right: -0.25rem;
 }
+.-right-1\.5 {
+  right: -0.375rem;
+}
 .-right-10 {
   right: -2.5rem;
 }
@@ -1164,6 +1167,9 @@ video {
 }
 .-top-1 {
   top: -0.25rem;
+}
+.-top-1\.5 {
+  top: -0.375rem;
 }
 .-top-10 {
   top: -2.5rem;
@@ -1180,8 +1186,8 @@ video {
 .bottom-20 {
   bottom: 5rem;
 }
-.bottom-6 {
-  bottom: 1.5rem;
+.bottom-5 {
+  bottom: 1.25rem;
 }
 .left-0 {
   left: 0px;
@@ -1194,6 +1200,9 @@ video {
 }
 .left-3 {
   left: 0.75rem;
+}
+.left-4 {
+  left: 1rem;
 }
 .left-5 {
   left: 1.25rem;
@@ -1209,9 +1218,6 @@ video {
 }
 .right-4 {
   right: 1rem;
-}
-.right-6 {
-  right: 1.5rem;
 }
 .top-0 {
   top: 0px;
@@ -1237,11 +1243,26 @@ video {
 .top-\[50\%\] {
   top: 50%;
 }
+.right-0 {
+  right: 0px;
+}
+.-right-0\.5 {
+  right: -0.125rem;
+}
+.-top-0\.5 {
+  top: -0.125rem;
+}
+.bottom-6 {
+  bottom: 1.5rem;
+}
 .-z-10 {
   z-index: -10;
 }
 .z-10 {
   z-index: 10;
+}
+.z-20 {
+  z-index: 20;
 }
 .z-30 {
   z-index: 30;
@@ -1265,9 +1286,9 @@ video {
   margin-left: -0.25rem;
   margin-right: -0.25rem;
 }
-.-mx-5 {
-  margin-left: -1.25rem;
-  margin-right: -1.25rem;
+.-mx-4 {
+  margin-left: -1rem;
+  margin-right: -1rem;
 }
 .mx-auto {
   margin-left: auto;
@@ -1288,6 +1309,9 @@ video {
 .my-6 {
   margin-top: 1.5rem;
   margin-bottom: 1.5rem;
+}
+.-mt-3\.5 {
+  margin-top: -0.875rem;
 }
 .mb-1 {
   margin-bottom: 0.25rem;
@@ -1322,9 +1346,6 @@ video {
 .ml-1 {
   margin-left: 0.25rem;
 }
-.ml-3 {
-  margin-left: 0.75rem;
-}
 .ml-5 {
   margin-left: 1.25rem;
 }
@@ -1333,9 +1354,6 @@ video {
 }
 .mr-1 {
   margin-right: 0.25rem;
-}
-.mr-2 {
-  margin-right: 0.5rem;
 }
 .mt-0\.5 {
   margin-top: 0.125rem;
@@ -1376,14 +1394,14 @@ video {
 .mt-6 {
   margin-top: 1.5rem;
 }
-.mt-7 {
-  margin-top: 1.75rem;
-}
 .mt-8 {
   margin-top: 2rem;
 }
 .mt-auto {
   margin-top: auto;
+}
+.mb-0\.5 {
+  margin-bottom: 0.125rem;
 }
 .line-clamp-1 {
   overflow: hidden;
@@ -1493,21 +1511,39 @@ video {
 .h-9 {
   height: 2.25rem;
 }
+.h-\[18px\] {
+  height: 18px;
+}
 .h-\[400px\] {
   height: 400px;
 }
 .h-\[90vh\] {
   height: 90vh;
 }
+.h-\[96px\] {
+  height: 96px;
+}
 .h-fit {
   height: -moz-fit-content;
   height: fit-content;
+}
+.h-full {
+  height: 100%;
 }
 .h-px {
   height: 1px;
 }
 .h-screen {
   height: 100vh;
+}
+.h-2 {
+  height: 0.5rem;
+}
+.h-2\.5 {
+  height: 0.625rem;
+}
+.h-20 {
+  height: 5rem;
 }
 .max-h-72 {
   max-height: 18rem;
@@ -1584,6 +1620,12 @@ video {
 .w-9 {
   width: 2.25rem;
 }
+.w-\[105px\] {
+  width: 105px;
+}
+.w-\[18px\] {
+  width: 18px;
+}
 .w-fit {
   width: -moz-fit-content;
   width: fit-content;
@@ -1597,6 +1639,12 @@ video {
 }
 .w-px {
   width: 1px;
+}
+.w-2 {
+  width: 0.5rem;
+}
+.w-2\.5 {
+  width: 0.625rem;
 }
 .min-w-0 {
   min-width: 0px;
@@ -1661,8 +1709,14 @@ video {
 .max-w-xs {
   max-width: 20rem;
 }
+.max-w-\[90vw\] {
+  max-width: 90vw;
+}
 .flex-1 {
   flex: 1 1 0%;
+}
+.flex-shrink-0 {
+  flex-shrink: 0;
 }
 .shrink-0 {
   flex-shrink: 0;
@@ -1728,8 +1782,24 @@ video {
 .animate-spin {
   animation: spin 1s linear infinite;
 }
+@keyframes ping {
+
+  75%, 100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+.animate-ping {
+  animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+.cursor-grab {
+  cursor: grab;
+}
 .cursor-pointer {
   cursor: pointer;
+}
+.touch-none {
+  touch-action: none;
 }
 .select-none {
   -webkit-user-select: none;
@@ -1802,6 +1872,9 @@ video {
 .gap-2 {
   gap: 0.5rem;
 }
+.gap-2\.5 {
+  gap: 0.625rem;
+}
 .gap-3 {
   gap: 0.75rem;
 }
@@ -1862,6 +1935,15 @@ video {
   margin-top: calc(1.25rem * calc(1 - var(--tw-space-y-reverse)));
   margin-bottom: calc(1.25rem * var(--tw-space-y-reverse));
 }
+.divide-y > :not([hidden]) ~ :not([hidden]) {
+  --tw-divide-y-reverse: 0;
+  border-top-width: calc(1px * calc(1 - var(--tw-divide-y-reverse)));
+  border-bottom-width: calc(1px * var(--tw-divide-y-reverse));
+}
+.divide-\[\#E7DFCB\] > :not([hidden]) ~ :not([hidden]) {
+  --tw-divide-opacity: 1;
+  border-color: rgb(231 223 203 / var(--tw-divide-opacity));
+}
 .self-start {
   align-self: flex-start;
 }
@@ -1876,6 +1958,9 @@ video {
 }
 .overflow-y-auto {
   overflow-y: auto;
+}
+.overflow-x-hidden {
+  overflow-x: hidden;
 }
 .truncate {
   overflow: hidden;
@@ -1914,6 +1999,12 @@ video {
 }
 .rounded-br-sm {
   border-bottom-right-radius: calc(var(--radius) - 4px);
+}
+.rounded-bl-full {
+  border-bottom-left-radius: 9999px;
+}
+.rounded-bl-\[3rem\] {
+  border-bottom-left-radius: 3rem;
 }
 .border {
   border-width: 1px;
@@ -1981,6 +2072,13 @@ video {
 .border-\[\#E7DFCB\]\/50 {
   border-color: rgb(231 223 203 / 0.5);
 }
+.border-\[\#E7DFCB\]\/60 {
+  border-color: rgb(231 223 203 / 0.6);
+}
+.border-\[\#ddd\] {
+  --tw-border-opacity: 1;
+  border-color: rgb(221 221 221 / var(--tw-border-opacity));
+}
 .border-alert {
   --tw-border-opacity: 1;
   border-color: rgb(255 59 48 / var(--tw-border-opacity));
@@ -2025,6 +2123,10 @@ video {
 .border-warn\/40 {
   border-color: rgb(255 159 10 / 0.4);
 }
+.border-white {
+  --tw-border-opacity: 1;
+  border-color: rgb(255 255 255 / var(--tw-border-opacity));
+}
 .border-zinc-500 {
   --tw-border-opacity: 1;
   border-color: rgb(113 113 122 / var(--tw-border-opacity));
@@ -2032,6 +2134,14 @@ video {
 .border-zinc-700 {
   --tw-border-opacity: 1;
   border-color: rgb(63 63 70 / var(--tw-border-opacity));
+}
+.border-gray-200 {
+  --tw-border-opacity: 1;
+  border-color: rgb(229 231 235 / var(--tw-border-opacity));
+}
+.bg-\[\#1A1106\] {
+  --tw-bg-opacity: 1;
+  background-color: rgb(26 17 6 / var(--tw-bg-opacity));
 }
 .bg-\[\#1A1106\]\/15 {
   background-color: rgb(26 17 6 / 0.15);
@@ -2083,6 +2193,9 @@ video {
 }
 .bg-\[\#FAF5EC\]\/90 {
   background-color: rgb(250 245 236 / 0.9);
+}
+.bg-\[\#FAF5EC\]\/95 {
+  background-color: rgb(250 245 236 / 0.95);
 }
 .bg-alert {
   --tw-bg-opacity: 1;
@@ -2180,6 +2293,27 @@ video {
   --tw-bg-opacity: 1;
   background-color: rgb(63 63 70 / var(--tw-bg-opacity));
 }
+.bg-\[\#8A1A2A\]\/5 {
+  background-color: rgb(138 26 42 / 0.05);
+}
+.bg-gray-100 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(243 244 246 / var(--tw-bg-opacity));
+}
+.bg-green-500 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(34 197 94 / var(--tw-bg-opacity));
+}
+.bg-\[\#FAF5EC\]\/10 {
+  background-color: rgb(250 245 236 / 0.1);
+}
+.bg-\[\#FAF5EC\]\/20 {
+  background-color: rgb(250 245 236 / 0.2);
+}
+.bg-green-400 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(74 222 128 / var(--tw-bg-opacity));
+}
 .bg-gradient-to-b {
   background-image: linear-gradient(to bottom, var(--tw-gradient-stops));
 }
@@ -2234,6 +2368,10 @@ video {
 }
 .fill-current {
   fill: currentColor;
+}
+.object-cover {
+  -o-object-fit: cover;
+     object-fit: cover;
 }
 .p-0 {
   padding: 0px;
@@ -2423,6 +2561,9 @@ video {
 .pb-24 {
   padding-bottom: 6rem;
 }
+.pb-28 {
+  padding-bottom: 7rem;
+}
 .pb-3 {
   padding-bottom: 0.75rem;
 }
@@ -2432,6 +2573,9 @@ video {
 .pl-2 {
   padding-left: 0.5rem;
 }
+.pl-3 {
+  padding-left: 0.75rem;
+}
 .pl-4 {
   padding-left: 1rem;
 }
@@ -2440,6 +2584,9 @@ video {
 }
 .pr-3 {
   padding-right: 0.75rem;
+}
+.pr-4 {
+  padding-right: 1rem;
 }
 .pr-5 {
   padding-right: 1.25rem;
@@ -2464,6 +2611,9 @@ video {
 }
 .pt-8 {
   padding-top: 2rem;
+}
+.pr-2 {
+  padding-right: 0.5rem;
 }
 .text-left {
   text-align: left;
@@ -2540,6 +2690,9 @@ video {
 .text-\[18vw\] {
   font-size: 18vw;
 }
+.text-\[9px\] {
+  font-size: 9px;
+}
 .text-base {
   font-size: 1rem;
   line-height: 1.5rem;
@@ -2609,11 +2762,17 @@ video {
 .leading-tight {
   line-height: 1.25;
 }
+.tracking-\[0\.12em\] {
+  letter-spacing: 0.12em;
+}
 .tracking-\[0\.15em\] {
   letter-spacing: 0.15em;
 }
 .tracking-\[0\.18em\] {
   letter-spacing: 0.18em;
+}
+.tracking-\[0\.1em\] {
+  letter-spacing: 0.1em;
 }
 .tracking-\[0\.25em\] {
   letter-spacing: 0.25em;
@@ -2641,6 +2800,9 @@ video {
 }
 .tracking-wider {
   letter-spacing: 0.05em;
+}
+.tracking-widest {
+  letter-spacing: 0.1em;
 }
 .text-\[\#1A1106\] {
   --tw-text-opacity: 1;
@@ -2749,6 +2911,10 @@ video {
   --tw-text-opacity: 1;
   color: rgb(26 26 26 / var(--tw-text-opacity));
 }
+.text-orange-600 {
+  --tw-text-opacity: 1;
+  color: rgb(234 88 12 / var(--tw-text-opacity));
+}
 .text-ready {
   --tw-text-opacity: 1;
   color: rgb(50 215 75 / var(--tw-text-opacity));
@@ -2788,6 +2954,10 @@ video {
   --tw-text-opacity: 1;
   color: rgb(82 82 91 / var(--tw-text-opacity));
 }
+.text-gray-500 {
+  --tw-text-opacity: 1;
+  color: rgb(107 114 128 / var(--tw-text-opacity));
+}
 .underline {
   text-decoration-line: underline;
 }
@@ -2805,6 +2975,9 @@ video {
 }
 .opacity-70 {
   opacity: 0.7;
+}
+.opacity-75 {
+  opacity: 0.75;
 }
 .shadow {
   --tw-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
@@ -2905,6 +3078,11 @@ video {
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
 }
+.transition-opacity {
+  transition-property: opacity;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
 .duration-300 {
   transition-duration: 300ms;
 }
@@ -2930,6 +3108,9 @@ video {
 }
 .duration-500 {
   animation-duration: 500ms;
+}
+.paused {
+  animation-play-state: paused;
 }
 
 :root {
@@ -3016,6 +3197,10 @@ h1, h2, h3, h4, h5, h6 { font-family: var(--font-heading), system-ui, sans-serif
   --tw-border-opacity: 1;
   border-color: rgb(138 26 42 / var(--tw-border-opacity));
 }
+.hover\:-translate-y-0\.5:hover {
+  --tw-translate-y: -0.125rem;
+  transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
+}
 .hover\:-translate-y-1:hover {
   --tw-translate-y: -0.25rem;
   transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
@@ -3092,6 +3277,10 @@ h1, h2, h3, h4, h5, h6 { font-family: var(--font-heading), system-ui, sans-serif
   --tw-bg-opacity: 1;
   background-color: rgb(255 255 255 / var(--tw-bg-opacity));
 }
+.hover\:bg-\[\#7a1523\]:hover {
+  --tw-bg-opacity: 1;
+  background-color: rgb(122 21 35 / var(--tw-bg-opacity));
+}
 .hover\:text-\[\#8A1A2A\]:hover {
   --tw-text-opacity: 1;
   color: rgb(138 26 42 / var(--tw-text-opacity));
@@ -3160,10 +3349,22 @@ h1, h2, h3, h4, h5, h6 { font-family: var(--font-heading), system-ui, sans-serif
 .focus-visible\:ring-offset-2:focus-visible {
   --tw-ring-offset-width: 2px;
 }
+.active\:scale-95:active {
+  --tw-scale-x: .95;
+  --tw-scale-y: .95;
+  transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
+}
 .active\:scale-\[0\.97\]:active {
   --tw-scale-x: 0.97;
   --tw-scale-y: 0.97;
   transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
+}
+.active\:cursor-grabbing:active {
+  cursor: grabbing;
+}
+.active\:bg-\[\#8A1A2A\]:active {
+  --tw-bg-opacity: 1;
+  background-color: rgb(138 26 42 / var(--tw-bg-opacity));
 }
 .disabled\:pointer-events-none:disabled {
   pointer-events: none;
@@ -3194,9 +3395,34 @@ h1, h2, h3, h4, h5, h6 { font-family: var(--font-heading), system-ui, sans-serif
   --tw-scale-y: 1.05;
   transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
 }
+.group:hover .group-hover\:scale-110 {
+  --tw-scale-x: 1.1;
+  --tw-scale-y: 1.1;
+  transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
+}
+.group:hover .group-hover\:bg-\[\#8A1A2A\] {
+  --tw-bg-opacity: 1;
+  background-color: rgb(138 26 42 / var(--tw-bg-opacity));
+}
+.group:hover .group-hover\:bg-\[\#C9A348\] {
+  --tw-bg-opacity: 1;
+  background-color: rgb(201 163 72 / var(--tw-bg-opacity));
+}
 .group:hover .group-hover\:text-clay {
   --tw-text-opacity: 1;
   color: rgb(200 75 49 / var(--tw-text-opacity));
+}
+.group:hover .group-hover\:text-\[\#C9A348\] {
+  --tw-text-opacity: 1;
+  color: rgb(201 163 72 / var(--tw-text-opacity));
+}
+.group:hover .group-hover\:text-\[\#FAF5EC\] {
+  --tw-text-opacity: 1;
+  color: rgb(250 245 236 / var(--tw-text-opacity));
+}
+.group:hover .group-hover\:text-\[\#1A1106\] {
+  --tw-text-opacity: 1;
+  color: rgb(26 17 6 / var(--tw-text-opacity));
 }
 .group:hover .group-hover\:opacity-20 {
   opacity: 0.2;
@@ -3290,6 +3516,10 @@ h1, h2, h3, h4, h5, h6 { font-family: var(--font-heading), system-ui, sans-serif
   .sm\:text-7xl {
     font-size: 4.5rem;
     line-height: 1;
+  }
+
+  .sm\:text-\[10px\] {
+    font-size: 10px;
   }
 }
 @media (min-width: 768px) {
@@ -3469,12 +3699,24 @@ h1, h2, h3, h4, h5, h6 { font-family: var(--font-heading), system-ui, sans-serif
     grid-column: span 2 / span 2;
   }
 
+  .lg\:mb-12 {
+    margin-bottom: 3rem;
+  }
+
+  .lg\:mt-7 {
+    margin-top: 1.75rem;
+  }
+
   .lg\:block {
     display: block;
   }
 
   .lg\:flex {
     display: flex;
+  }
+
+  .lg\:grid {
+    display: grid;
   }
 
   .lg\:hidden {
@@ -3508,6 +3750,11 @@ h1, h2, h3, h4, h5, h6 { font-family: var(--font-heading), system-ui, sans-serif
   .lg\:px-24 {
     padding-left: 6rem;
     padding-right: 6rem;
+  }
+
+  .lg\:text-6xl {
+    font-size: 3.75rem;
+    line-height: 1;
   }
 }
 @media (min-width: 1280px) {

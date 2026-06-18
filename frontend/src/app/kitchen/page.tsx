@@ -51,13 +51,25 @@ export default function KitchenPage() {
 
   const queue = (data?.orders || []).filter((o) => ["confirmed", "preparing"].includes(o.status));
 
-  // Today's reservations
   const { data: resData } = useQuery({
     queryKey: ["kds-reservations"],
     queryFn: () => api<{ reservations: Reservation[] }>("/api/reservations/today"),
     refetchInterval: 30_000,
   });
   const reservations = resData?.reservations || [];
+
+  // Active Notifications (Staff calls)
+  const { data: notifsData } = useQuery({
+    queryKey: ["kds-notifications"],
+    queryFn: () => api<{ notifications: any[] }>("/api/notifications"),
+    refetchInterval: 3000,
+  });
+  const notifications = notifsData?.notifications || [];
+
+  const markReadMut = useMutation({
+    mutationFn: (n_id: string) => api(`/api/notifications/${n_id}/read`, { method: "POST" }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["kds-notifications"] }); },
+  });
 
   // Re-render every second for live timers
   const [, setTick] = useState(0);
@@ -101,8 +113,8 @@ export default function KitchenPage() {
   }, []);
 
   return (
-    <div>
-      <div className="flex items-end justify-between mb-4 px-2">
+    <div className="min-h-screen bg-zinc-950 text-white p-4 md:p-8">
+      <header className="flex items-end justify-between mb-4 px-2">
         <div>
           <p className="uppercase tracking-[0.3em] text-xs text-zinc-500">Kitchen display</p>
           <h1 className="font-heading text-3xl tracking-tight">
@@ -129,26 +141,48 @@ export default function KitchenPage() {
           </button>
           <div className="text-xs text-zinc-500">Updates every 3s</div>
         </div>
-      </div>
+      </header>
 
-      {queue.length === 0 && (
-        <div className="bg-graphite border border-slate rounded-md p-20 text-center text-zinc-500 mt-8" data-testid="kds-empty">
-          No active orders. Time for a coffee.
+      {notifications.length > 0 && (
+        <div className="max-w-7xl mx-auto px-4 mt-6">
+          <div className="bg-[#8A1A2A] border border-[#8A1A2A] rounded-xl p-4 shadow-2xl flex items-center justify-between animate-pulse">
+            <div className="flex items-center gap-3 text-[#FAF5EC]">
+              <Bell className="h-6 w-6" />
+              <div>
+                <h3 className="font-royal text-lg tracking-wider">{notifications[0].title}</h3>
+                <p className="text-xs font-editorial italic opacity-90">{notifications[0].body}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => markReadMut.mutate(notifications[0].id)}
+              className="bg-[#FAF5EC] text-[#8A1A2A] px-5 py-2 rounded-lg text-sm font-bold uppercase tracking-widest hover:bg-[#E7DFCB] transition-colors"
+            >
+              Mark Resolved
+            </button>
+          </div>
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {queue.map((o) => (
-          <KitchenTicket
-            key={o.id}
-            order={o}
-            elapsed={elapsed(o.created_at)}
-            isLate={Date.now() - new Date(o.created_at).getTime() > LATE_THRESHOLD_MS}
-            onStart={onStart}
-            onReady={onReady}
-          />
-        ))}
-      </div>
+      <main className="max-w-7xl mx-auto px-4 py-8">
+        {queue.length === 0 && (
+          <div className="bg-graphite border border-slate rounded-md p-20 text-center text-zinc-500 mt-8" data-testid="kds-empty">
+            No active orders. Time for a coffee.
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {queue.map((o) => (
+            <KitchenTicket
+              key={o.id}
+              order={o}
+              elapsed={elapsed(o.created_at)}
+              isLate={Date.now() - new Date(o.created_at).getTime() > LATE_THRESHOLD_MS}
+              onStart={onStart}
+              onReady={onReady}
+            />
+          ))}
+        </div>
+      </main>
 
       {/* Today's reservations panel */}
       <section className="mt-10" data-testid="kds-reservations">
