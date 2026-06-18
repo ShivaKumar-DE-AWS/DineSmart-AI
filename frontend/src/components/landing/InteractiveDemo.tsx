@@ -15,7 +15,7 @@ export function InteractiveDemo() {
   ];
 
   return (
-    <section className="py-24 px-6 lg:px-24 max-w-[1400px] mx-auto bg-ink relative">
+    <section className="py-16 md:py-24 px-6 lg:px-24 max-w-[1400px] mx-auto bg-ink relative hidden md:block">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-clay/10 via-transparent to-transparent pointer-events-none" />
       
       <div className="text-center mb-12 relative z-10">

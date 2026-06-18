@@ -5,7 +5,7 @@ import { BarChart3, PieChart, Activity, LineChart } from "lucide-react";
 
 export function DashboardShowcase() {
   return (
-    <section className="py-24 px-6 lg:px-24 max-w-[1400px] mx-auto bg-ink relative overflow-hidden">
+    <section className="py-24 px-6 lg:px-24 max-w-[1400px] mx-auto bg-ink relative overflow-hidden hidden md:block">
       <div className="text-center mb-16 relative z-10">
         <h2 className="font-heading text-4xl md:text-5xl text-white mb-6">Total Control at Your Fingertips</h2>
         <p className="text-stone text-lg max-w-2xl mx-auto">

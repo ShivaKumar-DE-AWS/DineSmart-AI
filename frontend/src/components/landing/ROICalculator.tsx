@@ -27,7 +27,7 @@ export function ROICalculator() {
         </p>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-12 max-w-5xl mx-auto bg-white/[0.02] border border-white/5 rounded-[2rem] p-8 md:p-12 shadow-2xl backdrop-blur-xl">
+      <div className="flex flex-col lg:flex-row gap-12 max-w-5xl mx-auto bg-white/[0.02] border border-white/5 rounded-[2rem] p-6 md:p-12 shadow-2xl backdrop-blur-xl">
         <div className="flex-1 space-y-8">
           <div>
             <div className="flex justify-between mb-2">

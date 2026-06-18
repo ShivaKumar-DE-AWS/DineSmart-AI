@@ -6,7 +6,7 @@ import { ArrowUpRight, Play, Sparkles } from "lucide-react";
 
 export function HeroSection() {
   return (
-    <section className="relative pt-32 pb-20 md:pt-48 md:pb-32 px-6 lg:px-24 max-w-[1400px] mx-auto overflow-hidden">
+    <section className="relative pt-24 pb-16 md:pt-48 md:pb-32 px-6 lg:px-24 max-w-[1400px] mx-auto overflow-hidden">
       {/* Background glow effects */}
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-clay/20 rounded-full blur-[120px] -z-10 mix-blend-screen" />
       <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-electric-blue/10 rounded-full blur-[150px] -z-10 mix-blend-screen" />
@@ -27,7 +27,7 @@ export function HeroSection() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="font-heading text-5xl sm:text-6xl md:text-7xl lg:text-[5.5rem] leading-[1.05] tracking-tight text-white mb-8"
+            className="font-heading text-4xl sm:text-5xl md:text-6xl lg:text-7xl leading-[1.1] tracking-tight text-white mb-6"
           >
             Your Restaurant <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-clay via-gold to-electric-blue">
@@ -81,7 +81,7 @@ export function HeroSection() {
           </motion.div>
         </div>
 
-        <div className="flex-1 w-full max-w-xl lg:max-w-none relative">
+        <div className="flex-1 w-full max-w-xl lg:max-w-none relative hidden lg:block">
           <motion.div
             initial={{ opacity: 0, scale: 0.95, rotateY: 10 }}
             animate={{ opacity: 1, scale: 1, rotateY: 0 }}
