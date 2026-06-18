@@ -609,6 +609,8 @@ async def list_inventory():
     items = await db.inventory.find({}, {"_id": 0}).to_list(500)
     return {"items": items}
 
+import random
+
 @app.post("/api/inventory/seed-demo", dependencies=[Depends(require_roles("admin"))])
 async def seed_inventory_demo():
     """Seed the database with mock inventory and assign recipes to all menu items."""
@@ -624,26 +626,28 @@ async def seed_inventory_demo():
             {"id": "inv_spices", "name": "Mixed Spices", "unit": "g", "qty": 5000.0, "min_qty": 1000.0},
         ]
         await db.inventory.insert_many(mock_inv)
+        inventory = mock_inv
     
     menu = await db.menu.find().to_list(length=None)
+    
+    # Assign 2-3 random ingredients to each menu item for demo purposes
     for item in menu:
         recipe = []
-        name = item.get("name", "").lower()
-        
-        # Add spices and onion/tomato to everything
-        recipe.append({"ingredient_id": "inv_spices", "qty_required": 10.0})
-        recipe.append({"ingredient_id": "inv_onion", "qty_required": 0.1})
-        recipe.append({"ingredient_id": "inv_tomato", "qty_required": 0.1})
-        
-        if "chicken" in name:
-            recipe.append({"ingredient_id": "inv_chicken", "qty_required": 0.2})
-        if "biryani" in name or "rice" in name:
-            recipe.append({"ingredient_id": "inv_rice", "qty_required": 0.25})
-        if "paneer" in name:
-            recipe.append({"ingredient_id": "inv_paneer", "qty_required": 0.15})
-        if "naan" in name or "roti" in name:
-            recipe.append({"ingredient_id": "inv_flour", "qty_required": 0.1})
+        if inventory:
+            # Pick a random subset of 2 to 3 ingredients
+            sample_size = min(len(inventory), random.randint(2, 3))
+            sampled_ingredients = random.sample(inventory, sample_size)
             
+            for ing in sampled_ingredients:
+                # Randomize required quantity
+                qty_req = round(random.uniform(0.1, 0.5), 2)
+                if ing.get("unit") == "g":
+                    qty_req = round(random.uniform(5.0, 50.0), 0)
+                recipe.append({
+                    "ingredient_id": ing["id"],
+                    "qty_required": qty_req
+                })
+        
         await db.menu.update_one(
             {"id": item["id"]},
             {"$set": {"recipe": recipe}}
