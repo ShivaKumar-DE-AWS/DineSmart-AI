@@ -3,7 +3,7 @@ import { ChefHat, Monitor, Utensils, BarChart3, ArrowUpRight, Sparkles } from "l
 
 export default function Home() {
   const portals = [
-    { href: "/customer", label: "Customer", desc: "Order, talk to the AI waiter, track your token in realtime.", icon: Utensils, accent: "bg-clay", testid: "portal-customer" },
+    { href: "/r/mehfil-hyderabad", label: "Customer", desc: "Order, talk to the AI waiter, track your token in realtime.", icon: Utensils, accent: "bg-clay", testid: "portal-customer" },
     { href: "/admin", label: "Restaurant", desc: "Dashboard, revenue, inventory, menu and customer analytics.", icon: BarChart3, accent: "bg-sage", testid: "portal-admin" },
     { href: "/kitchen", label: "Kitchen", desc: "Live order queue, timers, one-tap status updates.", icon: ChefHat, accent: "bg-ink", testid: "portal-kitchen" },
     { href: "/counter", label: "Counter", desc: "Big-screen token board for guests picking up orders.", icon: Monitor, accent: "bg-clay-dark", testid: "portal-counter" },
@@ -17,7 +17,7 @@ export default function Home() {
           </div>
           <span className="text-xl font-heading font-semibold tracking-tight">SmartDine<span className="text-clay">.</span>AI</span>
         </div>
-        <Link href="/customer" className="text-sm font-medium hover:text-clay" data-testid="header-enter-link">
+        <Link href="/r/mehfil-hyderabad" className="text-sm font-medium hover:text-clay" data-testid="header-enter-link">
           Enter Restaurant →
         </Link>
       </header>
@@ -33,7 +33,7 @@ export default function Home() {
           One platform. Four portals. From the moment a guest scans a QR to the second a kitchen ticket clears — SmartDine connects every step with an AI sommelier-waiter at its heart.
         </p>
         <div className="mt-10 flex flex-wrap gap-3">
-          <Link href="/customer" data-testid="hero-cta-customer" className="inline-flex items-center gap-2 bg-ink text-cream rounded-full px-7 py-3.5 text-sm font-medium hover:bg-ink/85 transition">
+          <Link href="/r/mehfil-hyderabad" data-testid="hero-cta-customer" className="inline-flex items-center gap-2 bg-ink text-cream rounded-full px-7 py-3.5 text-sm font-medium hover:bg-ink/85 transition">
             Start as a guest <ArrowUpRight className="h-4 w-4" />
           </Link>
           <Link href="/auth/login" data-testid="hero-cta-staff" className="inline-flex items-center gap-2 border border-ink/20 text-ink rounded-full px-7 py-3.5 text-sm font-medium hover:bg-ink/5 transition">
@@ -69,7 +69,7 @@ export default function Home() {
       <footer className="border-t border-bone px-6 md:px-12 lg:px-24 py-8 flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-stone">
         <div>© 2026 SmartDine AI — Powered by Claude Sonnet 4.5</div>
         <div className="flex gap-6">
-          <Link href="/customer" className="hover:text-ink">Order</Link>
+          <Link href="/r/mehfil-hyderabad" className="hover:text-ink">Order</Link>
           <Link href="/admin" className="hover:text-ink">Admin</Link>
           <Link href="/kitchen" className="hover:text-ink">Kitchen</Link>
           <Link href="/counter" className="hover:text-ink">Counter</Link>

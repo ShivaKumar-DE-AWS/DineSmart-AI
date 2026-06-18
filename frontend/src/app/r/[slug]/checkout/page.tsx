@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter , useParams} from "next/navigation";
 import Link from "next/link";
 import { useCart } from "@/stores/cart";
 import { useTable } from "@/stores/table";
@@ -52,6 +52,9 @@ function getChipsForItem(name: string, category?: string): string[] {
 const COURSES = ["Auto (Natural pace)", "Starter", "Main Course", "Dessert", "All together"];
 
 export default function CheckoutPage() {
+  const params = useParams();
+  const slug = params?.slug as string;
+
   const router = useRouter();
   const cart = useCart();
   const table = useTable((s) => s.session);
@@ -111,39 +114,32 @@ export default function CheckoutPage() {
     if (cart.items.length === 0) { toast.error("Your thali is empty"); return; }
     setSubmitting(true);
     try {
+      // First, get the restaurant_id using slug
+      const restRes = await api<{ id: string }>(`/api/restaurants/${slug}`);
+      if (!restRes || !restRes.id) { toast.error("Restaurant not found."); return; }
+
       const payload = {
-        order_draft: {
-          customer_name: name.trim(),
-          customer_phone: phone.trim() || undefined,
-          items: cart.items.map((i) => {
-            const courseText = i.course && i.course !== "Auto (Natural pace)" ? `[Serve: ${i.course}] ` : "";
-            const finalNotes = `${courseText}${i.notes?.trim() || ""}`.trim();
-            return {
-              item_id: i.item_id, name: i.name, price: i.price, qty: i.qty,
-              notes: finalNotes || undefined,
-            };
-          }),
-          payment_method: "stripe",
-          notes: generalNotes.trim() || undefined,
-          table_session_id: table?.id || undefined,
-          table_number: table?.table_number || undefined,
-          is_ai: cart.isAi,
-        },
-        origin_url: window.location.origin,
+        restaurant_id: restRes.id,
+        customer_name: name.trim(),
+        customer_phone: phone.trim() || undefined,
+        items: cart.items.map((i) => {
+          const courseText = i.course && i.course !== "Auto (Natural pace)" ? `[Serve: ${i.course}] ` : "";
+          const finalNotes = `${courseText}${i.notes?.trim() || ""}`.trim();
+          return {
+            item_id: i.item_id, name: i.name, price: i.price, qty: i.qty,
+            notes: finalNotes || undefined,
+          };
+        }),
+        payment_method: "cash", // ignore payment gateway for now
+        notes: generalNotes.trim() || undefined,
+        table_session_id: table?.id || undefined,
+        table_number: table?.table_number || undefined,
+        is_ai: cart.isAi,
       };
-      const res = await api<{ mode: string; url?: string; session_id?: string; order_id?: string }>(
-        "/api/payment/checkout/session", { method: "POST", body: JSON.stringify(payload) },
-      );
-      if (res.mode === "stripe" && res.url) {
-        sessionStorage.setItem("sd_pending_cart_clear", "1");
-        window.location.href = res.url;
-      } else if (res.order_id) {
-        cart.clear();
-        toast.success("Your order is on its way to the kitchen");
-        router.push(`/customer/token/${res.order_id}`);
-      } else {
-        throw new Error("Unexpected payment response");
-      }
+      const res = await api<{ id: string }>("/api/orders", { method: "POST", body: JSON.stringify(payload) });
+      cart.clear();
+      toast.success("Your order is on its way to the kitchen");
+      router.push(`/r/${slug}/token/${res.id}`);
     } catch (e) {
       const err = e as Error;
       toast.error(err.message || "Checkout failed");
@@ -154,7 +150,7 @@ export default function CheckoutPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-5 md:px-10 py-12" data-testid="checkout-page">
-      <Link href="/customer/cart" className="inline-flex items-center gap-1 text-[#8A1A2A] hover:text-[#C9A348] font-royal tracking-wider uppercase text-[11px] mb-4">
+      <Link href={`/r/${slug}/cart`} className="inline-flex items-center gap-1 text-[#8A1A2A] hover:text-[#C9A348] font-royal tracking-wider uppercase text-[11px] mb-4">
         <ArrowLeft className="h-3.5 w-3.5" /> Back to thali
       </Link>
       <div className="text-center mb-10">

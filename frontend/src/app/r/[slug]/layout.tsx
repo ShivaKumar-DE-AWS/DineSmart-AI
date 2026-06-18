@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname , useParams} from "next/navigation";
 import { useEffect, useState, Suspense, useRef } from "react";
 import { ShoppingBag, Menu as MenuIcon, X, ChefHat, ArrowRight, BellRing } from "lucide-react";
 import { useCart } from "@/stores/cart";
@@ -20,6 +20,9 @@ const NAV = [
 ];
 
 export default function CustomerLayout({ children }: { children: React.ReactNode }) {
+  const params = useParams();
+  const slug = params?.slug as string;
+
   const path = usePathname();
   const cartCount = useCart((s) => s.count());
   const [scrolled, setScrolled] = useState(false);
@@ -115,7 +118,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
           <MehfilLogo size="sm" />
           <nav className="hidden md:flex items-center gap-9 text-sm tracking-[0.15em] uppercase font-royal" data-testid="mehfil-nav">
             {NAV.map((n) => (
-              <Link key={n.href} href={n.href} data-testid={n.testid} className={`transition-colors ${path === n.href || (n.href !== "/customer" && path?.startsWith(n.href)) ? "text-[#8A1A2A]" : "text-[#1A1106] hover:text-[#8A1A2A]"}`}>
+              <Link key={n.href} href={n.href} data-testid={n.testid} className={`transition-colors ${path === n.href || (n.href !== `/r/${slug}` && path?.startsWith(n.href)) ? "text-[#8A1A2A]" : "text-[#1A1106] hover:text-[#8A1A2A]"}`}>
                 {n.label}
               </Link>
             ))}
@@ -132,7 +135,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
                 <span className="hidden md:inline ml-2">Call Staff</span>
               </button>
             )}
-            <Link href="/customer/cart" data-testid="cart-link" className="relative inline-flex items-center gap-2 mehfil-btn-royal px-4 md:px-5 py-2.5 rounded-full text-xs md:text-sm font-medium tracking-wider uppercase">
+            <Link href={`/r/${slug}/cart`} data-testid="cart-link" className="relative inline-flex items-center gap-2 mehfil-btn-royal px-4 md:px-5 py-2.5 rounded-full text-xs md:text-sm font-medium tracking-wider uppercase">
               <ShoppingBag className="h-4 w-4" />
               <span className="hidden sm:inline">Cart</span>
               {cartCount > 0 && (
@@ -173,7 +176,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
 
       {activeOrders.length > 0 && path !== "/customer/track" && !path.startsWith("/customer/track/") && (
         <Link 
-          href="/customer/track" 
+          href={`/r/${slug}/track`} 
           className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-[#8A1A2A] text-[#FAF5EC] pl-4 pr-5 py-3 rounded-full shadow-2xl flex items-center gap-3 hover:bg-[#7a1523] transition-colors border border-[#C9A348]/40 max-w-[90vw] whitespace-nowrap group"
           data-testid="global-active-order-badge"
         >
@@ -222,7 +225,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
             <p className="text-sm text-[#FAF5EC]/85 leading-relaxed">
               +91 90000 12345<br />
               hello@mehfil.in<br />
-              <Link href="/customer/reserve" className="underline underline-offset-4 hover:text-[#C9A348]">Reserve a table</Link>
+              <Link href={`/r/${slug}/reserve`} className="underline underline-offset-4 hover:text-[#C9A348]">Reserve a table</Link>
             </p>
           </div>
         </div>

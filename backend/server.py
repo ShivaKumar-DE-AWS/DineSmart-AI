@@ -45,11 +45,15 @@ JWT_SECRET = os.environ.get("JWT_SECRET", "smartdine-dev-secret-change-me")
 STRIPE_API_KEY = os.environ.get("STRIPE_API_KEY", "")
 STRIPE_ENABLED = os.environ.get("STRIPE_ENABLED", "false").lower() == "true" and bool(STRIPE_API_KEY)
 
+kwargs = {}
+if "localhost" not in MONGO_URL and "127.0.0.1" not in MONGO_URL:
+    kwargs["tls"] = True
+    kwargs["tlsCAFile"] = certifi.where()
+
 client = AsyncIOMotorClient(
     MONGO_URL,
-    tls=True,
-    tlsCAFile=certifi.where(),
     serverSelectionTimeoutMS=30000,
+    **kwargs
 )
 db = client[DB_NAME]
 
@@ -135,8 +139,11 @@ def require_roles(*roles: str):
 # Analytics
 # =========================================================
 @app.get("/api/analytics", dependencies=[Depends(require_roles("admin"))])
-async def get_analytics():
-    orders = await db.orders.find({"status": {"$nin": ["cancelled"]}}).to_list(1000)
+async def get_analytics(user=Depends(require_user)):
+    q = {"status": {"$nin": ["cancelled"]}}
+    if user.get("restaurant_id"):
+        q["restaurant_id"] = user["restaurant_id"]
+    orders = await db.orders.find(q).to_list(1000)
     
     total_revenue = sum(o.get("total", 0) for o in orders)
     ai_orders = sum(1 for o in orders if o.get("is_ai"))
@@ -153,15 +160,16 @@ async def get_analytics():
 # =========================================================
 # Models
 # =========================================================
-class SignupReq(BaseModel):
-    email: EmailStr
-    password: str
-    name: str
-    role: str = "customer"
+# Replaced below
 
-class LoginReq(BaseModel):
-    email: EmailStr
-    password: str
+class RestaurantModel(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    slug: str
+    owner_email: str
+    stripe_customer_id: Optional[str] = None
+    subscription_status: str = "active"
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class RecipeIngredient(BaseModel):
     ingredient_id: str
@@ -169,6 +177,7 @@ class RecipeIngredient(BaseModel):
 
 class MenuItemModel(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    restaurant_id: Optional[str] = None
     name: str
     description: str
     price: float
@@ -187,6 +196,7 @@ class CartItemModel(BaseModel):
     notes: Optional[str] = None
 
 class OrderCreateReq(BaseModel):
+    restaurant_id: Optional[str] = None
     customer_name: str
     customer_phone: Optional[str] = None
     items: List[CartItemModel]
@@ -201,6 +211,7 @@ class OrderStatusUpdate(BaseModel):
 
 class InventoryItemModel(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    restaurant_id: Optional[str] = None
     name: str
     unit: str
     qty: float
@@ -356,31 +367,77 @@ async def health():
 # =========================================================
 # Auth
 # =========================================================
+class SignupReq(BaseModel):
+    email: EmailStr
+    password: str
+    name: str
+    role: str = "customer"
+    restaurant_name: Optional[str] = None  # Required if role == "admin"
+
+class LoginReq(BaseModel):
+    email: EmailStr
+    password: str
+
+# =========================================================
+# Auth & Registration
+# =========================================================
 @app.post("/api/auth/signup")
 async def signup(req: SignupReq):
     if await db.users.find_one({"email": req.email}):
         raise HTTPException(status_code=400, detail="Email already registered")
     if req.role not in {"customer", "admin", "kitchen", "counter"}:
         raise HTTPException(status_code=400, detail="Invalid role")
+        
     user_id = str(uuid.uuid4())
+    restaurant_id = None
+    
+    if req.role == "admin":
+        if not req.restaurant_name:
+            raise HTTPException(status_code=400, detail="Restaurant name required for admin signup")
+        restaurant_id = str(uuid.uuid4())
+        # Generate a URL-friendly slug
+        import re
+        slug = re.sub(r'[^a-z0-9]+', '-', req.restaurant_name.lower()).strip('-')
+        
+        # Ensure slug uniqueness
+        existing_slug = await db.restaurants.find_one({"slug": slug})
+        if existing_slug:
+            slug = f"{slug}-{str(uuid.uuid4())[:4]}"
+            
+        await db.restaurants.insert_one({
+            "id": restaurant_id,
+            "name": req.restaurant_name,
+            "slug": slug,
+            "owner_email": req.email,
+            "stripe_customer_id": None,
+            "subscription_status": "active", # Start as active
+            "created_at": now_iso()
+        })
+    
     await db.users.insert_one({
-        "id": user_id, "email": req.email, "name": req.name, "role": req.role,
-        "password_hash": hash_password(req.password), "created_at": now_iso(),
+        "id": user_id, 
+        "email": req.email, 
+        "name": req.name, 
+        "role": req.role,
+        "restaurant_id": restaurant_id,
+        "password_hash": hash_password(req.password), 
+        "created_at": now_iso(),
     })
-    token = jwt_sign({"sub": user_id, "email": req.email, "role": req.role, "name": req.name})
-    return {"token": token, "user": {"id": user_id, "email": req.email, "name": req.name, "role": req.role}}
+    token = jwt_sign({"sub": user_id, "email": req.email, "role": req.role, "name": req.name, "restaurant_id": restaurant_id})
+    return {"token": token, "user": {"id": user_id, "email": req.email, "name": req.name, "role": req.role, "restaurant_id": restaurant_id}}
 
 @app.post("/api/auth/login")
 async def login(req: LoginReq):
     user = await db.users.find_one({"email": req.email})
     if not user or not verify_password(req.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid email or password")
-    token = jwt_sign({"sub": user["id"], "email": user["email"], "role": user["role"], "name": user["name"]})
-    return {"token": token, "user": {"id": user["id"], "email": user["email"], "name": user["name"], "role": user["role"]}}
+    
+    token = jwt_sign({"sub": user["id"], "email": user["email"], "role": user["role"], "name": user["name"], "restaurant_id": user.get("restaurant_id")})
+    return {"token": token, "user": {"id": user["id"], "email": user["email"], "name": user["name"], "role": user["role"], "restaurant_id": user.get("restaurant_id")}}
 
 @app.get("/api/auth/me")
 async def me(user=Depends(require_user)):
-    return {"user": {"id": user["sub"], "email": user["email"], "name": user["name"], "role": user["role"]}}
+    return {"user": {"id": user["sub"], "email": user["email"], "name": user["name"], "role": user["role"], "restaurant_id": user.get("restaurant_id")}}
 
 class GuestReq(BaseModel):
     name: Optional[str] = None
@@ -473,29 +530,64 @@ async def stream_cart(session_id: str, req: Request):
     return StreamingResponse(stream(), media_type="text/event-stream")
 
 # =========================================================
+# Restaurant Info
+# =========================================================
+@app.get("/api/restaurants/{slug}")
+async def get_restaurant(slug: str):
+    rest = await db.restaurants.find_one({"slug": slug}, {"_id": 0})
+    if not rest:
+        raise HTTPException(status_code=404, detail="Restaurant not found")
+    return rest
+
+# =========================================================
 # Menu
 # =========================================================
 @app.get("/api/menu")
-async def list_menu():
-    items = await db.menu.find({}, {"_id": 0}).to_list(500)
+async def list_menu(restaurant_slug: str = None, request: Request = None):
+    q = {}
+    
+    # Optional token parsing for admin access without breaking public access
+    user_data = None
+    if request:
+        auth = request.headers.get("Authorization")
+        if auth and auth.startswith("Bearer "):
+            try:
+                user_data = jwt_verify(auth.split(" ")[1])
+            except Exception:
+                pass
+                
+    if restaurant_slug:
+        rest = await db.restaurants.find_one({"slug": restaurant_slug})
+        if rest: q["restaurant_id"] = rest["id"]
+    elif user_data and user_data.get("restaurant_id"):
+        q["restaurant_id"] = user_data["restaurant_id"]
+        
+    items = await db.menu.find(q, {"_id": 0}).to_list(500)
     return {"items": items}
 
 @app.post("/api/menu", dependencies=[Depends(require_roles("admin"))])
-async def create_menu_item(item: MenuItemModel):
-    await db.menu.insert_one(item.model_dump())
+async def create_menu_item(item: MenuItemModel, user=Depends(require_user)):
+    item_dict = item.model_dump()
+    if user.get("restaurant_id"):
+        item_dict["restaurant_id"] = user["restaurant_id"]
+    await db.menu.insert_one(item_dict)
     return item
 
 @app.patch("/api/menu/{item_id}", dependencies=[Depends(require_roles("admin"))])
-async def update_menu_item(item_id: str, patch: Dict[str, Any]):
+async def update_menu_item(item_id: str, patch: Dict[str, Any], user=Depends(require_user)):
     patch.pop("id", None); patch.pop("_id", None)
-    res = await db.menu.update_one({"id": item_id}, {"$set": patch})
+    q = {"id": item_id}
+    if user.get("restaurant_id"): q["restaurant_id"] = user["restaurant_id"]
+    res = await db.menu.update_one(q, {"$set": patch})
     if res.matched_count == 0:
         raise HTTPException(status_code=404, detail="Item not found")
     return {"ok": True}
 
 @app.delete("/api/menu/{item_id}", dependencies=[Depends(require_roles("admin"))])
-async def delete_menu_item(item_id: str):
-    await db.menu.delete_one({"id": item_id})
+async def delete_menu_item(item_id: str, user=Depends(require_user)):
+    q = {"id": item_id}
+    if user.get("restaurant_id"): q["restaurant_id"] = user["restaurant_id"]
+    await db.menu.delete_one(q)
     return {"ok": True}
 
 # =========================================================
@@ -548,19 +640,24 @@ async def create_order(req: OrderCreateReq):
     })
     return clean(order)
 
-@app.get("/api/orders")
-async def list_orders(status_filter: Optional[str] = None, table_session_id: Optional[str] = None, limit: int = 100):
+@app.get("/api/orders", dependencies=[Depends(require_roles("admin", "kitchen", "counter"))])
+async def list_orders(status_filter: Optional[str] = None, table_session_id: Optional[str] = None, limit: int = 100, user=Depends(require_user)):
     q: Dict[str, Any] = {}
     if status_filter:
         q["status"] = status_filter
     if table_session_id:
         q["table_session_id"] = table_session_id
+    if user.get("restaurant_id"):
+        q["restaurant_id"] = user["restaurant_id"]
     docs = await db.orders.find(q, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(limit)
     return {"orders": docs}
 
 @app.get("/api/orders/{order_id}")
-async def get_order(order_id: str):
-    o = await db.orders.find_one({"id": order_id}, {"_id": 0})
+async def get_order(order_id: str, user=Depends(require_user)):
+    q = {"id": order_id}
+    if user.get("restaurant_id"):
+        q["restaurant_id"] = user["restaurant_id"]
+    o = await db.orders.find_one(q, {"_id": 0})
     if not o:
         raise HTTPException(status_code=404, detail="Order not found")
     return o
@@ -569,8 +666,10 @@ async def get_order(order_id: str):
 async def update_status(order_id: str, body: OrderStatusUpdate, user=Depends(require_roles("admin", "kitchen", "counter"))):
     if body.status not in {"pending", "confirmed", "preparing", "ready", "served", "cancelled"}:
         raise HTTPException(status_code=400, detail="Invalid status")
+    q = {"id": order_id}
+    if user.get("restaurant_id"): q["restaurant_id"] = user["restaurant_id"]
     res = await db.orders.update_one(
-        {"id": order_id},
+        q,
         {"$set": {"status": body.status, "updated_at": now_iso()}}
     )
     if res.matched_count == 0:
@@ -605,16 +704,20 @@ async def update_status(order_id: str, body: OrderStatusUpdate, user=Depends(req
 # Inventory
 # =========================================================
 @app.get("/api/inventory", dependencies=[Depends(require_roles("admin", "kitchen"))])
-async def list_inventory():
-    items = await db.inventory.find({}, {"_id": 0}).to_list(500)
+async def list_inventory(user=Depends(require_user)):
+    q = {}
+    if user.get("restaurant_id"): q["restaurant_id"] = user["restaurant_id"]
+    items = await db.inventory.find(q, {"_id": 0}).to_list(500)
     return {"items": items}
 
 import random
 
 @app.post("/api/inventory/seed-demo", dependencies=[Depends(require_roles("admin"))])
-async def seed_inventory_demo():
+async def seed_inventory_demo(user=Depends(require_user)):
     """Seed the database with dynamic inventory and assign recipes to all menu items using Gemini."""
-    menu = await db.menu.find().to_list(length=None)
+    q_menu = {}
+    if user.get("restaurant_id"): q_menu["restaurant_id"] = user["restaurant_id"]
+    menu = await db.menu.find(q_menu).to_list(length=None)
     if not menu:
         return {"message": "No menu items found to generate inventory from."}
     
@@ -661,23 +764,31 @@ async def seed_inventory_demo():
         
         # 1. Replace Inventory
         if data.get("inventory"):
-            await db.inventory.delete_many({})
-            await db.inventory.insert_many(data["inventory"])
+            # Attach restaurant_id to generated inventory
+            inv_list = data["inventory"]
+            for inv in inv_list:
+                if user.get("restaurant_id"): inv["restaurant_id"] = user["restaurant_id"]
+            
+            q_inv = {}
+            if user.get("restaurant_id"): q_inv["restaurant_id"] = user["restaurant_id"]
+            await db.inventory.delete_many(q_inv)
+            await db.inventory.insert_many(inv_list)
             
         # 2. Update Recipes
         recipes_map = data.get("recipes", {})
         for item in menu:
             recipe = recipes_map.get(item.get("name"), [])
-            await db.menu.update_one(
-                {"id": item["id"]},
-                {"$set": {"recipe": recipe}}
-            )
+            update_q = {"id": item["id"]}
+            if user.get("restaurant_id"): update_q["restaurant_id"] = user["restaurant_id"]
+            await db.menu.update_one(update_q, {"$set": {"recipe": recipe}})
             
         return {"message": "Demo data seeded dynamically using AI!"}
     except Exception as e:
         print(f"Failed to seed demo using AI: {e}")
         # Fallback to simple random assignment if AI fails
-        inventory = await db.inventory.find().to_list(length=None)
+        q_inv = {}
+        if user.get("restaurant_id"): q_inv["restaurant_id"] = user["restaurant_id"]
+        inventory = await db.inventory.find(q_inv).to_list(length=None)
         if not inventory:
             mock_inv = [
                 {"id": "inv_chicken", "name": "Raw Chicken", "unit": "kg", "qty": 50.0, "min_qty": 10.0},
@@ -701,21 +812,27 @@ async def seed_inventory_demo():
         return {"message": "Fallback demo data seeded successfully"}
 
 @app.post("/api/inventory", dependencies=[Depends(require_roles("admin"))])
-async def create_inventory_item(item: InventoryItemModel):
-    await db.inventory.insert_one(item.model_dump())
+async def create_inventory_item(item: InventoryItemModel, user=Depends(require_user)):
+    item_dict = item.model_dump()
+    if user.get("restaurant_id"): item_dict["restaurant_id"] = user["restaurant_id"]
+    await db.inventory.insert_one(item_dict)
     return item
 
 @app.patch("/api/inventory/{item_id}", dependencies=[Depends(require_roles("admin", "kitchen"))])
 async def update_inventory(item_id: str, patch: Dict[str, Any]):
     patch.pop("id", None); patch.pop("_id", None)
-    res = await db.inventory.update_one({"id": item_id}, {"$set": patch})
+    q = {"id": item_id}
+    if user.get("restaurant_id"): q["restaurant_id"] = user["restaurant_id"]
+    res = await db.inventory.update_one(q, {"$set": patch})
     if res.matched_count == 0:
         raise HTTPException(status_code=404, detail="Inventory item not found")
     return {"ok": True}
 
 @app.delete("/api/inventory/{item_id}", dependencies=[Depends(require_roles("admin"))])
 async def delete_inventory(item_id: str):
-    await db.inventory.delete_one({"id": item_id})
+    q = {"id": item_id}
+    if user.get("restaurant_id"): q["restaurant_id"] = user["restaurant_id"]
+    await db.inventory.delete_one(q)
     return {"ok": True}
 
 # =========================================================
@@ -1521,7 +1638,7 @@ async def lookup_customer(req: CustomerLookupReq):
 TABLE_SESSION_TTL_SECONDS = 10 * 60
 
 @app.get("/api/tables", dependencies=[Depends(require_roles("admin"))])
-async def list_tables():
+async def list_tables(user=Depends(require_user)):
     """List all tables (admin)."""
     docs = await db.tables.find({}, {"_id": 0}).sort("number", 1).to_list(500)
     # Attach current live session info if any

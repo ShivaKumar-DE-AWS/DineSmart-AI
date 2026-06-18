@@ -10,6 +10,9 @@ import { toast } from "sonner";
 import type { Order } from "@/types";
 
 export default function TokenPage() {
+  const params = useParams();
+  const slug = params?.slug as string;
+
   const { orderId } = useParams<{ orderId: string }>();
   const { data: order, isLoading } = useQuery({
     queryKey: ["order", orderId],
@@ -117,10 +120,10 @@ export default function TokenPage() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Link href={`/customer/track/${order.id}`} data-testid="token-track-link" className="inline-flex items-center justify-center gap-2 mehfil-btn-royal rounded-full px-6 py-3.5 font-royal tracking-[0.2em] uppercase text-xs">
+        <Link href={`/r/${slug}/track/${order.id}`} data-testid="token-track-link" className="inline-flex items-center justify-center gap-2 mehfil-btn-royal rounded-full px-6 py-3.5 font-royal tracking-[0.2em] uppercase text-xs">
           <Eye className="h-4 w-4" /> Track live
         </Link>
-        <Link href="/customer/menu" className="inline-flex items-center justify-center gap-2 rounded-full px-6 py-3.5 font-royal tracking-[0.2em] uppercase text-xs border border-[#8A1A2A]/30 text-[#8A1A2A] hover:bg-[#8A1A2A]/5 transition">
+        <Link href={`/r/${slug}/menu`} className="inline-flex items-center justify-center gap-2 rounded-full px-6 py-3.5 font-royal tracking-[0.2em] uppercase text-xs border border-[#8A1A2A]/30 text-[#8A1A2A] hover:bg-[#8A1A2A]/5 transition">
           <Sparkles className="h-4 w-4" /> Add to the mehfil
         </Link>
       </div>

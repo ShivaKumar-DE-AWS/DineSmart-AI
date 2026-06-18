@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter , useParams} from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { useSession } from "@/stores/session";
@@ -12,6 +12,9 @@ import { MehfilLogo } from "@/components/customer/MehfilLogo";
 type Tab = "guest" | "staff";
 
 export default function LoginPage() {
+  const params = useParams();
+  const slug = params?.slug as string;
+
   const router = useRouter();
   const setSession = useSession((s) => s.setSession);
   const [tab, setTab] = useState<Tab>("guest");
@@ -34,7 +37,7 @@ export default function LoginPage() {
       });
       setSession(res.user, res.token);
       toast.success(`Welcome to Mehfil, ${res.user.name}`);
-      router.push("/customer/menu");
+      router.push(`/r/${slug}/menu`);
     } catch (e) {
       const err = e as Error;
       toast.error(err.message || "Could not continue");
@@ -68,7 +71,7 @@ export default function LoginPage() {
 
   return (
     <div className="mehfil min-h-screen mehfil-paper flex items-center justify-center p-5">
-      <Link href="/customer" data-testid="back-to-home" className="fixed top-5 left-5 flex items-center gap-1 text-[#8A1A2A] hover:text-[#C9A348] font-royal tracking-wider uppercase text-xs">
+      <Link href={`/r/${slug}`} data-testid="back-to-home" className="fixed top-5 left-5 flex items-center gap-1 text-[#8A1A2A] hover:text-[#C9A348] font-royal tracking-wider uppercase text-xs">
         <ChevronLeft className="h-4 w-4" /> Back
       </Link>
 

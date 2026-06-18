@@ -1,3 +1,4 @@
+import { useParams } from "next/navigation";
 "use client";
 import Link from "next/link";
 import { useCart } from "@/stores/cart";
@@ -6,6 +7,9 @@ import { ArrowRight, Trash2, Plus, Minus, ShoppingBag, BookOpen } from "lucide-r
 import { motion } from "framer-motion";
 
 export default function CartPage() {
+  const params = useParams();
+  const slug = params?.slug as string;
+
   const cart = useCart();
   const subtotal = cart.subtotal();
   const tax = Math.round(subtotal * 0.05);
@@ -19,7 +23,7 @@ export default function CartPage() {
         <p className="font-editorial italic text-[#1A1106]/70 mt-4 mb-10 leading-relaxed">
           Step into the mehfil — choose a chapter and let the dishes find you.
         </p>
-        <Link href="/customer/menu" data-testid="cart-go-menu" className="inline-flex items-center gap-2 mehfil-btn-royal rounded-full px-7 py-3.5 text-xs font-royal tracking-[0.2em] uppercase">
+        <Link href={`/r/${slug}/menu`} data-testid="cart-go-menu" className="inline-flex items-center gap-2 mehfil-btn-royal rounded-full px-7 py-3.5 text-xs font-royal tracking-[0.2em] uppercase">
           <BookOpen className="h-4 w-4" /> Browse menu <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
@@ -73,10 +77,10 @@ export default function CartPage() {
               <span className="font-royal text-2xl text-[#8A1A2A]" data-testid="summary-total">{formatCurrency(total)}</span>
             </div>
           </div>
-          <Link href="/customer/checkout" data-testid="cart-checkout-btn" className="mt-6 w-full mehfil-btn-royal rounded-full py-3.5 font-royal tracking-[0.2em] uppercase text-xs inline-flex items-center justify-center gap-2">
+          <Link href={`/r/${slug}/checkout`} data-testid="cart-checkout-btn" className="mt-6 w-full mehfil-btn-royal rounded-full py-3.5 font-royal tracking-[0.2em] uppercase text-xs inline-flex items-center justify-center gap-2">
             Proceed to checkout <ArrowRight className="h-4 w-4" />
           </Link>
-          <Link href="/customer/menu" className="mt-3 block text-center font-royal tracking-wider uppercase text-[10px] text-[#8A1A2A] hover:text-[#C9A348]">
+          <Link href={`/r/${slug}/menu`} className="mt-3 block text-center font-royal tracking-wider uppercase text-[10px] text-[#8A1A2A] hover:text-[#C9A348]">
             ← Add a few more
           </Link>
         </aside>

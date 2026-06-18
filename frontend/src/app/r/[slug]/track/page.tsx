@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter , useParams} from "next/navigation";
 import { Search, ArrowRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -21,6 +21,9 @@ function SectionTag({ children }: { children: React.ReactNode }) {
 }
 
 export default function TrackLanding() {
+  const params = useParams();
+  const slug = params?.slug as string;
+
   const router = useRouter();
   const [id, setId] = useState("");
   
@@ -53,7 +56,7 @@ export default function TrackLanding() {
               return (
                 <Link
                   key={order.id}
-                  href={`/customer/track/${order.id}`}
+                  href={`/r/${slug}/track/${order.id}`}
                   className="block mehfil-card rounded-2xl p-6 border border-[#C9A348]/30 hover:border-[#8A1A2A] transition-colors relative overflow-hidden group shadow-lg bg-white"
                 >
                   <div className="absolute top-0 right-0 w-20 h-20 bg-[#8A1A2A]/5 rounded-bl-[3rem] -z-10 group-hover:scale-110 transition-transform duration-500" />
@@ -104,13 +107,13 @@ export default function TrackLanding() {
             placeholder="Order ID"
             value={id}
             onChange={(e) => setId(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && id && router.push(`/customer/track/${id}`)}
+            onKeyDown={(e) => e.key === "Enter" && id && router.push(`/r/${slug}/track/${id}`)}
             className="flex-1 bg-transparent outline-none text-sm placeholder:text-[#1A1106]/40 font-editorial"
           />
         </div>
         <button
           data-testid="track-go-btn"
-          onClick={() => id && router.push(`/customer/track/${id}`)}
+          onClick={() => id && router.push(`/r/${slug}/track/${id}`)}
           disabled={!id}
           className="mt-5 mehfil-btn-royal rounded-full px-7 py-3 font-royal tracking-[0.2em] uppercase text-xs inline-flex items-center gap-2 disabled:opacity-50 transition-opacity"
         >

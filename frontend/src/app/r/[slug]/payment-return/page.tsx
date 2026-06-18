@@ -1,6 +1,6 @@
 "use client";
 import { Suspense, useEffect, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams , useParams} from "next/navigation";
 import { api } from "@/lib/api";
 import { useCart } from "@/stores/cart";
 import { Loader2, XCircle } from "lucide-react";
@@ -35,7 +35,7 @@ function PaymentReturnContent() {
         if (res.payment_status === "paid" && res.order_id) {
           cartRef.current.clear();
           setStatus("success");
-          router.replace(`/customer/token/${res.order_id}`);
+          router.replace(`/r/${slug}/token/${res.order_id}`);
           return;
         }
         if (res.status === "expired") {
@@ -69,7 +69,7 @@ function PaymentReturnContent() {
           <XCircle className="h-10 w-10 text-alert mx-auto mb-4" />
           <h1 className="font-heading text-3xl tracking-tight">Payment didn't go through</h1>
           <p className="text-stone mt-2 text-sm">{message}</p>
-          <button onClick={() => router.push("/customer/cart")} className="mt-6 bg-ink text-cream rounded-full px-6 py-3 font-medium">
+          <button onClick={() => router.push(`/r/${slug}/cart`)} className="mt-6 bg-ink text-cream rounded-full px-6 py-3 font-medium">
             Back to cart
           </button>
         </>
@@ -79,6 +79,9 @@ function PaymentReturnContent() {
 }
 
 export default function PaymentReturn() {
+  const params = useParams();
+  const slug = params?.slug as string;
+
   return (
     <Suspense fallback={
       <div className="px-6 py-24 max-w-md mx-auto text-center">

@@ -1,12 +1,15 @@
 "use client";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter , useParams} from "next/navigation";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { Calendar, Clock, Users, Phone, User2, MessageSquare, Sparkles, CheckCircle2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function ReservePage() {
+  const params = useParams();
+  const slug = params?.slug as string;
+
   const router = useRouter();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -58,7 +61,7 @@ export default function ReservePage() {
           Reservation # {confirmation.id.slice(0, 8)}
         </div>
         <div className="flex justify-center gap-3 mt-8">
-          <button onClick={() => router.push("/customer/menu")} className="mehfil-btn-royal rounded-full px-6 py-3 font-royal tracking-[0.2em] uppercase text-xs inline-flex items-center gap-2">
+          <button onClick={() => router.push(`/r/${slug}/menu`)} className="mehfil-btn-royal rounded-full px-6 py-3 font-royal tracking-[0.2em] uppercase text-xs inline-flex items-center gap-2">
             <Sparkles className="h-3.5 w-3.5" /> Preview the menu
           </button>
           <button onClick={() => setConfirmation(null)} className="rounded-full border border-[#8A1A2A]/30 text-[#8A1A2A] px-6 py-3 font-royal tracking-[0.2em] uppercase text-xs hover:bg-[#8A1A2A]/5">

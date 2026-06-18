@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Sparkles, Send, X, Loader2, Mic, MessageSquare, BookOpen, Plus, Minus, Square, Volume2, VolumeX, ArrowRight } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter , useParams} from "next/navigation";
 import Link from "next/link";
 import { api, apiUrl } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
@@ -102,6 +102,9 @@ function extractActions(content: string): { clean: string; adds: {name: string, 
 }
 
 export function AIWaiterDock() {
+  const params = useParams();
+  const slug = params?.slug as string;
+
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>("chat");
   const [language, setLanguage] = useState<Lang>("auto");
@@ -613,7 +616,7 @@ export function AIWaiterDock() {
                 dynamicPrompts={dynamicPrompts}
                 onCheckout={() => {
                   setOpen(false);
-                  router.push("/customer/checkout");
+                  router.push(`/r/${slug}/checkout`);
                 }}
               />
             )}

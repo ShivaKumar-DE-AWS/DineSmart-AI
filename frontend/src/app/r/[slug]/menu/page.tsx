@@ -1,3 +1,4 @@
+import { useParams } from "next/navigation";
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -10,6 +11,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import type { MenuItem } from "@/types";
 
 export default function MenuPage() {
+  const params = useParams();
+  const slug = params?.slug as string;
+
   const { data, isLoading } = useQuery({
     queryKey: ["menu"],
     queryFn: () => api<{ items: MenuItem[] }>("/api/menu"),
@@ -310,7 +314,7 @@ export default function MenuPage() {
       <AnimatePresence>
         {cart.count() > 0 && (
           <motion.a
-            href="/customer/cart"
+            href={`/r/${slug}/cart`}
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}

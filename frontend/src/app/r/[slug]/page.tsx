@@ -1,3 +1,4 @@
+import { useParams } from "next/navigation";
 "use client";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
@@ -29,6 +30,9 @@ function SectionTag({ children }: { children: React.ReactNode }) {
 }
 
 export default function MehfilHome() {
+  const params = useParams();
+  const slug = params?.slug as string;
+
   const cart = useCart();
   const { session } = useTable();
   const { data: menuData } = useQuery({ queryKey: ["menu"], queryFn: () => api<{ items: MenuItem[] }>("/api/menu") });
@@ -72,13 +76,13 @@ export default function MehfilHome() {
           </p>
 
           <div className="mt-10 flex flex-wrap gap-3 justify-center">
-            <Link href="/customer/menu" data-testid="hero-explore-menu" className="mehfil-btn-royal rounded-full px-8 py-3.5 text-sm tracking-[0.2em] uppercase font-royal inline-flex items-center gap-2">
+            <Link href={`/r/${slug}/menu`} data-testid="hero-explore-menu" className="mehfil-btn-royal rounded-full px-8 py-3.5 text-sm tracking-[0.2em] uppercase font-royal inline-flex items-center gap-2">
               Explore Menu <ArrowRight className="h-4 w-4" />
             </Link>
             <button onClick={openAI} data-testid="hero-talk-ai" className="mehfil-btn-gold rounded-full px-8 py-3.5 text-sm tracking-[0.2em] uppercase font-royal inline-flex items-center gap-2">
               <Sparkles className="h-4 w-4" /> Talk to AI Waiter
             </button>
-            <Link href="/customer/menu" data-testid="hero-order-now" className="rounded-full px-8 py-3.5 text-sm tracking-[0.2em] uppercase font-royal border border-[#8A1A2A] text-[#8A1A2A] hover:bg-[#8A1A2A] hover:text-[#FAF5EC] transition-colors inline-flex items-center gap-2">
+            <Link href={`/r/${slug}/menu`} data-testid="hero-order-now" className="rounded-full px-8 py-3.5 text-sm tracking-[0.2em] uppercase font-royal border border-[#8A1A2A] text-[#8A1A2A] hover:bg-[#8A1A2A] hover:text-[#FAF5EC] transition-colors inline-flex items-center gap-2">
               Order Now
             </Link>
           </div>
@@ -109,7 +113,7 @@ export default function MehfilHome() {
               return (
                 <Link
                   key={order.id}
-                  href={`/customer/track/${order.id}`}
+                  href={`/r/${slug}/track/${order.id}`}
                   className="block mehfil-card rounded-2xl p-5 border border-[#C9A348]/30 hover:border-[#8A1A2A] transition-colors relative overflow-hidden group"
                 >
                   <div className="absolute top-0 right-0 w-16 h-16 bg-[#8A1A2A]/5 rounded-bl-full -z-10 group-hover:scale-110 transition-transform" />
@@ -244,7 +248,7 @@ export default function MehfilHome() {
         <SectionTag>From the Royal Kitchen</SectionTag>
         <div className="flex items-end justify-between flex-wrap gap-4 mb-12">
           <h2 className="font-royal text-4xl md:text-5xl text-[#8A1A2A]">Signature <span className="font-editorial italic mehfil-gold-gradient">dishes</span></h2>
-          <Link href="/customer/menu" data-testid="sig-see-full" className="font-royal tracking-[0.2em] uppercase text-xs text-[#8A1A2A] hover:text-[#C9A348] inline-flex items-center gap-1">See full menu <ArrowRight className="h-3 w-3" /></Link>
+          <Link href={`/r/${slug}/menu`} data-testid="sig-see-full" className="font-royal tracking-[0.2em] uppercase text-xs text-[#8A1A2A] hover:text-[#C9A348] inline-flex items-center gap-1">See full menu <ArrowRight className="h-3 w-3" /></Link>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -283,7 +287,7 @@ export default function MehfilHome() {
         <p className="font-editorial italic text-lg text-[#1A1106]/75 mt-6 max-w-2xl mx-auto leading-relaxed">
           Search, filter by veg/non-veg, dive into biryanis, starters, tandoori, curries, breads, rice, traditional sweets and beverages.
         </p>
-        <Link href="/customer/menu" data-testid="menu-cta-explore" className="mt-10 inline-flex items-center gap-2 mehfil-btn-royal rounded-full px-9 py-4 text-sm tracking-[0.2em] uppercase font-royal">
+        <Link href={`/r/${slug}/menu`} data-testid="menu-cta-explore" className="mt-10 inline-flex items-center gap-2 mehfil-btn-royal rounded-full px-9 py-4 text-sm tracking-[0.2em] uppercase font-royal">
           Explore Full Menu <ArrowRight className="h-4 w-4" />
         </Link>
       </section>
@@ -462,7 +466,7 @@ export default function MehfilHome() {
           <p className="font-editorial italic text-lg md:text-xl text-[#FAF5EC]/80 mt-6 max-w-2xl mx-auto leading-relaxed">
             We hold tables for guests who plan ahead — choose your evening, party size and any special note for the chef.
           </p>
-          <Link href="/customer/reserve" data-testid="reserve-cta" className="mt-10 inline-flex items-center gap-2 mehfil-btn-gold rounded-full px-9 py-4 text-sm tracking-[0.2em] uppercase font-royal">
+          <Link href={`/r/${slug}/reserve`} data-testid="reserve-cta" className="mt-10 inline-flex items-center gap-2 mehfil-btn-gold rounded-full px-9 py-4 text-sm tracking-[0.2em] uppercase font-royal">
             Reserve a Table <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
