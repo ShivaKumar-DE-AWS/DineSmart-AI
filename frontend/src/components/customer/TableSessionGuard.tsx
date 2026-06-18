@@ -82,6 +82,7 @@ export function TableSessionGuard() {
       <AnimatePresence>
         {session && remaining && (
           <motion.div
+            key="table-banner"
             initial={{ y: -40, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: -40, opacity: 0 }}
@@ -116,6 +117,7 @@ export function TableSessionGuard() {
         
         {qrToken && (
           <motion.div
+            key="name-modal"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}

@@ -1,4 +1,25 @@
 {
+  "/_not-found/page": "app/_not-found/page.js",
+  "/auth/login/page": "app/auth/login/page.js",
   "/page": "app/page.js",
-  "/customer/page": "app/customer/page.js"
+  "/icon.png/route": "app/icon.png/route.js",
+  "/admin/inventory/page": "app/admin/inventory/page.js",
+  "/admin/reservations/page": "app/admin/reservations/page.js",
+  "/customer/cart/page": "app/customer/cart/page.js",
+  "/counter/page": "app/counter/page.js",
+  "/customer/page": "app/customer/page.js",
+  "/admin/orders/page": "app/admin/orders/page.js",
+  "/customer/payment-return/page": "app/customer/payment-return/page.js",
+  "/customer/checkout/page": "app/customer/checkout/page.js",
+  "/customer/reserve/page": "app/customer/reserve/page.js",
+  "/customer/token/[orderId]/page": "app/customer/token/[orderId]/page.js",
+  "/customer/menu/page": "app/customer/menu/page.js",
+  "/admin/menu/page": "app/admin/menu/page.js",
+  "/customer/track/page": "app/customer/track/page.js",
+  "/customer/track/[orderId]/page": "app/customer/track/[orderId]/page.js",
+  "/admin/tables/page": "app/admin/tables/page.js",
+  "/admin/revenue/page": "app/admin/revenue/page.js",
+  "/admin/customers/page": "app/admin/customers/page.js",
+  "/admin/page": "app/admin/page.js",
+  "/kitchen/page": "app/kitchen/page.js"
 }
