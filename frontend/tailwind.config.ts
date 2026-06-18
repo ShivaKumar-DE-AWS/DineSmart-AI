@@ -15,12 +15,17 @@ const config: Config = {
       colors: {
         // Customer / Admin (warm earth)
         cream: "#F6F4F0",
-        ink: "#1A1A1A",
-        clay: "#C84B31",
-        "clay-dark": "#A83C25",
+        ink: "#050505", // Deepened for premium dark mode
+        clay: "#D95333", // Matched to logo 'Dine'
+        "clay-dark": "#B83A1F",
         sage: "#4E6C50",
-        stone: "#5C5C5C",
-        bone: "#E2DFD8",
+        stone: "#888888",
+        bone: "#2A2A2A", // Darkened for dark mode borders
+        
+        // Brand accents
+        gold: "#EAB308",
+        "electric-blue": "#2A64F6",
+
         // Kitchen / Counter (high contrast)
         coal: "#0A0A0A",
         graphite: "#141414",
