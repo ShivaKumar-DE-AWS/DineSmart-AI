@@ -1137,7 +1137,7 @@ def _make_waiter_stream(session_id: str, message: str, system_prompt: str):
 
             def _stream_in_thread():
                 # Models verified to work on free tier (tested 2026-06-18)
-                models_to_try = ["gemini-3.1-flash-lite", "gemini-3-flash-preview", "gemini-2.5-flash-lite"]
+                models_to_try = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
                 for model_name in models_to_try:
                     try:
                         response = client.models.generate_content_stream(
@@ -1256,7 +1256,7 @@ async def ai_transcribe(file: UploadFile = File(...), language: str = Form("")):
         mime = file.content_type or "audio/webm"
         
         # Models verified to work on free tier
-        models_to_try = ["gemini-3.1-flash-lite", "gemini-3-flash-preview", "gemini-2.5-flash-lite"]
+        models_to_try = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
         for model_name in models_to_try:
             try:
                 response = await asyncio.to_thread(
