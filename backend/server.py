@@ -458,10 +458,10 @@ class GuestReq(BaseModel):
 @app.post("/api/auth/guest")
 async def auth_guest(req: GuestReq):
     """Lightweight guest sign-in for customers. Name & phone are optional."""
-    name = (req.name or "").strip() or "Mehfil Guest"
-    phone = (req.phone or "").strip() or None
-    guest_id = f"guest_{uuid.uuid4().hex[:12]}"
-    payload = {"sub": guest_id, "email": f"{guest_id}@guest.mehfil", "name": name, "role": "customer", "phone": phone}
+    name = (req.name or "").strip() or "Guest"
+    guest_id = f"guest_{str(uuid.uuid4())[:8]}"
+    phone = (req.phone or "").strip()
+    payload = {"sub": guest_id, "email": f"{guest_id}@guest.smartdine", "name": name, "role": "customer", "phone": phone}
     token = jwt_sign(payload, ttl_hours=24 * 30)
     await db.guests.insert_one({
         "id": guest_id, "name": name, "phone": phone, "created_at": now_iso(),
@@ -731,7 +731,7 @@ async def update_status(order_id: str, body: OrderStatusUpdate, user=Depends(req
         "confirmed": ("Your order is confirmed", "Our khansama is gathering the spices."),
         "preparing": ("Your dum is on the fire", "The biryani begins its slow journey."),
         "ready": (f"Token {order['token']} is ready", "Collect from the counter — bring your appetite."),
-        "served": ("Enjoy your mehfil", "Tag us with #MehfilMoments — bon appétit."),
+        "served": ("Enjoy your meal", "Bon appétit."),
         "cancelled": ("Order cancelled", "We&apos;re sorry — please reach the counter for help."),
     }
     title, push_body = stage_messages.get(body.status, (f"Order {order['token']}", f"Status: {body.status}"))
@@ -1137,7 +1137,7 @@ async def _find_or_create_customer(name: str, phone: Optional[str]) -> Dict[str,
     doc = {
         "id": str(uuid.uuid4()),
         "code": code,
-        "name": name_clean or "Mehfil Guest",
+        "name": name_clean or "Guest",
         "phone": phone_clean,
         "points": 0,
         "lifetime_spend": 0.0,
@@ -1296,10 +1296,10 @@ async def stripe_webhook(request: Request):
 # =========================================================
 # AI Waiter — Streaming SSE via emergentintegrations + Claude Sonnet
 # =========================================================
-async def _build_waiter_system_prompt(language: str = "auto", tone: str = "friendly", customer_name: str = None) -> str:
+async def _build_waiter_system_prompt(restaurant_id: str, restaurant_name: str, language: str = "auto", tone: str = "friendly", customer_name: str = None) -> str:
     """Compose the system prompt with the current live menu inlined."""
     menu_docs = await db.menu.find(
-        {"available": True},
+        {"available": True, "restaurant_id": restaurant_id},
         {"_id": 0, "name": 1, "description": 1, "price": 1, "category": 1, "tags": 1},
     ).to_list(60)
     menu_block = "\n".join(
@@ -1341,7 +1341,7 @@ async def _build_waiter_system_prompt(language: str = "auto", tone: str = "frien
     upsell_rule = "Proactively upsell! If they order a main course (like Biryani or Curry), naturally suggest a pairing like Raita, Naan, or a refreshing beverage."
 
     return (
-        "You are 'SmartDine AI Waiter' — the elite, professional, deeply hospitable live waiter at Mehfil Restaurant, Hyderabad. "
+        f"You are 'SmartDine AI Waiter' — the elite, professional, deeply hospitable live waiter at {restaurant_name}. "
         "Your primary goal is to guide guests through a seamless, delightful conversational dining experience from greeting to payment."
         f"\n\n### 1. CORE OPERATIONAL RULES\n- **Personalization:** {greeting_rule}\n- **Proactive Up-selling:** {upsell_rule}"
         "\n- **Role Consistency:** You are a human professional waiter. NEVER break character. You are a real person."
@@ -1350,7 +1350,7 @@ async def _build_waiter_system_prompt(language: str = "auto", tone: str = "frien
         + "\n- **Tone:** " + tone_rule
         + "\n\n### 2. THE CUSTOMER JOURNEY"
         "\n\n**Phase A — Welcome & Discovery:**"
-        "\n- Greet the guest warmly: 'Welcome to Mehfil Exclusive!'"
+        f"\n- Greet the guest warmly: 'Welcome to {restaurant_name}!'"
         "\n- If they are undecided, gently ask ONE clarifying question per turn (Veg/Non-Veg, spice tolerance, group size, budget)."
         "\n- Never bombard with multiple questions at once."
         "\n\n**Phase B — Recommendations & Smart Upselling:**"
@@ -1481,8 +1481,20 @@ async def ai_chat(req: ChatReq):
 
     session = await db.table_sessions.find_one({"id": req.session_id})
     customer_name = session.get("customer_name") if session else None
+    
+    restaurant_id = "rest_mehfil_001"
+    restaurant_name = "Mehfil"
+    if session and session.get("table_id"):
+        table = await db.tables.find_one({"id": session["table_id"]})
+        if table and table.get("restaurant_id"):
+            restaurant_id = table["restaurant_id"]
+            rest = await db.restaurants.find_one({"id": restaurant_id})
+            if rest:
+                restaurant_name = rest.get("name", "SmartDine")
 
     system_prompt = await _build_waiter_system_prompt(
+        restaurant_id=restaurant_id,
+        restaurant_name=restaurant_name,
         language=req.language or "auto", 
         tone=req.tone or "friendly",
         customer_name=customer_name
@@ -1792,7 +1804,7 @@ async def get_table_session(session_id: str):
 # =========================================================
 VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY", "")
 VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY", "")
-VAPID_CONTACT = os.environ.get("VAPID_CONTACT", "mailto:hello@mehfil.in")
+VAPID_CONTACT = os.environ.get("VAPID_CONTACT", "mailto:hello@smartdine.ai")
 
 class PushSubscription(BaseModel):
     endpoint: str
@@ -1858,7 +1870,7 @@ async def send_push_to_order(order_id: str, title: str, body: str, data: Optiona
 @app.post("/api/push/test/{order_id}")
 async def push_test(order_id: str):
     """Dev helper: fire a test push to all subscribers of this order."""
-    result = await send_push_to_order(order_id, "Mehfil test", "Push is alive and well 🌹", {"test": True})
+    result = await send_push_to_order(order_id, "SmartDine test", "Push is alive and well 🌹", {"test": True})
     return result
 
 # =========================================================
