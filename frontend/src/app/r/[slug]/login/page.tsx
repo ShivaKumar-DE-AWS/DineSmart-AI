@@ -71,7 +71,7 @@ export default function LoginPage() {
 
   return (
     <div className="mehfil min-h-screen mehfil-paper flex items-center justify-center p-5">
-      <Link href={`/r/${slug}`} data-testid="back-to-home" className="fixed top-5 left-5 flex items-center gap-1 text-[#8A1A2A] hover:text-[#C9A348] font-royal tracking-wider uppercase text-xs">
+      <Link href={`/r/${slug}`} data-testid="back-to-home" className="fixed top-5 left-5 flex items-center gap-1 text-brand-primary hover:text-brand-secondary font-royal tracking-wider uppercase text-xs">
         <ChevronLeft className="h-4 w-4" /> Back
       </Link>
 
@@ -86,14 +86,14 @@ export default function LoginPage() {
           <p className="font-editorial italic text-[#5C0E1B]/75 mt-3 text-sm">A Hyderabadi mehfil awaits — step right in.</p>
         </div>
 
-        <div className="bg-[#FAF5EC] border border-[#C9A348]/40 rounded-2xl p-7 shadow-2xl backdrop-blur">
+        <div className="bg-[#FAF5EC] border border-brand-secondary/40 rounded-2xl p-7 shadow-2xl backdrop-blur">
           {/* Tabs */}
           <div className="flex bg-[#F3EBD8] rounded-full p-1 mb-6" data-testid="login-tabs">
             <button
               data-testid="tab-guest"
               onClick={() => setTab("guest")}
               className={`flex-1 py-2.5 rounded-full font-royal tracking-[0.2em] uppercase text-[10px] transition ${
-                tab === "guest" ? "bg-[#8A1A2A] text-[#FAF5EC] shadow-md" : "text-[#8A1A2A]"
+                tab === "guest" ? "bg-brand-primary text-[#FAF5EC] shadow-md" : "text-brand-primary"
               }`}
             >
               I&apos;m a Guest
@@ -102,7 +102,7 @@ export default function LoginPage() {
               data-testid="tab-staff"
               onClick={() => setTab("staff")}
               className={`flex-1 py-2.5 rounded-full font-royal tracking-[0.2em] uppercase text-[10px] transition ${
-                tab === "staff" ? "bg-[#8A1A2A] text-[#FAF5EC] shadow-md" : "text-[#8A1A2A]"
+                tab === "staff" ? "bg-brand-primary text-[#FAF5EC] shadow-md" : "text-brand-primary"
               }`}
             >
               Mehfil Staff
@@ -118,8 +118,8 @@ export default function LoginPage() {
               <div className="space-y-3">
                 <label className="block">
                   <span className="font-royal tracking-wider uppercase text-[10px] text-[#8A6A1B]">Your name (optional)</span>
-                  <div className="mt-1.5 flex items-center bg-white border border-[#C9A348]/30 rounded-full px-4">
-                    <User2 className="h-4 w-4 text-[#8A1A2A]" />
+                  <div className="mt-1.5 flex items-center bg-white border border-brand-secondary/30 rounded-full px-4">
+                    <User2 className="h-4 w-4 text-brand-primary" />
                     <input
                       data-testid="guest-name"
                       value={gName}
@@ -131,8 +131,8 @@ export default function LoginPage() {
                 </label>
                 <label className="block">
                   <span className="font-royal tracking-wider uppercase text-[10px] text-[#8A6A1B]">Phone (optional)</span>
-                  <div className="mt-1.5 flex items-center bg-white border border-[#C9A348]/30 rounded-full px-4">
-                    <Phone className="h-4 w-4 text-[#8A1A2A]" />
+                  <div className="mt-1.5 flex items-center bg-white border border-brand-secondary/30 rounded-full px-4">
+                    <Phone className="h-4 w-4 text-brand-primary" />
                     <input
                       data-testid="guest-phone"
                       type="tel"
@@ -161,15 +161,15 @@ export default function LoginPage() {
               <div className="mehfil-divider mb-5"><span className="font-royal tracking-[0.3em] text-[10px] uppercase">Mehfil Staff Sign in</span></div>
               <label className="block">
                 <span className="font-royal tracking-wider uppercase text-[10px] text-[#8A6A1B]">Email</span>
-                <div className="mt-1.5 flex items-center bg-white border border-[#C9A348]/30 rounded-full px-4">
-                  <Sparkles className="h-4 w-4 text-[#8A1A2A]" />
+                <div className="mt-1.5 flex items-center bg-white border border-brand-secondary/30 rounded-full px-4">
+                  <Sparkles className="h-4 w-4 text-brand-primary" />
                   <input data-testid="login-email" value={email} onChange={(e) => setEmail(e.target.value)} className="flex-1 bg-transparent px-3 py-3 text-sm outline-none font-editorial" />
                 </div>
               </label>
               <label className="block">
                 <span className="font-royal tracking-wider uppercase text-[10px] text-[#8A6A1B]">Password</span>
-                <div className="mt-1.5 flex items-center bg-white border border-[#C9A348]/30 rounded-full px-4">
-                  <Lock className="h-4 w-4 text-[#8A1A2A]" />
+                <div className="mt-1.5 flex items-center bg-white border border-brand-secondary/30 rounded-full px-4">
+                  <Lock className="h-4 w-4 text-brand-primary" />
                   <input data-testid="login-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="flex-1 bg-transparent px-3 py-3 text-sm outline-none font-editorial" />
                 </div>
               </label>

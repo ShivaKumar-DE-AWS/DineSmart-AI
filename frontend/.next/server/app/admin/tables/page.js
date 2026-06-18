@@ -2,9 +2,9 @@
       <style>
         @page { margin: 18mm; }
         body { font-family: Georgia, serif; text-align: center; padding: 40px; color: #1A1106; }
-        .frame { border: 2px solid #C9A348; padding: 28px 36px; max-width: 460px; margin: 0 auto; background: #FAF5EC; }
-        .brand { letter-spacing: 0.4em; text-transform: uppercase; color: #8A1A2A; font-size: 12px; }
-        h1 { font-size: 48px; margin: 6px 0 0; color: #8A1A2A; }
+        .frame { border: 2px solid var(--brand-secondary); padding: 28px 36px; max-width: 460px; margin: 0 auto; background: #FAF5EC; }
+        .brand { letter-spacing: 0.4em; text-transform: uppercase; color: var(--brand-primary); font-size: 12px; }
+        h1 { font-size: 48px; margin: 6px 0 0; color: var(--brand-primary); }
         .sub { font-style: italic; color: #8A6A1B; margin-top: 10px; font-size: 14px; }
         .qr { margin: 26px auto 12px; }
         .qr svg { width: 320px; height: 320px; }

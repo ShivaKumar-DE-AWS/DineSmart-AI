@@ -73,11 +73,11 @@ export default function TrackPage() {
     <div className="max-w-3xl mx-auto px-5 md:px-10 py-12" data-testid="track-page">
       <div className="text-center mb-8">
         <div className="mehfil-divider mb-3 max-w-xs mx-auto"><span className="font-royal tracking-[0.4em] text-[10px] uppercase">Live tracking</span></div>
-        <h1 className="font-royal text-4xl md:text-5xl text-[#8A1A2A] tracking-wide mb-2">
+        <h1 className="font-royal text-4xl md:text-5xl text-brand-primary tracking-wide mb-2">
           Token <span className="font-editorial italic mehfil-gold-gradient">{order.token}</span>
         </h1>
         {order.table_number && (
-          <div className="inline-block bg-[#C9A348]/10 border border-[#C9A348]/30 rounded-full px-4 py-1.5 font-royal tracking-[0.2em] uppercase text-xs text-[#C9A348] mb-3">
+          <div className="inline-block bg-brand-secondary/10 border border-brand-secondary/30 rounded-full px-4 py-1.5 font-royal tracking-[0.2em] uppercase text-xs text-brand-secondary mb-3">
             Table {order.table_number}
           </div>
         )}
@@ -98,8 +98,8 @@ export default function TrackPage() {
         </motion.button>
       )}
       {pushState === "subscribed" && !isCancelled && (
-        <div data-testid="track-push-on" className="mx-auto w-fit mb-6 bg-[#FAF5EC] border border-[#C9A348]/40 rounded-full px-4 py-2 text-[10px] font-royal tracking-[0.2em] uppercase text-[#8A1A2A] inline-flex items-center gap-2">
-          <BellRing className="h-3.5 w-3.5 text-[#C9A348]" /> You&apos;ll be pinged on every stage
+        <div data-testid="track-push-on" className="mx-auto w-fit mb-6 bg-[#FAF5EC] border border-brand-secondary/40 rounded-full px-4 py-2 text-[10px] font-royal tracking-[0.2em] uppercase text-brand-primary inline-flex items-center gap-2">
+          <BellRing className="h-3.5 w-3.5 text-brand-secondary" /> You&apos;ll be pinged on every stage
         </div>
       )}
 
@@ -116,22 +116,22 @@ export default function TrackPage() {
                     initial={false}
                     animate={{ scale: active ? 1.05 : 1 }}
                     className={`h-12 w-12 rounded-full flex items-center justify-center shrink-0 transition-all ${
-                      done ? "mehfil-royal-bg text-[#C9A348] shadow-lg" : "bg-[#F3EBD8] text-[#1A1106]/40"
-                    } ${active ? "ring-4 ring-[#C9A348]/40 mehfil-glow" : ""}`}
+                      done ? "mehfil-royal-bg text-brand-secondary shadow-lg" : "bg-[#F3EBD8] text-[#1A1106]/40"
+                    } ${active ? "ring-4 ring-brand-secondary/40 mehfil-glow" : ""}`}
                   >
                     <Icon className="h-5 w-5" />
                   </motion.div>
                   <div className="flex-1">
-                    <div className={`font-royal tracking-wide ${done ? "text-[#8A1A2A] text-lg" : "text-[#1A1106]/50 text-base"}`}>
+                    <div className={`font-royal tracking-wide ${done ? "text-brand-primary text-lg" : "text-[#1A1106]/50 text-base"}`}>
                       {s.label}
                     </div>
-                    {active && <div className="font-editorial italic text-xs text-[#8A1A2A] mt-0.5">{s.line}</div>}
+                    {active && <div className="font-editorial italic text-xs text-brand-primary mt-0.5">{s.line}</div>}
                     {done && !active && <div className="font-editorial italic text-[11px] text-[#1A1106]/50 mt-0.5">Complete</div>}
                   </div>
-                  {done && <CheckCircle2 className="h-5 w-5 text-[#C9A348]" />}
+                  {done && <CheckCircle2 className="h-5 w-5 text-brand-secondary" />}
                 </div>
                 {i < STAGES.length - 1 && (
-                  <div className={`absolute left-6 top-[3.6rem] h-3 w-px ${done ? "bg-[#C9A348]" : "bg-[#1A1106]/15"}`} />
+                  <div className={`absolute left-6 top-[3.6rem] h-3 w-px ${done ? "bg-brand-secondary" : "bg-[#1A1106]/15"}`} />
                 )}
               </div>
             );
@@ -140,19 +140,19 @@ export default function TrackPage() {
       </div>
 
       {isCancelled ? (
-        <div className="mehfil-card rounded-2xl p-6 flex items-center gap-4 border-[#8A1A2A]/40" data-testid="track-cancelled">
-          <BellOff className="h-6 w-6 text-[#8A1A2A]" />
+        <div className="mehfil-card rounded-2xl p-6 flex items-center gap-4 border-brand-primary/40" data-testid="track-cancelled">
+          <BellOff className="h-6 w-6 text-brand-primary" />
           <div>
-            <div className="font-royal text-[#8A1A2A]">Order cancelled</div>
+            <div className="font-royal text-brand-primary">Order cancelled</div>
             <div className="font-editorial italic text-xs text-[#1A1106]/60">Please reach the counter for assistance.</div>
           </div>
         </div>
       ) : (
         <div className="mehfil-card rounded-2xl p-6 flex items-center gap-4">
-          <Clock className="h-6 w-6 text-[#8A1A2A]" />
+          <Clock className="h-6 w-6 text-brand-primary" />
           <div>
             <div className="font-royal tracking-wider uppercase text-[10px] text-[#1A1106]/60">Ready by</div>
-            <div className="font-royal text-xl text-[#8A1A2A]" data-testid="track-eta">{fmtTime(order.estimated_ready_at)}</div>
+            <div className="font-royal text-xl text-brand-primary" data-testid="track-eta">{fmtTime(order.estimated_ready_at)}</div>
           </div>
         </div>
       )}

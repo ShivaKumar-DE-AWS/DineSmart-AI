@@ -26,10 +26,10 @@
   --mehfil-cream: #FAF5EC;
   --mehfil-cream-2: #F3EBD8;
   --mehfil-bone: #E7DFCB;
-  --mehfil-gold: #C9A348;
+  --mehfil-gold: var(--brand-secondary);
   --mehfil-gold-soft: #DDB85C;
   --mehfil-amber: #E78B1F;
-  --mehfil-royal: #8A1A2A;
+  --mehfil-royal: var(--brand-primary);
   --mehfil-deep: #5C0E1B;
   --mehfil-ink: #1A1106;
 
@@ -52,7 +52,7 @@
 
 /* Mehfil-specific decoration */
 .mehfil-gold-gradient {
-  background: linear-gradient(135deg, #DDB85C 0%, #C9A348 45%, #8A6A1B 100%);
+  background: linear-gradient(135deg, #DDB85C 0%, var(--brand-secondary) 45%, #8A6A1B 100%);
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
@@ -117,7 +117,7 @@
 }
 
 .mehfil-btn-royal {
-  background: linear-gradient(180deg, #A92133 0%, #8A1A2A 100%);
+  background: linear-gradient(180deg, #A92133 0%, var(--brand-primary) 100%);
   color: #FAF5EC;
   border: 1px solid rgba(201,163,72,0.5);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 8px 20px -10px rgba(138,26,42,0.5);
@@ -127,7 +127,7 @@
 }
 
 .mehfil-btn-gold {
-  background: linear-gradient(180deg, #DDB85C 0%, #C9A348 100%);
+  background: linear-gradient(180deg, #DDB85C 0%, var(--brand-secondary) 100%);
   color: #1A1106;
   border: 1px solid rgba(138,106,27,0.4);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), 0 8px 20px -10px rgba(201,163,72,0.5);
@@ -144,6 +144,6 @@
 }
 
 .mehfil ::selection {
-  background: #C9A348;
+  background: var(--brand-secondary);
   color: #1A1106;
 }

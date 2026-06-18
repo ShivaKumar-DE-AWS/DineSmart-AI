@@ -77,12 +77,12 @@ export default function MenuPage() {
       {/* Hero — hidden on mobile for more space */}
       <div className="text-center mb-8 lg:mb-12">
         <div className="hidden lg:block mehfil-divider mb-4 max-w-xs mx-auto"><span className="font-royal tracking-[0.4em] text-xs uppercase">The royal menu</span></div>
-        <h1 className="font-royal text-3xl lg:text-6xl text-[#8A1A2A] tracking-wide">Mehfil <span className="font-editorial italic mehfil-gold-gradient">Exclusive</span></h1>
+        <h1 className="font-royal text-3xl lg:text-6xl text-brand-primary tracking-wide">Mehfil <span className="font-editorial italic mehfil-gold-gradient">Exclusive</span></h1>
         <p className="hidden lg:block font-editorial italic text-lg text-[#1A1106]/75 mt-4 max-w-2xl mx-auto leading-relaxed">
           Twenty-seven dishes, eight chapters, one Hyderabad. Flip a card to read the chef&apos;s notes, tap ADD to seat it on your thali.
         </p>
-        <div className="mt-5 lg:mt-7 mx-auto max-w-md flex items-center gap-3 bg-[#FAF5EC] border border-[#C9A348]/40 rounded-full px-4 py-2 shadow-sm">
-          <Search className="h-4 w-4 text-[#8A1A2A]" />
+        <div className="mt-5 lg:mt-7 mx-auto max-w-md flex items-center gap-3 bg-[#FAF5EC] border border-brand-secondary/40 rounded-full px-4 py-2 shadow-sm">
+          <Search className="h-4 w-4 text-brand-primary" />
           <input
             data-testid="menu-search"
             value={q}
@@ -104,7 +104,7 @@ export default function MenuPage() {
                 onClick={() => setActiveCat(c)}
                 className={`whitespace-nowrap rounded-full px-4 py-2 text-[11px] font-royal tracking-[0.12em] uppercase border transition-all ${
                   activeCat === c
-                    ? "bg-[#8A1A2A] text-white border-[#8A1A2A] shadow-md"
+                    ? "bg-brand-primary text-white border-brand-primary shadow-md"
                     : "bg-white text-[#1A1106] border-[#ddd]"
                 }`}
               >
@@ -117,7 +117,7 @@ export default function MenuPage() {
         {/* Category heading */}
         {activeCat && (
           <div className="flex items-center gap-3 mb-3">
-            <h2 className="font-royal text-xl text-[#8A1A2A] tracking-wide">{activeCat}</h2>
+            <h2 className="font-royal text-xl text-brand-primary tracking-wide">{activeCat}</h2>
             <span className="text-xs text-[#1A1106]/40">{mobileItems.length} items</span>
           </div>
         )}
@@ -134,7 +134,7 @@ export default function MenuPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     {item.tags?.includes("bestseller") && (
-                      <span className="flex items-center gap-1 text-[10px] font-bold text-[#C9A348] uppercase tracking-wider">
+                      <span className="flex items-center gap-1 text-[10px] font-bold text-brand-secondary uppercase tracking-wider">
                         <Sparkles className="h-3 w-3" /> Bestseller
                       </span>
                     )}
@@ -155,16 +155,16 @@ export default function MenuPage() {
                     {item.image_url ? (
                       <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" loading="lazy" />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-[#C9A348]/40"><BookOpen className="h-7 w-7" /></div>
+                      <div className="w-full h-full flex items-center justify-center text-brand-secondary/40"><BookOpen className="h-7 w-7" /></div>
                     )}
                   </div>
                   {/* ADD / Qty control — overlaps image bottom */}
                   <div className="-mt-3.5 relative z-10">
                     {inCart ? (
                       <div className="flex items-center bg-[#5C0E1B] text-white rounded-lg shadow-lg overflow-hidden border-2 border-white">
-                        <button onClick={() => cart.setQty(item.id, inCart.qty - 1)} className="h-7 w-8 flex items-center justify-center active:bg-[#8A1A2A]"><Minus className="h-3 w-3" /></button>
+                        <button onClick={() => cart.setQty(item.id, inCart.qty - 1)} className="h-7 w-8 flex items-center justify-center active:bg-brand-primary"><Minus className="h-3 w-3" /></button>
                         <span className="w-5 text-center font-royal text-sm font-bold">{inCart.qty}</span>
-                        <button onClick={() => cart.setQty(item.id, inCart.qty + 1)} className="h-7 w-8 flex items-center justify-center active:bg-[#8A1A2A]"><Plus className="h-3 w-3" /></button>
+                        <button onClick={() => cart.setQty(item.id, inCart.qty + 1)} className="h-7 w-8 flex items-center justify-center active:bg-brand-primary"><Plus className="h-3 w-3" /></button>
                       </div>
                     ) : (
                       <button
@@ -193,7 +193,7 @@ export default function MenuPage() {
       <div className="hidden lg:grid lg:grid-cols-[220px_1fr] gap-10">
         {/* Chapters sidebar */}
         <aside className="sticky top-24 self-start" data-testid="menu-chapters">
-          <div className="font-royal tracking-[0.3em] text-xs uppercase text-[#C9A348] mb-4 flex items-center gap-2">
+          <div className="font-royal tracking-[0.3em] text-xs uppercase text-brand-secondary mb-4 flex items-center gap-2">
             <BookOpen className="h-3.5 w-3.5" /> Chapters
           </div>
           <ol className="space-y-1">
@@ -203,10 +203,10 @@ export default function MenuPage() {
                   data-testid={`chapter-link-${c}`}
                   onClick={() => scrollTo(c)}
                   className={`group w-full flex items-center gap-3 py-2.5 pr-3 pl-2 text-left rounded-md transition-all ${
-                    activeCat === c ? "bg-[#8A1A2A] text-[#FAF5EC] shadow-md" : "hover:bg-[#F3EBD8] text-[#1A1106]"
+                    activeCat === c ? "bg-brand-primary text-[#FAF5EC] shadow-md" : "hover:bg-[#F3EBD8] text-[#1A1106]"
                   }`}
                 >
-                  <span className={`font-royal text-sm w-7 text-center tracking-wider ${activeCat === c ? "text-[#C9A348]" : "text-[#C9A348]/70"}`}>
+                  <span className={`font-royal text-sm w-7 text-center tracking-wider ${activeCat === c ? "text-brand-secondary" : "text-brand-secondary/70"}`}>
                     {String(idx + 1).padStart(2, "0")}
                   </span>
                   <span className="font-royal tracking-wider uppercase text-[11px]">{c}</span>
@@ -226,12 +226,12 @@ export default function MenuPage() {
           {categories.map((c, ci) => (
             <section key={c} id={`chapter-${c}`} className="mb-16 scroll-mt-24" data-testid={`chapter-section-${c}`}>
               <div className="flex items-end gap-4 mb-6">
-                <div className="font-royal text-5xl text-[#C9A348]/40 leading-none tabular-nums">{String(ci + 1).padStart(2, "0")}</div>
+                <div className="font-royal text-5xl text-brand-secondary/40 leading-none tabular-nums">{String(ci + 1).padStart(2, "0")}</div>
                 <div className="flex-1">
-                  <div className="font-royal tracking-[0.3em] uppercase text-[10px] text-[#8A1A2A]">Chapter {ci + 1}</div>
-                  <h2 className="font-royal text-3xl text-[#8A1A2A] tracking-wide">{c}</h2>
+                  <div className="font-royal tracking-[0.3em] uppercase text-[10px] text-brand-primary">Chapter {ci + 1}</div>
+                  <h2 className="font-royal text-3xl text-brand-primary tracking-wide">{c}</h2>
                 </div>
-                <div className="h-px flex-1 bg-gradient-to-r from-[#C9A348]/40 to-transparent" />
+                <div className="h-px flex-1 bg-gradient-to-r from-brand-secondary/40 to-transparent" />
               </div>
 
               <div className="grid grid-cols-2 xl:grid-cols-3 gap-6" data-testid={`menu-grid-${c}`}>
@@ -251,24 +251,24 @@ export default function MenuPage() {
                           <div className="relative aspect-[5/4] bg-cover bg-center overflow-hidden" style={{ backgroundImage: `url(${item.image_url})` }}>
                             <div className="absolute inset-0 bg-gradient-to-t from-[#5C0E1B]/70 via-transparent to-transparent" />
                             {item.tags?.includes("bestseller") && (
-                              <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-[#C9A348] text-[#1A1106] text-[10px] font-royal tracking-wider uppercase shadow-md">Bestseller</div>
+                              <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-brand-secondary text-[#1A1106] text-[10px] font-royal tracking-wider uppercase shadow-md">Bestseller</div>
                             )}
                             {item.tags?.includes("spicy") && (
-                              <div className="absolute top-3 right-3 h-7 w-7 rounded-full bg-[#8A1A2A] text-[#FAF5EC] flex items-center justify-center shadow-md" title="Spicy"><Flame className="h-3.5 w-3.5" /></div>
+                              <div className="absolute top-3 right-3 h-7 w-7 rounded-full bg-brand-primary text-[#FAF5EC] flex items-center justify-center shadow-md" title="Spicy"><Flame className="h-3.5 w-3.5" /></div>
                             )}
                           </div>
                           <div className="p-5 flex-1 flex flex-col">
-                            <h3 className="font-royal text-lg text-[#8A1A2A] leading-tight">{item.name}</h3>
+                            <h3 className="font-royal text-lg text-brand-primary leading-tight">{item.name}</h3>
                             <div className="font-editorial italic text-sm text-[#1A1106]/70 mt-1.5 line-clamp-2 flex-1">{item.description}</div>
                             <div className="mt-4 pt-4 border-t border-[#E7DFCB] flex items-center justify-between">
-                              <span className="font-royal text-xl text-[#8A1A2A]">{formatCurrency(item.price)}</span>
+                              <span className="font-royal text-xl text-brand-primary">{formatCurrency(item.price)}</span>
                               <div className="flex items-center gap-2">
-                                <button data-testid={`flip-btn-${item.id}`} onClick={() => setFlipped((s) => ({ ...s, [item.id]: !s[item.id] }))} className="text-[10px] font-royal tracking-[0.2em] uppercase text-[#8A1A2A] hover:text-[#C9A348] transition px-2 py-1">Details</button>
+                                <button data-testid={`flip-btn-${item.id}`} onClick={() => setFlipped((s) => ({ ...s, [item.id]: !s[item.id] }))} className="text-[10px] font-royal tracking-[0.2em] uppercase text-brand-primary hover:text-brand-secondary transition px-2 py-1">Details</button>
                                 {inCart ? (
                                   <div className="flex items-center gap-1 bg-[#5C0E1B] text-[#FAF5EC] rounded-full p-1 shadow" data-testid={`qty-control-${item.id}`}>
-                                    <button onClick={() => cart.setQty(item.id, inCart.qty - 1)} className="h-7 w-7 rounded-full hover:bg-[#8A1A2A] flex items-center justify-center"><Minus className="h-3 w-3" /></button>
+                                    <button onClick={() => cart.setQty(item.id, inCart.qty - 1)} className="h-7 w-7 rounded-full hover:bg-brand-primary flex items-center justify-center"><Minus className="h-3 w-3" /></button>
                                     <span className="px-2 font-royal text-sm font-semibold w-6 text-center">{inCart.qty}</span>
-                                    <button onClick={() => cart.setQty(item.id, inCart.qty + 1)} className="h-7 w-7 rounded-full hover:bg-[#8A1A2A] flex items-center justify-center"><Plus className="h-3 w-3" /></button>
+                                    <button onClick={() => cart.setQty(item.id, inCart.qty + 1)} className="h-7 w-7 rounded-full hover:bg-brand-primary flex items-center justify-center"><Plus className="h-3 w-3" /></button>
                                   </div>
                                 ) : (
                                   <button data-testid={`add-to-cart-${item.id}`} onClick={() => { cart.add(item); toast.success(`${item.name} added to your thali`); }} className="mehfil-btn-royal rounded-full px-4 py-2 text-[11px] font-royal tracking-[0.15em] uppercase inline-flex items-center gap-1.5"><Plus className="h-3 w-3" /> Add</button>
@@ -280,17 +280,17 @@ export default function MenuPage() {
 
                         {/* BACK */}
                         <div className="absolute inset-0 mehfil-royal-bg text-[#FAF5EC] rounded-lg overflow-hidden flex flex-col shadow-2xl p-6" style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
-                          <div className="font-royal tracking-[0.3em] uppercase text-[10px] text-[#C9A348]">Chef&apos;s note</div>
+                          <div className="font-royal tracking-[0.3em] uppercase text-[10px] text-brand-secondary">Chef&apos;s note</div>
                           <h3 className="font-royal text-2xl text-[#FAF5EC] mt-2">{item.name}</h3>
                           <div className="mehfil-divider my-4"><span className="text-[10px] font-royal tracking-wider uppercase">est · 2006</span></div>
                           <p className="font-editorial italic text-[#FAF5EC]/90 leading-relaxed text-sm">{item.description}</p>
                           <div className="mt-4 grid grid-cols-2 gap-3 text-[11px] font-royal tracking-wider uppercase text-[#FAF5EC]/80">
-                            <div><span className="text-[#C9A348]">Prep · </span>{item.prep_time_min} min</div>
-                            <div><span className="text-[#C9A348]">Price · </span>{formatCurrency(item.price)}</div>
-                            {item.tags?.length ? <div className="col-span-2"><span className="text-[#C9A348]">Notes · </span>{item.tags.join(" · ")}</div> : null}
+                            <div><span className="text-brand-secondary">Prep · </span>{item.prep_time_min} min</div>
+                            <div><span className="text-brand-secondary">Price · </span>{formatCurrency(item.price)}</div>
+                            {item.tags?.length ? <div className="col-span-2"><span className="text-brand-secondary">Notes · </span>{item.tags.join(" · ")}</div> : null}
                           </div>
                           <div className="mt-auto flex items-center gap-3">
-                            <button onClick={() => setFlipped((s) => ({ ...s, [item.id]: false }))} className="rounded-full border border-[#C9A348]/50 text-[#FAF5EC] px-4 py-2 text-[11px] font-royal tracking-[0.15em] uppercase hover:bg-[#C9A348]/10">Close</button>
+                            <button onClick={() => setFlipped((s) => ({ ...s, [item.id]: false }))} className="rounded-full border border-brand-secondary/50 text-[#FAF5EC] px-4 py-2 text-[11px] font-royal tracking-[0.15em] uppercase hover:bg-brand-secondary/10">Close</button>
                             <button onClick={() => { cart.add(item); toast.success(`${item.name} added`); setFlipped((s) => ({ ...s, [item.id]: false })); }} className="mehfil-btn-gold rounded-full px-5 py-2 text-[11px] font-royal tracking-[0.15em] uppercase inline-flex items-center gap-1.5"><ShoppingBag className="h-3.5 w-3.5" /> Add to thali</button>
                           </div>
                         </div>
@@ -323,7 +323,7 @@ export default function MenuPage() {
           >
             <div className="relative">
               <ShoppingBag className="h-5 w-5" />
-              <span className="absolute -top-2 -right-2 h-[18px] w-[18px] rounded-full bg-[#C9A348] text-[#1A1106] text-[10px] font-bold flex items-center justify-center">{cart.count()}</span>
+              <span className="absolute -top-2 -right-2 h-[18px] w-[18px] rounded-full bg-brand-secondary text-[#1A1106] text-[10px] font-bold flex items-center justify-center">{cart.count()}</span>
             </div>
             <span className="font-royal text-xs tracking-wider uppercase">{formatCurrency(cart.subtotal())}</span>
           </motion.a>

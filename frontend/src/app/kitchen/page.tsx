@@ -186,7 +186,7 @@ export default function KitchenPage() {
 
       {notifications.length > 0 && (
         <div className="max-w-7xl mx-auto px-4 mt-6">
-          <div className="bg-[#8A1A2A] border border-[#8A1A2A] rounded-xl p-4 shadow-2xl flex items-center justify-between animate-pulse">
+          <div className="bg-brand-primary border border-brand-primary rounded-xl p-4 shadow-2xl flex items-center justify-between animate-pulse">
             <div className="flex items-center gap-3 text-[#FAF5EC]">
               <Bell className="h-6 w-6" />
               <div>
@@ -196,7 +196,7 @@ export default function KitchenPage() {
             </div>
             <button
               onClick={() => markReadMut.mutate(notifications[0].id)}
-              className="bg-[#FAF5EC] text-[#8A1A2A] px-5 py-2 rounded-lg text-sm font-bold uppercase tracking-widest hover:bg-[#E7DFCB] transition-colors"
+              className="bg-[#FAF5EC] text-brand-primary px-5 py-2 rounded-lg text-sm font-bold uppercase tracking-widest hover:bg-[#E7DFCB] transition-colors"
             >
               Mark Resolved
             </button>

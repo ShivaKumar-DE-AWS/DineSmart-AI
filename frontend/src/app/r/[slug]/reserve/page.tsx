@@ -47,24 +47,24 @@ export default function ReservePage() {
   if (confirmation) {
     return (
       <div className="max-w-2xl mx-auto px-5 md:px-10 py-20 text-center" data-testid="reserve-confirmed">
-        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring" }} className="inline-flex h-16 w-16 rounded-full bg-[#C9A348]/20 ring-4 ring-[#C9A348]/30 items-center justify-center mb-5">
-          <CheckCircle2 className="h-8 w-8 text-[#8A1A2A]" />
+        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring" }} className="inline-flex h-16 w-16 rounded-full bg-brand-secondary/20 ring-4 ring-brand-secondary/30 items-center justify-center mb-5">
+          <CheckCircle2 className="h-8 w-8 text-brand-primary" />
         </motion.div>
         <div className="mehfil-divider mb-3 max-w-xs mx-auto"><span className="font-royal tracking-[0.4em] text-[10px] uppercase">Reservation requested</span></div>
-        <h1 className="font-royal text-4xl md:text-5xl text-[#8A1A2A] tracking-wide">
+        <h1 className="font-royal text-4xl md:text-5xl text-brand-primary tracking-wide">
           A table for <span className="font-editorial italic mehfil-gold-gradient">{guests}</span>
         </h1>
         <p className="font-editorial italic text-[#1A1106]/70 mt-4 leading-relaxed">
-          {name}, we&apos;ve received your request for <span className="font-royal text-[#8A1A2A]">{date} · {time}</span>. Our khansama will call you within 30 minutes to confirm your mehfil.
+          {name}, we&apos;ve received your request for <span className="font-royal text-brand-primary">{date} · {time}</span>. Our khansama will call you within 30 minutes to confirm your mehfil.
         </p>
-        <div className="mt-6 inline-block bg-[#FAF5EC] border border-[#C9A348]/40 rounded-full px-5 py-2 font-royal tracking-wider uppercase text-[11px] text-[#1A1106]/70">
+        <div className="mt-6 inline-block bg-[#FAF5EC] border border-brand-secondary/40 rounded-full px-5 py-2 font-royal tracking-wider uppercase text-[11px] text-[#1A1106]/70">
           Reservation # {confirmation.id.slice(0, 8)}
         </div>
         <div className="flex justify-center gap-3 mt-8">
           <button onClick={() => router.push(`/r/${slug}/menu`)} className="mehfil-btn-royal rounded-full px-6 py-3 font-royal tracking-[0.2em] uppercase text-xs inline-flex items-center gap-2">
             <Sparkles className="h-3.5 w-3.5" /> Preview the menu
           </button>
-          <button onClick={() => setConfirmation(null)} className="rounded-full border border-[#8A1A2A]/30 text-[#8A1A2A] px-6 py-3 font-royal tracking-[0.2em] uppercase text-xs hover:bg-[#8A1A2A]/5">
+          <button onClick={() => setConfirmation(null)} className="rounded-full border border-brand-primary/30 text-brand-primary px-6 py-3 font-royal tracking-[0.2em] uppercase text-xs hover:bg-brand-primary/5">
             Reserve again
           </button>
         </div>
@@ -76,7 +76,7 @@ export default function ReservePage() {
     <div className="max-w-3xl mx-auto px-5 md:px-10 py-14" data-testid="reserve-page">
       <div className="text-center mb-10">
         <div className="mehfil-divider mb-4 max-w-xs mx-auto"><span className="font-royal tracking-[0.4em] text-[10px] uppercase">Reserve a table</span></div>
-        <h1 className="font-royal text-4xl md:text-5xl text-[#8A1A2A] tracking-wide">
+        <h1 className="font-royal text-4xl md:text-5xl text-brand-primary tracking-wide">
           Be our <span className="font-editorial italic mehfil-gold-gradient">mehmaan</span>
         </h1>
         <p className="font-editorial italic text-sm md:text-base text-[#1A1106]/75 mt-4 max-w-xl mx-auto leading-relaxed">
@@ -112,7 +112,7 @@ export default function ReservePage() {
                 data-testid={`reserve-guest-${n}`}
                 onClick={() => setGuests(n)}
                 className={`h-10 w-10 rounded-full font-royal text-sm tracking-wider transition border ${
-                  guests === n ? "bg-[#8A1A2A] text-[#FAF5EC] border-[#8A1A2A] shadow-md" : "bg-white text-[#8A1A2A] border-[#C9A348]/40 hover:border-[#8A1A2A]"
+                  guests === n ? "bg-brand-primary text-[#FAF5EC] border-brand-primary shadow-md" : "bg-white text-brand-primary border-brand-secondary/40 hover:border-brand-primary"
                 }`}
               >
                 {n}
@@ -125,7 +125,7 @@ export default function ReservePage() {
               data-testid="reserve-guests-input"
               value={guests}
               onChange={(e) => setGuests(Math.max(1, Math.min(30, Number(e.target.value) || 1)))}
-              className="h-10 w-16 rounded-full bg-white border border-[#C9A348]/40 text-center font-royal text-sm outline-none"
+              className="h-10 w-16 rounded-full bg-white border border-brand-secondary/40 text-center font-royal text-sm outline-none"
             />
           </div>
         </div>
@@ -171,7 +171,7 @@ export default function ReservePage() {
           transition: border-color 0.2s, box-shadow 0.2s;
         }
         .reserve-input:focus {
-          border-color: #8A1A2A;
+          border-color: var(--brand-primary);
           box-shadow: 0 0 0 3px rgba(138, 26, 42, 0.1);
         }
       `}</style>

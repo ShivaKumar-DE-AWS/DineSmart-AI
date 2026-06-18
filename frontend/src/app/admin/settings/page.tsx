@@ -21,8 +21,8 @@ export default function AdminSettings() {
   // Settings State
   const [name, setName] = useState(settings?.name || "");
   const [tagline, setTagline] = useState(settings?.tagline || "");
-  const [primaryColor, setPrimaryColor] = useState(settings?.primary_color || "#8A1A2A");
-  const [secondaryColor, setSecondaryColor] = useState(settings?.secondary_color || "#C9A348");
+  const [primaryColor, setPrimaryColor] = useState(settings?.primary_color || "var(--brand-primary)");
+  const [secondaryColor, setSecondaryColor] = useState(settings?.secondary_color || "var(--brand-secondary)");
   const [logoUrl, setLogoUrl] = useState(settings?.logo_url || "");
 
   // Update effect to prefill from fetched data
@@ -30,8 +30,8 @@ export default function AdminSettings() {
     if (settings) {
       setName(settings.name || "");
       setTagline(settings.tagline || "");
-      setPrimaryColor(settings.primary_color || "#8A1A2A");
-      setSecondaryColor(settings.secondary_color || "#C9A348");
+      setPrimaryColor(settings.primary_color || "var(--brand-primary)");
+      setSecondaryColor(settings.secondary_color || "var(--brand-secondary)");
       setLogoUrl(settings.logo_url || "");
     }
   }, [settings]);

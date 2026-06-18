@@ -538,7 +538,7 @@ export function AIWaiterDock() {
           onTouchEnd={handleDragEnd}
         >
           <div className="mehfil-btn-royal rounded-full pl-4 pr-5 py-3.5 shadow-2xl flex items-center gap-2 group hover:-translate-y-0.5 transition-transform">
-            <Sparkles className="h-5 w-5 text-[#C9A348] group-hover:rotate-12 transition" />
+            <Sparkles className="h-5 w-5 text-brand-secondary group-hover:rotate-12 transition" />
             <span className="font-royal tracking-wider uppercase text-xs">MehfilAI Waiter</span>
           </div>
         </div>
@@ -547,9 +547,9 @@ export function AIWaiterDock() {
       {open && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:justify-end p-0 sm:p-6" data-testid="ai-waiter-panel">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setOpen(false)} />
-          <div className="relative z-10 w-full sm:w-[460px] sm:max-w-md h-[90vh] sm:h-[680px] sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden border bg-[#FAF5EC] border-[#C9A348]/40">
+          <div className="relative z-10 w-full sm:w-[460px] sm:max-w-md h-[90vh] sm:h-[680px] sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden border bg-[#FAF5EC] border-brand-secondary/40">
             {/* Header */}
-            <header className="px-5 py-4 flex items-center justify-between border-b mehfil-royal-bg text-[#FAF5EC] border-[#C9A348]/30">
+            <header className="px-5 py-4 flex items-center justify-between border-b mehfil-royal-bg text-[#FAF5EC] border-brand-secondary/30">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-full bg-gradient-to-br from-[#DDB85C] to-[#8A6A1B] flex items-center justify-center shadow-md">
                   <Sparkles className="h-5 w-5 text-[#5C0E1B]" />
@@ -561,11 +561,11 @@ export function AIWaiterDock() {
               </div>
               <div className="flex items-center gap-1">
                 {mode !== "explore" && (
-                  <button data-testid="ai-tts-toggle" onClick={() => setTtsOn((v) => !v)} title={ttsOn ? "Mute voice" : "Unmute voice"} className="h-9 w-9 rounded-full hover:bg-[#C9A348]/15 flex items-center justify-center text-[#C9A348]">
+                  <button data-testid="ai-tts-toggle" onClick={() => setTtsOn((v) => !v)} title={ttsOn ? "Mute voice" : "Unmute voice"} className="h-9 w-9 rounded-full hover:bg-brand-secondary/15 flex items-center justify-center text-brand-secondary">
                     {ttsOn ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
                   </button>
                 )}
-                <button data-testid="ai-waiter-close" onClick={() => setOpen(false)} className="h-9 w-9 rounded-full hover:bg-[#C9A348]/15 flex items-center justify-center text-[#FAF5EC]">
+                <button data-testid="ai-waiter-close" onClick={() => setOpen(false)} className="h-9 w-9 rounded-full hover:bg-brand-secondary/15 flex items-center justify-center text-[#FAF5EC]">
                   <X className="h-4 w-4" />
                 </button>
               </div>
@@ -586,8 +586,8 @@ export function AIWaiterDock() {
                     onClick={() => setMode(t.k)}
                     className={`flex-1 py-3 text-[11px] font-royal tracking-[0.2em] uppercase border-b-2 transition flex items-center justify-center gap-1.5 ${
                       active
-                        ? "border-[#8A1A2A] text-[#8A1A2A] bg-[#F3EBD8]"
-                        : "border-transparent text-[#1A1106]/60 hover:text-[#8A1A2A]"
+                        ? "border-brand-primary text-brand-primary bg-[#F3EBD8]"
+                        : "border-transparent text-[#1A1106]/60 hover:text-brand-primary"
                     }`}
                   >
                     <t.icon className="h-3.5 w-3.5" /> {t.label}
@@ -672,7 +672,7 @@ function ChatPane({
             data-testid="chat-tone-select"
             value={tone}
             onChange={(e) => setTone(e.target.value as Tone)}
-            className="bg-white text-[#8A1A2A] text-[11px] font-royal tracking-[0.15em] uppercase border border-[#C9A348]/40 rounded-full px-3 py-1.5 outline-none cursor-pointer focus:border-[#8A1A2A]"
+            className="bg-white text-brand-primary text-[11px] font-royal tracking-[0.15em] uppercase border border-brand-secondary/40 rounded-full px-3 py-1.5 outline-none cursor-pointer focus:border-brand-primary"
           >
             {TONES.map((t) => <option key={t.code} value={t.code} className="bg-white text-[#1A1106]">{t.label}</option>)}
           </select>
@@ -680,7 +680,7 @@ function ChatPane({
             data-testid="chat-language-select"
             value={language}
             onChange={(e) => setLanguage(e.target.value as Lang)}
-            className="bg-white text-[#8A1A2A] text-[11px] font-royal tracking-[0.15em] uppercase border border-[#C9A348]/40 rounded-full px-3 py-1.5 outline-none cursor-pointer focus:border-[#8A1A2A]"
+            className="bg-white text-brand-primary text-[11px] font-royal tracking-[0.15em] uppercase border border-brand-secondary/40 rounded-full px-3 py-1.5 outline-none cursor-pointer focus:border-brand-primary"
           >
             {LANGS.map((l) => <option key={l.code} value={l.code} className="bg-white text-[#1A1106]">{l.label}</option>)}
           </select>
@@ -696,7 +696,7 @@ function ChatPane({
           </div>
         </div>
         <div className="text-right">
-          <div className="font-royal text-[#8A1A2A] text-sm" data-testid="chat-tray-total">{cart.count()} · {formatCurrency(cart.subtotal())}</div>
+          <div className="font-royal text-brand-primary text-sm" data-testid="chat-tray-total">{cart.count()} · {formatCurrency(cart.subtotal())}</div>
         </div>
       </div>
 
@@ -707,14 +707,14 @@ function ChatPane({
             <div
               className={`rounded-2xl px-4 py-3 font-editorial italic text-[15px] leading-relaxed shadow-sm ${
                 m.role === "user"
-                  ? "bg-[#8A1A2A] text-[#FAF5EC] rounded-br-sm"
-                  : "bg-white text-[#1A1106] rounded-bl-sm border border-[#C9A348]/25"
+                  ? "bg-brand-primary text-[#FAF5EC] rounded-br-sm"
+                  : "bg-white text-[#1A1106] rounded-bl-sm border border-brand-secondary/25"
               }`}
               data-testid={`msg-${m.role}-${idx}`}
             >
               {m.content || (streaming && idx === messages.length - 1 ? <span className="opacity-60">…</span> : "")}
               {streaming && idx === messages.length - 1 && m.role === "assistant" && m.content && (
-                <span className="ml-1 inline-block w-1.5 h-4 bg-[#8A1A2A] align-middle animate-pulse" />
+                <span className="ml-1 inline-block w-1.5 h-4 bg-brand-primary align-middle animate-pulse" />
               )}
             </div>
           </div>
@@ -730,7 +730,7 @@ function ChatPane({
                 key={r.id}
                 data-testid={`chip-tap-add-${r.id}`}
                 onClick={() => onTapChip(r)}
-                className="group inline-flex items-center gap-1.5 rounded-full bg-white border border-[#8A1A2A]/40 px-3.5 py-1.5 text-[10px] font-royal tracking-[0.18em] uppercase text-[#8A1A2A] hover:bg-[#8A1A2A] hover:text-[#FAF5EC] hover:border-[#8A1A2A] transition"
+                className="group inline-flex items-center gap-1.5 rounded-full bg-white border border-brand-primary/40 px-3.5 py-1.5 text-[10px] font-royal tracking-[0.18em] uppercase text-brand-primary hover:bg-brand-primary hover:text-[#FAF5EC] hover:border-brand-primary transition"
               >
                 <Plus className="h-3 w-3" /> {r.name}
                 <span className="opacity-70 normal-case font-editorial italic text-[10px] tracking-normal ml-1">{formatCurrency(r.price)}</span>
@@ -745,7 +745,7 @@ function ChatPane({
               data-testid={`chip-quick-${q.replace(/\W+/g, "-").toLowerCase()}`}
               onClick={() => sendText(q)}
               disabled={streaming}
-              className="rounded-full border border-[#C9A348]/50 px-3.5 py-1.5 text-[10px] font-royal tracking-[0.18em] uppercase text-[#8A6A1B] hover:border-[#8A1A2A] hover:text-[#8A1A2A] hover:bg-white transition disabled:opacity-40"
+              className="rounded-full border border-brand-secondary/50 px-3.5 py-1.5 text-[10px] font-royal tracking-[0.18em] uppercase text-[#8A6A1B] hover:border-brand-primary hover:text-brand-primary hover:bg-white transition disabled:opacity-40"
             >
               {q}
             </button>
@@ -764,7 +764,7 @@ function ChatPane({
 
       {/* Composer */}
       <div className="px-4 pb-4 pt-2 bg-[#FAF5EC] border-t border-[#E7DFCB]">
-        <div className="flex items-center gap-2 bg-white rounded-full border border-[#C9A348]/40 p-1.5 focus-within:border-[#8A1A2A]">
+        <div className="flex items-center gap-2 bg-white rounded-full border border-brand-secondary/40 p-1.5 focus-within:border-brand-primary">
           <input
             data-testid="ai-waiter-input"
             type="text"
@@ -806,7 +806,7 @@ function VoicePane({
         {messages.map((m, idx) => (
           <div key={m.id} className="space-y-2">
             <div className={`max-w-[88%] ${m.role === "user" ? "ml-auto" : ""} rounded-2xl px-4 py-3 font-editorial italic text-[15px] leading-relaxed ${
-              m.role === "user" ? "bg-[#8A1A2A] text-[#FAF5EC] rounded-br-sm" : "bg-white text-[#1A1106] rounded-bl-sm border border-[#C9A348]/20"
+              m.role === "user" ? "bg-brand-primary text-[#FAF5EC] rounded-br-sm" : "bg-white text-[#1A1106] rounded-bl-sm border border-brand-secondary/20"
             }`}>
               {m.content || (streaming && idx === messages.length - 1 ? "…" : "")}
             </div>
@@ -817,7 +817,7 @@ function VoicePane({
                     key={r.id}
                     data-testid={`voice-rec-add-${r.id}`}
                     onClick={() => onAdd(r)}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-white border border-[#C9A348]/40 px-3 py-1.5 text-[10px] font-royal tracking-[0.18em] uppercase text-[#8A1A2A] hover:bg-[#8A1A2A] hover:text-[#FAF5EC] transition"
+                    className="inline-flex items-center gap-1.5 rounded-full bg-white border border-brand-secondary/40 px-3 py-1.5 text-[10px] font-royal tracking-[0.18em] uppercase text-brand-primary hover:bg-brand-primary hover:text-[#FAF5EC] transition"
                   >
                     <Plus className="h-3 w-3" /> {r.name}
                   </button>
@@ -834,14 +834,14 @@ function VoicePane({
             onClick={recording ? stopRecording : startRecording}
             disabled={voiceProcessing || streaming}
             className={`h-16 w-16 rounded-full flex items-center justify-center shadow-2xl transition-all ${
-              recording ? "bg-[#8A1A2A] mehfil-glow" : "mehfil-btn-gold"
+              recording ? "bg-brand-primary mehfil-glow" : "mehfil-btn-gold"
             } disabled:opacity-50`}
           >
             {voiceProcessing || streaming ? <Loader2 className="h-6 w-6 animate-spin text-[#FAF5EC]" /> :
               recording ? <Square className="h-6 w-6 text-[#FAF5EC] fill-current" /> :
               <Mic className="h-7 w-7 text-[#1A1106]" />}
           </button>
-          <div className="font-royal tracking-[0.2em] uppercase text-[10px] text-[#8A1A2A]">
+          <div className="font-royal tracking-[0.2em] uppercase text-[10px] text-brand-primary">
             {voiceProcessing ? "Transcribing…" : recording ? "Listening… tap to send" : streaming ? "MehfilAI is thinking…" : "Tap & speak to MehfilAI"}
           </div>
           <div className="font-editorial italic text-[10px] text-[#1A1106]/50 text-center px-4">Try: &ldquo;Spicy biryani for two with a sweet finish&rdquo;</div>
@@ -872,7 +872,7 @@ function ExploreList({ menu }: { menu: MenuItem[] }) {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search the menu…"
-          className="w-full bg-white border border-[#C9A348]/30 rounded-full px-4 py-2 text-sm outline-none font-editorial italic"
+          className="w-full bg-white border border-brand-secondary/30 rounded-full px-4 py-2 text-sm outline-none font-editorial italic"
         />
         <div className="flex gap-1.5 overflow-x-auto mt-2 -mx-1 px-1 pb-1">
           {categories.map((c) => (
@@ -881,7 +881,7 @@ function ExploreList({ menu }: { menu: MenuItem[] }) {
               data-testid={`ai-explore-cat-${c}`}
               onClick={() => setCat(c)}
               className={`whitespace-nowrap rounded-full px-3 py-1 text-[10px] font-royal tracking-wider uppercase border transition ${
-                cat === c ? "bg-[#8A1A2A] text-[#FAF5EC] border-[#8A1A2A]" : "bg-white text-[#8A1A2A] border-[#C9A348]/30"
+                cat === c ? "bg-brand-primary text-[#FAF5EC] border-brand-primary" : "bg-white text-brand-primary border-brand-secondary/30"
               }`}
             >
               {c}
@@ -893,19 +893,19 @@ function ExploreList({ menu }: { menu: MenuItem[] }) {
         {filtered.map((m) => {
           const line = cart.items.find((i) => i.item_id === m.id);
           return (
-            <div key={m.id} className="flex items-center gap-3 bg-white border border-[#C9A348]/20 rounded-lg p-2.5" data-testid={`ai-explore-item-${m.id}`}>
+            <div key={m.id} className="flex items-center gap-3 bg-white border border-brand-secondary/20 rounded-lg p-2.5" data-testid={`ai-explore-item-${m.id}`}>
               <div className="h-14 w-14 rounded-md bg-cover bg-center shrink-0" style={{ backgroundImage: `url(${m.image_url})` }} />
               <div className="flex-1 min-w-0">
-                <div className="font-royal text-[13px] text-[#8A1A2A] leading-tight line-clamp-1">{m.name}</div>
+                <div className="font-royal text-[13px] text-brand-primary leading-tight line-clamp-1">{m.name}</div>
                 <div className="font-editorial italic text-[11px] text-[#1A1106]/60 line-clamp-1">{m.description}</div>
-                <div className="font-royal text-xs text-[#8A1A2A] mt-0.5">{formatCurrency(m.price)}</div>
+                <div className="font-royal text-xs text-brand-primary mt-0.5">{formatCurrency(m.price)}</div>
               </div>
               {line ? (
                 <div className="flex items-center gap-1 bg-[#5C0E1B] text-[#FAF5EC] rounded-full p-1 shadow shrink-0" data-testid={`ai-explore-qty-${m.id}`}>
                   <button
                     data-testid={`ai-explore-dec-${m.id}`}
                     onClick={() => cart.setQty(m.id, line.qty - 1)}
-                    className="h-7 w-7 rounded-full hover:bg-[#8A1A2A] flex items-center justify-center"
+                    className="h-7 w-7 rounded-full hover:bg-brand-primary flex items-center justify-center"
                   >
                     <Minus className="h-3 w-3" />
                   </button>
@@ -913,7 +913,7 @@ function ExploreList({ menu }: { menu: MenuItem[] }) {
                   <button
                     data-testid={`ai-explore-inc-${m.id}`}
                     onClick={() => cart.setQty(m.id, line.qty + 1)}
-                    className="h-7 w-7 rounded-full hover:bg-[#8A1A2A] flex items-center justify-center"
+                    className="h-7 w-7 rounded-full hover:bg-brand-primary flex items-center justify-center"
                   >
                     <Plus className="h-3 w-3" />
                   </button>

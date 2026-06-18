@@ -35,12 +35,12 @@ export default function TokenPage() {
           initial={{ scale: 0, rotate: -45 }}
           animate={{ scale: 1, rotate: 0 }}
           transition={{ type: "spring", duration: 0.7 }}
-          className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-[#C9A348]/20 mb-4 ring-4 ring-[#C9A348]/30"
+          className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-brand-secondary/20 mb-4 ring-4 ring-brand-secondary/30"
         >
-          <CheckCircle2 className="h-8 w-8 text-[#8A1A2A]" />
+          <CheckCircle2 className="h-8 w-8 text-brand-primary" />
         </motion.div>
         <div className="mehfil-divider mb-3 max-w-xs mx-auto"><span className="font-royal tracking-[0.4em] text-[10px] uppercase">Order confirmed</span></div>
-        <h1 className="font-royal text-4xl md:text-5xl text-[#8A1A2A] tracking-wide">
+        <h1 className="font-royal text-4xl md:text-5xl text-brand-primary tracking-wide">
           Aadab, <span className="font-editorial italic mehfil-gold-gradient">{order.customer_name}</span>
         </h1>
         <p className="font-editorial italic text-sm text-[#1A1106]/70 mt-3">Your feast is being orchestrated. Show this token at the counter.</p>
@@ -51,10 +51,10 @@ export default function TokenPage() {
         animate={{ opacity: 1, y: 0 }}
         className="mehfil-royal-bg text-[#FAF5EC] rounded-3xl p-10 text-center mb-6 relative overflow-hidden shadow-2xl"
       >
-        <div className="absolute -top-10 -right-10 h-40 w-40 bg-[#C9A348]/30 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-10 -left-10 h-40 w-40 bg-[#8A1A2A]/40 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -top-10 -right-10 h-40 w-40 bg-brand-secondary/30 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-10 -left-10 h-40 w-40 bg-brand-primary/40 rounded-full blur-3xl pointer-events-none" />
         <div className="relative">
-          <p className="font-royal tracking-[0.4em] uppercase text-[10px] text-[#C9A348] mb-2">Your token</p>
+          <p className="font-royal tracking-[0.4em] uppercase text-[10px] text-brand-secondary mb-2">Your token</p>
           <div className="mehfil-divider mb-4 max-w-[120px] mx-auto" />
           <motion.div
             initial={{ scale: 0.7 }}
@@ -67,12 +67,12 @@ export default function TokenPage() {
           </motion.div>
           <div className="mehfil-divider mt-4 max-w-[120px] mx-auto" />
           {order.table_number && (
-            <p className="font-royal uppercase text-[12px] tracking-widest text-[#C9A348] mt-3">
+            <p className="font-royal uppercase text-[12px] tracking-widest text-brand-secondary mt-3">
               Table {order.table_number}
             </p>
           )}
           <p className="font-editorial italic text-[#FAF5EC]/80 mt-2">
-            Ready by <span className="font-royal text-[#C9A348] tracking-wider" data-testid="token-eta">{fmtTime(order.estimated_ready_at)}</span>
+            Ready by <span className="font-royal text-brand-secondary tracking-wider" data-testid="token-eta">{fmtTime(order.estimated_ready_at)}</span>
           </p>
         </div>
       </motion.div>
@@ -83,10 +83,10 @@ export default function TokenPage() {
         </div>
         <div className="space-y-2 text-sm">
           {order.items.map((i) => (
-            <div key={i.item_id} className="border-b border-[#C9A348]/15 pb-2 last:border-0">
+            <div key={i.item_id} className="border-b border-brand-secondary/15 pb-2 last:border-0">
               <div className="flex justify-between">
                 <span className="font-editorial text-[#1A1106]/85">{i.qty}× {i.name}</span>
-                <span className="font-royal text-[#8A1A2A]">{formatCurrency(i.qty * i.price)}</span>
+                <span className="font-royal text-brand-primary">{formatCurrency(i.qty * i.price)}</span>
               </div>
               {i.notes && (
                 <div className="font-editorial italic text-[11px] text-[#8A6A1B] mt-0.5" data-testid={`token-note-${i.item_id}`}>↳ {i.notes}</div>
@@ -94,27 +94,27 @@ export default function TokenPage() {
             </div>
           ))}
           {order.notes && (
-            <div className="mt-3 bg-[#C9A348]/10 border border-[#C9A348]/30 rounded-lg px-3 py-2 text-[12px] text-[#8A6A1B] font-editorial italic" data-testid="token-general-note">
+            <div className="mt-3 bg-brand-secondary/10 border border-brand-secondary/30 rounded-lg px-3 py-2 text-[12px] text-[#8A6A1B] font-editorial italic" data-testid="token-general-note">
               For the whole order: {order.notes}
             </div>
           )}
-          <div className="border-t border-[#C9A348]/30 my-3" />
-          <div className="flex justify-between"><span className="text-[#1A1106]/60 font-editorial italic">Subtotal</span><span className="font-royal text-[#8A1A2A]">{formatCurrency(order.subtotal)}</span></div>
-          <div className="flex justify-between"><span className="text-[#1A1106]/60 font-editorial italic">Tax</span><span className="font-royal text-[#8A1A2A]">{formatCurrency(order.tax)}</span></div>
+          <div className="border-t border-brand-secondary/30 my-3" />
+          <div className="flex justify-between"><span className="text-[#1A1106]/60 font-editorial italic">Subtotal</span><span className="font-royal text-brand-primary">{formatCurrency(order.subtotal)}</span></div>
+          <div className="flex justify-between"><span className="text-[#1A1106]/60 font-editorial italic">Tax</span><span className="font-royal text-brand-primary">{formatCurrency(order.tax)}</span></div>
           <div className="flex justify-between items-end mt-3">
-            <span className="font-royal tracking-wider uppercase text-xs text-[#8A1A2A]">Total paid</span>
-            <span className="font-royal text-xl text-[#8A1A2A]">{formatCurrency(order.total)}</span>
+            <span className="font-royal tracking-wider uppercase text-xs text-brand-primary">Total paid</span>
+            <span className="font-royal text-xl text-brand-primary">{formatCurrency(order.total)}</span>
           </div>
         </div>
         {order.customer_code && (
-          <div className="mt-4 bg-[#FAF5EC] border border-[#C9A348]/30 rounded-xl p-3 flex items-center gap-3" data-testid="token-customer-code">
-            <Sparkles className="h-4 w-4 text-[#C9A348]" />
+          <div className="mt-4 bg-[#FAF5EC] border border-brand-secondary/30 rounded-xl p-3 flex items-center gap-3" data-testid="token-customer-code">
+            <Sparkles className="h-4 w-4 text-brand-secondary" />
             <div className="font-editorial italic text-[12px] text-[#1A1106]/75">
               Mehfil member <span className="font-royal text-[#8A6A1B] tracking-wider not-italic">{order.customer_code}</span> — save this for points &amp; offers.
             </div>
           </div>
         )}
-        <button onClick={copyId} className="mt-5 text-[10px] font-royal tracking-[0.2em] uppercase text-[#8A1A2A]/70 hover:text-[#8A1A2A] inline-flex items-center gap-1.5">
+        <button onClick={copyId} className="mt-5 text-[10px] font-royal tracking-[0.2em] uppercase text-brand-primary/70 hover:text-brand-primary inline-flex items-center gap-1.5">
           <Copy className="h-3 w-3" /> Order ID {order.id.slice(0, 8)}…
         </button>
       </div>
@@ -123,7 +123,7 @@ export default function TokenPage() {
         <Link href={`/r/${slug}/track/${order.id}`} data-testid="token-track-link" className="inline-flex items-center justify-center gap-2 mehfil-btn-royal rounded-full px-6 py-3.5 font-royal tracking-[0.2em] uppercase text-xs">
           <Eye className="h-4 w-4" /> Track live
         </Link>
-        <Link href={`/r/${slug}/menu`} className="inline-flex items-center justify-center gap-2 rounded-full px-6 py-3.5 font-royal tracking-[0.2em] uppercase text-xs border border-[#8A1A2A]/30 text-[#8A1A2A] hover:bg-[#8A1A2A]/5 transition">
+        <Link href={`/r/${slug}/menu`} className="inline-flex items-center justify-center gap-2 rounded-full px-6 py-3.5 font-royal tracking-[0.2em] uppercase text-xs border border-brand-primary/30 text-brand-primary hover:bg-brand-primary/5 transition">
           <Sparkles className="h-4 w-4" /> Add to the mehfil
         </Link>
       </div>

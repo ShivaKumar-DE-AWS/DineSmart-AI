@@ -90,23 +90,23 @@ export function TableSessionGuard() {
             data-testid="table-banner"
           >
             <div className="flex items-center gap-3 min-w-0">
-              <div className="h-8 w-8 rounded-full bg-[#C9A348]/20 border border-[#C9A348]/50 flex items-center justify-center shrink-0">
-                <MapPin className="h-4 w-4 text-[#C9A348]" />
+              <div className="h-8 w-8 rounded-full bg-brand-secondary/20 border border-brand-secondary/50 flex items-center justify-center shrink-0">
+                <MapPin className="h-4 w-4 text-brand-secondary" />
               </div>
               <div className="min-w-0">
-                <div className="font-royal tracking-[0.25em] uppercase text-[10px] text-[#C9A348]">Seated at</div>
+                <div className="font-royal tracking-[0.25em] uppercase text-[10px] text-brand-secondary">Seated at</div>
                 <div className="font-royal text-sm leading-tight">Table {session.table_number}</div>
               </div>
             </div>
             <div className="flex items-center gap-3 shrink-0">
-              <div className="flex items-center gap-1.5 bg-[#C9A348]/10 border border-[#C9A348]/40 rounded-full px-3 py-1" data-testid="table-countdown">
-                <Clock className="h-3 w-3 text-[#C9A348]" />
-                <span className="font-royal text-xs text-[#C9A348] tabular-nums">{remaining}</span>
+              <div className="flex items-center gap-1.5 bg-brand-secondary/10 border border-brand-secondary/40 rounded-full px-3 py-1" data-testid="table-countdown">
+                <Clock className="h-3 w-3 text-brand-secondary" />
+                <span className="font-royal text-xs text-brand-secondary tabular-nums">{remaining}</span>
               </div>
               <button
                 data-testid="table-banner-close"
                 onClick={() => { clear(); toast.info("Table released."); }}
-                className="h-7 w-7 rounded-full hover:bg-[#C9A348]/10 flex items-center justify-center"
+                className="h-7 w-7 rounded-full hover:bg-brand-secondary/10 flex items-center justify-center"
                 title="Release table"
               >
                 <X className="h-3.5 w-3.5 text-[#FAF5EC]/70" />
@@ -123,8 +123,8 @@ export function TableSessionGuard() {
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[100] flex items-center justify-center bg-[#1A1106]/80 backdrop-blur-sm p-4"
           >
-            <div className="bg-[#FAF5EC] rounded-2xl p-6 w-full max-w-sm shadow-2xl border border-[#C9A348]/20">
-              <h2 className="font-royal text-2xl text-[#8A1A2A] mb-2 text-center">Welcome to Mehfil</h2>
+            <div className="bg-[#FAF5EC] rounded-2xl p-6 w-full max-w-sm shadow-2xl border border-brand-secondary/20">
+              <h2 className="font-royal text-2xl text-brand-primary mb-2 text-center">Welcome to Mehfil</h2>
               <p className="text-sm font-editorial text-zinc-600 mb-6 text-center italic">Every grand feast begins with a name.</p>
               
               <div className="mb-6">
@@ -134,7 +134,7 @@ export function TableSessionGuard() {
                   value={guestName}
                   onChange={(e) => setGuestName(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleJoin()}
-                  className="w-full bg-white border border-[#E7DFCB] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#C9A348] focus:ring-1 focus:ring-[#C9A348] transition-shadow text-[#1A1106]"
+                  className="w-full bg-white border border-[#E7DFCB] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-secondary focus:ring-1 focus:ring-brand-secondary transition-shadow text-[#1A1106]"
                   autoFocus
                 />
               </div>
@@ -142,7 +142,7 @@ export function TableSessionGuard() {
               <button
                 onClick={handleJoin}
                 disabled={scanning}
-                className="w-full bg-[#8A1A2A] text-[#FAF5EC] rounded-xl px-4 py-3 text-sm font-bold tracking-widest uppercase hover:bg-[#A32034] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                className="w-full bg-brand-primary text-[#FAF5EC] rounded-xl px-4 py-3 text-sm font-bold tracking-widest uppercase hover:bg-[#A32034] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {scanning ? "Joining..." : "Join Table"}
               </button>

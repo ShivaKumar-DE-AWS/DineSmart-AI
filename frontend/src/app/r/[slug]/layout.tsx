@@ -30,6 +30,12 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const { session } = useTable();
+  const { data: restaurant } = useQuery({
+    queryKey: ["restaurant", slug],
+    queryFn: () => api<any>(`/api/restaurants/${slug}`),
+    enabled: !!slug,
+  });
+
   const { data: sessionOrdersData } = useQuery({
     queryKey: ["session-orders", session?.id],
     queryFn: () => api<{ orders: Order[] }>(`/api/orders?table_session_id=${session?.id}`),
@@ -113,13 +119,21 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
 
   return (
     <div className="mehfil min-h-screen mehfil-paper">
+      {restaurant && (
+        <style dangerouslySetInnerHTML={{ __html: `
+          .mehfil {
+            --brand-primary: ${restaurant.primary_color || '#8A1A2A'};
+            --brand-secondary: ${restaurant.secondary_color || '#C9A348'};
+          }
+        `}} />
+      )}
       <Suspense fallback={null}><TableSessionGuard /></Suspense>
       <header className={`sticky top-0 z-40 transition-all duration-300 ${scrolled ? "bg-[#FAF5EC]/90 backdrop-blur-md border-b border-[#E7DFCB]" : "bg-transparent"}`}>
         <div className="max-w-7xl mx-auto px-5 md:px-10 py-3 flex items-center justify-between gap-4">
           <MehfilLogo size="sm" />
           <nav className="hidden md:flex items-center gap-9 text-sm tracking-[0.15em] uppercase font-royal" data-testid="mehfil-nav">
             {NAV.map((n) => (
-              <Link key={n.href} href={n.href} data-testid={n.testid} className={`transition-colors ${path === n.href || (n.href !== `/r/${slug}` && path?.startsWith(n.href)) ? "text-[#8A1A2A]" : "text-[#1A1106] hover:text-[#8A1A2A]"}`}>
+              <Link key={n.href} href={n.href} data-testid={n.testid} className={`transition-colors ${path === n.href || (n.href !== `/r/${slug}` && path?.startsWith(n.href)) ? "text-brand-primary" : "text-[#1A1106] hover:text-brand-primary"}`}>
                 {n.label}
               </Link>
             ))}
@@ -129,7 +143,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
               <button 
                 onClick={callStaff} 
                 disabled={callingStaff}
-                className="flex items-center justify-center h-[38px] w-[38px] md:h-auto md:w-auto md:px-4 md:py-2.5 text-xs font-royal tracking-widest uppercase border border-[#C9A348]/40 bg-[#FAF5EC] text-[#8A1A2A] rounded-full hover:bg-[#8A1A2A] hover:text-[#FAF5EC] transition-colors disabled:opacity-50"
+                className="flex items-center justify-center h-[38px] w-[38px] md:h-auto md:w-auto md:px-4 md:py-2.5 text-xs font-royal tracking-widest uppercase border border-brand-secondary/40 bg-[#FAF5EC] text-brand-primary rounded-full hover:bg-brand-primary hover:text-[#FAF5EC] transition-colors disabled:opacity-50"
                 title="Call Staff"
               >
                 <BellRing className="h-4 w-4" />
@@ -140,12 +154,12 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
               <ShoppingBag className="h-4 w-4" />
               <span className="hidden sm:inline">Cart</span>
               {cartCount > 0 && (
-                <span data-testid="cart-count" className="absolute -top-1 -right-1 h-5 min-w-5 px-1 rounded-full bg-[#C9A348] text-[#1A1106] text-[10px] font-bold flex items-center justify-center">
+                <span data-testid="cart-count" className="absolute -top-1 -right-1 h-5 min-w-5 px-1 rounded-full bg-brand-secondary text-[#1A1106] text-[10px] font-bold flex items-center justify-center">
                   {cartCount}
                 </span>
               )}
             </Link>
-            <button data-testid="mobile-menu-btn" onClick={() => setMobileOpen((o) => !o)} className="md:hidden h-10 w-10 rounded-full border border-[#E7DFCB] flex items-center justify-center text-[#8A1A2A]">
+            <button data-testid="mobile-menu-btn" onClick={() => setMobileOpen((o) => !o)} className="md:hidden h-10 w-10 rounded-full border border-[#E7DFCB] flex items-center justify-center text-brand-primary">
               {mobileOpen ? <X className="h-4 w-4" /> : <MenuIcon className="h-4 w-4" />}
             </button>
           </div>
@@ -161,7 +175,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
               <button 
                 onClick={callStaff} 
                 disabled={callingStaff}
-                className="w-full text-left px-5 py-4 text-sm tracking-[0.15em] uppercase font-royal text-[#8A1A2A] hover:bg-[#E7DFCB]/30 border-t border-[#E7DFCB]"
+                className="w-full text-left px-5 py-4 text-sm tracking-[0.15em] uppercase font-royal text-brand-primary hover:bg-[#E7DFCB]/30 border-t border-[#E7DFCB]"
               >
                 <div className="flex items-center gap-3">
                   <BellRing className="h-4 w-4" />
@@ -178,21 +192,21 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
       {activeOrders.length > 0 && path !== "/customer/track" && !path.startsWith("/customer/track/") && (
         <Link 
           href={`/r/${slug}/track`} 
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-[#8A1A2A] text-[#FAF5EC] pl-4 pr-5 py-3 rounded-full shadow-2xl flex items-center gap-3 hover:bg-[#7a1523] transition-colors border border-[#C9A348]/40 max-w-[90vw] whitespace-nowrap group"
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-brand-primary text-[#FAF5EC] pl-4 pr-5 py-3 rounded-full shadow-2xl flex items-center gap-3 hover:bg-[#7a1523] transition-colors border border-brand-secondary/40 max-w-[90vw] whitespace-nowrap group"
           data-testid="global-active-order-badge"
         >
           <div className="relative flex items-center justify-center h-10 w-10 bg-[#FAF5EC]/10 rounded-full">
-            <ChefHat className="h-5 w-5 text-[#C9A348]" />
+            <ChefHat className="h-5 w-5 text-brand-secondary" />
             <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
             </span>
           </div>
           <div className="flex flex-col flex-1 pr-2">
-            <span className="font-royal text-[9px] tracking-[0.2em] uppercase text-[#C9A348] mb-0.5">Live Tracking</span>
+            <span className="font-royal text-[9px] tracking-[0.2em] uppercase text-brand-secondary mb-0.5">Live Tracking</span>
             <span className="font-editorial italic text-sm">{activeOrders.length} order{activeOrders.length > 1 ? 's' : ''} in progress</span>
           </div>
-          <div className="bg-[#FAF5EC]/20 rounded-full h-8 w-8 flex items-center justify-center group-hover:bg-[#C9A348] group-hover:text-[#1A1106] transition-colors">
+          <div className="bg-[#FAF5EC]/20 rounded-full h-8 w-8 flex items-center justify-center group-hover:bg-brand-secondary group-hover:text-[#1A1106] transition-colors">
             <ArrowRight className="h-4 w-4" />
           </div>
         </Link>
@@ -203,18 +217,18 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
         <div className="max-w-7xl mx-auto px-6 md:px-10 py-16 grid md:grid-cols-4 gap-10">
           <div className="md:col-span-1">
             <MehfilLogo size="md" invert />
-            <p className="font-editorial italic text-[#FAF5EC]/70 mt-5 leading-relaxed">A Hyderabadi heritage, plated with grace since 2006.</p>
+            {restaurant?.tagline && (
+              <p className="font-editorial italic text-[#FAF5EC]/70 mt-5 leading-relaxed">{restaurant.tagline}</p>
+            )}
           </div>
           <div>
-            <h4 className="font-royal tracking-[0.2em] text-[#C9A348] uppercase text-xs mb-4">Visit Us</h4>
-            <p className="text-sm text-[#FAF5EC]/85 leading-relaxed">
-              Banjara Hills, Road No. 12<br />
-              Hyderabad, Telangana 500034<br />
-              India
+            <h4 className="font-royal tracking-[0.2em] text-brand-secondary uppercase text-xs mb-4">Visit Us</h4>
+            <p className="text-sm text-[#FAF5EC]/85 leading-relaxed whitespace-pre-line">
+              {restaurant?.address || "Visit us today"}
             </p>
           </div>
           <div>
-            <h4 className="font-royal tracking-[0.2em] text-[#C9A348] uppercase text-xs mb-4">Hours</h4>
+            <h4 className="font-royal tracking-[0.2em] text-brand-secondary uppercase text-xs mb-4">Hours</h4>
             <p className="text-sm text-[#FAF5EC]/85 leading-relaxed">
               Lunch — 12:00 to 15:30<br />
               Dinner — 18:30 to 23:30<br />
@@ -222,20 +236,20 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
             </p>
           </div>
           <div>
-            <h4 className="font-royal tracking-[0.2em] text-[#C9A348] uppercase text-xs mb-4">Reach</h4>
+            <h4 className="font-royal tracking-[0.2em] text-brand-secondary uppercase text-xs mb-4">Reach</h4>
             <p className="text-sm text-[#FAF5EC]/85 leading-relaxed">
-              +91 90000 12345<br />
-              hello@mehfil.in<br />
-              <Link href={`/r/${slug}/reserve`} className="underline underline-offset-4 hover:text-[#C9A348]">Reserve a table</Link>
+              {restaurant?.phone && <>{restaurant.phone}<br /></>}
+              {restaurant?.email && <>{restaurant.email}<br /></>}
+              <Link href={`/r/${slug}/reserve`} className="underline underline-offset-4 hover:text-brand-secondary">Reserve a table</Link>
             </p>
           </div>
         </div>
-        <div className="border-t border-[#C9A348]/15 px-6 md:px-10 py-5 max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-3 text-xs text-[#FAF5EC]/60 font-royal tracking-wider uppercase">
-          <div>© 2026 Mehfil · A Hyderabad institution</div>
+        <div className="border-t border-brand-secondary/15 px-6 md:px-10 py-5 max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-3 text-xs text-[#FAF5EC]/60 font-royal tracking-wider uppercase">
+          <div>© {new Date().getFullYear()} {restaurant?.name || "SmartDine"}</div>
           <div className="flex gap-6">
-            <Link href="#" className="hover:text-[#C9A348]">Privacy</Link>
-            <Link href="#" className="hover:text-[#C9A348]">Terms</Link>
-            <Link href="/auth/login" className="hover:text-[#C9A348]">Staff</Link>
+            <Link href="#" className="hover:text-brand-secondary">Privacy</Link>
+            <Link href="#" className="hover:text-brand-secondary">Terms</Link>
+            <Link href="/auth/login" className="hover:text-brand-secondary">Staff</Link>
           </div>
         </div>
       </footer>

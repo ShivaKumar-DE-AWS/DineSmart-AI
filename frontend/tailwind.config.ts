@@ -26,6 +26,10 @@ const config: Config = {
         gold: "#EAB308",
         "electric-blue": "#2A64F6",
 
+        // Dynamic Brand Theme (defaults to Mehfil colors if not set)
+        "brand-primary": "var(--brand-primary, #8A1A2A)",
+        "brand-secondary": "var(--brand-secondary, #C9A348)",
+
         // Kitchen / Counter (high contrast)
         coal: "#0A0A0A",
         graphite: "#141414",
