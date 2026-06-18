@@ -613,46 +613,92 @@ import random
 
 @app.post("/api/inventory/seed-demo", dependencies=[Depends(require_roles("admin"))])
 async def seed_inventory_demo():
-    """Seed the database with mock inventory and assign recipes to all menu items."""
-    inventory = await db.inventory.find().to_list(length=None)
-    if not inventory:
-        mock_inv = [
-            {"id": "inv_chicken", "name": "Raw Chicken", "unit": "kg", "qty": 50.0, "min_qty": 10.0},
-            {"id": "inv_rice", "name": "Basmati Rice", "unit": "kg", "qty": 100.0, "min_qty": 20.0},
-            {"id": "inv_paneer", "name": "Paneer", "unit": "kg", "qty": 30.0, "min_qty": 5.0},
-            {"id": "inv_flour", "name": "Flour", "unit": "kg", "qty": 20.0, "min_qty": 5.0},
-            {"id": "inv_onion", "name": "Onions", "unit": "kg", "qty": 40.0, "min_qty": 10.0},
-            {"id": "inv_tomato", "name": "Tomatoes", "unit": "kg", "qty": 35.0, "min_qty": 10.0},
-            {"id": "inv_spices", "name": "Mixed Spices", "unit": "g", "qty": 5000.0, "min_qty": 1000.0},
-        ]
-        await db.inventory.insert_many(mock_inv)
-        inventory = mock_inv
-    
+    """Seed the database with dynamic inventory and assign recipes to all menu items using Gemini."""
     menu = await db.menu.find().to_list(length=None)
+    if not menu:
+        return {"message": "No menu items found to generate inventory from."}
     
-    # Assign 2-3 random ingredients to each menu item for demo purposes
-    for item in menu:
-        recipe = []
-        if inventory:
-            # Pick a random subset of 2 to 3 ingredients
-            sample_size = min(len(inventory), random.randint(2, 3))
-            sampled_ingredients = random.sample(inventory, sample_size)
-            
-            for ing in sampled_ingredients:
-                # Randomize required quantity
-                qty_req = round(random.uniform(0.1, 0.5), 2)
-                if ing.get("unit") == "g":
-                    qty_req = round(random.uniform(5.0, 50.0), 0)
-                recipe.append({
-                    "ingredient_id": ing["id"],
-                    "qty_required": qty_req
-                })
-        
-        await db.menu.update_one(
-            {"id": item["id"]},
-            {"$set": {"recipe": recipe}}
+    # Extract menu names to send to Gemini
+    menu_names = [m.get("name", "Unknown") for m in menu]
+    
+    prompt = f"""
+    You are an expert chef and restaurant manager. I have a restaurant with the following menu items:
+    {', '.join(menu_names)}
+    
+    1. Create a realistic list of raw ingredients (inventory) needed to cook all these dishes. Keep the list concise (10-15 core ingredients total).
+    2. For each menu item, list which of those exact ingredients are required and in what quantity (in kg, L, or g).
+    
+    Respond STRICTLY with a valid JSON object matching this schema:
+    {{
+        "inventory": [
+            {{"id": "inv_1", "name": "Ingredient Name", "unit": "kg/g/L", "qty": 100, "min_qty": 20}}
+        ],
+        "recipes": {{
+            "Exact Menu Item Name": [
+                {{"ingredient_id": "inv_1", "qty_required": 0.5}}
+            ]
+        }}
+    }}
+    Do not include any markdown formatting, backticks, or explanation. Just the raw JSON.
+    """
+    
+    try:
+        from google import genai
+        from google.genai import types as genai_types
+        client_ai = genai.Client(api_key=GEMINI_API_KEY)
+        response = await asyncio.to_thread(
+            client_ai.models.generate_content,
+            model="gemini-2.5-flash",
+            contents=prompt,
         )
-    return {"message": "Demo data seeded successfully"}
+        data_str = response.text.strip()
+        if data_str.startswith("```json"):
+            data_str = data_str[7:-3].strip()
+        elif data_str.startswith("```"):
+            data_str = data_str[3:-3].strip()
+            
+        data = json.loads(data_str)
+        
+        # 1. Replace Inventory
+        if data.get("inventory"):
+            await db.inventory.delete_many({})
+            await db.inventory.insert_many(data["inventory"])
+            
+        # 2. Update Recipes
+        recipes_map = data.get("recipes", {})
+        for item in menu:
+            recipe = recipes_map.get(item.get("name"), [])
+            await db.menu.update_one(
+                {"id": item["id"]},
+                {"$set": {"recipe": recipe}}
+            )
+            
+        return {"message": "Demo data seeded dynamically using AI!"}
+    except Exception as e:
+        print(f"Failed to seed demo using AI: {e}")
+        # Fallback to simple random assignment if AI fails
+        inventory = await db.inventory.find().to_list(length=None)
+        if not inventory:
+            mock_inv = [
+                {"id": "inv_chicken", "name": "Raw Chicken", "unit": "kg", "qty": 50.0, "min_qty": 10.0},
+                {"id": "inv_rice", "name": "Basmati Rice", "unit": "kg", "qty": 100.0, "min_qty": 20.0},
+                {"id": "inv_paneer", "name": "Paneer", "unit": "kg", "qty": 30.0, "min_qty": 5.0},
+            ]
+            await db.inventory.insert_many(mock_inv)
+            inventory = mock_inv
+        
+        for item in menu:
+            recipe = []
+            if inventory:
+                sample_size = min(len(inventory), random.randint(1, 2))
+                sampled_ingredients = random.sample(inventory, sample_size)
+                for ing in sampled_ingredients:
+                    recipe.append({
+                        "ingredient_id": ing["id"],
+                        "qty_required": round(random.uniform(0.1, 0.5), 2)
+                    })
+            await db.menu.update_one({"id": item["id"]}, {"$set": {"recipe": recipe}})
+        return {"message": "Fallback demo data seeded successfully"}
 
 @app.post("/api/inventory", dependencies=[Depends(require_roles("admin"))])
 async def create_inventory_item(item: InventoryItemModel):
