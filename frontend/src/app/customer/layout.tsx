@@ -2,11 +2,15 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
-import { ShoppingBag, Menu as MenuIcon, X } from "lucide-react";
+import { ShoppingBag, Menu as MenuIcon, X, ChefHat, ArrowRight } from "lucide-react";
 import { useCart } from "@/stores/cart";
 import { AIWaiterDock } from "@/components/customer/AIWaiterDock";
 import { MehfilLogo } from "@/components/customer/MehfilLogo";
 import { TableSessionGuard } from "@/components/customer/TableSessionGuard";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+import { useTable } from "@/stores/table";
+import { Order } from "@/types";
 
 const NAV = [
   { href: "/customer", label: "Home", testid: "nav-home" },
@@ -20,6 +24,16 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
   const cartCount = useCart((s) => s.count());
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const { session } = useTable();
+  const { data: sessionOrdersData } = useQuery({
+    queryKey: ["session-orders", session?.id],
+    queryFn: () => api<{ orders: Order[] }>(`/api/orders?table_session_id=${session?.id}`),
+    enabled: !!session?.id,
+    refetchInterval: 10000,
+  });
+  const sessionOrders = sessionOrdersData?.orders ?? [];
+  const activeOrders = sessionOrders.filter((o) => !["delivered", "cancelled"].includes(o.status));
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -79,7 +93,28 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
 
       <main>{children}</main>
 
-      <AIWaiterDock />
+      {activeOrders.length > 0 && path !== "/customer/track" && !path.startsWith("/customer/track/") && (
+        <Link 
+          href="/customer/track" 
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-[#8A1A2A] text-[#FAF5EC] pl-4 pr-5 py-3 rounded-full shadow-2xl flex items-center gap-3 hover:bg-[#7a1523] transition-colors border border-[#C9A348]/40 max-w-[90vw] whitespace-nowrap group"
+          data-testid="global-active-order-badge"
+        >
+          <div className="relative flex items-center justify-center h-10 w-10 bg-[#FAF5EC]/10 rounded-full">
+            <ChefHat className="h-5 w-5 text-[#C9A348]" />
+            <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
+            </span>
+          </div>
+          <div className="flex flex-col flex-1 pr-2">
+            <span className="font-royal text-[9px] tracking-[0.2em] uppercase text-[#C9A348] mb-0.5">Live Tracking</span>
+            <span className="font-editorial italic text-sm">{activeOrders.length} order{activeOrders.length > 1 ? 's' : ''} in progress</span>
+          </div>
+          <div className="bg-[#FAF5EC]/20 rounded-full h-8 w-8 flex items-center justify-center group-hover:bg-[#C9A348] group-hover:text-[#1A1106] transition-colors">
+            <ArrowRight className="h-4 w-4" />
+          </div>
+        </Link>
+      )}      <AIWaiterDock />
 
       {/* Footer */}
       <footer className="mt-20 mehfil-royal-bg text-[#FAF5EC]" data-testid="mehfil-footer">
