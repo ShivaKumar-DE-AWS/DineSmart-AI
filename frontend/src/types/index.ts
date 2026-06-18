@@ -27,6 +27,7 @@ export interface CartItem {
   qty: number;
   notes?: string;
   category?: string;
+  course?: string;
 }
 
 export type OrderStatus =

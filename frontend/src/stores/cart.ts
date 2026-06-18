@@ -8,6 +8,7 @@ interface CartState {
   add: (item: MenuItem, qty?: number) => void;
   remove: (item_id: string) => void;
   setQty: (item_id: string, qty: number) => void;
+  setCourse: (item_id: string, course: string) => void;
   setNote: (item_id: string, notes: string) => void;
   clear: () => void;
   subtotal: () => number;
@@ -28,6 +29,9 @@ export const useCart = create<CartState>()(
       remove: (id) => set((s) => ({ items: s.items.filter((i) => i.item_id !== id) })),
       setQty: (id, qty) => set((s) => ({
         items: qty <= 0 ? s.items.filter((i) => i.item_id !== id) : s.items.map((i) => i.item_id === id ? { ...i, qty } : i),
+      })),
+      setCourse: (id, course) => set((s) => ({
+        items: s.items.map((i) => i.item_id === id ? { ...i, course } : i),
       })),
       setNote: (id, notes) => set((s) => ({
         items: s.items.map((i) => i.item_id === id ? { ...i, notes: notes || undefined } : i),

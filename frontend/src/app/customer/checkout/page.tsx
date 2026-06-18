@@ -49,6 +49,8 @@ function getChipsForItem(name: string, category?: string): string[] {
 }
 
 
+const COURSES = ["Auto (Natural pace)", "Starter", "Main Course", "Dessert", "All together"];
+
 export default function CheckoutPage() {
   const router = useRouter();
   const cart = useCart();
@@ -113,10 +115,14 @@ export default function CheckoutPage() {
         order_draft: {
           customer_name: name.trim(),
           customer_phone: phone.trim() || undefined,
-          items: cart.items.map((i) => ({
-            item_id: i.item_id, name: i.name, price: i.price, qty: i.qty,
-            notes: i.notes?.trim() || undefined,
-          })),
+          items: cart.items.map((i) => {
+            const courseText = i.course && i.course !== "Auto (Natural pace)" ? `[Serve: ${i.course}] ` : "";
+            const finalNotes = `${courseText}${i.notes?.trim() || ""}`.trim();
+            return {
+              item_id: i.item_id, name: i.name, price: i.price, qty: i.qty,
+              notes: finalNotes || undefined,
+            };
+          }),
           payment_method: "stripe",
           notes: generalNotes.trim() || undefined,
         },
@@ -226,10 +232,19 @@ export default function CheckoutPage() {
                         <span className="h-7 w-7 rounded-full bg-[#8A1A2A] text-[#FAF5EC] font-royal text-xs flex items-center justify-center">{line.qty}</span>
                         <div className="font-royal text-[15px] text-[#8A1A2A] leading-tight">{line.name}</div>
                       </div>
-                      <div className="flex items-center gap-1 bg-[#FAF5EC] rounded-full p-0.5 border border-[#C9A348]/30">
-                        <button data-testid={`cook-dec-${line.item_id}`} onClick={() => cart.setQty(line.item_id, line.qty - 1)} className="h-7 w-7 rounded-full hover:bg-[#8A1A2A] hover:text-[#FAF5EC] flex items-center justify-center"><Minus className="h-3 w-3" /></button>
-                        <span className="px-1 w-5 text-center font-royal text-xs">{line.qty}</span>
-                        <button data-testid={`cook-inc-${line.item_id}`} onClick={() => cart.setQty(line.item_id, line.qty + 1)} className="h-7 w-7 rounded-full hover:bg-[#8A1A2A] hover:text-[#FAF5EC] flex items-center justify-center"><Plus className="h-3 w-3" /></button>
+                      <div className="flex items-center gap-2">
+                        <select
+                          className="bg-[#FAF5EC] border border-[#C9A348]/30 rounded-full px-2 py-1.5 text-[9px] sm:text-[10px] font-royal tracking-[0.1em] uppercase outline-none text-[#8A1A2A] focus:border-[#8A1A2A] cursor-pointer"
+                          value={line.course || "Auto (Natural pace)"}
+                          onChange={(e) => cart.setCourse(line.item_id, e.target.value)}
+                        >
+                          {COURSES.map((c) => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                        <div className="flex items-center gap-1 bg-[#FAF5EC] rounded-full p-0.5 border border-[#C9A348]/30 shrink-0">
+                          <button data-testid={`cook-dec-${line.item_id}`} onClick={() => cart.setQty(line.item_id, line.qty - 1)} className="h-7 w-7 rounded-full hover:bg-[#8A1A2A] hover:text-[#FAF5EC] flex items-center justify-center transition-colors"><Minus className="h-3 w-3" /></button>
+                          <span className="px-1 w-5 text-center font-royal text-xs">{line.qty}</span>
+                          <button data-testid={`cook-inc-${line.item_id}`} onClick={() => cart.setQty(line.item_id, line.qty + 1)} className="h-7 w-7 rounded-full hover:bg-[#8A1A2A] hover:text-[#FAF5EC] flex items-center justify-center transition-colors"><Plus className="h-3 w-3" /></button>
+                        </div>
                       </div>
                     </div>
                     <div className="flex flex-wrap gap-1.5 mb-3" data-testid={`cook-chips-${line.item_id}`}>

@@ -12,8 +12,7 @@ export function RoleGuard({ allow, children }: { allow: Role[]; children: React.
 
   // Wait for zustand-persist to rehydrate from localStorage before any redirect.
   useEffect(() => {
-    // @ts-expect-error persist API attached at runtime
-    const ph = useSession.persist;
+    const ph = (useSession as any).persist;
     if (ph?.hasHydrated?.()) {
       setHydrated(true);
       return;
