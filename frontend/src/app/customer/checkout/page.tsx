@@ -43,6 +43,8 @@ function getChipsForItem(name: string, category?: string): string[] {
   if (cat.includes("rice") || cat.includes("noodle")) return CHIPS_BY_TYPE.rice_noodles;
   const nm = name.toLowerCase();
   if (nm.includes("paneer") || nm.includes("dal") || nm.includes("veg")) return CHIPS_BY_TYPE.veg;
+  if (nm.includes("meetha") || nm.includes("jamun") || nm.includes("kheer") || nm.includes("sweet")) return CHIPS_BY_TYPE.sweets;
+  if (nm.includes("lassi") || nm.includes("chai") || nm.includes("soda") || nm.includes("drink")) return CHIPS_BY_TYPE.beverages;
   return CHIPS_BY_TYPE.meat;
 }
 
@@ -231,7 +233,7 @@ export default function CheckoutPage() {
                       </div>
                     </div>
                     <div className="flex flex-wrap gap-1.5 mb-3" data-testid={`cook-chips-${line.item_id}`}>
-                      {getChipsForItem(line.name).map((c) => {
+                      {getChipsForItem(line.name, line.category).map((c) => {
                         const active = selected.includes(c.toLowerCase());
                         return (
                           <button
