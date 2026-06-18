@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { LayoutDashboard, ShoppingBag, LineChart, Boxes, UtensilsCrossed, Users, CalendarClock, QrCode, LogOut, Sparkles, Menu as MenuIcon, X } from "lucide-react";
+import { LayoutDashboard, ShoppingBag, LineChart, Boxes, UtensilsCrossed, Users, CalendarClock, QrCode, LogOut, Sparkles, Menu as MenuIcon, X, CreditCard } from "lucide-react";
 import { RoleGuard } from "@/components/shared/RoleGuard";
 import { useSession } from "@/stores/session";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -15,6 +15,7 @@ const nav = [
   { href: "/admin/reservations", label: "Reservations", icon: CalendarClock, testid: "admin-nav-reservations" },
   { href: "/admin/tables", label: "Tables & QR", icon: QrCode, testid: "admin-nav-tables" },
   { href: "/admin/revenue", label: "Analytics & Revenue", icon: LineChart, testid: "admin-nav-revenue" },
+  { href: "/admin/billing", label: "Billing & Plan", icon: CreditCard, testid: "admin-nav-billing" },
   { href: "/admin/inventory", label: "Inventory", icon: Boxes, testid: "admin-nav-inventory" },
   { href: "/admin/menu", label: "Menu", icon: UtensilsCrossed, testid: "admin-nav-menu" },
   { href: "/admin/customers", label: "Customers", icon: Users, testid: "admin-nav-customers" },

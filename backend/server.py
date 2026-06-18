@@ -410,7 +410,8 @@ async def signup(req: SignupReq):
             "slug": slug,
             "owner_email": req.email,
             "stripe_customer_id": None,
-            "subscription_status": "active", # Start as active
+            "subscription_status": "trial", # Trial by default
+            "subscription_expiry": (datetime.now(timezone.utc) + timedelta(days=14)).isoformat() + "Z", # 14-day trial
             "created_at": now_iso()
         })
     
@@ -538,6 +539,35 @@ async def get_restaurant(slug: str):
     if not rest:
         raise HTTPException(status_code=404, detail="Restaurant not found")
     return rest
+# =========================================================
+# Billing & Subscription
+# =========================================================
+@app.get("/api/billing/status", dependencies=[Depends(require_roles("admin"))])
+async def get_billing_status(user=Depends(require_user)):
+    rest = await db.restaurants.find_one({"id": user["restaurant_id"]}, {"_id": 0})
+    if not rest:
+        raise HTTPException(status_code=404, detail="Restaurant not found")
+    return {
+        "subscription_status": rest.get("subscription_status", "trial"),
+        "subscription_expiry": rest.get("subscription_expiry")
+    }
+
+@app.post("/api/billing/subscribe", dependencies=[Depends(require_roles("admin"))])
+async def subscribe_billing(user=Depends(require_user)):
+    # Simulated payment processing for ₹10,000/month
+    rest = await db.restaurants.find_one({"id": user["restaurant_id"]})
+    if not rest:
+        raise HTTPException(status_code=404, detail="Restaurant not found")
+        
+    new_expiry = (datetime.now(timezone.utc) + timedelta(days=30)).isoformat() + "Z"
+    await db.restaurants.update_one(
+        {"id": user["restaurant_id"]},
+        {"$set": {
+            "subscription_status": "active",
+            "subscription_expiry": new_expiry
+        }}
+    )
+    return {"status": "success", "message": "Subscription activated successfully"}
 
 # =========================================================
 # Menu

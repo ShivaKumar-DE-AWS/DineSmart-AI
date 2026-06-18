@@ -1,5 +1,5 @@
-import { useParams } from "next/navigation";
 "use client";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 
 export function MehfilLogo({ size = "md", invert = false, withTagline = false }: { size?: "sm" | "md" | "lg"; invert?: boolean; withTagline?: boolean }) {

@@ -1,5 +1,5 @@
-import { useParams } from "next/navigation";
 "use client";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useCart } from "@/stores/cart";
 import { formatCurrency } from "@/lib/utils";
