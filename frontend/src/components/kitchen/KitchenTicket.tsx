@@ -6,25 +6,31 @@ import type { Order } from "@/types";
 interface Props {
   order: Order;
   elapsed: string;
-  isLate: boolean;
+  elapsedMs: number;
+  isSelected?: boolean;
   onStart: (id: string) => void;
   onReady: (id: string) => void;
 }
 
-function getBorderClass(isLate: boolean, isPreparing: boolean): string {
-  if (isLate) return "border-alert animate-pulse-alert";
-  if (isPreparing) return "border-warn";
+function getBorderClass(elapsedMs: number, isPreparing: boolean): string {
+  // SLA thresholds: > 15m Red, > 10m Yellow, else Green (if preparing), or neutral if just confirmed
+  if (elapsedMs > 15 * 60 * 1000) return "border-alert animate-pulse";
+  if (elapsedMs > 10 * 60 * 1000) return "border-[#facc15]"; // Yellow
+  if (isPreparing) return "border-[#4ade80]"; // Green
   return "border-zinc-500";
 }
 
-function KitchenTicketImpl({ order, elapsed, isLate, onStart, onReady }: Props) {
+function KitchenTicketImpl({ order, elapsed, elapsedMs, isSelected, onStart, onReady }: Props) {
   const isPreparing = order.status === "preparing";
-  const borderClass = getBorderClass(isLate, isPreparing);
+  const borderClass = getBorderClass(elapsedMs, isPreparing);
+  
+  // Highlighting selected ticket for Bump Bar
+  const ringClass = isSelected ? "ring-2 ring-white ring-offset-2 ring-offset-graphite scale-[1.02] shadow-xl" : "";
 
   return (
     <div
       data-testid={`kds-ticket-${order.token}`}
-      className={`bg-graphite border-l-[8px] ${borderClass} rounded-md p-4`}
+      className={`bg-graphite border-l-[8px] ${borderClass} rounded-md p-4 transition-all duration-200 ${ringClass}`}
     >
       <div className="flex items-start justify-between mb-3">
         <div className="font-display text-4xl text-white leading-none">{order.token}</div>

@@ -163,6 +163,10 @@ class LoginReq(BaseModel):
     email: EmailStr
     password: str
 
+class RecipeIngredient(BaseModel):
+    ingredient_id: str
+    qty_required: float
+
 class MenuItemModel(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
@@ -173,6 +177,7 @@ class MenuItemModel(BaseModel):
     available: bool = True
     prep_time_min: int = 10
     tags: List[str] = []
+    recipe: List[RecipeIngredient] = []
 
 class CartItemModel(BaseModel):
     item_id: str
@@ -530,6 +535,7 @@ async def create_order(req: OrderCreateReq):
         "is_ai": getattr(req, "is_ai", False),
     }
     await db.orders.insert_one(order)
+    await _deduct_inventory(order)
     # notification
     await db.notifications.insert_one({
         "id": str(uuid.uuid4()),
@@ -892,6 +898,21 @@ async def _find_or_create_customer(name: str, phone: Optional[str]) -> Dict[str,
     }
     await db.customers.insert_one(doc)
     return doc
+async def _deduct_inventory(order: Dict[str, Any]) -> None:
+    """Deduct ingredient quantities from inventory based on order items."""
+    for item in order.get("items", []):
+        qty = item.get("qty", 1)
+        # Fetch the menu item to get its recipe
+        m = await db.menu.find_one({"id": item.get("item_id")}, {"recipe": 1})
+        if m and m.get("recipe"):
+            for ing in m["recipe"]:
+                ing_id = ing.get("ingredient_id")
+                req_qty = ing.get("qty_required", 0) * qty
+                if ing_id and req_qty > 0:
+                    await db.inventory.update_one(
+                        {"id": ing_id},
+                        {"$inc": {"qty": -req_qty}}
+                    )
 
 async def _on_order_paid(order: Dict[str, Any]) -> None:
     """Credit loyalty points + update customer aggregates. Called when an order materializes (i.e. paid)."""
@@ -946,6 +967,7 @@ async def _materialize_order_from_draft(draft_id: str, payment_method: str, sess
     }
     await db.orders.insert_one(order)
     await _on_order_paid(order)
+    await _deduct_inventory(order)
     await db.notifications.insert_one({
         "id": str(uuid.uuid4()),
         "order_id": order["id"],

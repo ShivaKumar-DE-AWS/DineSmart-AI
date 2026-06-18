@@ -51,6 +51,47 @@ export default function KitchenPage() {
 
   const queue = (data?.orders || []).filter((o) => ["confirmed", "preparing"].includes(o.status));
 
+  // --- Bump Bar Logic ---
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  
+  // Keep selection in bounds if queue shrinks
+  useEffect(() => {
+    if (selectedIndex >= queue.length && queue.length > 0) {
+      setSelectedIndex(queue.length - 1);
+    } else if (queue.length === 0 && selectedIndex !== 0) {
+      setSelectedIndex(0);
+    }
+  }, [queue.length, selectedIndex]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if user is typing in an input (not likely on KDS, but safe)
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        setSelectedIndex(i => Math.min(i + 1, Math.max(0, queue.length - 1)));
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        setSelectedIndex(i => Math.max(i - 1, 0));
+      } else if (e.key === " " || e.key === "Enter") {
+        e.preventDefault();
+        const selectedOrder = queue[selectedIndex];
+        if (selectedOrder) {
+          if (selectedOrder.status === "confirmed") {
+            onStart(selectedOrder.id);
+          } else if (selectedOrder.status === "preparing") {
+            onReady(selectedOrder.id);
+          }
+        }
+      }
+    };
+    
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [queue, selectedIndex, onStart, onReady]);
+  // ----------------------
+
   const { data: resData } = useQuery({
     queryKey: ["kds-reservations"],
     queryFn: () => api<{ reservations: Reservation[] }>("/api/reservations/today"),
@@ -171,16 +212,20 @@ export default function KitchenPage() {
         )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {queue.map((o) => (
-            <KitchenTicket
-              key={o.id}
-              order={o}
-              elapsed={elapsed(o.created_at)}
-              isLate={Date.now() - new Date(o.created_at).getTime() > LATE_THRESHOLD_MS}
-              onStart={onStart}
-              onReady={onReady}
-            />
-          ))}
+          {queue.map((o, idx) => {
+            const elapsedMs = Date.now() - new Date(o.created_at).getTime();
+            return (
+              <KitchenTicket
+                key={o.id}
+                order={o}
+                elapsed={elapsed(o.created_at)}
+                elapsedMs={elapsedMs}
+                isSelected={idx === selectedIndex}
+                onStart={onStart}
+                onReady={onReady}
+              />
+            );
+          })}
         </div>
       </main>
 
