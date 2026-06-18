@@ -112,6 +112,7 @@ export function AIWaiterDock() {
   const [voiceProcessing, setVoiceProcessing] = useState(false);
   const [ttsOn, setTtsOn] = useState(true);
   const [ttsPlaying, setTtsPlaying] = useState(false);
+  const vadPausedRef = useRef(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -344,10 +345,15 @@ export function AIWaiterDock() {
     }
   }, [streaming, appendAssistantDelta, replaceLastAssistant, finalizeLastAssistant, language, tone]);
 
+  // Update vadPausedRef whenever state changes
+  useEffect(() => {
+    vadPausedRef.current = !open || mode !== "voice" || streaming || voiceProcessing || ttsPlaying;
+  }, [open, mode, streaming, voiceProcessing, ttsPlaying]);
+
   // Continuous VAD Auto-Listen
   useEffect(() => {
-    if (!open || mode !== "voice" || streaming || voiceProcessing || ttsPlaying) {
-      // Stop VAD if active
+    if (!open || mode !== "voice") {
+      // Complete teardown only if we leave Voice mode or close dock
       if (vadCtxRef.current) {
         vadCtxRef.current.close().catch(() => {});
         vadCtxRef.current = null;
@@ -364,97 +370,112 @@ export function AIWaiterDock() {
       return;
     }
 
-    let isActive = true;
-    let silenceStart = 0;
-    let speaking = false;
+    let isCleanup = false;
 
-    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-      if (!isActive) { stream.getTracks().forEach(t => t.stop()); return; }
-      vadStreamRef.current = stream;
+    if (!vadStreamRef.current) {
+      navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+        if (isCleanup) { stream.getTracks().forEach(t => t.stop()); return; }
+        vadStreamRef.current = stream;
 
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      const ctx = new AudioCtx();
-      vadCtxRef.current = ctx;
+        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+        const ctx = new AudioCtx();
+        vadCtxRef.current = ctx;
 
-      const source = ctx.createMediaStreamSource(stream);
-      const analyser = ctx.createAnalyser();
-      analyser.minDecibels = -70; // sensitive for speech
-      analyser.smoothingTimeConstant = 0.2;
-      source.connect(analyser);
+        const source = ctx.createMediaStreamSource(stream);
+        const analyser = ctx.createAnalyser();
+        analyser.minDecibels = -60; // Slightly less sensitive to avoid background hum
+        analyser.smoothingTimeConstant = 0.2;
+        source.connect(analyser);
 
-      const mime = MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "";
-      const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
-      mediaRecorderRef.current = rec;
-      rec.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
-      
-      rec.onstop = async () => {
-        if (!isActive) return;
-        const blob = new Blob(audioChunksRef.current, { type: mime || "audio/webm" });
-        audioChunksRef.current = [];
-        if (blob.size < 800) return; // Too short
+        const mime = MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "";
+        const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+        mediaRecorderRef.current = rec;
         
-        setVoiceProcessing(true);
-        try {
-          const fd = new FormData();
-          fd.append("file", blob, "voice.webm");
-          fd.append("language", language === "auto" ? "" : language);
-          const r = await fetch(apiUrl("/api/ai-waiter/transcribe"), { method: "POST", body: fd });
-          if (!r.ok) throw new Error(`STT ${r.status}`);
-          const j = await r.json() as { text: string };
-          const text = (j.text || "").trim();
-          if (text) {
-             void sendText(text, { speak: true });
-          }
-        } catch (e) {
-          toast.error("Voice failed: " + (e as Error).message);
-        } finally {
-          setVoiceProcessing(false);
-        }
-      };
+        let speaking = false;
+        let silenceStart = 0;
 
-      const data = new Uint8Array(analyser.frequencyBinCount);
-      const check = () => {
-        if (!isActive) return;
-        analyser.getByteFrequencyData(data);
-        let sum = 0;
-        for (let i = 0; i < data.length; i++) sum += data[i];
-        const avg = sum / data.length;
+        rec.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
+        
+        rec.onstop = async () => {
+          if (isCleanup) return;
+          const blob = new Blob(audioChunksRef.current, { type: mime || "audio/webm" });
+          audioChunksRef.current = [];
+          if (blob.size < 800) return; // Too short
+          
+          setVoiceProcessing(true);
+          try {
+            const fd = new FormData();
+            fd.append("file", blob, "voice.webm");
+            fd.append("language", language === "auto" ? "" : language);
+            const r = await fetch(apiUrl("/api/ai-waiter/transcribe"), { method: "POST", body: fd });
+            if (!r.ok) throw new Error(`STT ${r.status}`);
+            const j = await r.json() as { text: string };
+            let text = (j.text || "").trim();
 
-        if (avg > 5) { // speaking threshold
-          if (!speaking) {
-            speaking = true;
-            setRecording(true);
-            audioChunksRef.current = [];
-            rec.start();
+            // Filter common whisper hallucinations on silence
+            const lower = text.toLowerCase();
+            if (lower === "thank you." || lower === "thank you" || lower === "thanks for watching" || lower.includes("subscribe")) {
+              text = "";
+            }
+
+            if (text.length > 2) {
+               void sendText(text, { speak: true });
+            }
+          } catch (e) {
+            toast.error("Voice failed: " + (e as Error).message);
+          } finally {
+            setVoiceProcessing(false);
           }
-          silenceStart = 0;
-        } else { // silent
-          if (speaking) {
-            if (!silenceStart) silenceStart = Date.now();
-            else if (Date.now() - silenceStart > 1500) { // 1.5s silence = stop recording
+        };
+
+        const data = new Uint8Array(analyser.frequencyBinCount);
+        const check = () => {
+          if (isCleanup) return;
+          requestAnimationFrame(check);
+
+          if (vadPausedRef.current) {
+            if (speaking) {
               speaking = false;
               setRecording(false);
-              rec.stop(); 
+              if (rec.state !== "inactive") rec.stop();
+            }
+            return;
+          }
+
+          analyser.getByteFrequencyData(data);
+          let sum = 0;
+          for (let i = 0; i < data.length; i++) sum += data[i];
+          const avg = sum / data.length;
+
+          if (avg > 10) { // speaking threshold (increased slightly to ignore fan noise)
+            if (!speaking) {
+              speaking = true;
+              setRecording(true);
+              audioChunksRef.current = [];
+              if (rec.state === "inactive") rec.start();
+            }
+            silenceStart = 0;
+          } else { // silent
+            if (speaking) {
+              if (!silenceStart) silenceStart = Date.now();
+              else if (Date.now() - silenceStart > 1500) { // 1.5s silence = stop recording
+                speaking = false;
+                setRecording(false);
+                if (rec.state !== "inactive") rec.stop(); 
+              }
             }
           }
-        }
-        requestAnimationFrame(check);
-      };
-      check();
-    }).catch(err => {
-      console.warn("[ai-waiter] Mic access denied", err);
-    });
+        };
+        check();
+      }).catch(err => {
+        console.warn("[ai-waiter] Mic access denied", err);
+      });
+    }
 
     return () => {
-      isActive = false;
-      if (vadCtxRef.current) vadCtxRef.current.close().catch(()=>{});
-      if (vadStreamRef.current) vadStreamRef.current.getTracks().forEach(t=>t.stop());
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-         mediaRecorderRef.current.stop();
-      }
-      setRecording(false);
+      isCleanup = true;
     };
-  }, [open, mode, streaming, voiceProcessing, ttsPlaying, language, sendText]);
+  }, [open, mode]); // Only re-run when mode or open changes!
 
   const startRecording = useCallback(() => {}, []);
   const stopRecording = useCallback(() => {
