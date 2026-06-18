@@ -125,6 +125,8 @@ export default function CheckoutPage() {
           }),
           payment_method: "stripe",
           notes: generalNotes.trim() || undefined,
+          table_session_id: table?.id || undefined,
+          table_number: table?.table_number || undefined,
         },
         origin_url: window.location.origin,
       };

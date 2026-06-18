@@ -424,6 +424,8 @@ async def create_order(req: OrderCreateReq):
         "estimated_ready_at": eta,
         "payment_method": req.payment_method,
         "notes": req.notes,
+        "table_number": req.table_number,
+        "table_session_id": req.table_session_id,
     }
     await db.orders.insert_one(order)
     # notification
@@ -439,10 +441,12 @@ async def create_order(req: OrderCreateReq):
     return clean(order)
 
 @app.get("/api/orders")
-async def list_orders(status_filter: Optional[str] = None, limit: int = 100):
+async def list_orders(status_filter: Optional[str] = None, table_session_id: Optional[str] = None, limit: int = 100):
     q: Dict[str, Any] = {}
     if status_filter:
         q["status"] = status_filter
+    if table_session_id:
+        q["table_session_id"] = table_session_id
     docs = await db.orders.find(q, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(limit)
     return {"orders": docs}
 

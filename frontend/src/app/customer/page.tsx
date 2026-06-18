@@ -9,10 +9,11 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useCart } from "@/stores/cart";
+import { useTable } from "@/stores/table";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import { MehfilLogo } from "@/components/customer/MehfilLogo";
-import type { MenuItem } from "@/types";
+import type { MenuItem, Order } from "@/types";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
@@ -29,8 +30,17 @@ function SectionTag({ children }: { children: React.ReactNode }) {
 
 export default function MehfilHome() {
   const cart = useCart();
+  const { session } = useTable();
   const { data: menuData } = useQuery({ queryKey: ["menu"], queryFn: () => api<{ items: MenuItem[] }>("/api/menu") });
   const items = menuData?.items ?? [];
+
+  const { data: sessionOrdersData } = useQuery({
+    queryKey: ["session-orders", session?.id],
+    queryFn: () => api<{ orders: Order[] }>(`/api/orders?table_session_id=${session?.id}`),
+    enabled: !!session?.id,
+    refetchInterval: 10000,
+  });
+  const sessionOrders = sessionOrdersData?.orders ?? [];
 
   const signature = items.filter((i) => ["Biryani", "Tandoori", "Starters", "Sweets"].includes(i.category)).slice(0, 8);
 
@@ -80,6 +90,53 @@ export default function MehfilHome() {
           </div>
         </motion.div>
       </section>
+
+      {/* ============================================================
+          SECTION 1.5 — ACTIVE ORDERS (ONLY IF SESSION EXISTS)
+      ============================================================ */}
+      {session && sessionOrders.length > 0 && (
+        <section className="py-10 px-5 md:px-6 max-w-5xl mx-auto" data-testid="section-active-orders">
+          <SectionTag>Live Tracking</SectionTag>
+          <div className="flex items-center gap-3 mb-6">
+            <h2 className="font-royal text-2xl md:text-3xl text-[#8A1A2A] tracking-wide">
+              Your <span className="font-editorial italic font-normal mehfil-gold-gradient">Table Orders</span>
+            </h2>
+            <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {sessionOrders.map((order) => {
+              const isActive = !["delivered", "cancelled"].includes(order.status);
+              return (
+                <Link
+                  key={order.id}
+                  href={`/customer/track/${order.id}`}
+                  className="block mehfil-card rounded-2xl p-5 border border-[#C9A348]/30 hover:border-[#8A1A2A] transition-colors relative overflow-hidden group"
+                >
+                  <div className="absolute top-0 right-0 w-16 h-16 bg-[#8A1A2A]/5 rounded-bl-full -z-10 group-hover:scale-110 transition-transform" />
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <div className="font-royal tracking-widest text-[10px] uppercase text-[#8A6A1B]">Token</div>
+                      <div className="font-royal text-xl text-[#8A1A2A]">{order.token}</div>
+                    </div>
+                    <div className={`px-2.5 py-1 rounded-full text-[9px] font-royal tracking-wider uppercase border ${isActive ? 'bg-[#C9A348]/10 border-[#C9A348]/50 text-[#8A6A1B]' : 'bg-gray-100 border-gray-200 text-gray-500'}`}>
+                      {order.status}
+                    </div>
+                  </div>
+                  <div className="font-editorial text-sm text-[#1A1106]/70 mb-4 line-clamp-1">
+                    {order.items.map(i => `${i.qty}x ${i.name}`).join(', ')}
+                  </div>
+                  <div className="flex items-center justify-between border-t border-[#C9A348]/20 pt-3">
+                    <span className="font-royal text-sm">{formatCurrency(order.total)}</span>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-royal tracking-wider uppercase text-[#8A1A2A] group-hover:text-[#C9A348]">
+                      Track <ArrowRight className="h-3 w-3" />
+                    </span>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* ============================================================
           SECTION 2 — OUR STORY (TIMELINE)
