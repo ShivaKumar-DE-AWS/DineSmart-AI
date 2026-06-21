@@ -78,7 +78,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 # =========================================================
 app = FastAPI(title="SmartDine AI API", version="2.0.0")
 app.add_middleware(RateLimitMiddleware)
-ALLOWED_ORIGINS = os.environ.get("ALLOWED_ORIGINS", "https://dine-smart-ai.vercel.app,http://localhost:3000").split(",")
+ALLOWED_ORIGINS = os.environ.get("ALLOWED_ORIGINS", "https://dine-smart-ai.vercel.app,http://localhost:3000,http://localhost:3001").split(",")
 
 app.add_middleware(
     CORSMiddleware,

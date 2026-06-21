@@ -159,7 +159,7 @@ export default function ContactPage() {
             className="rounded-2xl overflow-hidden shadow-2xl border border-brand-secondary/20"
           >
             <iframe
-              src={`https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3806.1234567890123!2d${config.longitude || 78.4073}!3d${config.latitude || 17.4325}!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMTfCsDI2JzA1LjAiTiA3OMKwMjQnMjYuMyJF!5e0!3m2!1sen!2sin!4v1234567890123`}
+              src={`https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3806.1234567890123!2d78.4073!3d17.4325!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMTfCsDI2JzA1LjAiTiA3OMKwMjQnMjYuMyJF!5e0!3m2!1sen!2sin!4v1234567890123`}
               width="100%"
               height="400"
               style={{ border: 0 }}

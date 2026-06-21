@@ -27,17 +27,19 @@ async def list_customers(limit: int = 500, user=Depends(require_user)):
 
 
 @router.post("/api/customers/lookup")
-async def lookup_customer(req: CustomerLookupReq):
-    """Public: look up an existing customer by phone or name."""
+async def lookup_customer(req: CustomerLookupReq, restaurant_id: Optional[str] = None):
+    """Look up an existing customer by phone or name, scoped by restaurant."""
     phone = (req.phone or "").strip() or None
     name = (req.name or "").strip() or None
     q: Optional[Dict[str, Any]] = None
     if phone:
         q = {"phone": phone}
     elif name:
-        q = {"name": name}
+        q = {"name": name, "phone": None}
     if not q:
         return {"customer": None}
+    if restaurant_id:
+        q["restaurant_id"] = restaurant_id
     doc = await db.customers.find_one(q, {"_id": 0})
     return {"customer": doc}
 

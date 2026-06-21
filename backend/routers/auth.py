@@ -1,4 +1,5 @@
 """Authentication routes: signup, login, me, guest."""
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from deps import (
     db, now_iso, hash_password, verify_password, jwt_sign,
@@ -68,18 +69,17 @@ async def login(req: LoginReq):
         for r in restaurants:
             slug = r.get("slug", "")
             rid = r.get("id", "")
-            if slug in email or (slug.split("-")[0] if "-" in slug else slug) in email:
+            if slug in email:
                 restaurant_id = rid
                 restaurant_slug = slug
                 break
-        if not restaurant_id and restaurants:
-            restaurant_id = restaurants[0].get("id", "")
-            restaurant_slug = restaurants[0].get("slug", "")
         if restaurant_id:
             await db.users.update_one(
                 {"_id": user["_id"]},
                 {"$set": {"restaurant_id": restaurant_id, "restaurant_slug": restaurant_slug or ""}},
             )
+        else:
+            raise HTTPException(status_code=400, detail="Could not determine restaurant for this account. Contact support.")
 
     token = jwt_sign({
         "sub": user["id"], "email": user["email"], "role": user["role"],
@@ -106,13 +106,20 @@ async def me(user=Depends(require_user)):
 
 
 @router.post("/guest")
-async def auth_guest(req: GuestReq):
-    """Lightweight guest sign-in for customers."""
+async def auth_guest(req: GuestReq, restaurant_id: Optional[str] = None):
+    """Lightweight guest sign-in for customers. Requires restaurant_id."""
     import uuid
+    from typing import Optional as Opt
+    if not restaurant_id:
+        raise HTTPException(status_code=400, detail="restaurant_id is required for guest login")
     name = (req.name or "").strip() or "Guest"
     guest_id = f"guest_{str(uuid.uuid4())[:8]}"
     phone = (req.phone or "").strip()
-    payload = {"sub": guest_id, "email": f"{guest_id}@guest.smartdine", "name": name, "role": "customer", "phone": phone}
+    payload = {
+        "sub": guest_id, "email": f"{guest_id}@guest.smartdine",
+        "name": name, "role": "customer", "phone": phone,
+        "restaurant_id": restaurant_id,
+    }
     token = jwt_sign(payload, ttl_hours=24 * 30)
-    await db.guests.insert_one({"id": guest_id, "name": name, "phone": phone, "created_at": now_iso()})
-    return {"token": token, "user": {"id": guest_id, "email": payload["email"], "name": name, "role": "customer", "phone": phone}}
+    await db.guests.insert_one({"id": guest_id, "name": name, "phone": phone, "restaurant_id": restaurant_id, "created_at": now_iso()})
+    return {"token": token, "user": {"id": guest_id, "email": payload["email"], "name": name, "role": "customer", "phone": phone, "restaurant_id": restaurant_id}}

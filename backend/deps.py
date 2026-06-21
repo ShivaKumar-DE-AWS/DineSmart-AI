@@ -25,7 +25,11 @@ load_dotenv(ROOT_DIR / ".env")
 MONGO_URL = os.environ["MONGO_URL"]
 DB_NAME = os.environ["DB_NAME"]
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-JWT_SECRET = os.environ.get("JWT_SECRET", "smartdine-dev-secret-change-me")
+JWT_SECRET = os.environ.get("JWT_SECRET", "")
+if not JWT_SECRET:
+    import warnings
+    warnings.warn("JWT_SECRET env var not set — using insecure dev fallback. NEVER deploy without setting this.")
+    JWT_SECRET = "smartdine-dev-secret-change-me"
 STRIPE_API_KEY = os.environ.get("STRIPE_API_KEY", "")
 STRIPE_ENABLED = os.environ.get("STRIPE_ENABLED", "false").lower() == "true" and bool(STRIPE_API_KEY)
 
@@ -79,8 +83,10 @@ def jwt_verify(token: str) -> Dict[str, Any]:
         if payload.get("exp", 0) < int(datetime.now(timezone.utc).timestamp()):
             raise ValueError("expired")
         return payload
-    except Exception as e:
-        raise HTTPException(status_code=401, detail=f"Invalid token: {e}")
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid authentication token")
 
 # =========================================================
 # Password helpers
@@ -117,8 +123,17 @@ def require_roles(*roles: str):
     async def dep(user=Depends(require_user)):
         if user.get("role") not in roles:
             raise HTTPException(status_code=403, detail="Forbidden")
+        if not user.get("restaurant_id"):
+            raise HTTPException(status_code=403, detail="No restaurant assigned to this account")
         return user
     return dep
+
+def require_restaurant_id(user=Depends(require_user)) -> str:
+    """Extract mandatory restaurant_id from user token. Raises 403 if missing."""
+    rid = user.get("restaurant_id")
+    if not rid:
+        raise HTTPException(status_code=403, detail="No restaurant assigned to this account")
+    return rid
 
 # =========================================================
 # Pydantic Models

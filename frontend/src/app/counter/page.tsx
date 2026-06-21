@@ -29,7 +29,7 @@ export default function CounterPage() {
 
   const { data } = useQuery({
     queryKey: ["counter-orders", user?.restaurant_id],
-    queryFn: () => api<{ orders: Order[] }>(`/api/orders?limit=200${user?.restaurant_id ? `&restaurant_id=${user.restaurant_id}` : ""}`),
+    queryFn: () => api<{ orders: Order[] }>("/api/orders?limit=200"),
     refetchInterval: 15000, // 15s auto-refresh fallback — SSE handles real-time push
   });
   const mut = useMutation({
@@ -56,7 +56,7 @@ export default function CounterPage() {
 
   const { data: notifsData } = useQuery({
     queryKey: ["counter-notifications", user?.restaurant_id],
-    queryFn: () => api<{ notifications: any[] }>(`/api/notifications${user?.restaurant_id ? `?restaurant_id=${user.restaurant_id}` : ""}`),
+    queryFn: () => api<{ notifications: any[] }>("/api/notifications"),
     refetchInterval: 3000,
   });
 
@@ -89,7 +89,7 @@ export default function CounterPage() {
   }, [notifsData, notifiedSet, markReadMut]);
 
   return (
-    <div className="h-screen flex flex-col bg-[#0a0a0f] text-white overflow-hidden">
+    <div className="min-h-screen h-screen flex flex-col bg-[#0a0a0f] text-white overflow-hidden">
       {/* Header */}
       <header className="relative overflow-hidden shrink-0">
         <div className="absolute inset-0 bg-gradient-to-r from-emerald-900/20 via-[#0a0a0f] to-[#0a0a0f]" />
@@ -104,7 +104,7 @@ export default function CounterPage() {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-6 text-xs">
+            <div className="hidden md:flex items-center gap-6 text-xs">
               <div className="flex items-center gap-2 bg-zinc-900/80 border border-zinc-800 rounded-xl px-4 py-2.5">
                 <ChefHat className="h-4 w-4 text-blue-400" />
                 <span className="text-zinc-400">Cooking</span>
@@ -126,7 +126,7 @@ export default function CounterPage() {
       </header>
 
       {/* Main Content - Split View */}
-      <div className="flex-1 grid grid-cols-2 gap-0 min-h-0">
+      <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-0 min-h-0">
         {/* Preparing Column */}
         <section className="border-r border-zinc-800/50 p-6 overflow-hidden flex flex-col">
           <div className="flex items-center justify-between mb-5">

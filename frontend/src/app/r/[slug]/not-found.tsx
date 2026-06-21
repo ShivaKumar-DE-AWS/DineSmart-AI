@@ -1,0 +1,20 @@
+"use client";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+
+export default function RestaurantNotFound() {
+  const params = useParams();
+  const slug = params?.slug as string;
+  return (
+    <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center px-6">
+      <div className="text-center">
+        <div className="text-8xl font-bold text-brand-secondary/30 mb-4">404</div>
+        <h1 className="text-2xl font-bold text-white mb-2">Restaurant Not Found</h1>
+        <p className="text-zinc-500 text-sm mb-8">This restaurant doesn&apos;t exist or is no longer available.</p>
+        <Link href="/" className="inline-flex items-center gap-2 bg-brand-primary text-white px-6 py-3 rounded-full text-sm font-medium hover:opacity-90 transition">
+          Back to Home
+        </Link>
+      </div>
+    </div>
+  );
+}

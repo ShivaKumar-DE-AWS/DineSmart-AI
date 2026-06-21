@@ -11,6 +11,8 @@ const MAX_POLL_ATTEMPTS = 8;
 function PaymentReturnContent() {
   const router = useRouter();
   const params = useSearchParams();
+  const pathParams = useParams();
+  const slug = pathParams?.slug as string;
   const cart = useCart();
   const sessionId = params.get("session_id");
   const [status, setStatus] = useState<"checking" | "success" | "failed" | "expired">("checking");

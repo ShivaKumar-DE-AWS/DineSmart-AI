@@ -77,7 +77,10 @@ export default function LoginPage() {
     setBusy(true);
     try {
       const displayName = getDisplayName();
-      const res = await api<{ token: string; user: { id: string; email: string; name: string; role: "customer" } }>("/api/auth/guest", {
+      const guestUrl = restaurantConfig?.id
+        ? `/api/auth/guest?restaurant_id=${encodeURIComponent(restaurantConfig.id)}`
+        : "/api/auth/guest";
+      const res = await api<{ token: string; user: { id: string; email: string; name: string; role: "customer" } }>(guestUrl, {
         method: "POST",
         body: JSON.stringify({ name: displayName }),
       });

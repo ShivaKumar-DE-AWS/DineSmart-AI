@@ -35,12 +35,13 @@ interface Msg { id: string; role: "user" | "assistant"; content: string; recs?: 
 
 function makeId(): string { return `m_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`; }
 
-function getSessionId(): string {
+function getSessionId(restaurantSlug?: string): string {
   if (typeof window === "undefined") return "anon";
-  let sid = localStorage.getItem("mehfil_ai_session");
+  const key = `smartdine_ai_session_${restaurantSlug || "default"}`;
+  let sid = localStorage.getItem(key);
   if (!sid) {
     sid = `s_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    localStorage.setItem("mehfil_ai_session", sid);
+    localStorage.setItem(key, sid);
   }
   return sid;
 }
@@ -221,7 +222,7 @@ export function AIWaiterDock() {
     if (open && mode === "voice" && !hasGreetedRef.current) {
       hasGreetedRef.current = true;
       // Start streaming to true so VAD doesn't trigger until greeting ends
-      void speakText(INITIAL_GREETING.content);
+      void speakText(getInitialGreeting(restaurantName).content);
     }
   }, [open, mode]);
 
@@ -326,7 +327,7 @@ export function AIWaiterDock() {
       const res = await fetch(apiUrl("/api/ai-waiter/chat"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ session_id: session?.id || getSessionId(), message: text, language, tone, restaurant_id: restaurantConfig?.id }),
+        body: JSON.stringify({ session_id: session?.id || getSessionId(slug), message: text, language, tone, restaurant_id: restaurantConfig?.id }),
       });
       if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
       const reader = res.body.getReader();
@@ -541,7 +542,7 @@ export function AIWaiterDock() {
         >
           <div className="mehfil-btn-royal rounded-full pl-4 pr-5 py-3.5 shadow-2xl flex items-center gap-2 group hover:-translate-y-0.5 transition-transform">
             <Sparkles className="h-5 w-5 text-brand-secondary group-hover:rotate-12 transition" />
-            <span className="font-royal tracking-wider uppercase text-xs">MehfilAI Waiter</span>
+            <span className="font-royal tracking-wider uppercase text-xs">{restaurantConfig?.ai_waiter?.name || "AI"} Waiter</span>
           </div>
         </div>
       )}
@@ -557,7 +558,7 @@ export function AIWaiterDock() {
                   <Sparkles className="h-5 w-5 text-[#5C0E1B]" />
                 </div>
                 <div>
-                  <div className="font-royal tracking-wider uppercase text-sm">MehfilAI Concierge</div>
+                  <div className="font-royal tracking-wider uppercase text-sm">{restaurantConfig?.ai_waiter?.name || "AI"} Concierge</div>
                   <div className="font-editorial italic text-[10px] text-[#FAF5EC]/80">Your personal sommelier · live</div>
                 </div>
               </div>
@@ -802,6 +803,10 @@ function VoicePane({
   recording: boolean; voiceProcessing: boolean;
   startRecording: () => void; stopRecording: () => void;
 }) {
+  const params = useParams();
+  const slug = params?.slug as string;
+  const { config: voiceConfig } = useRestaurantConfig();
+  const aiName = voiceConfig?.ai_waiter?.name || "AI";
   return (
     <>
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-5 space-y-3" data-testid="ai-waiter-messages-voice">
@@ -844,7 +849,7 @@ function VoicePane({
               <Mic className="h-7 w-7 text-[#1A1106]" />}
           </button>
           <div className="font-royal tracking-[0.2em] uppercase text-[10px] text-brand-primary">
-            {voiceProcessing ? "Transcribing…" : recording ? "Listening… tap to send" : streaming ? "MehfilAI is thinking…" : "Tap & speak to MehfilAI"}
+            {voiceProcessing ? "Transcribing…" : recording ? "Listening… tap to send" : streaming ? `${aiName} is thinking…` : `Tap & speak to ${aiName}`}
           </div>
           <div className="font-editorial italic text-[10px] text-[#1A1106]/50 text-center px-4">Try: &ldquo;Spicy biryani for two with a sweet finish&rdquo;</div>
         </div>

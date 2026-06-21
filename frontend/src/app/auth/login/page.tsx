@@ -50,7 +50,7 @@ export default function SaaSAuthPage() {
       setSession(res.user, res.token);
       toast.success(`Welcome back, ${res.user.name}`);
       const restaurantId = res.user.restaurant_id;
-      const slug = res.user.restaurant_slug || (restaurantId ? restaurantId.replace("rest_", "").replace(/_001$/, "").replace(/_/g, "-") : null);
+      const slug = restaurantId ? slugFromRestaurantId(restaurantId) : null;
       const dest = slug
         ? res.user.role === "kitchen" ? `/r/${slug}/kitchen`
         : res.user.role === "counter" ? `/r/${slug}/counter`

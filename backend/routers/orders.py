@@ -41,7 +41,11 @@ async def stream_orders(restaurant_id: Optional[str] = None, token: Optional[str
         user = jwt_verify(token)
     if not user:
         return JSONResponse({"detail": "Authentication required"}, status_code=401)
-    rid = restaurant_id or user.get("restaurant_id") or "_all"
+    # Enforce: user can only subscribe to their own restaurant's stream
+    user_rid = user.get("restaurant_id")
+    if not user_rid:
+        return JSONResponse({"detail": "No restaurant assigned"}, status_code=403)
+    rid = user_rid  # Always use the user's restaurant_id, ignore client-supplied value
 
     async def event_gen():
         q: asyncio.Queue = asyncio.Queue()
@@ -76,6 +80,12 @@ async def stream_orders(restaurant_id: Optional[str] = None, token: Optional[str
 async def create_order(req: OrderCreateReq):
     if not req.items:
         raise HTTPException(status_code=400, detail="Cart is empty")
+    if not req.restaurant_id:
+        raise HTTPException(status_code=400, detail="restaurant_id is required")
+    # Validate restaurant exists
+    rest = await db.restaurants.find_one({"id": req.restaurant_id})
+    if not rest:
+        raise HTTPException(status_code=400, detail="Invalid restaurant_id")
     subtotal = sum(i.price * i.qty for i in req.items)
     tax = round(subtotal * TAX_RATE, 2)
     total = round(subtotal + tax, 2)
@@ -135,7 +145,6 @@ async def create_order(req: OrderCreateReq):
 async def list_orders(
     status_filter: Optional[str] = None,
     table_session_id: Optional[str] = None,
-    restaurant_id: Optional[str] = None,
     limit: int = 100,
     user=Depends(require_user),
 ):
@@ -144,9 +153,10 @@ async def list_orders(
         q["status"] = status_filter
     if table_session_id:
         q["table_session_id"] = table_session_id
-    rid = restaurant_id or user.get("restaurant_id")
-    if rid:
-        q["restaurant_id"] = rid
+    rid = user.get("restaurant_id")
+    if not rid:
+        raise HTTPException(status_code=403, detail="No restaurant assigned")
+    q["restaurant_id"] = rid
     docs = await db.orders.find(q, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(limit)
     return {"orders": docs}
 
@@ -201,8 +211,12 @@ async def _find_or_create_customer(name: str, phone: Optional[str], restaurant_i
     query: Optional[Dict[str, Any]] = None
     if phone_clean:
         query = {"phone": phone_clean}
+        if restaurant_id:
+            query["restaurant_id"] = restaurant_id
     elif name_clean:
         query = {"name": name_clean, "phone": None}
+        if restaurant_id:
+            query["restaurant_id"] = restaurant_id
     if query:
         existing = await db.customers.find_one(query, {"_id": 0})
         if existing:

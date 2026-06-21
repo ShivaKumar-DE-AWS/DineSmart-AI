@@ -36,9 +36,9 @@ async def health():
 # Notifications
 # =========================================================
 @router.get("/api/notifications")
-async def get_notifications(restaurant_id: Optional[str] = None, user=Depends(require_user)):
+async def get_notifications(user=Depends(require_user)):
     q: Dict[str, Any] = {"read": False}
-    rid = restaurant_id or user.get("restaurant_id")
+    rid = user.get("restaurant_id")
     if rid:
         q["restaurant_id"] = rid
     nots = await db.notifications.find(q).sort("created_at", -1).to_list(100)
@@ -403,10 +403,10 @@ async def request_restaurant(req: RestaurantRequestReq):
     return {
         "status": "created", "slug": slug, "url": f"/r/{slug}",
         "credentials": {
-            "owner": {"email": f"{short_slug}@smartdine.ai", "password": "Owner@123"},
-            "admin": {"email": f"admin-{short_slug}@smartdine.ai", "password": "Admin@123"},
-            "kitchen": {"email": f"kitchen-{short_slug}@smartdine.ai", "password": "Chef@123"},
-            "counter": {"email": f"counter-{short_slug}@smartdine.ai", "password": "Counter@123"},
+            "owner": {"email": f"{short_slug}@smartdine.ai", "hint": "Owner@123"},
+            "admin": {"email": f"admin-{short_slug}@smartdine.ai", "hint": "Admin@123"},
+            "kitchen": {"email": f"kitchen-{short_slug}@smartdine.ai", "hint": "Chef@123"},
+            "counter": {"email": f"counter-{short_slug}@smartdine.ai", "hint": "Counter@123"},
         },
         "table_count": req.tables_count, "menu_items": len(sample_menu),
     }
