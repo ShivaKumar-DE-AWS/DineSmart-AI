@@ -82,6 +82,18 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
   const cartItems = useCart(s => s.items);
   const lastUpdatedBy = useCart(s => s.lastUpdatedBy);
   const setCartItems = useCart(s => s.setItems);
+  const cartSlug = useCart(s => s.restaurantSlug);
+  const setCartSlug = useCart(s => s.setRestaurantSlug);
+  const clearCart = useCart(s => s.clear);
+
+  useEffect(() => {
+    if (cartSlug && cartSlug !== slug) {
+      clearCart();
+    }
+    if (cartSlug !== slug) {
+      setCartSlug(slug);
+    }
+  }, [slug, cartSlug, clearCart, setCartSlug]);
 
   useEffect(() => {
     if (!session?.id) return;

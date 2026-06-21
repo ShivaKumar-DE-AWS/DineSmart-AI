@@ -6,6 +6,7 @@ import type { CartItem, MenuItem } from "@/types";
 interface CartState {
   items: CartItem[];
   isAi: boolean;
+  restaurantSlug?: string | null;
   lastUpdatedBy: "local" | "remote";
   add: (item: MenuItem, qty?: number) => void;
   remove: (item_id: string) => void;
@@ -14,6 +15,7 @@ interface CartState {
   setNote: (item_id: string, notes: string) => void;
   setItems: (items: CartItem[]) => void;
   setIsAi: (val: boolean) => void;
+  setRestaurantSlug: (slug: string) => void;
   clear: () => void;
   subtotal: () => number;
   count: () => number;
@@ -24,6 +26,7 @@ export const useCart = create<CartState>()(
     (set, get) => ({
       items: [],
       isAi: false,
+      restaurantSlug: null,
       lastUpdatedBy: "local",
       add: (item, qty = 1) => set((s) => {
         const existing = s.items.find((i) => i.item_id === item.id);
@@ -47,6 +50,7 @@ export const useCart = create<CartState>()(
       })),
       setItems: (items) => set({ items, lastUpdatedBy: "remote" }),
       setIsAi: (val) => set({ isAi: val }),
+      setRestaurantSlug: (slug) => set({ restaurantSlug: slug }),
       clear: () => set({ items: [], isAi: false, lastUpdatedBy: "local" }),
       subtotal: () => get().items.reduce((sum, i) => sum + i.price * i.qty, 0),
       count: () => get().items.reduce((n, i) => n + i.qty, 0),
