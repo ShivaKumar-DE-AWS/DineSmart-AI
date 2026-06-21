@@ -5,9 +5,9 @@ import json
 from datetime import datetime, timezone, timedelta
 from typing import Optional, Dict, Any, List
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import StreamingResponse, Response
+from fastapi.responses import StreamingResponse, Response, JSONResponse
 from deps import (
-    db, now_iso, TAX_RATE, require_user, require_roles,
+    db, now_iso, TAX_RATE, require_user, require_roles, current_user, jwt_verify,
     next_token, OrderCreateReq, OrderStatusUpdate,
     PaymentReq, CheckoutSessionReq,
     STRIPE_API_KEY, STRIPE_ENABLED,
@@ -32,8 +32,15 @@ def broadcast_order_update(restaurant_id: str, order_data: Dict[str, Any]):
                 pass
 
 @router.get("/api/orders/stream")
-async def stream_orders(restaurant_id: Optional[str] = None, user=Depends(require_user)):
-    """SSE endpoint: streams order updates in real-time for kitchen/counter dashboards."""
+async def stream_orders(restaurant_id: Optional[str] = None, token: Optional[str] = None, user=Depends(current_user)):
+    """SSE endpoint: streams order updates in real-time for kitchen/counter dashboards.
+
+    Accepts auth via Bearer header OR ?token= query param (EventSource can't send headers).
+    """
+    if not user and token:
+        user = jwt_verify(token)
+    if not user:
+        return JSONResponse({"detail": "Authentication required"}, status_code=401)
     rid = restaurant_id or user.get("restaurant_id") or "_all"
 
     async def event_gen():

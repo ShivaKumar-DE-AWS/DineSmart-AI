@@ -6,13 +6,13 @@ import type { Order } from "@/types";
 
 /**
  * Subscribes to the SSE order stream for the current user's restaurant.
+ * Passes JWT as query param (EventSource can't send custom headers).
  * Automatically updates the React Query cache for ["kds-orders", restaurantId]
- * and ["counter-orders", restaurantId] so the UI updates in real-time
- * without 3s polling.
+ * and ["counter-orders", restaurantId] so the UI updates in real-time.
  */
 export function useOrderStream() {
   const qc = useQueryClient();
-  const { user } = useSession();
+  const { user, token } = useSession();
   const rid = user?.restaurant_id;
   const eventSourceRef = useRef<EventSource | null>(null);
 
@@ -61,8 +61,10 @@ export function useOrderStream() {
   );
 
   useEffect(() => {
-    if (!rid) return;
-    const es = new EventSource(`/api/orders/stream?restaurant_id=${rid}`);
+    if (!rid || !token) return;
+    // Pass JWT as query param — EventSource can't send Authorization headers
+    const params = new URLSearchParams({ restaurant_id: rid, token });
+    const es = new EventSource(`/api/orders/stream?${params.toString()}`);
     es.onmessage = handleEvent;
     es.onerror = () => {
       // Auto-reconnect handled by EventSource browser API
@@ -72,5 +74,5 @@ export function useOrderStream() {
       es.close();
       eventSourceRef.current = null;
     };
-  }, [rid, handleEvent]);
+  }, [rid, token, handleEvent]);
 }

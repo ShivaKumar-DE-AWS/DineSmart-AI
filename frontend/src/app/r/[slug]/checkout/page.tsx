@@ -138,10 +138,10 @@ export default function CheckoutPage() {
         table_number: table?.table_number || undefined,
         is_ai: cart.isAi,
       };
-      const res = await api<{ id: string }>("/api/orders", { method: "POST", body: JSON.stringify(payload) });
+      const res = await api<{ order_id: string; token: string }>("/api/orders", { method: "POST", body: JSON.stringify(payload) });
       cart.clear();
       toast.success("Your order is on its way to the kitchen");
-      router.push(`/r/${slug}/token/${res.id}`);
+      router.push(`/r/${slug}/token/${res.order_id}`);
     } catch (e) {
       const err = e as Error;
       toast.error(err.message || "Checkout failed");
