@@ -1,0 +1,22 @@
+{
+  "id": "rest_smartdine-foodcourt_001",
+  "name": "SmartDine Foodcourt",
+  "slug": "smartdine-foodcourt",
+  "plan": "trial",
+  "users": [
+    {"email": "smartdine-foodcourt@smartdine.ai", "password": "Owner@123", "name": "Foodcourt Owner", "role": "admin"},
+    {"email": "admin-smartdine-foodcourt@smartdine.ai", "password": "Admin@123", "name": "Foodcourt Admin", "role": "admin"},
+    {"email": "kitchen-smartdine-foodcourt@smartdine.ai", "password": "Chef@123", "name": "Head Chef Foodcourt", "role": "kitchen"},
+    {"email": "counter-smartdine-foodcourt@smartdine.ai", "password": "Counter@123", "name": "Counter Foodcourt", "role": "counter"}
+  ],
+  "menu": [
+    {"name": "Butter Chicken Bowl", "description": "Creamy tomato-based chicken curry served over steamed basmati rice.", "price": 280, "category": "Indian", "image_url": "https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=600&q=80", "prep_time_min": 10, "tags": ["bestseller", "non-veg"]},
+    {"name": "Schezwan Noodle Box", "description": "Spicy wok-fried noodles with vegetables and chicken in Schezwan sauce.", "price": 220, "category": "Chinese", "image_url": "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=600&q=80", "prep_time_min": 8, "tags": ["spicy", "non-veg"]},
+    {"name": "BBQ Paneer Wrap", "description": "Smoky grilled paneer wrapped in rumali roti with mint chutney.", "price": 180, "category": "Street Food", "image_url": "https://images.unsplash.com/photo-1626708362543-d221a5914130?w=600&q=80", "prep_time_min": 6, "tags": ["popular", "veg"]},
+    {"name": "Greek Salad Bowl", "description": "Fresh greens, feta, olives, cucumber, and cherry tomatoes with olive oil dressing.", "price": 200, "category": "Continental", "image_url": "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=600&q=80", "prep_time_min": 5, "tags": ["healthy", "veg"]},
+    {"name": "Masala Dosa Platter", "description": "Crispy rice crepe with spiced potato filling, sambar, and coconut chutney.", "price": 160, "category": "Indian", "image_url": "https://images.unsplash.com/photo-1630383249896-424e482df921?w=600&q=80", "prep_time_min": 8, "tags": ["bestseller", "veg"]},
+    {"name": "Tandoori Chicken", "description": "Yogurt-marinated chicken roasted in clay oven, served with mint chutney.", "price": 260, "category": "Indian", "image_url": "https://images.unsplash.com/photo-1628294895950-9805252327bc?w=600&q=80", "prep_time_min": 12, "tags": ["non-veg"]},
+    {"name": "Chocolate Brownie", "description": "Warm chocolate brownie with vanilla ice cream and chocolate sauce.", "price": 150, "category": "Desserts", "image_url": "https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?w=600&q=80", "prep_time_min": 3, "tags": ["veg"]},
+    {"name": "Fresh Lime Soda", "description": "Refreshing lime soda — sweet or salty.", "price": 60, "category": "Beverages", "image_url": "https://images.unsplash.com/photo-1571934811356-5cc061b6821f?w=600&q=80", "prep_time_min": 2, "tags": ["refreshing", "veg"]}
+  ]
+}

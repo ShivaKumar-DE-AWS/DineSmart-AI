@@ -1,0 +1,26 @@
+{
+  "id": "rest_the-golden-dragon_001",
+  "name": "The Golden Dragon",
+  "slug": "the-golden-dragon",
+  "plan": "trial",
+  "users": [
+    {"email": "the-golden-dragon@smartdine.ai", "password": "Owner@123", "name": "Dragon Owner", "role": "admin"},
+    {"email": "admin-the-golden-dragon@smartdine.ai", "password": "Admin@123", "name": "Dragon Admin", "role": "admin"},
+    {"email": "kitchen-the-golden-dragon@smartdine.ai", "password": "Chef@123", "name": "Head Chef Dragon", "role": "kitchen"},
+    {"email": "counter-the-golden-dragon@smartdine.ai", "password": "Counter@123", "name": "Counter Dragon", "role": "counter"}
+  ],
+  "menu": [
+    {"name": "Chicken Dim Sum", "description": "Steamed dumplings filled with seasoned chicken and ginger, served with soy dipping sauce.", "price": 280, "category": "Dim Sum", "image_url": "https://images.unsplash.com/photo-1496116218417-1a781b1c416c?w=600&q=80", "prep_time_min": 12, "tags": ["bestseller", "non-veg"]},
+    {"name": "Peking Duck", "description": "Crispy roasted duck with thin pancakes, scallions, and hoisin sauce.", "price": 680, "category": "Dim Sum", "image_url": "https://images.unsplash.com/photo-1518492104633-130d0cc84637?w=600&q=80", "prep_time_min": 25, "tags": ["signature", "non-veg"]},
+    {"name": "Kung Pao Chicken", "description": "Wok-tossed chicken with peanuts, dried chilies, and Sichuan peppercorns.", "price": 320, "category": "Sichuan Specials", "image_url": "https://images.unsplash.com/photo-1525755662778-989d0524087e?w=600&q=80", "prep_time_min": 10, "tags": ["spicy", "non-veg"]},
+    {"name": "Mapo Tofu", "description": "Silken tofu in fiery Sichuan chili bean paste with minced pork.", "price": 240, "category": "Sichuan Specials", "image_url": "https://images.unsplash.com/photo-1582452919408-aca2fdcd0536?w=600&q=80", "prep_time_min": 8, "tags": ["spicy", "veg"]},
+    {"name": "Spring Rolls", "description": "Crispy golden rolls stuffed with shredded vegetables and glass noodles.", "price": 180, "category": "Starters", "image_url": "https://images.unsplash.com/photo-1529692236671-f1f6cf9683ba?w=600&q=80", "prep_time_min": 8, "tags": ["veg"]},
+    {"name": "Sweet and Sour Pork", "description": "Battered pork tossed in tangy pineapple and bell pepper sauce.", "price": 340, "category": "Starters", "image_url": "https://images.unsplash.com/photo-1529692236671-f1f6cf9683ba?w=600&q=80", "prep_time_min": 12, "tags": ["popular", "non-veg"]},
+    {"name": "Dan Dan Noodles", "description": "Hand-pulled noodles in spicy sesame sauce with minced pork and chili oil.", "price": 260, "category": "Noodles", "image_url": "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=600&q=80", "prep_time_min": 10, "tags": ["spicy", "non-veg"]},
+    {"name": "Hakka Noodles", "description": "Wok-fried noodles with mixed vegetables and soy sauce.", "price": 220, "category": "Noodles", "image_url": "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=600&q=80", "prep_time_min": 8, "tags": ["veg"]},
+    {"name": "Fried Rice", "description": "Wok-tossed jasmine rice with egg, scallions, and soy.", "price": 200, "category": "Rice", "image_url": "https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=600&q=80", "prep_time_min": 8, "tags": ["veg"]},
+    {"name": "Wonton Soup", "description": "Clear broth with delicate pork and shrimp wontons.", "price": 180, "category": "Soups", "image_url": "https://images.unsplash.com/photo-1547592166-23ac45744acd?w=600&q=80", "prep_time_min": 6, "tags": ["comfort", "non-veg"]},
+    {"name": "Mango Pudding", "description": "Silky smooth mango pudding topped with coconut cream.", "price": 140, "category": "Desserts", "image_url": "https://images.unsplash.com/photo-1488477181946-6428a0291777?w=600&q=80", "prep_time_min": 3, "tags": ["veg"]},
+    {"name": "Jasmine Tea", "description": "Fragrant jasmine pearl tea, freshly brewed.", "price": 60, "category": "Beverages", "image_url": "https://images.unsplash.com/photo-1571934811356-5cc061b6821f?w=600&q=80", "prep_time_min": 3, "tags": ["veg"]}
+  ]
+}

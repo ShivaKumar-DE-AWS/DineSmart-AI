@@ -45,8 +45,8 @@ export default function RestaurantHome() {
   const { config: restaurantConfig } = useRestaurantConfig();
 
   const { data: menuData } = useQuery({
-    queryKey: ["menu"],
-    queryFn: () => api<{ items: MenuItem[] }>("/api/menu"),
+    queryKey: ["menu", restaurantConfig?.id],
+    queryFn: () => api<{ items: MenuItem[] }>(`/api/menu${restaurantConfig?.id ? `?restaurant_id=${restaurantConfig.id}` : ""}`),
   });
   const items = menuData?.items ?? [];
 

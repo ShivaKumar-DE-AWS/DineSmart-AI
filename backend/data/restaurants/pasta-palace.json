@@ -1,0 +1,22 @@
+{
+  "id": "rest_pasta-palace_001",
+  "name": "Pasta Palace",
+  "slug": "pasta-palace",
+  "plan": "trial",
+  "users": [
+    {"email": "pasta-palace@smartdine.ai", "password": "Owner@123", "name": "Pasta Owner", "role": "admin"},
+    {"email": "admin-pasta-palace@smartdine.ai", "password": "Admin@123", "name": "Pasta Admin", "role": "admin"},
+    {"email": "kitchen-pasta-palace@smartdine.ai", "password": "Chef@123", "name": "Head Chef Pasta", "role": "kitchen"},
+    {"email": "counter-pasta-palace@smartdine.ai", "password": "Counter@123", "name": "Counter Pasta", "role": "counter"}
+  ],
+  "menu": [
+    {"name": "Truffle Tagliatelle", "description": "Fresh handmade tagliatelle tossed in black truffle cream sauce with parmesan shavings.", "price": 420, "category": "Pasta Fresca", "image_url": "https://images.unsplash.com/photo-1551183053-bf91a1d81141?w=600&q=80", "prep_time_min": 15, "tags": ["bestseller", "signature", "veg"]},
+    {"name": "Seafood Linguine", "description": "Linguine with prawns, mussels, and clams in white wine garlic sauce.", "price": 480, "category": "Pasta Fresca", "image_url": "https://images.unsplash.com/photo-1563379926898-05f4575a45d8?w=600&q=80", "prep_time_min": 18, "tags": ["chef-special", "non-veg"]},
+    {"name": "Margherita Pizza", "description": "San Marzano tomato sauce, fresh mozzarella, basil on wood-fired dough.", "price": 320, "category": "Pizza", "image_url": "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=600&q=80", "prep_time_min": 12, "tags": ["classic", "veg"]},
+    {"name": "Ravioli al Tartufo", "description": "Handmade ravioli stuffed with truffle ricotta, served in sage butter.", "price": 380, "category": "Pasta Fresca", "image_url": "https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?w=600&q=80", "prep_time_min": 15, "tags": ["signature", "veg"]},
+    {"name": "Bruschetta", "description": "Grilled ciabatta topped with fresh tomato, basil, and balsamic glaze.", "price": 180, "category": "Antipasti", "image_url": "https://images.unsplash.com/photo-1572695157366-5e585ab2b69f?w=600&q=80", "prep_time_min": 5, "tags": ["popular", "veg"]},
+    {"name": "Penne Arrabbiata", "description": "Penne in fiery tomato sauce with garlic, chili flakes, and fresh basil.", "price": 260, "category": "Pasta Fresca", "image_url": "https://images.unsplash.com/photo-1563379926898-05f4575a45d8?w=600&q=80", "prep_time_min": 10, "tags": ["spicy", "veg"]},
+    {"name": "Risotto Milanese", "description": "Creamy saffron risotto with bone marrow and parmesan.", "price": 340, "category": "Risotto", "image_url": "https://images.unsplash.com/photo-1476124369491-e7addf5db371?w=600&q=80", "prep_time_min": 20, "tags": ["chef-special", "veg"]},
+    {"name": "Tiramisu", "description": "Classic Italian dessert with mascarpone, espresso-soaked ladyfingers, and cocoa.", "price": 220, "category": "Dolci", "image_url": "https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?w=600&q=80", "prep_time_min": 5, "tags": ["bestseller", "veg"]}
+  ]
+}

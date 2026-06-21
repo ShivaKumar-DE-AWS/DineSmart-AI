@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, X, ImageIcon, Upload, Link2, Loader2 } from "lucide-react";
+import { useSession } from "@/stores/session";
 import type { MenuItem } from "@/types";
 
 interface MenuForm {
@@ -36,7 +37,9 @@ function resolveImageUrl(u: string): string {
 
 export default function AdminMenu() {
   const qc = useQueryClient();
-  const { data, isLoading } = useQuery({ queryKey: ["admin-menu"], queryFn: () => api<{ items: MenuItem[] }>("/api/menu") });
+  const { user } = useSession();
+  const rid = user?.restaurant_id || "";
+  const { data, isLoading } = useQuery({ queryKey: ["admin-menu", rid], queryFn: () => api<{ items: MenuItem[] }>(`/api/menu${rid ? `?restaurant_id=${rid}` : ""}`) });
   const [editing, setEditing] = useState<MenuForm | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<MenuItem | null>(null);
 
