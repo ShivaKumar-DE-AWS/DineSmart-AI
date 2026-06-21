@@ -10,13 +10,12 @@
 // sent on background tabs.
 const BASE = process.env.NEXT_PUBLIC_BACKEND_URL || "";
 
+import { useSession } from "@/stores/session";
+
 function getToken(): string | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = localStorage.getItem("sd-session");
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    return parsed?.state?.token ?? null;
+    return useSession.getState().token || null;
   } catch {
     return null;
   }
