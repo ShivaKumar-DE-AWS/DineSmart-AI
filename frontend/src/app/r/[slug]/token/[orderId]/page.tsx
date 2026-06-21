@@ -110,7 +110,7 @@ export default function TokenPage() {
           <div className="mt-4 bg-[#FAF5EC] border border-brand-secondary/30 rounded-xl p-3 flex items-center gap-3" data-testid="token-customer-code">
             <Sparkles className="h-4 w-4 text-brand-secondary" />
             <div className="font-editorial italic text-[12px] text-[#1A1106]/75">
-              Mehfil member <span className="font-royal text-[#8A6A1B] tracking-wider not-italic">{order.customer_code}</span> — save this for points &amp; offers.
+              SmartDine member <span className="font-royal text-[#8A6A1B] tracking-wider not-italic">{order.customer_code}</span> — save this for points &amp; offers.
             </div>
           </div>
         )}

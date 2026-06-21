@@ -1,0 +1,204 @@
+{
+  "id": "rest_mehfil_001",
+  "name": "Mehfil",
+  "slug": "mehfil-hyderabad",
+  "tagline": "Hyderabad's Original Biryani Experience",
+  "description": "Where every grain of basmati carries the perfume of saffron and the soul of old Hyderabad.",
+  "logo_url": "",
+
+  "primary_color": "#8A1A2A",
+  "secondary_color": "#C9A348",
+  "accent_color": "#E78B1F",
+
+  "hero_images": [
+    "https://images.unsplash.com/photo-1633945274405-b6c8069047b0?w=1600&q=80",
+    "https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?w=1600&q=80",
+    "https://images.unsplash.com/photo-1567171466295-4afa63d45416?w=1600&q=80"
+  ],
+  "hero_quote": "Where every grain of basmati carries the perfume of saffron and the soul of old Hyderabad.",
+
+  "history_intro": "From a single kitchen in old Hyderabad to a family of restaurants and now an AI-powered dining house — Mehfil's journey has always begun with one ingredient: love.",
+  "history": [
+    {
+      "year": "2006",
+      "title": "The First Mehfil",
+      "description": "A single tandoor and one biryani recipe — opened in the by-lanes of old Hyderabad.",
+      "image_url": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=900&q=80"
+    },
+    {
+      "year": "2010",
+      "title": "Expansion",
+      "description": "Three outlets across Hyderabad. The dum biryani earns its first city-wide following.",
+      "image_url": "https://images.unsplash.com/photo-1551782450-a2132b4ba21d?w=900&q=80"
+    },
+    {
+      "year": "2015",
+      "title": "Signature Recognition",
+      "description": "Times Food Awards: Best Hyderabadi Biryani. The Nizami sweets win their own column.",
+      "image_url": "https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?w=900&q=80"
+    },
+    {
+      "year": "2020",
+      "title": "Modern Dining",
+      "description": "A new flagship — heritage architecture, modern service, contactless ordering.",
+      "image_url": "https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?w=900&q=80"
+    },
+    {
+      "year": "2026",
+      "title": "AI-Powered Dining",
+      "description": "MehfilAI joins the family — recommending pairings, remembering preferences, never sleeping.",
+      "image_url": "https://images.unsplash.com/photo-1633945274405-b6c8069047b0?w=900&q=80"
+    }
+  ],
+
+  "specialties": [
+    "Authentic Hyderabadi Dum Biryani",
+    "Nizami Sweets & Desserts",
+    "Tandoori Specialties",
+    "Traditional Haleem",
+    "Fresh Seafood Preparations"
+  ],
+
+  "famous_dishes": [
+    {
+      "name": "Mehfil Special Dum Biryani",
+      "description": "Our signature Hyderabadi biryani, slow-cooked with saffron, rose water, and tender meat in a sealed pot.",
+      "image_url": "https://images.unsplash.com/photo-1633945274405-b6c8069047b0?w=800&q=80",
+      "rating": 4.9,
+      "popularity_badge": "Most Ordered"
+    },
+    {
+      "name": "Apollo Fish Fry",
+      "description": "Crispy, golden fish fillets with our secret spice blend — a Hyderabadi street food classic.",
+      "image_url": "https://images.unsplash.com/photo-1535400875775-32eb96cefd1e?w=800&q=80",
+      "rating": 4.8,
+      "popularity_badge": "Bestseller"
+    },
+    {
+      "name": "Double Ka Meetha",
+      "description": "Traditional Hyderabadi bread pudding with saffron, cardamom, and pistachios.",
+      "image_url": "https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?w=800&q=80",
+      "rating": 4.7,
+      "popularity_badge": "Chef's Choice"
+    },
+    {
+      "name": "Mirchi Ka Salan",
+      "description": "Tangy, spicy curry with green chilies — the perfect companion to our biryani.",
+      "image_url": "https://images.unsplash.com/photo-1589302168068-964664d93dc0?w=800&q=80",
+      "rating": 4.6,
+      "popularity_badge": "Heritage Classic"
+    }
+  ],
+
+  "why_us": [
+    {
+      "icon": "Crown",
+      "title": "Authentic Hyderabadi",
+      "description": "Recipes guarded since the Nizam era — dum cooked, never rushed."
+    },
+    {
+      "icon": "Heart",
+      "title": "Fresh, Always",
+      "description": "Spices stone-ground daily, meats sourced morning-fresh."
+    },
+    {
+      "icon": "Users",
+      "title": "Family Friendly",
+      "description": "Big tables, big platters, big welcomes — bring the whole crew."
+    },
+    {
+      "icon": "ChefHat",
+      "title": "Signature Recipes",
+      "description": "Eight signatures, twelve heritage classics, zero shortcuts."
+    },
+    {
+      "icon": "Flame",
+      "title": "Fast Service",
+      "description": "Avg. 18-minute prep on biryani — without compromising the dum."
+    },
+    {
+      "icon": "Sparkles",
+      "title": "AI Waiter",
+      "description": "Your personal sommelier — chat, ask, order, track. All in one place."
+    }
+  ],
+
+  "contact": {
+    "phone": "+91 98765 43210",
+    "email": "hello@mehfil.ai",
+    "address": "Road No. 36, Jubilee Hills, Hyderabad, Telangana 500033",
+    "google_map_url": "https://maps.google.com/?q=Mehfil+Hyderabad",
+    "latitude": 17.4325,
+    "longitude": 78.4073
+  },
+
+  "social_links": {
+    "instagram": "https://instagram.com/mehfilhyderabad",
+    "facebook": "https://facebook.com/mehfilhyderabad",
+    "twitter": "https://twitter.com/mehfilhyd",
+    "website": "https://mehfil.ai"
+  },
+
+  "hours": {
+    "lunch": "12:00 PM to 3:30 PM",
+    "dinner": "6:30 PM to 11:30 PM",
+    "open_days": "Open all 7 days"
+  },
+
+  "ai_waiter": {
+    "name": "MehfilAI",
+    "personality": "Warm, poetic, and knowledgeable about Hyderabadi cuisine. Speaks with the warmth of old Hyderabad hospitality.",
+    "greeting": "Namaste! I'm your AI Waiter here at Mehfil. I can help you explore the menu, recommend dishes based on your cravings, or add items to your cart. Feel free to type or tap the microphone to speak with me!",
+    "languages": ["en", "hi", "te", "ur", "ta", "mr"],
+    "tones": ["friendly", "formal", "playful", "poetic"]
+  },
+
+  "reviews": [
+    {
+      "name": "Asma R.",
+      "role": "Banjara Hills · 8 visits",
+      "text": "Twenty years in Hyderabad — Mehfil is still the most authentic dum I've eaten outside my mother's kitchen. The qubani is poetry.",
+      "rating": 5
+    },
+    {
+      "name": "Rohit M.",
+      "role": "Family of 6",
+      "text": "Booked their family pack for a birthday. AI Waiter remembered we ordered last time and suggested the same combo — uncanny and lovely.",
+      "rating": 5
+    },
+    {
+      "name": "Priya K.",
+      "role": "Foodie · IG 80K",
+      "text": "Apollo fish that audibly crackles. Saffron biryani with mirchi salan that argues sweetly with you. Five stars.",
+      "rating": 5
+    }
+  ],
+
+  "offers": [
+    {
+      "tag": "Family Pack",
+      "title": "Biryani for 4 + 2 Sweets",
+      "description": "Save ₹240. Available 7 days.",
+      "image_url": "https://images.unsplash.com/photo-1589302168068-964664d93dc0?w=800&q=80"
+    },
+    {
+      "tag": "Weekend Spl.",
+      "title": "Apollo Fish + Sweet Lassi",
+      "description": "Saturdays & Sundays only.",
+      "image_url": "https://images.unsplash.com/photo-1535400875775-32eb96cefd1e?w=800&q=80"
+    },
+    {
+      "tag": "AI Pick",
+      "title": "Tandoori Trio + Naan",
+      "description": "Curated by MehfilAI based on tonight's rush.",
+      "image_url": "https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?w=800&q=80"
+    }
+  ],
+
+  "menu_config": {
+    "category_order": ["Biryani", "Starters", "Tandoori", "Curries", "Breads", "Rice", "Sweets", "Beverages"],
+    "show_best_sellers": true,
+    "show_chef_specials": true,
+    "show_recommendations": true
+  }
+}

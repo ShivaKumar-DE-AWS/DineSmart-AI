@@ -1,0 +1,28 @@
+{
+  "id": "rest_spice_garden_001",
+  "name": "Spice Garden",
+  "slug": "spice-garden",
+  "plan": "trial",
+  "users": [
+    {"email": "spice-garden@smartdine.ai", "password": "Owner@123", "name": "Spice Garden Owner", "role": "admin"},
+    {"email": "admin-spice-garden@smartdine.ai", "password": "Admin@123", "name": "Spice Garden Admin", "role": "admin"},
+    {"email": "kitchen-spice-garden@smartdine.ai", "password": "Chef@123", "name": "Head Chef", "role": "kitchen"},
+    {"email": "counter-spice-garden@smartdine.ai", "password": "Counter@123", "name": "Counter Staff", "role": "counter"}
+  ],
+  "menu": [
+    {"name": "Butter Chicken", "description": "Creamy tomato-based curry with tender chicken, slow-cooked with aromatic spices, finished with butter and cream.", "price": 320, "category": "Starters", "image_url": "https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=600&q=80", "prep_time_min": 15, "tags": ["bestseller", "signature", "non-veg"]},
+    {"name": "Paneer Tikka Masala", "description": "Fresh cottage cheese grilled in tandoor, simmered in rich creamy tomato gravy.", "price": 260, "category": "Starters", "image_url": "https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?w=600&q=80", "prep_time_min": 12, "tags": ["popular", "veg"]},
+    {"name": "Lamb Biryani", "description": "Fragrant basmati layered with tender lamb, caramelized onions, saffron, slow-cooked in sealed pot.", "price": 380, "category": "Starters", "image_url": "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=600&q=80", "prep_time_min": 22, "tags": ["chef-special", "non-veg"]},
+    {"name": "Tandoori Platter", "description": "Royal feast of tandoori chicken, seekh kebab, reshmi kebab, fish tikka with mint chutney.", "price": 520, "category": "Tandoori", "image_url": "https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?w=600&q=80", "prep_time_min": 18, "tags": ["signature", "non-veg"]},
+    {"name": "Chicken Tikka", "description": "Boneless tandoor-charred chicken with smoked yogurt and saffron.", "price": 260, "category": "Tandoori", "image_url": "https://images.unsplash.com/photo-1628294895950-9805252327bc?w=600&q=80", "prep_time_min": 12, "tags": ["popular", "non-veg"]},
+    {"name": "Dal Makhani", "description": "Black lentils slow-cooked overnight with butter, cream, and aromatic spices.", "price": 200, "category": "Main Course", "image_url": "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=600&q=80", "prep_time_min": 10, "tags": ["comfort", "veg"]},
+    {"name": "Palak Paneer", "description": "Fresh spinach puree with soft paneer cubes, tempered with cumin and garlic.", "price": 220, "category": "Main Course", "image_url": "https://images.unsplash.com/photo-1631452180519-c014fe946bc7?w=600&q=80", "prep_time_min": 12, "tags": ["veg"]},
+    {"name": "Butter Naan", "description": "Soft tandoor-baked flatbread brushed with cultured butter.", "price": 50, "category": "Breads", "image_url": "https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=600&q=80", "prep_time_min": 4, "tags": ["veg"]},
+    {"name": "Garlic Naan", "description": "Naan crusted with roasted garlic and coriander.", "price": 60, "category": "Breads", "image_url": "https://images.unsplash.com/photo-1626776877729-3bd96bf38904?w=600&q=80", "prep_time_min": 4, "tags": ["veg"]},
+    {"name": "Jeera Rice", "description": "Basmati rice tempered with cumin seeds and ghee.", "price": 120, "category": "Rice & Biryani", "image_url": "https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=600&q=80", "prep_time_min": 8, "tags": ["veg"]},
+    {"name": "Gulab Jamun", "description": "Soft milk dumplings soaked in rose-flavored sugar syrup, served warm.", "price": 100, "category": "Desserts", "image_url": "https://images.unsplash.com/photo-1666190466521-0e4a38f7e2be?w=600&q=80", "prep_time_min": 3, "tags": ["bestseller", "veg"]},
+    {"name": "Rasmalai", "description": "Delicate cottage cheese patties in saffron-cardamom milk.", "price": 120, "category": "Desserts", "image_url": "https://images.unsplash.com/photo-1488477181946-6428a0291777?w=600&q=80", "prep_time_min": 3, "tags": ["heritage", "veg"]},
+    {"name": "Masala Chai", "description": "Black tea boiled with ginger, cardamom, cloves.", "price": 40, "category": "Beverages", "image_url": "https://images.unsplash.com/photo-1571934811356-5cc061b6821f?w=600&q=80", "prep_time_min": 3, "tags": ["veg"]},
+    {"name": "Mango Lassi", "description": "Chilled yogurt blended with fresh Alphonso mango pulp.", "price": 80, "category": "Beverages", "image_url": "https://images.unsplash.com/photo-1626790291650-503dfc480593?w=600&q=80", "prep_time_min": 3, "tags": ["refreshing", "veg"]}
+  ]
+}

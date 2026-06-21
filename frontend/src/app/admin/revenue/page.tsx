@@ -35,11 +35,9 @@ export default function AdminRevenue() {
 
   return (
     <div>
-      <p className="uppercase tracking-[0.3em] text-xs text-stone mb-2">Analytics</p>
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
-        <div>
-          <h1 className="font-heading text-4xl tracking-tight">Revenue</h1>
-        </div>
+      <p className="uppercase tracking-[0.3em] text-[10px] text-stone mb-1">Analytics</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-3">
+        <h1 className="font-heading text-2xl tracking-tight">Revenue</h1>
         <button
           onClick={async () => {
             try {
@@ -72,26 +70,26 @@ export default function AdminRevenue() {
               toast.error("Export failed");
             }
           }}
-          className="bg-ink text-cream px-4 py-2 rounded-xl text-sm font-bold tracking-wide hover:bg-ink/80 transition shadow-sm"
+          className="bg-ink text-cream px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-ink/80 transition shadow-sm"
         >
           Export CSV
         </button>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-4 mb-8">
-        <div className="border border-bone bg-white rounded-2xl p-6" data-testid="rev-7d">
-          <div className="text-xs uppercase text-stone tracking-wider">Last 7 days</div>
-          <div className="font-heading text-4xl mt-2 tracking-tight">{formatCurrency(total7)}</div>
+      <div className="grid grid-cols-2 gap-3 mb-6">
+        <div className="border border-bone bg-white rounded-xl p-4" data-testid="rev-7d">
+          <div className="text-[10px] uppercase text-stone tracking-wider">Last 7 days</div>
+          <div className="font-heading text-2xl mt-1 tracking-tight">{formatCurrency(total7)}</div>
         </div>
-        <div className="border border-bone bg-white rounded-2xl p-6" data-testid="rev-30d">
-          <div className="text-xs uppercase text-stone tracking-wider">Last 30 days</div>
-          <div className="font-heading text-4xl mt-2 tracking-tight">{formatCurrency(total30)}</div>
+        <div className="border border-bone bg-white rounded-xl p-4" data-testid="rev-30d">
+          <div className="text-[10px] uppercase text-stone tracking-wider">Last 30 days</div>
+          <div className="font-heading text-2xl mt-1 tracking-tight">{formatCurrency(total30)}</div>
         </div>
       </div>
 
-      <div className="bg-white border border-bone rounded-2xl p-6">
-        <h2 className="font-heading text-xl mb-4">Daily revenue · last 30 days</h2>
-        <div className="h-80">
+      <div className="bg-white border border-bone rounded-xl p-5">
+        <h2 className="font-heading text-base mb-3">Daily revenue · last 30 days</h2>
+        <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={m?.series || []}>
               <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_STROKE} />
@@ -104,18 +102,18 @@ export default function AdminRevenue() {
         </div>
       </div>
 
-      <div className="bg-white border border-bone rounded-2xl p-6 mt-8">
-        <h2 className="font-heading text-xl mb-4">Top Selling Items</h2>
-        <div className="space-y-4">
+      <div className="bg-white border border-bone rounded-xl p-5 mt-6">
+        <h2 className="font-heading text-base mb-3">Top Selling Items</h2>
+        <div className="space-y-3">
           {topItems.map((ti, i) => (
-            <div key={i} className="flex items-center justify-between border-b border-bone pb-2 last:border-0 last:pb-0">
-              <div className="flex items-center gap-3">
-                <div className="font-bold text-stone w-4">{i + 1}.</div>
-                <div className="font-medium text-ink">{ti.name}</div>
+            <div key={i} className="flex items-center justify-between border-b border-bone pb-1.5 last:border-0 last:pb-0">
+              <div className="flex items-center gap-2">
+                <div className="font-bold text-stone w-3 text-xs">{i + 1}.</div>
+                <div className="font-medium text-sm text-ink">{ti.name}</div>
               </div>
               <div className="text-right">
                 <div className="text-sm font-bold text-ink">{ti.qty} sold</div>
-                <div className="text-xs text-stone">{formatCurrency(ti.rev)}</div>
+                <div className="text-[10px] text-stone">{formatCurrency(ti.rev)}</div>
               </div>
             </div>
           ))}

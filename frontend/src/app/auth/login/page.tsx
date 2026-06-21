@@ -4,43 +4,58 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Mail, Lock, ArrowRight, Loader2, Store, Phone, Users, Utensils, Link as LinkIcon } from "lucide-react";
+import { Sparkles, Mail, Lock, ArrowRight, Loader2, Store, Phone, Users, Utensils, Link as LinkIcon, Eye, EyeOff } from "lucide-react";
 import { api } from "@/lib/api";
 import { useSession } from "@/stores/session";
+import { useAllRestaurantConfigs } from "@/hooks/useRestaurantConfig";
 import { toast } from "sonner";
 
 type Tab = "login" | "register";
 
+// Dynamic slug derivation from restaurant_id
+function slugFromRestaurantId(restaurantId: string): string {
+  return restaurantId.replace("rest_", "").replace(/_001$/, "").replace(/_/g, "-");
+}
+
 export default function SaaSAuthPage() {
   const router = useRouter();
   const setSession = useSession((s) => s.setSession);
+  const allRestaurants = useAllRestaurantConfigs();
   
   const [tab, setTab] = useState<Tab>("login");
   const [busy, setBusy] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
-  const [email, setEmail] = useState("admin-mehfil@smartdine.ai");
-  const [password, setPassword] = useState("Owner@123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
   // Registration state
   const [regName, setRegName] = useState("");
   const [regEmail, setRegEmail] = useState("");
   const [regRestaurantName, setRegRestaurantName] = useState("");
-  const [regPassword, setRegPassword] = useState("");
+  const [regPhone, setRegPhone] = useState("");
+  const [regTables, setRegTables] = useState("15");
+  const [regCuisine, setRegCuisine] = useState("");
+  const [regLogoUrl, setRegLogoUrl] = useState("");
+  const [result, setResult] = useState<{ url: string; credentials: Record<string, { email: string; password: string }> } | null>(null);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
     try {
-      const res = await api<{ token: string; user: { id: string; email: string; name: string; role: "admin" | "kitchen" | "counter" | "customer" } }>("/api/auth/login", {
+      const res = await api<{ token: string; user: { id: string; email: string; name: string; role: "admin" | "kitchen" | "counter" | "customer"; restaurant_id?: string } }>("/api/auth/login", {
         method: "POST",
         body: JSON.stringify({ email, password }),
       });
       setSession(res.user, res.token);
       toast.success(`Welcome back, ${res.user.name}`);
-      const dest = res.user.role === "admin" ? "/r/mehfil-hyderabad"
-        : res.user.role === "kitchen" ? "/kitchen"
-        : res.user.role === "counter" ? "/counter"
-        : "/customer";
+      const restaurantId = res.user.restaurant_id;
+      const slug = res.user.restaurant_slug || (restaurantId ? restaurantId.replace("rest_", "").replace(/_001$/, "").replace(/_/g, "-") : null);
+      const dest = slug
+        ? res.user.role === "kitchen" ? `/r/${slug}/kitchen`
+        : res.user.role === "counter" ? `/r/${slug}/counter`
+        : `/r/${slug}/menu`
+        : "/";
       router.push(dest);
     } catch (e) {
       const err = e as Error;
@@ -53,19 +68,27 @@ export default function SaaSAuthPage() {
   const handleRequestAccess = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setBusy(true);
-    const formData = new FormData(e.currentTarget);
-    // Disable captcha for AJAX
-    formData.append("_captcha", "false");
+    setResult(null);
     try {
-      await fetch("https://formsubmit.co/ajax/shivakumar.nalu@gmail.com", {
+      const res = await fetch("/api/restaurants/request", {
         method: "POST",
-        body: formData,
-        headers: { 'Accept': 'application/json' }
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: regRestaurantName,
+          email: regEmail,
+          phone: regPhone,
+          tables_count: parseInt(regTables) || 15,
+          cuisine: regCuisine,
+          notes: `Owner: ${regName}. Logo/Theme: ${regLogoUrl || "none provided"}`,
+        }),
       });
-      toast.success("Request sent successfully! We will create your portal and email you.");
-      setTab("login");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Failed to create restaurant");
+      setResult({ url: data.url, credentials: data.credentials });
+      toast.success("Restaurant created successfully!");
     } catch (err) {
-      toast.error("Failed to send request. Please try again.");
+      const msg = err instanceof Error ? err.message : "Failed to create restaurant";
+      toast.error(msg);
     } finally {
       setBusy(false);
     }
@@ -162,13 +185,20 @@ export default function SaaSAuthPage() {
                   <div className="relative">
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone" />
                     <input 
-                      type="password" 
+                      type={showPassword ? "text" : "password"}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder:text-stone focus:outline-none focus:ring-2 focus:ring-electric-blue/50 focus:border-electric-blue/50 transition"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-11 pr-11 text-white placeholder:text-stone focus:outline-none focus:ring-2 focus:ring-electric-blue/50 focus:border-electric-blue/50 transition"
                       placeholder="••••••••"
                       required
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-stone hover:text-white transition"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
                   </div>
                 </div>
 
@@ -192,14 +222,22 @@ export default function SaaSAuthPage() {
               >
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-stone pl-1">Full Name</label>
-                  <input type="text" name="Full Name" className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 px-4 text-white text-sm placeholder:text-stone focus:outline-none focus:ring-2 focus:ring-clay/50" placeholder="John Doe" required />
+                  <input type="text" value={regName} onChange={(e) => setRegName(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 px-4 text-white text-sm placeholder:text-stone focus:outline-none focus:ring-2 focus:ring-clay/50" placeholder="John Doe" required />
                 </div>
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-stone pl-1">Restaurant Name</label>
                   <div className="relative">
                     <Store className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone" />
-                    <input type="text" name="Restaurant Name" className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-11 pr-4 text-white text-sm placeholder:text-stone focus:outline-none focus:ring-2 focus:ring-clay/50" placeholder="The Golden Plate" required />
+                    <input type="text" value={regRestaurantName} onChange={(e) => setRegRestaurantName(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-11 pr-4 text-white text-sm placeholder:text-stone focus:outline-none focus:ring-2 focus:ring-clay/50" placeholder="The Golden Plate" required />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-stone pl-1">Your Email</label>
+                  <div className="relative">
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone" />
+                    <input type="email" value={regEmail} onChange={(e) => setRegEmail(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-11 pr-4 text-white text-sm placeholder:text-stone focus:outline-none focus:ring-2 focus:ring-clay/50" placeholder="owner@restaurant.com" required />
                   </div>
                 </div>
 
@@ -207,7 +245,7 @@ export default function SaaSAuthPage() {
                   <label className="text-xs font-medium text-stone pl-1">Phone Number</label>
                   <div className="relative">
                     <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone" />
-                    <input type="tel" name="Phone Number" className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-11 pr-4 text-white text-sm placeholder:text-stone focus:outline-none focus:ring-2 focus:ring-clay/50" placeholder="+1 (555) 000-0000" required />
+                    <input type="tel" value={regPhone} onChange={(e) => setRegPhone(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-11 pr-4 text-white text-sm placeholder:text-stone focus:outline-none focus:ring-2 focus:ring-clay/50" placeholder="+91 98765 43210" required />
                   </div>
                 </div>
 
@@ -216,7 +254,7 @@ export default function SaaSAuthPage() {
                     <label className="text-xs font-medium text-stone pl-1">Number of Tables</label>
                     <div className="relative">
                       <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone" />
-                      <input type="number" name="Number of Tables" className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-11 pr-4 text-white text-sm placeholder:text-stone focus:outline-none focus:ring-2 focus:ring-clay/50" placeholder="15" required />
+                      <input type="number" value={regTables} onChange={(e) => setRegTables(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-11 pr-4 text-white text-sm placeholder:text-stone focus:outline-none focus:ring-2 focus:ring-clay/50" placeholder="15" required />
                     </div>
                   </div>
 
@@ -224,7 +262,7 @@ export default function SaaSAuthPage() {
                     <label className="text-xs font-medium text-stone pl-1">Cuisine / Menu Type</label>
                     <div className="relative">
                       <Utensils className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone" />
-                      <input type="text" name="Cuisine / Menu Type" className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-11 pr-4 text-white text-sm placeholder:text-stone focus:outline-none focus:ring-2 focus:ring-clay/50" placeholder="Italian, Cafe..." required />
+                      <input type="text" value={regCuisine} onChange={(e) => setRegCuisine(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-11 pr-4 text-white text-sm placeholder:text-stone focus:outline-none focus:ring-2 focus:ring-clay/50" placeholder="Italian, Indian, Cafe..." required />
                     </div>
                   </div>
                 </div>
@@ -233,7 +271,7 @@ export default function SaaSAuthPage() {
                   <label className="text-xs font-medium text-stone pl-1">Logo / Theme / Example Website</label>
                   <div className="relative">
                     <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone" />
-                    <input type="text" name="Logo or Example Website" className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-11 pr-4 text-white text-sm placeholder:text-stone focus:outline-none focus:ring-2 focus:ring-clay/50" placeholder="URL or brief description" />
+                    <input type="text" value={regLogoUrl} onChange={(e) => setRegLogoUrl(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-11 pr-4 text-white text-sm placeholder:text-stone focus:outline-none focus:ring-2 focus:ring-clay/50" placeholder="URL or brief description" />
                   </div>
                 </div>
 
@@ -242,8 +280,37 @@ export default function SaaSAuthPage() {
                   disabled={busy}
                   className="w-full bg-clay hover:bg-clay-dark text-white font-semibold rounded-xl py-3 transition flex items-center justify-center gap-2 mt-4 shadow-lg shadow-clay/20"
                 >
-                  {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : "Request Custom Portal"}
+                  {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : "Create My Restaurant Portal"}
                 </button>
+
+                {result && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    className="mt-6 bg-emerald-900/30 border border-emerald-500/30 rounded-xl p-4 text-xs space-y-3"
+                  >
+                    <div className="text-emerald-400 font-semibold text-sm">Restaurant Created!</div>
+                    <div>
+                      <span className="text-stone">Your URL:</span>{" "}
+                      <a href={result.url} className="text-electric-blue hover:underline">{result.url}</a>
+                    </div>
+                    <div className="space-y-1.5">
+                      <div className="text-stone font-medium mb-1">Login Credentials:</div>
+                      {Object.entries(result.credentials).map(([role, cred]) => (
+                        <div key={role} className="flex justify-between bg-white/5 rounded-lg px-3 py-1.5">
+                          <span className="text-white capitalize">{role}:</span>
+                          <span className="text-stone">{cred.email} / {cred.password}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <Link
+                      href={result.url}
+                      className="block text-center bg-white hover:bg-cream text-ink font-semibold rounded-lg py-2 text-xs transition mt-2"
+                    >
+                      Visit Your Restaurant
+                    </Link>
+                  </motion.div>
+                )}
               </motion.form>
             )}
           </AnimatePresence>
@@ -252,13 +319,22 @@ export default function SaaSAuthPage() {
         {tab === "login" && (
           <div className="mt-8 bg-white/5 border border-white/10 rounded-2xl p-4 text-xs text-stone space-y-2 backdrop-blur-md">
             <div className="font-semibold text-white mb-2">Demo Credentials:</div>
-            <div className="grid grid-cols-2 gap-2">
-              <div><span className="text-white">Admin:</span> admin-mehfil@smartdine.ai</div>
-              <div><span className="text-white">Pass:</span> Owner@123</div>
-              <div><span className="text-white">Kitchen:</span> kitchen-mehfil@smartdine.ai</div>
-              <div><span className="text-white">Pass:</span> Chef@123</div>
-              <div><span className="text-white">Counter:</span> counter-mehfil@smartdine.ai</div>
-              <div><span className="text-white">Pass:</span> Counter@123</div>
+            <div className="grid grid-cols-2 gap-1">
+              {allRestaurants.map((r) => (
+                <div key={r.slug}>
+                  <span className="text-gold">{r.name}:</span> {r.email}
+                </div>
+              ))}
+            </div>
+            <div className="grid grid-cols-2 gap-1">
+              {allRestaurants.map((r) => (
+                <div key={r.slug}>
+                  <span className="text-white">Pass:</span> Owner@123
+                </div>
+              ))}
+            </div>
+            <div className="text-[10px] text-stone/60 mt-2 border-t border-white/10 pt-2">
+              Staff logins available from each restaurant&apos;s login page.
             </div>
           </div>
         )}

@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname , useParams} from "next/navigation";
 import { useEffect, useState, Suspense, useRef } from "react";
-import { ShoppingBag, Menu as MenuIcon, X, ChefHat, ArrowRight, BellRing } from "lucide-react";
+import { ShoppingBag, Menu as MenuIcon, X, ChefHat, ArrowRight, BellRing, Instagram, Facebook, Twitter, Sparkles } from "lucide-react";
 import { useCart } from "@/stores/cart";
 import { AIWaiterDock } from "@/components/customer/AIWaiterDock";
 import { MehfilLogo } from "@/components/customer/MehfilLogo";
@@ -12,15 +12,27 @@ import { api } from "@/lib/api";
 import { useTable } from "@/stores/table";
 import { Order } from "@/types";
 import { toast } from "sonner";
+import { useRestaurantConfig } from "@/hooks/useRestaurantConfig";
 export default function CustomerLayout({ children }: { children: React.ReactNode }) {
   const params = useParams();
   const slug = params?.slug as string;
+  
+  // Get restaurant config from local JSON files
+  const { config: restaurantConfig } = useRestaurantConfig();
 
+  // Enhanced navigation with new pages
   const NAV = [
     { href: `/r/${slug}`, label: "Home", testid: "nav-home" },
     { href: `/r/${slug}/menu`, label: "Menu", testid: "nav-menu" },
     { href: `/r/${slug}/reserve`, label: "Reserve", testid: "nav-reserve" },
     { href: `/r/${slug}/track`, label: "Track", testid: "nav-track" },
+    { href: `/r/${slug}/about`, label: "About", testid: "nav-about" },
+    { href: `/r/${slug}/contact`, label: "Contact", testid: "nav-contact" },
+  ];
+
+  // Secondary nav items (right side)
+  const SECONDARY_NAV = [
+    { href: `/r/${slug}/smartdine`, label: "SmartDine", testid: "nav-smartdine" },
     { href: `/r/${slug}/login`, label: "Staff Login", testid: "nav-staff" },
   ];
 
@@ -117,13 +129,31 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
     };
   }, []);
 
+  const isStaffPage = path?.includes("/kitchen") || path?.includes("/counter") || path?.includes("/admin");
+
+  if (isStaffPage) {
+    return (
+      <div className="mehfil min-h-screen mehfil-paper">
+        {restaurantConfig && (
+          <style dangerouslySetInnerHTML={{ __html: `
+            .mehfil {
+              --brand-primary: ${restaurantConfig.primary_color || '#8A1A2A'};
+              --brand-secondary: ${restaurantConfig.secondary_color || '#C9A348'};
+            }
+          `}} />
+        )}
+        {children}
+      </div>
+    );
+  }
+
   return (
     <div className="mehfil min-h-screen mehfil-paper">
-      {restaurant && (
+      {restaurantConfig && (
         <style dangerouslySetInnerHTML={{ __html: `
           .mehfil {
-            --brand-primary: ${restaurant.primary_color || '#8A1A2A'};
-            --brand-secondary: ${restaurant.secondary_color || '#C9A348'};
+            --brand-primary: ${restaurantConfig.primary_color || '#8A1A2A'};
+            --brand-secondary: ${restaurantConfig.secondary_color || '#C9A348'};
           }
         `}} />
       )}
@@ -131,14 +161,27 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
       <header className={`sticky top-0 z-40 transition-all duration-300 ${scrolled ? "bg-[#FAF5EC]/90 backdrop-blur-md border-b border-[#E7DFCB]" : "bg-transparent"}`}>
         <div className="max-w-7xl mx-auto px-5 md:px-10 py-3 flex items-center justify-between gap-4">
           <MehfilLogo size="sm" />
-          <nav className="hidden md:flex items-center gap-9 text-sm tracking-[0.15em] uppercase font-royal" data-testid="mehfil-nav">
+          
+          {/* Main Navigation - Desktop */}
+          <nav className="hidden lg:flex items-center gap-6 text-xs tracking-[0.12em] uppercase font-royal" data-testid="mehfil-nav">
             {NAV.map((n) => (
-              <Link key={n.href} href={n.href} data-testid={n.testid} className={`transition-colors ${path === n.href || (n.href !== `/r/${slug}` && path?.startsWith(n.href)) ? "text-brand-primary" : "text-[#1A1106] hover:text-brand-primary"}`}>
+              <Link key={n.href} href={n.href} data-testid={n.testid} className={`transition-colors whitespace-nowrap ${path === n.href || (n.href !== `/r/${slug}` && path?.startsWith(n.href)) ? "text-brand-primary" : "text-[#1A1106] hover:text-brand-primary"}`}>
                 {n.label}
               </Link>
             ))}
           </nav>
+
+          {/* Right Side - Actions */}
           <div className="flex items-center gap-2">
+            {/* Secondary Nav - Desktop */}
+            <div className="hidden lg:flex items-center gap-3">
+              {SECONDARY_NAV.map((n) => (
+                <Link key={n.href} href={n.href} data-testid={n.testid} className={`text-xs tracking-[0.1em] uppercase font-royal transition-colors ${path === n.href ? "text-brand-primary" : "text-[#1A1106]/70 hover:text-brand-primary"}`}>
+                  {n.label}
+                </Link>
+              ))}
+            </div>
+
             {session && (
               <button 
                 onClick={callStaff} 
@@ -159,30 +202,42 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
                 </span>
               )}
             </Link>
-            <button data-testid="mobile-menu-btn" onClick={() => setMobileOpen((o) => !o)} className="md:hidden h-10 w-10 rounded-full border border-[#E7DFCB] flex items-center justify-center text-brand-primary">
+            <button data-testid="mobile-menu-btn" onClick={() => setMobileOpen((o) => !o)} className="lg:hidden h-10 w-10 rounded-full border border-[#E7DFCB] flex items-center justify-center text-brand-primary">
               {mobileOpen ? <X className="h-4 w-4" /> : <MenuIcon className="h-4 w-4" />}
             </button>
           </div>
         </div>
+
+        {/* Mobile Menu */}
         {mobileOpen && (
-          <div className="md:hidden border-t border-[#E7DFCB] bg-[#FAF5EC]" data-testid="mobile-menu">
-            {NAV.map((n) => (
-              <Link key={n.href} href={n.href} onClick={() => setMobileOpen(false)} className="block px-6 py-3.5 text-sm tracking-[0.15em] uppercase font-royal border-b border-[#E7DFCB]/50 text-[#1A1106]">
-                {n.label}
-              </Link>
-            ))}
-            {session && (
-              <button 
-                onClick={callStaff} 
-                disabled={callingStaff}
-                className="w-full text-left px-5 py-4 text-sm tracking-[0.15em] uppercase font-royal text-brand-primary hover:bg-[#E7DFCB]/30 border-t border-[#E7DFCB]"
-              >
-                <div className="flex items-center gap-3">
-                  <BellRing className="h-4 w-4" />
-                  Call Staff
-                </div>
-              </button>
-            )}
+          <div className="lg:hidden border-t border-[#E7DFCB] bg-[#FAF5EC] backdrop-blur-md" data-testid="mobile-menu">
+            <div className="max-w-7xl mx-auto px-5 py-4">
+              {NAV.map((n) => (
+                <Link key={n.href} href={n.href} onClick={() => setMobileOpen(false)} className="block px-4 py-3 text-sm tracking-[0.15em] uppercase font-royal border-b border-[#E7DFCB]/50 text-[#1A1106] hover:text-brand-primary transition-colors">
+                  {n.label}
+                </Link>
+              ))}
+              <div className="mt-4 pt-4 border-t border-[#E7DFCB]">
+                <div className="text-xs font-royal tracking-[0.2em] uppercase text-[#8A6A1B] mb-3 px-4">More</div>
+                {SECONDARY_NAV.map((n) => (
+                  <Link key={n.href} href={n.href} onClick={() => setMobileOpen(false)} className="block px-4 py-2.5 text-sm tracking-[0.15em] uppercase font-royal text-[#1A1106]/70 hover:text-brand-primary transition-colors">
+                    {n.label}
+                  </Link>
+                ))}
+              </div>
+              {session && (
+                <button 
+                  onClick={callStaff} 
+                  disabled={callingStaff}
+                  className="w-full mt-4 text-left px-4 py-3 text-sm tracking-[0.15em] uppercase font-royal text-brand-primary hover:bg-[#E7DFCB]/30 border-t border-[#E7DFCB]"
+                >
+                  <div className="flex items-center gap-3">
+                    <BellRing className="h-4 w-4" />
+                    Call Staff
+                  </div>
+                </button>
+              )}
+            </div>
           </div>
         )}
       </header>
@@ -214,42 +269,84 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
 
       {/* Footer */}
       <footer className="mt-20 mehfil-royal-bg text-[#FAF5EC]" data-testid="mehfil-footer">
-        <div className="max-w-7xl mx-auto px-6 md:px-10 py-16 grid md:grid-cols-4 gap-10">
-          <div className="md:col-span-1">
-            <MehfilLogo size="md" invert />
-            {restaurant?.tagline && (
-              <p className="font-editorial italic text-[#FAF5EC]/70 mt-5 leading-relaxed">{restaurant.tagline}</p>
-            )}
-          </div>
-          <div>
-            <h4 className="font-royal tracking-[0.2em] text-brand-secondary uppercase text-xs mb-4">Visit Us</h4>
-            <p className="text-sm text-[#FAF5EC]/85 leading-relaxed whitespace-pre-line">
-              {restaurant?.address || "Visit us today"}
-            </p>
-          </div>
-          <div>
-            <h4 className="font-royal tracking-[0.2em] text-brand-secondary uppercase text-xs mb-4">Hours</h4>
-            <p className="text-sm text-[#FAF5EC]/85 leading-relaxed">
-              Lunch — 12:00 to 15:30<br />
-              Dinner — 18:30 to 23:30<br />
-              Open all 7 days
-            </p>
-          </div>
-          <div>
-            <h4 className="font-royal tracking-[0.2em] text-brand-secondary uppercase text-xs mb-4">Reach</h4>
-            <p className="text-sm text-[#FAF5EC]/85 leading-relaxed">
-              {restaurant?.phone && <>{restaurant.phone}<br /></>}
-              {restaurant?.email && <>{restaurant.email}<br /></>}
-              <Link href={`/r/${slug}/reserve`} className="underline underline-offset-4 hover:text-brand-secondary">Reserve a table</Link>
-            </p>
+        <div className="max-w-7xl mx-auto px-6 md:px-10 py-16">
+          <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-10">
+            {/* Brand Column */}
+            <div className="lg:col-span-2">
+              <MehfilLogo size="md" invert />
+              {restaurantConfig?.tagline && (
+                <p className="font-editorial italic text-[#FAF5EC]/70 mt-5 leading-relaxed max-w-sm">{restaurantConfig.tagline}</p>
+              )}
+              {/* Social Links */}
+              <div className="flex items-center gap-4 mt-6">
+                {restaurantConfig?.social_links?.instagram && (
+                  <a href={restaurantConfig.social_links.instagram} target="_blank" rel="noopener noreferrer" className="h-10 w-10 rounded-full border border-[#FAF5EC]/20 flex items-center justify-center hover:bg-brand-secondary hover:text-[#1A1106] transition-colors">
+                    <Instagram className="h-4 w-4" />
+                  </a>
+                )}
+                {restaurantConfig?.social_links?.facebook && (
+                  <a href={restaurantConfig.social_links.facebook} target="_blank" rel="noopener noreferrer" className="h-10 w-10 rounded-full border border-[#FAF5EC]/20 flex items-center justify-center hover:bg-brand-secondary hover:text-[#1A1106] transition-colors">
+                    <Facebook className="h-4 w-4" />
+                  </a>
+                )}
+                {restaurantConfig?.social_links?.twitter && (
+                  <a href={restaurantConfig.social_links.twitter} target="_blank" rel="noopener noreferrer" className="h-10 w-10 rounded-full border border-[#FAF5EC]/20 flex items-center justify-center hover:bg-brand-secondary hover:text-[#1A1106] transition-colors">
+                    <Twitter className="h-4 w-4" />
+                  </a>
+                )}
+              </div>
+            </div>
+
+            {/* Quick Links */}
+            <div>
+              <h4 className="font-royal tracking-[0.2em] text-brand-secondary uppercase text-xs mb-4">Explore</h4>
+              <ul className="space-y-2.5 text-sm text-[#FAF5EC]/85">
+                <li><Link href={`/r/${slug}/menu`} className="hover:text-brand-secondary transition-colors">Menu</Link></li>
+                <li><Link href={`/r/${slug}/reserve`} className="hover:text-brand-secondary transition-colors">Reservations</Link></li>
+                <li><Link href={`/r/${slug}/track`} className="hover:text-brand-secondary transition-colors">Track Order</Link></li>
+                <li><Link href={`/r/${slug}/about`} className="hover:text-brand-secondary transition-colors">About Us</Link></li>
+                <li><Link href={`/r/${slug}/contact`} className="hover:text-brand-secondary transition-colors">Contact</Link></li>
+              </ul>
+            </div>
+
+            {/* Contact */}
+            <div>
+              <h4 className="font-royal tracking-[0.2em] text-brand-secondary uppercase text-xs mb-4">Reach Us</h4>
+              <ul className="space-y-2.5 text-sm text-[#FAF5EC]/85">
+                {restaurantConfig?.contact?.phone && <li>{restaurantConfig.contact.phone}</li>}
+                {restaurantConfig?.contact?.email && <li>{restaurantConfig.contact.email}</li>}
+                <li className="whitespace-pre-line">{restaurantConfig?.contact?.address || "Visit us today"}</li>
+              </ul>
+            </div>
+
+            {/* Hours */}
+            <div>
+              <h4 className="font-royal tracking-[0.2em] text-brand-secondary uppercase text-xs mb-4">Hours</h4>
+              <ul className="space-y-2.5 text-sm text-[#FAF5EC]/85">
+                <li>Lunch — {restaurantConfig?.hours?.lunch || "12:00 to 15:30"}</li>
+                <li>Dinner — {restaurantConfig?.hours?.dinner || "18:30 to 23:30"}</li>
+                <li>{restaurantConfig?.hours?.open_days || "Open all 7 days"}</li>
+              </ul>
+            </div>
           </div>
         </div>
-        <div className="border-t border-brand-secondary/15 px-6 md:px-10 py-5 max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-3 text-xs text-[#FAF5EC]/60 font-royal tracking-wider uppercase">
-          <div>© {new Date().getFullYear()} {restaurant?.name || "SmartDine"}</div>
-          <div className="flex gap-6">
-            <Link href="#" className="hover:text-brand-secondary">Privacy</Link>
-            <Link href="#" className="hover:text-brand-secondary">Terms</Link>
-            <Link href="/auth/login" className="hover:text-brand-secondary">Staff</Link>
+
+        {/* Bottom Bar */}
+        <div className="border-t border-brand-secondary/15 px-6 md:px-10 py-5">
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div className="flex items-center gap-2 text-xs text-[#FAF5EC]/60 font-royal tracking-wider uppercase">
+              <span>© {new Date().getFullYear()} {restaurantConfig?.name || "SmartDine"}</span>
+              <span className="hidden sm:inline">·</span>
+              <span className="hidden sm:inline">Powered by</span>
+              <Link href={`/r/${slug}/smartdine`} className="hidden sm:inline-flex items-center gap-1 text-brand-secondary hover:text-[#FAF5EC] transition-colors">
+                <Sparkles className="h-3 w-3" /> SmartDine
+              </Link>
+            </div>
+            <div className="flex gap-6 text-xs text-[#FAF5EC]/60 font-royal tracking-wider uppercase">
+              <Link href="#" className="hover:text-brand-secondary transition-colors">Privacy</Link>
+              <Link href="#" className="hover:text-brand-secondary transition-colors">Terms</Link>
+              <Link href={`/r/${slug}/login`} className="hover:text-brand-secondary transition-colors">Staff</Link>
+            </div>
           </div>
         </div>
       </footer>

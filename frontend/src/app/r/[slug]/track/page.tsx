@@ -5,6 +5,7 @@ import { Search, ArrowRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useTable } from "@/stores/table";
+import { useRestaurantConfig } from "@/hooks/useRestaurantConfig";
 import { Order } from "@/types";
 import Link from "next/link";
 import { formatCurrency } from "@/lib/utils";
@@ -23,6 +24,7 @@ function SectionTag({ children }: { children: React.ReactNode }) {
 export default function TrackLanding() {
   const params = useParams();
   const slug = params?.slug as string;
+  const { config: restaurantConfig } = useRestaurantConfig();
 
   const router = useRouter();
   const [id, setId] = useState("");
@@ -97,7 +99,7 @@ export default function TrackLanding() {
         )}
         
         <h1 className="font-royal text-4xl md:text-5xl text-brand-primary tracking-wide">
-          Where is my <span className="font-editorial italic mehfil-gold-gradient">mehfil</span>?
+          Where is my <span className="font-editorial italic mehfil-gold-gradient">order</span>?
         </h1>
         <p className="font-editorial italic text-sm text-[#1A1106]/70 mt-3 mb-8">Paste the order ID we shared on confirmation.</p>
         <div className="flex items-center gap-3 bg-[#FAF5EC] border border-brand-secondary/40 rounded-full px-5 py-2.5 shadow-sm max-w-md mx-auto">

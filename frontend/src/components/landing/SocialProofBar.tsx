@@ -16,7 +16,7 @@ export function SocialProofBar() {
       <div className="max-w-[1400px] mx-auto px-6 lg:px-24">
         <div className="text-center mb-10">
           <p className="text-stone text-sm font-medium tracking-widest uppercase mb-4">
-            Trusted by premium restaurants across Hyderabad
+            Trusted by premium restaurants across India
           </p>
           <div className="flex justify-center gap-1 text-gold">
             {[1, 2, 3, 4, 5].map((i) => (

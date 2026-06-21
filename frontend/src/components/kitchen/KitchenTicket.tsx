@@ -1,5 +1,5 @@
 "use client";
-import { ChefHat, CheckCheck } from "lucide-react";
+import { ChefHat, CheckCheck, Clock, AlertTriangle } from "lucide-react";
 import { memo } from "react";
 import type { Order } from "@/types";
 
@@ -12,54 +12,63 @@ interface Props {
   onReady: (id: string) => void;
 }
 
-function getBorderClass(elapsedMs: number, isPreparing: boolean): string {
-  // SLA thresholds: > 15m Red, > 10m Yellow, else Green (if preparing), or neutral if just confirmed
-  if (elapsedMs > 15 * 60 * 1000) return "border-alert animate-pulse";
-  if (elapsedMs > 10 * 60 * 1000) return "border-[#facc15]"; // Yellow
-  if (isPreparing) return "border-[#4ade80]"; // Green
-  return "border-zinc-500";
+function getCardStyle(elapsedMs: number, isPreparing: boolean): { border: string; glow: string; badge: string } {
+  if (elapsedMs > 15 * 60 * 1000) return { border: "border-l-red-500", glow: "shadow-red-500/10", badge: "bg-red-500/10 text-red-400 border-red-500/20" };
+  if (elapsedMs > 10 * 60 * 1000) return { border: "border-l-amber-500", glow: "shadow-amber-500/10", badge: "bg-amber-500/10 text-amber-400 border-amber-500/20" };
+  if (isPreparing) return { border: "border-l-emerald-500", glow: "shadow-emerald-500/10", badge: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" };
+  return { border: "border-l-zinc-500", glow: "", badge: "bg-zinc-500/10 text-zinc-400 border-zinc-500/20" };
 }
 
 function KitchenTicketImpl({ order, elapsed, elapsedMs, isSelected, onStart, onReady }: Props) {
   const isPreparing = order.status === "preparing";
-  const borderClass = getBorderClass(elapsedMs, isPreparing);
+  const isLate = elapsedMs > 10 * 60 * 1000;
+  const styles = getCardStyle(elapsedMs, isPreparing);
   
-  // Highlighting selected ticket for Bump Bar
-  const ringClass = isSelected ? "ring-2 ring-white ring-offset-2 ring-offset-graphite scale-[1.02] shadow-xl" : "";
+  const ringClass = isSelected ? "ring-2 ring-white/30 scale-[1.02] shadow-xl" : "";
+  const minutes = Math.floor(elapsedMs / 60000);
 
   return (
     <div
       data-testid={`kds-ticket-${order.token}`}
-      className={`bg-graphite border-l-[8px] ${borderClass} rounded-md p-4 transition-all duration-200 ${ringClass}`}
+      className={`bg-zinc-900/80 border-l-[6px] ${styles.border} rounded-2xl p-5 transition-all duration-200 ${ringClass} shadow-lg ${styles.glow} hover:bg-zinc-900`}
     >
-      <div className="flex items-start justify-between mb-3">
-        <div className="font-display text-4xl text-white leading-none">{order.token}</div>
-        <div className="text-right">
-          <div className="font-mono text-2xl text-warn tracking-tighter">{elapsed}</div>
-          <div className="text-[10px] uppercase text-zinc-500 tracking-wider">elapsed</div>
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <div className="text-3xl font-bold text-white">{order.token}</div>
+          {isLate && (
+            <div className="flex items-center gap-1 bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] font-bold px-2 py-0.5 rounded-lg animate-pulse">
+              <AlertTriangle className="h-3 w-3" /> LATE
+            </div>
+          )}
+        </div>
+        <div className="flex items-center gap-1.5 bg-zinc-800/80 border border-zinc-700/50 rounded-lg px-2.5 py-1.5">
+          <Clock className="h-3.5 w-3.5 text-zinc-400" />
+          <span className={`font-mono text-sm font-bold ${isLate ? "text-red-400" : "text-zinc-300"}`}>{elapsed}</span>
         </div>
       </div>
-      <div className="text-xs uppercase tracking-wider text-zinc-500 mb-1 flex items-center gap-2">
+
+      <div className="flex items-center gap-2 mb-4">
         {order.table_number != null && (
-          <span className="bg-warn text-coal px-2 py-0.5 rounded font-bold text-[11px]" data-testid={`kds-table-${order.token}`}>
+          <span className="bg-amber-500/10 border border-amber-500/20 text-amber-400 px-2.5 py-1 rounded-lg text-[11px] font-bold" data-testid={`kds-table-${order.token}`}>
             TABLE {order.table_number}
           </span>
         )}
-        <span>{order.customer_name}</span>
-        {order.customer_code ? <span className="text-zinc-600 lowercase">{order.customer_code}</span> : null}
+        <span className="text-sm text-zinc-300 font-medium">{order.customer_name}</span>
+        {order.customer_code ? <span className="text-[10px] text-zinc-600 lowercase">· {order.customer_code}</span> : null}
       </div>
-      <div className="space-y-1.5 mb-4">
+
+      <div className="space-y-2 mb-5">
         {order.items.map((i) => (
-          <div key={`${order.id}-${i.item_id}`} className="text-sm">
-            <div className="flex justify-between">
-              <span className="text-white">
-                <span className="text-alert font-bold mr-1">{i.qty}×</span>
+          <div key={`${order.id}-${i.item_id}`} className="bg-zinc-800/50 rounded-xl px-3 py-2">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-white">
+                <span className="text-amber-400 font-bold mr-1.5">{i.qty}×</span>
                 {i.name}
               </span>
             </div>
             {i.notes && (
               <div
-                className="ml-5 mt-0.5 text-[11px] uppercase tracking-wider font-bold text-warn bg-warn/10 border border-warn/30 rounded px-1.5 py-0.5 inline-block"
+                className="mt-1.5 text-[10px] uppercase tracking-wider font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-2 py-1 inline-block"
                 data-testid={`kds-note-${order.token}-${i.item_id}`}
               >
                 {i.notes}
@@ -68,26 +77,30 @@ function KitchenTicketImpl({ order, elapsed, elapsedMs, isSelected, onStart, onR
           </div>
         ))}
       </div>
+
       {order.notes && (
-        <div className="bg-warn text-coal text-xs px-2 py-1 rounded mb-3 font-medium">NOTE: {order.notes}</div>
+        <div className="bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs px-3 py-2 rounded-xl mb-4 font-medium">
+          NOTE: {order.notes}
+        </div>
       )}
+
       <div className="flex gap-2">
         {order.status === "confirmed" && (
           <button
             data-testid={`kds-start-${order.token}`}
             onClick={() => onStart(order.id)}
-            className="flex-1 bg-warn text-coal py-2.5 rounded font-bold text-sm hover:bg-warn/90 transition flex items-center justify-center gap-2"
+            className="flex-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white py-3 rounded-xl font-bold text-sm hover:from-amber-600 hover:to-orange-600 transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20"
           >
-            <ChefHat className="h-4 w-4" /> START
+            <ChefHat className="h-4 w-4" /> START COOKING
           </button>
         )}
         {order.status === "preparing" && (
           <button
             data-testid={`kds-ready-${order.token}`}
             onClick={() => onReady(order.id)}
-            className="flex-1 bg-ready text-coal py-2.5 rounded font-bold text-sm hover:bg-ready/90 transition flex items-center justify-center gap-2"
+            className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-500 text-white py-3 rounded-xl font-bold text-sm hover:from-emerald-600 hover:to-teal-600 transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
           >
-            <CheckCheck className="h-4 w-4" /> READY
+            <CheckCheck className="h-4 w-4" /> MARK READY
           </button>
         )}
       </div>

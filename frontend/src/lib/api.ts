@@ -1,12 +1,25 @@
-// NOTE on storage: JWT lives in localStorage for SPA simplicity (bearer token pattern).
+// NOTE on storage: JWT lives in zustand persist (sd-session localStorage) for SPA simplicity.
 // httpOnly cookies would be more XSS-resistant, but require CSRF mitigation and a full
 // fetch refactor with credentials:'include'. Acceptable trade-off for a demo app on
 // trusted networks. Mitigation: short JWT TTL (7 days) + no third-party scripts on /admin /kitchen /counter.
+//
+// IMPORTANT: We read the token from zustand's persisted state rather than a separate
+// localStorage key ("sd_token") to prevent cross-restaurant token collision when multiple
+// staff tabs are open on different restaurants. zustand state is per-tab until hydrate;
+// the old approach overwrote a shared key on every login, causing the wrong JWT to be
+// sent on background tabs.
 const BASE = process.env.NEXT_PUBLIC_BACKEND_URL || "";
 
 function getToken(): string | null {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem("sd_token");
+  try {
+    const raw = localStorage.getItem("sd-session");
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed?.state?.token ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export async function api<T = any>(path: string, init: RequestInit = {}): Promise<T> {

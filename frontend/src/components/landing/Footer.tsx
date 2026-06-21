@@ -68,9 +68,9 @@ export function Footer() {
         <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-stone">
           <div>© 2026 SmartDine AI. All rights reserved.</div>
           <div className="flex gap-2">
-            <span>Built in Hyderabad</span>
+            <span>Built with ❤️</span>
             <span>•</span>
-            <span>123 Tech Park, Hitec City, 500081</span>
+            <span>SmartDine AI Platform</span>
           </div>
         </div>
       </div>

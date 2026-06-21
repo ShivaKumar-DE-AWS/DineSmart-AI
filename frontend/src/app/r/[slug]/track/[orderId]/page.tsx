@@ -14,7 +14,7 @@ const STAGES: Array<{ key: Order["status"]; label: string; line: string; icon: R
   { key: "confirmed", label: "Confirmed", line: "The khansama has your scroll.", icon: ClipboardCheck },
   { key: "preparing", label: "On the dum", line: "Spices waltzing in a copper handi.", icon: ChefHat },
   { key: "ready", label: "Ready", line: "Awaiting you at the counter.", icon: ConciergeBell },
-  { key: "served", label: "Served", line: "Khaana khaiye — enjoy your mehfil.", icon: CheckCircle2 },
+  { key: "served", label: "Served", line: "Khaana khaiye — enjoy your meal.", icon: CheckCircle2 },
 ];
 
 export default function TrackPage() {
@@ -62,7 +62,7 @@ export default function TrackPage() {
   };
 
   if (!order) {
-    return <div className="py-32 text-center font-editorial italic text-[#1A1106]/60" data-testid="track-loading">Finding your mehfil…</div>;
+    return <div className="py-32 text-center font-editorial italic text-[#1A1106]/60" data-testid="track-loading">Finding your order…</div>;
   }
 
   const currentIdx = STAGES.findIndex((s) => s.key === order.status);

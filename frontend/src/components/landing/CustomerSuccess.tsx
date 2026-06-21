@@ -18,7 +18,7 @@ export function CustomerSuccess() {
       feedback: "During our morning rush, the line used to be out the door. Now, people just sit down, scan, and their coffee is ready in minutes. It completely eliminated our bottleneck.",
     },
     {
-      name: "Mehfil Biryani",
+      name: "Premium Biryani House",
       growth: "0%",
       metric: "Order Errors",
       feedback: "We used to have at least 5-6 wrongly punched orders a day. Since switching to SmartDine AI, the kitchen gets exactly what the customer typed. Zero errors. Zero wastage.",

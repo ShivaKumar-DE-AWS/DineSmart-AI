@@ -186,7 +186,7 @@ function DishEditorModal({ form, categories, onClose, onSaved }: { form: MenuFor
     if (!file) return;
     setUploading(true);
     try {
-      const token = typeof window !== "undefined" ? localStorage.getItem("sd_token") : null;
+      const token = typeof window !== "undefined" ? (() => { try { const p = JSON.parse(localStorage.getItem("sd-session") || "{}"); return p?.state?.token ?? null; } catch { return null; } })() : null;
       const fd = new FormData();
       fd.append("file", file);
       const res = await fetch(apiUrl("/api/upload/image"), {

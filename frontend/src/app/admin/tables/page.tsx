@@ -2,6 +2,8 @@
 import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { useSession } from "@/stores/session";
+import { getRestaurantConfig } from "@/hooks/useRestaurantConfig";
 import { toast } from "sonner";
 import { Plus, QrCode, RefreshCw, Trash2, Download, Printer, Users, Clock, MapPin } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -22,14 +24,29 @@ function customerOrigin(): string {
   return window.location.origin;
 }
 
-function tableQrUrl(token: string): string {
-  return `${customerOrigin()}/r/mehfil-hyderabad?t=${token}`;
+function useRestaurantSlug(): string {
+  const { user } = useSession();
+  return user?.restaurant_slug || "";
+}
+
+function useRestaurantName(): string {
+  const { user } = useSession();
+  if (!user?.restaurant_id) return "Restaurant";
+  const config = getRestaurantConfig(user.restaurant_slug || "");
+  return config?.name || "Restaurant";
+}
+
+function tableQrUrl(slug: string, token: string): string {
+  return `${customerOrigin()}/r/${slug}?t=${token}`;
 }
 
 export default function AdminTables() {
   const qc = useQueryClient();
+  const slug = useRestaurantSlug();
+  const restaurantName = useRestaurantName();
+  const { user } = useSession();
   const { data, isLoading } = useQuery({
-    queryKey: ["admin-tables"],
+    queryKey: ["admin-tables", user?.restaurant_id],
     queryFn: () => api<{ tables: TableDoc[] }>("/api/tables"),
     refetchInterval: 10_000,
   });
@@ -39,11 +56,11 @@ export default function AdminTables() {
 
   const remove = useMutation({
     mutationFn: (id: string) => api(`/api/tables/${id}`, { method: "DELETE" }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-tables"] }); toast.success("Table removed"); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-tables", user?.restaurant_id] }); toast.success("Table removed"); },
   });
   const regen = useMutation({
     mutationFn: (id: string) => api(`/api/tables/${id}/regenerate-qr`, { method: "POST" }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-tables"] }); toast.success("New QR generated"); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-tables", user?.restaurant_id] }); toast.success("New QR generated"); },
   });
 
   const addTable = async () => {
@@ -55,7 +72,7 @@ export default function AdminTables() {
       await api("/api/tables", { method: "POST", body: JSON.stringify({ number: n, capacity: cap }) });
       toast.success(`Table ${n} added`);
       setNewNumber("");
-      qc.invalidateQueries({ queryKey: ["admin-tables"] });
+      qc.invalidateQueries({ queryKey: ["admin-tables", user?.restaurant_id] });
     } catch (e) {
       const err = e as Error;
       toast.error(err.message || "Could not add table");
@@ -100,7 +117,7 @@ export default function AdminTables() {
       {isLoading && <div className="text-stone">Loading tables…</div>}
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {tables.map((t) => <TableCard key={t.id} t={t} onRegen={(id) => regen.mutate(id)} onDelete={(id) => remove.mutate(id)} />)}
+        {tables.map((t) => <TableCard key={t.id} t={t} onRegen={(id) => regen.mutate(id)} onDelete={(id) => remove.mutate(id)} slug={slug} restaurantName={restaurantName} />)}
       </div>
 
       {!isLoading && tables.length === 0 && (
@@ -112,9 +129,9 @@ export default function AdminTables() {
   );
 }
 
-function TableCard({ t, onRegen, onDelete }: { t: TableDoc; onRegen: (id: string) => void; onDelete: (id: string) => void }) {
+function TableCard({ t, onRegen, onDelete, slug, restaurantName }: { t: TableDoc; onRegen: (id: string) => void; onDelete: (id: string) => void; slug: string; restaurantName: string }) {
   const svgRef = useRef<HTMLDivElement>(null);
-  const url = tableQrUrl(t.qr_token);
+  const url = tableQrUrl(slug, t.qr_token);
 
   const downloadPng = async () => {
     const svgEl = svgRef.current?.querySelector("svg");
@@ -131,7 +148,7 @@ function TableCard({ t, onRegen, onDelete }: { t: TableDoc; onRegen: (id: string
       ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, size, size);
       ctx.drawImage(img, 0, 0, size, size);
       const link = document.createElement("a");
-      link.download = `mehfil-table-${t.number}.png`;
+      link.download = `${slug}-table-${t.number}.png`;
       link.href = canvas.toDataURL("image/png");
       link.click();
     };
@@ -144,7 +161,7 @@ function TableCard({ t, onRegen, onDelete }: { t: TableDoc; onRegen: (id: string
     const svgEl = svgRef.current?.querySelector("svg");
     if (!svgEl) return;
     const xml = new XMLSerializer().serializeToString(svgEl);
-    w.document.write(`<!doctype html><html><head><title>Mehfil — Table ${t.number}</title>
+    w.document.write(`<!doctype html><html><head><title>${restaurantName} — Table ${t.number}</title>
       <style>
         @page { margin: 18mm; }
         body { font-family: Georgia, serif; text-align: center; padding: 40px; color: #1A1106; }
@@ -158,7 +175,7 @@ function TableCard({ t, onRegen, onDelete }: { t: TableDoc; onRegen: (id: string
         .footer { font-size: 11px; color: #8A6A1B; margin-top: 16px; letter-spacing: 0.2em; text-transform: uppercase; }
       </style></head><body>
       <div class="frame">
-        <div class="brand">Mehfil · Hyderabad</div>
+        <div class="brand">${restaurantName}</div>
         <h1>Table ${t.number}</h1>
         <div class="sub">Scan to order from your seat</div>
         <div class="qr">${xml}</div>

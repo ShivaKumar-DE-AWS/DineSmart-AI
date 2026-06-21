@@ -6,6 +6,7 @@ import { useCart } from "@/stores/cart";
 import { useTable } from "@/stores/table";
 import { formatCurrency } from "@/lib/utils";
 import { api } from "@/lib/api";
+import { useRestaurantConfig } from "@/hooks/useRestaurantConfig";
 import { toast } from "sonner";
 import { Lock, CreditCard, ExternalLink, ArrowLeft, ScrollText, User2, ChefHat, Plus, Minus, Phone, Gift, Sparkles, MapPin } from "lucide-react";
 
@@ -54,6 +55,7 @@ const COURSES = ["Auto (Natural pace)", "Starter", "Main Course", "Dessert", "Al
 export default function CheckoutPage() {
   const params = useParams();
   const slug = params?.slug as string;
+  const { config: restaurantConfig } = useRestaurantConfig();
 
   const router = useRouter();
   const cart = useCart();
@@ -111,18 +113,12 @@ export default function CheckoutPage() {
 
   const submit = async () => {
     const finalName = table?.customer_name || name.trim();
-    if (!finalName) { toast.error("Please share your name — every mehfil starts with a name."); return; }
+    if (!finalName) { toast.error("Please share your name — every great meal starts with a name."); return; }
     if (cart.items.length === 0) { toast.error("Your thali is empty"); return; }
     setSubmitting(true);
     try {
-      // First, get the restaurant_id using slug
-      let restId = "rest_mehfil_001";
-      try {
-        const restRes = await api<{ id: string }>(`/api/restaurants/${slug}`);
-        if (restRes && restRes.id) restId = restRes.id;
-      } catch (e) {
-        console.warn("Could not fetch restaurant, falling back to default demo ID");
-      }
+      const restId = restaurantConfig?.id || "";
+      if (!restId) { toast.error("Restaurant not found. Please try again."); setSubmitting(false); return; }
 
       const payload = {
         restaurant_id: restId,
@@ -162,7 +158,7 @@ export default function CheckoutPage() {
       <div className="text-center mb-10">
         <div className="mehfil-divider mb-4 max-w-xs mx-auto"><span className="font-royal tracking-[0.4em] text-[10px] uppercase">Final step</span></div>
         <h1 className="font-royal text-4xl md:text-5xl text-brand-primary tracking-wide">
-          Seal the <span className="font-editorial italic mehfil-gold-gradient">mehfil</span>
+          Seal the <span className="font-editorial italic mehfil-gold-gradient">{restaurantConfig?.name || "order"}</span>
         </h1>
         <p className="font-editorial italic text-sm text-[#1A1106]/70 mt-3">A name, your preferences, and the feast is yours.</p>
       </div>

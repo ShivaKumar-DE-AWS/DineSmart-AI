@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { api } from "@/lib/api";
 import { useTable } from "@/stores/table";
+import { useRestaurantConfig } from "@/hooks/useRestaurantConfig";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Clock, X } from "lucide-react";
@@ -20,11 +21,16 @@ export function TableSessionGuard() {
   const router = useRouter();
   const path = usePathname();
   const { session, setSession, clear } = useTable();
+  const { config: restaurantConfig } = useRestaurantConfig();
   const [remaining, setRemaining] = useState<string>("");
 
   const [qrToken, setQrToken] = useState<string | null>(null);
   const [guestName, setGuestName] = useState("");
   const [scanning, setScanning] = useState(false);
+
+  // Extract slug from current path (e.g., /r/mehfil-hyderabad/menu → mehfil-hyderabad)
+  const slugFromPath = path?.match(/^\/r\/([^/]+)/)?.[1] || "";
+  const restaurantName = restaurantConfig?.name || slugFromPath.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || "Restaurant";
 
   // Effect 1: capture QR token from URL
   useEffect(() => {
@@ -34,23 +40,31 @@ export function TableSessionGuard() {
 
   const handleJoin = async () => {
     if (!qrToken) return;
-    if (!guestName.trim()) { toast.error("Please enter your name — every mehfil starts with a name."); return; }
+    if (!guestName.trim()) { toast.error("Please enter your name — every gathering starts with a name."); return; }
     
     setScanning(true);
     try {
-      const res = await api<{ table: { number: number }; session: import("@/stores/table").TableSession }>(
+      const res = await api<{ table: { number: number; restaurant_id?: string }; session: import("@/stores/table").TableSession & { restaurant_id?: string } }>(
         "/api/tables/scan",
         { method: "POST", body: JSON.stringify({ qr_token: qrToken, customer_name: guestName.trim() }) }
       );
+      // Verify the table belongs to this restaurant
+      const currentRestaurantId = restaurantConfig?.id;
+      if (currentRestaurantId && res.table.restaurant_id && res.table.restaurant_id !== currentRestaurantId) {
+        toast.error("This table belongs to a different restaurant. Please scan the correct QR code.");
+        setQrToken(null);
+        router.replace(path || `/r/${slugFromPath}`, { scroll: false });
+        return;
+      }
       setSession(res.session);
       toast.success(`Welcome to Table ${res.table.number}, ${guestName.trim()}!`);
       setQrToken(null);
-      router.replace(path || "/r/mehfil-hyderabad", { scroll: false });
+      router.replace(path || `/r/${slugFromPath}`, { scroll: false });
     } catch (e) {
       const err = e as Error;
       toast.error(err.message || "Invalid table QR");
       setQrToken(null);
-      router.replace(path || "/r/mehfil-hyderabad", { scroll: false });
+      router.replace(path || `/r/${slugFromPath}`, { scroll: false });
     } finally {
       setScanning(false);
     }
@@ -124,7 +138,7 @@ export function TableSessionGuard() {
             className="fixed inset-0 z-[100] flex items-center justify-center bg-[#1A1106]/80 backdrop-blur-sm p-4"
           >
             <div className="bg-[#FAF5EC] rounded-2xl p-6 w-full max-w-sm shadow-2xl border border-brand-secondary/20">
-              <h2 className="font-royal text-2xl text-brand-primary mb-2 text-center">Welcome to Mehfil</h2>
+              <h2 className="font-royal text-2xl text-brand-primary mb-2 text-center">Welcome to {restaurantName}</h2>
               <p className="text-sm font-editorial text-zinc-600 mb-6 text-center italic">Every grand feast begins with a name.</p>
               
               <div className="mb-6">

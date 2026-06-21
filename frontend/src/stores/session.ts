@@ -1,7 +1,11 @@
 "use client";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { QueryClient } from "@tanstack/react-query";
 import type { User } from "@/types";
+
+let sharedQueryClient: QueryClient | null = null;
+export function setSharedQueryClient(qc: QueryClient) { sharedQueryClient = qc; }
 
 interface SessionState {
   user: User | null;
@@ -16,12 +20,12 @@ export const useSession = create<SessionState>()(
       user: null,
       token: null,
       setSession: (user, token) => {
-        if (typeof window !== "undefined") localStorage.setItem("sd_token", token);
         set({ user, token });
+        sharedQueryClient?.clear();
       },
       clear: () => {
-        if (typeof window !== "undefined") localStorage.removeItem("sd_token");
         set({ user: null, token: null });
+        sharedQueryClient?.clear();
       },
     }),
     { name: "sd-session" }

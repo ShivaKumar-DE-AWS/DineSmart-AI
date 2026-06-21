@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Sparkles, Send, X, Loader2, Mic, MessageSquare, BookOpen, Plus, Minus, Square, Volume2, VolumeX, ArrowRight } from "lucide-react";
 import { useRouter , useParams} from "next/navigation";
 import Link from "next/link";
+import { useRestaurantConfig } from "@/hooks/useRestaurantConfig";
 import { api, apiUrl } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
 import { useCart } from "@/stores/cart";
@@ -44,11 +45,11 @@ function getSessionId(): string {
   return sid;
 }
 
-const INITIAL_GREETING: Msg = {
+const getInitialGreeting = (restaurantName: string): Msg => ({
   id: "greeting",
   role: "assistant",
-  content: "Namaste! I'm your AI Waiter here at Mehfil. I can help you explore the menu, recommend dishes based on your cravings, or add items to your cart. Feel free to type or tap the microphone to speak with me!",
-};
+  content: `Namaste! I'm your AI Waiter here at ${restaurantName}. I can help you explore the menu, recommend dishes based on your cravings, or add items to your cart. Feel free to type or tap the microphone to speak with me!`,
+});
 
 
 
@@ -104,12 +105,14 @@ function extractActions(content: string): { clean: string; adds: {name: string, 
 export function AIWaiterDock() {
   const params = useParams();
   const slug = params?.slug as string;
+  const { config: restaurantConfig } = useRestaurantConfig();
+  const restaurantName = restaurantConfig?.name || slug?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || "Restaurant";
 
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>("chat");
   const [language, setLanguage] = useState<Lang>("auto");
   const [tone, setTone] = useState<Tone>("friendly");
-  const [messages, setMessages] = useState<Msg[]>([INITIAL_GREETING]);
+  const [messages, setMessages] = useState<Msg[]>([getInitialGreeting(restaurantName)]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
   const [recording, setRecording] = useState(false);
@@ -159,10 +162,9 @@ export function AIWaiterDock() {
     if (!wasDrag) setOpen(true); // tap = open
   };
 
-
   const { data: menuData } = useQuery({
     queryKey: ["menu"],
-    queryFn: () => api<{ items: MenuItem[] }>("/api/menu"),
+    queryFn: () => api<{ items: MenuItem[] }>(`/api/menu?restaurant_id=${restaurantConfig?.id || ""}`),
     staleTime: 30_000,
   });
   const menu = useMemo(() => (menuData?.items ?? []).filter((i) => i.available !== false), [menuData]);
@@ -324,7 +326,7 @@ export function AIWaiterDock() {
       const res = await fetch(apiUrl("/api/ai-waiter/chat"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ session_id: session?.id || getSessionId(), message: text, language, tone }),
+        body: JSON.stringify({ session_id: session?.id || getSessionId(), message: text, language, tone, restaurant_id: restaurantConfig?.id }),
       });
       if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
       const reader = res.body.getReader();

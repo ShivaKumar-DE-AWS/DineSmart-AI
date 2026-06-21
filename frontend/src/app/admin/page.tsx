@@ -4,6 +4,7 @@ import { api } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
 import { TrendingUp, ShoppingBag, Receipt, AlertTriangle } from "lucide-react";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
+import { useSession } from "@/stores/session";
 
 // Static chart styling — extracted to avoid creating new objects on every render
 const CHART_GRID_STROKE = "#E2DFD8";
@@ -13,8 +14,9 @@ const CHART_MARGIN = { top: 10, right: 20, left: -10, bottom: 0 };
 const formatDayShort = (d: string) => d.slice(5);
 
 export default function AdminDashboard() {
-  const { data: dash } = useQuery({ queryKey: ["admin-dashboard"], queryFn: () => api<any>("/api/analytics/dashboard"), refetchInterval: 10000 });
-  const { data: rev } = useQuery({ queryKey: ["admin-revenue"], queryFn: () => api<any>("/api/analytics/revenue?days=7"), refetchInterval: 30000 });
+  const { user } = useSession();
+  const { data: dash } = useQuery({ queryKey: ["admin-dashboard", user?.restaurant_id], queryFn: () => api<any>("/api/analytics/dashboard"), refetchInterval: 10000 });
+  const { data: rev } = useQuery({ queryKey: ["admin-revenue", user?.restaurant_id], queryFn: () => api<any>("/api/analytics/revenue?days=7"), refetchInterval: 30000 });
 
   const kpis = [
     { label: "Revenue today", value: dash ? formatCurrency(dash.revenue_today) : "—", icon: TrendingUp, testid: "kpi-revenue" },
@@ -25,33 +27,33 @@ export default function AdminDashboard() {
 
   return (
     <div>
-      <div className="flex items-end justify-between mb-8">
+      <div className="flex items-end justify-between mb-6">
         <div>
-          <p className="uppercase tracking-[0.3em] text-xs text-stone mb-2">Overview</p>
-          <h1 className="font-heading text-4xl tracking-tight" data-testid="admin-dashboard-title">Restaurant pulse</h1>
+          <p className="uppercase tracking-[0.3em] text-[10px] text-stone mb-1">Overview</p>
+          <h1 className="font-heading text-2xl tracking-tight" data-testid="admin-dashboard-title">Restaurant pulse</h1>
         </div>
-        <div className="text-xs text-stone">Auto-refreshes every 10s</div>
+        <div className="text-[10px] text-stone">Auto-refreshes every 10s</div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
         {kpis.map((k) => {
           const Icon = k.icon;
           return (
-            <div key={k.label} data-testid={k.testid} className="border border-bone bg-white rounded-2xl p-5">
-              <div className="flex items-center justify-between text-stone text-xs uppercase tracking-wider">
+            <div key={k.label} data-testid={k.testid} className="border border-bone bg-white rounded-xl p-4">
+              <div className="flex items-center justify-between text-stone text-[10px] uppercase tracking-wider">
                 <span>{k.label}</span>
-                <Icon className="h-4 w-4" />
+                <Icon className="h-3.5 w-3.5" />
               </div>
-              <div className="font-heading text-3xl mt-3 tracking-tight">{k.value}</div>
+              <div className="font-heading text-xl mt-2 tracking-tight">{k.value}</div>
             </div>
           );
         })}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white border border-bone rounded-2xl p-6">
-          <h2 className="font-heading text-xl mb-4">Revenue · last 7 days</h2>
-          <div className="h-72" data-testid="revenue-chart">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2 bg-white border border-bone rounded-xl p-5">
+          <h2 className="font-heading text-base mb-3">Revenue · last 7 days</h2>
+          <div className="h-56" data-testid="revenue-chart">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={rev?.series || []} margin={CHART_MARGIN}>
                 <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_STROKE} />
@@ -64,10 +66,10 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        <div className="bg-white border border-bone rounded-2xl p-6">
-          <h2 className="font-heading text-xl mb-4">Top items today</h2>
+        <div className="bg-white border border-bone rounded-xl p-5">
+          <h2 className="font-heading text-base mb-3">Top items today</h2>
           {dash?.top_items?.length ? (
-            <ul className="space-y-3" data-testid="top-items-list">
+            <ul className="space-y-2" data-testid="top-items-list">
               {dash.top_items.map((t: any) => (
                 <li key={t.name} className="flex items-center justify-between">
                   <span className="text-sm">{t.name}</span>
@@ -82,13 +84,13 @@ export default function AdminDashboard() {
       </div>
 
       {dash?.low_stock?.length > 0 && (
-        <div className="mt-8 bg-warn/10 border border-warn/30 rounded-2xl p-6" data-testid="low-stock-alert">
-          <div className="flex items-center gap-2 mb-3"><AlertTriangle className="h-5 w-5 text-warn" /> <h3 className="font-heading text-lg">Low stock alert</h3></div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+        <div className="mt-6 bg-warn/10 border border-warn/30 rounded-xl p-4" data-testid="low-stock-alert">
+          <div className="flex items-center gap-2 mb-2"><AlertTriangle className="h-4 w-4 text-warn" /> <h3 className="font-heading text-sm">Low stock alert</h3></div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
             {dash.low_stock.map((i: any) => (
-              <div key={i.id} className="bg-white rounded-xl p-3 border border-bone">
+              <div key={i.id} className="bg-white rounded-lg p-2.5 border border-bone">
                 <div className="font-medium">{i.name}</div>
-                <div className="text-stone text-xs">{i.qty} {i.unit} · reorder at {i.reorder_level}</div>
+                <div className="text-stone">{i.qty} {i.unit} · reorder at {i.reorder_level}</div>
               </div>
             ))}
           </div>

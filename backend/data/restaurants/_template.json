@@ -1,0 +1,17 @@
+{
+  "_comment": "TEMPLATE: Copy this file, rename it to your-restaurant-slug.json, and fill in the details",
+  "_instructions": "The slug (filename without .json) becomes the URL: /r/{slug}",
+  "id": "rest_your_restaurant_001",
+  "name": "Your Restaurant Name",
+  "slug": "your-restaurant-slug",
+  "plan": "trial",
+  "users": [
+    {"email": "your-restaurant-slug@smartdine.ai", "password": "Owner@123", "name": "Owner Name", "role": "admin"},
+    {"email": "admin-your-restaurant-slug@smartdine.ai", "password": "Admin@123", "name": "Admin Name", "role": "admin"},
+    {"email": "kitchen-your-restaurant-slug@smartdine.ai", "password": "Chef@123", "name": "Head Chef", "role": "kitchen"},
+    {"email": "counter-your-restaurant-slug@smartdine.ai", "password": "Counter@123", "name": "Counter Staff", "role": "counter"}
+  ],
+  "menu": [
+    {"name": "Signature Dish", "description": "Your signature dish description.", "price": 300, "category": "Starters", "image_url": "https://images.unsplash.com/photo-XXXXX?w=600&q=80", "prep_time_min": 15, "tags": ["bestseller", "signature"]}
+  ]
+}

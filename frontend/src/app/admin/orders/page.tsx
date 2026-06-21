@@ -6,6 +6,7 @@ import { formatCurrency, fmtTime } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import type { Order } from "@/types";
 import { toast } from "sonner";
+import { useSession } from "@/stores/session";
 
 const STATUS_OPTIONS: Order["status"][] = ["confirmed", "preparing", "ready", "served", "cancelled"];
 const STATUS_COLOR: Record<string, "clay" | "warn" | "ready" | "sage" | "alert"> = {
@@ -14,11 +15,12 @@ const STATUS_COLOR: Record<string, "clay" | "warn" | "ready" | "sage" | "alert">
 
 export default function AdminOrders() {
   const qc = useQueryClient();
+  const { user } = useSession();
   const [filter, setFilter] = useState<string>("");
-  const { data } = useQuery({ queryKey: ["admin-orders", filter], queryFn: () => api<{ orders: Order[] }>(`/api/orders${filter ? `?status_filter=${filter}` : ""}`), refetchInterval: 5000 });
+  const { data } = useQuery({ queryKey: ["admin-orders", filter, user?.restaurant_id], queryFn: () => api<{ orders: Order[] }>(`/api/orders${filter ? `?status_filter=${filter}` : ""}`), refetchInterval: 5000 });
   const mut = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) => api(`/api/orders/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-orders"] }); toast.success("Status updated"); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-orders", undefined, user?.restaurant_id] }); toast.success("Status updated"); },
   });
 
   return (

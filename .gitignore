@@ -20,7 +20,8 @@ node_modules/
 /coverage
 
 # Next.js
-/.next/
+.next/
+frontend/.next/
 /out/
 next-env.d.ts
 *.tsbuildinfo
@@ -51,6 +52,10 @@ __pycache__/
 *pyc*
 venv/
 .venv/
+backend/__pycache__/
+backend/venv/
+backend/uploads/
+backend/*.pyc
 
 # Development tools
 chainlit.md

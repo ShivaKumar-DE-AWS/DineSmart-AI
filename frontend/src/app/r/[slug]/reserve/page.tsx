@@ -5,6 +5,7 @@ import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { Calendar, Clock, Users, Phone, User2, MessageSquare, Sparkles, CheckCircle2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { getRestaurantConfig } from "@/hooks/useRestaurantConfig";
 
 export default function ReservePage() {
   const params = useParams();
@@ -32,7 +33,7 @@ export default function ReservePage() {
     try {
       const res = await api<{ ok: boolean; reservation_id: string; status: string }>("/api/reservations", {
         method: "POST",
-        body: JSON.stringify({ name: name.trim(), phone: phone.trim(), date, time, guests, notes: notes.trim() || undefined }),
+        body: JSON.stringify({ name: name.trim(), phone: phone.trim(), date, time, guests, notes: notes.trim() || undefined, restaurant_id: getRestaurantConfig(slug).id }),
       });
       setConfirmation({ id: res.reservation_id });
       toast.success("Reservation requested — we&apos;ll confirm shortly");
@@ -55,7 +56,7 @@ export default function ReservePage() {
           A table for <span className="font-editorial italic mehfil-gold-gradient">{guests}</span>
         </h1>
         <p className="font-editorial italic text-[#1A1106]/70 mt-4 leading-relaxed">
-          {name}, we&apos;ve received your request for <span className="font-royal text-brand-primary">{date} · {time}</span>. Our khansama will call you within 30 minutes to confirm your mehfil.
+          {name}, we&apos;ve received your request for <span className="font-royal text-brand-primary">{date} · {time}</span>. Our team will call you within 30 minutes to confirm your reservation.
         </p>
         <div className="mt-6 inline-block bg-[#FAF5EC] border border-brand-secondary/40 rounded-full px-5 py-2 font-royal tracking-wider uppercase text-[11px] text-[#1A1106]/70">
           Reservation # {confirmation.id.slice(0, 8)}
@@ -80,7 +81,7 @@ export default function ReservePage() {
           Be our <span className="font-editorial italic mehfil-gold-gradient">mehmaan</span>
         </h1>
         <p className="font-editorial italic text-sm md:text-base text-[#1A1106]/75 mt-4 max-w-xl mx-auto leading-relaxed">
-          Tell us when, who, and how many — we&apos;ll set the silverware and warm the dum biryani for your arrival.
+          Tell us when, who, and how many — we&apos;ll set the table and prepare for your arrival.
         </p>
       </div>
 

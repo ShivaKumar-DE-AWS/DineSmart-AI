@@ -21,7 +21,7 @@ export default function CartPage() {
         <div className="mehfil-divider mb-5 max-w-xs mx-auto"><span className="font-royal tracking-[0.4em] text-[10px] uppercase">Your thali</span></div>
         <h1 className="font-royal text-4xl md:text-5xl text-brand-primary tracking-wide">An empty thali awaits</h1>
         <p className="font-editorial italic text-[#1A1106]/70 mt-4 mb-10 leading-relaxed">
-          Step into the mehfil — choose a chapter and let the dishes find you.
+          Step in — browse the menu and let the dishes find you.
         </p>
         <Link href={`/r/${slug}/menu`} data-testid="cart-go-menu" className="inline-flex items-center gap-2 mehfil-btn-royal rounded-full px-7 py-3.5 text-xs font-royal tracking-[0.2em] uppercase">
           <BookOpen className="h-4 w-4" /> Browse menu <ArrowRight className="h-4 w-4" />
@@ -35,7 +35,7 @@ export default function CartPage() {
       <div className="text-center mb-10">
         <div className="mehfil-divider mb-4 max-w-xs mx-auto"><span className="font-royal tracking-[0.4em] text-[10px] uppercase">Your thali</span></div>
         <h1 className="font-royal text-4xl md:text-5xl text-brand-primary tracking-wide" data-testid="cart-title">
-          A Mehfil for <span className="font-editorial italic mehfil-gold-gradient">{cart.count()}</span>
+          A feast for <span className="font-editorial italic mehfil-gold-gradient">{cart.count()}</span>
         </h1>
         <p className="font-editorial italic text-sm text-[#1A1106]/70 mt-3">Review your selections before we send them to our khansama&apos;s kitchen.</p>
       </div>
