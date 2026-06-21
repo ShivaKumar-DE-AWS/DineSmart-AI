@@ -107,11 +107,14 @@ async def me(user=Depends(require_user)):
 
 @router.post("/guest")
 async def auth_guest(req: GuestReq, restaurant_id: Optional[str] = None):
-    """Lightweight guest sign-in for customers. Requires restaurant_id."""
+    """Lightweight guest sign-in for customers. Requires valid restaurant_id."""
     import uuid
-    from typing import Optional as Opt
     if not restaurant_id:
         raise HTTPException(status_code=400, detail="restaurant_id is required for guest login")
+    # Validate restaurant exists
+    restaurant = await db.restaurants.find_one({"id": restaurant_id})
+    if not restaurant:
+        raise HTTPException(status_code=400, detail="Invalid restaurant_id")
     name = (req.name or "").strip() or "Guest"
     guest_id = f"guest_{str(uuid.uuid4())[:8]}"
     phone = (req.phone or "").strip()
