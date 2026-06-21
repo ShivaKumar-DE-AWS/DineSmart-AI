@@ -166,11 +166,17 @@ async def seed_db():
                         "password_hash": hash_password(u["password"]),
                         "created_at": now_iso(),
                     })
-                elif not existing_user.get("restaurant_slug"):
-                    await db.users.update_one(
-                        {"email": u["email"]},
-                        {"$set": {"restaurant_slug": rest_slug}}
-                    )
+                else:
+                    updates = {}
+                    if not existing_user.get("restaurant_id"):
+                        updates["restaurant_id"] = rest_id
+                    if not existing_user.get("restaurant_slug"):
+                        updates["restaurant_slug"] = rest_slug
+                    if updates:
+                        await db.users.update_one(
+                            {"email": u["email"]},
+                            {"$set": updates}
+                        )
 
         if await db.inventory.count_documents({}) == 0:
             for i in SEED_INVENTORY:
@@ -181,6 +187,87 @@ async def seed_db():
     except Exception as e:
         print(f"[startup] WARNING: Database seed failed: {e}")
         print("[startup] App will continue — DB operations may fail until connection is restored")
+
+
+@app.on_event("startup")
+async def backfill_restaurant_ids():
+    """Migration: backfill restaurant_id on users/orders missing it."""
+    try:
+        restaurants = await db.restaurants.find({}, {"id": 1, "slug": 1}).to_list(100)
+        slug_to_id = {r["slug"]: r["id"] for r in restaurants if r.get("id") and r.get("slug")}
+
+        updated_users = 0
+        async for user in db.users.find({"$or": [
+            {"restaurant_id": {"$exists": False}},
+            {"restaurant_id": None},
+            {"restaurant_id": ""},
+        ]}):
+            email = user.get("email", "")
+            inferred_rest_id = None
+            inferred_slug = None
+            for slug, rid in slug_to_id.items():
+                if slug in email or email.endswith(f"@{slug}.smartdine"):
+                    inferred_rest_id = rid
+                    inferred_slug = slug
+                    break
+            if not inferred_rest_id:
+                for slug, rid in slug_to_id.items():
+                    prefix = slug.split("-")[0] if "-" in slug else slug
+                    if prefix in email:
+                        inferred_rest_id = rid
+                        inferred_slug = slug
+                        break
+            if inferred_rest_id:
+                await db.users.update_one(
+                    {"_id": user["_id"]},
+                    {"$set": {"restaurant_id": inferred_rest_id, "restaurant_slug": inferred_slug or ""}},
+                )
+                updated_users += 1
+
+        updated_orders = 0
+        async for order in db.orders.find({"$or": [
+            {"restaurant_id": {"$exists": False}},
+            {"restaurant_id": None},
+            {"restaurant_id": ""},
+        ]}):
+            token = order.get("token", "")
+            customer = order.get("customer_name", "")
+            best_match = None
+            for slug, rid in slug_to_id.items():
+                slug_clean = slug.replace("-", "")
+                customer_lower = customer.lower().replace("-", "").replace(" ", "")
+                if slug_clean in customer_lower or slug.split("-")[0] in customer.lower():
+                    best_match = rid
+                    break
+            if not best_match and slug_to_id:
+                best_match = list(slug_to_id.values())[0]
+            if best_match:
+                await db.orders.update_one(
+                    {"_id": order["_id"]},
+                    {"$set": {"restaurant_id": best_match}},
+                )
+                updated_orders += 1
+
+        if updated_users or updated_orders:
+            print(f"[startup] Backfill: {updated_users} users, {updated_orders} orders updated")
+        else:
+            print("[startup] No backfill needed — all records have restaurant_id")
+
+        # Normalize password field: old users may have 'password' instead of 'password_hash'
+        async for user in db.users.find({"$or": [
+            {"password_hash": {"$exists": False}},
+            {"password_hash": None},
+            {"password_hash": ""},
+        ]}):
+            old_pw = user.get("password", "")
+            if old_pw:
+                await db.users.update_one(
+                    {"_id": user["_id"]},
+                    {"$set": {"password_hash": old_pw}},
+                )
+                print(f"[startup] Normalized password field for {user.get('email')}")
+    except Exception as e:
+        print(f"[startup] WARNING: Backfill failed: {e}")
 
 
 @app.on_event("startup")

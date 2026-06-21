@@ -29,7 +29,7 @@ export default function CounterPage() {
 
   const { data } = useQuery({
     queryKey: ["counter-orders", user?.restaurant_id],
-    queryFn: () => api<{ orders: Order[] }>("/api/orders?limit=200"),
+    queryFn: () => api<{ orders: Order[] }>(`/api/orders?limit=200${user?.restaurant_id ? `&restaurant_id=${user.restaurant_id}` : ""}`),
     refetchInterval: 60000, // 60s fallback — SSE handles real-time
   });
   const mut = useMutation({
@@ -55,8 +55,8 @@ export default function CounterPage() {
   }, [ready]);
 
   const { data: notifsData } = useQuery({
-    queryKey: ["counter-notifications"],
-    queryFn: () => api<{ notifications: any[] }>("/api/notifications"),
+    queryKey: ["counter-notifications", user?.restaurant_id],
+    queryFn: () => api<{ notifications: any[] }>(`/api/notifications${user?.restaurant_id ? `?restaurant_id=${user.restaurant_id}` : ""}`),
     refetchInterval: 3000,
   });
 

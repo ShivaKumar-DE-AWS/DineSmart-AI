@@ -36,10 +36,11 @@ async def health():
 # Notifications
 # =========================================================
 @router.get("/api/notifications")
-async def get_notifications(user=Depends(require_user)):
+async def get_notifications(restaurant_id: Optional[str] = None, user=Depends(require_user)):
     q: Dict[str, Any] = {"read": False}
-    if user.get("restaurant_id"):
-        q["restaurant_id"] = user["restaurant_id"]
+    rid = restaurant_id or user.get("restaurant_id")
+    if rid:
+        q["restaurant_id"] = rid
     nots = await db.notifications.find(q).sort("created_at", -1).to_list(100)
     for n in nots:
         n.pop("_id", None)

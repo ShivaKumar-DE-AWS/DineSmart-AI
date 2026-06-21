@@ -55,19 +55,43 @@ async def signup(req: SignupReq):
 @router.post("/login")
 async def login(req: LoginReq):
     user = await db.users.find_one({"email": req.email})
-    if not user or not verify_password(req.password, user["password_hash"]):
+    stored_hash = user.get("password_hash") or user.get("password") if user else None
+    if not user or not verify_password(req.password, stored_hash or ""):
         raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    restaurant_id = user.get("restaurant_id")
+    restaurant_slug = user.get("restaurant_slug")
+
+    if not restaurant_id:
+        email = user.get("email", "")
+        restaurants = await db.restaurants.find({}, {"id": 1, "slug": 1}).to_list(100)
+        for r in restaurants:
+            slug = r.get("slug", "")
+            rid = r.get("id", "")
+            if slug in email or (slug.split("-")[0] if "-" in slug else slug) in email:
+                restaurant_id = rid
+                restaurant_slug = slug
+                break
+        if not restaurant_id and restaurants:
+            restaurant_id = restaurants[0].get("id", "")
+            restaurant_slug = restaurants[0].get("slug", "")
+        if restaurant_id:
+            await db.users.update_one(
+                {"_id": user["_id"]},
+                {"$set": {"restaurant_id": restaurant_id, "restaurant_slug": restaurant_slug or ""}},
+            )
+
     token = jwt_sign({
         "sub": user["id"], "email": user["email"], "role": user["role"],
-        "name": user["name"], "restaurant_id": user.get("restaurant_id"),
-        "restaurant_slug": user.get("restaurant_slug"),
+        "name": user["name"], "restaurant_id": restaurant_id,
+        "restaurant_slug": restaurant_slug,
     })
     return {
         "token": token,
         "user": {
             "id": user["id"], "email": user["email"], "name": user["name"],
-            "role": user["role"], "restaurant_id": user.get("restaurant_id"),
-            "restaurant_slug": user.get("restaurant_slug"),
+            "role": user["role"], "restaurant_id": restaurant_id,
+            "restaurant_slug": restaurant_slug,
         },
     }
 

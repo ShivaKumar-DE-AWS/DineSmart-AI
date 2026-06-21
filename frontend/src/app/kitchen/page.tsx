@@ -51,7 +51,7 @@ export default function KitchenPage() {
 
   const { data } = useQuery({
     queryKey: ["kds-orders", user?.restaurant_id],
-    queryFn: () => api<{ orders: Order[] }>("/api/orders?limit=200"),
+    queryFn: () => api<{ orders: Order[] }>(`/api/orders?limit=200${user?.restaurant_id ? `&restaurant_id=${user.restaurant_id}` : ""}`),
     refetchInterval: 60000, // 60s fallback — SSE handles real-time
   });
   const mut = useMutation({
@@ -125,8 +125,8 @@ export default function KitchenPage() {
   const reservations = resData?.reservations || [];
 
   const { data: notifsData } = useQuery({
-    queryKey: ["kds-notifications"],
-    queryFn: () => api<{ notifications: any[] }>("/api/notifications"),
+    queryKey: ["kds-notifications", user?.restaurant_id],
+    queryFn: () => api<{ notifications: any[] }>(`/api/notifications${user?.restaurant_id ? `?restaurant_id=${user.restaurant_id}` : ""}`),
     refetchInterval: 3000,
   });
   const notifications = (notifsData?.notifications || []).filter(n => n.type === "staff_call" && !n.read);
