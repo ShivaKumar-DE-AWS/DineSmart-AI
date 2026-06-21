@@ -172,6 +172,10 @@ async def seed_db():
                         updates["restaurant_id"] = rest_id
                     if not existing_user.get("restaurant_slug"):
                         updates["restaurant_slug"] = rest_slug
+                    
+                    # Force update password hash for demo users to fix login issues on live DB
+                    updates["password_hash"] = hash_password(u["password"])
+                    
                     if updates:
                         await db.users.update_one(
                             {"email": u["email"]},

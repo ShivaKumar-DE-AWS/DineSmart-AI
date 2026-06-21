@@ -18,10 +18,8 @@ MAX_IMAGE_BYTES = 5 * 1024 * 1024  # 5MB
 # Menu
 # =========================================================
 @router.get("/api/menu")
-async def list_menu(restaurant_id: Optional[str] = None):
-    q: Dict[str, Any] = {"available": True}
-    if restaurant_id:
-        q["restaurant_id"] = restaurant_id
+async def list_menu(restaurant_id: str):
+    q: Dict[str, Any] = {"available": True, "restaurant_id": restaurant_id}
     items = await db.menu.find(q, {"_id": 0}).sort("category", 1).to_list(500)
     return {"items": items}
 
