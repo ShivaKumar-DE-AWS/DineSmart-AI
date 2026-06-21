@@ -45,14 +45,15 @@ class RateLimiter:
 _rate_limiter = RateLimiter()
 
 RATE_LIMITS: Dict[str, tuple] = {
-    "/api/auth/login": (10, 60),
+    "/api/auth/login": (5, 60),
     "/api/auth/signup": (5, 60),
     "/api/auth/guest": (20, 60),
     "/api/orders": (30, 60),
-    "/api/ai-waiter/chat": (30, 60),
+    "/api/ai-waiter/chat": (15, 60),
     "/api/ai-waiter/transcribe": (10, 60),
     "/api/ai-waiter/speak": (10, 60),
     "/api/reservations": (15, 60),
+    "/api/payment/checkout/session": (10, 60),
 }
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
@@ -77,9 +78,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 # =========================================================
 app = FastAPI(title="SmartDine AI API", version="2.0.0")
 app.add_middleware(RateLimitMiddleware)
+ALLOWED_ORIGINS = os.environ.get("ALLOWED_ORIGINS", "https://dine-smart-ai.vercel.app,http://localhost:3000").split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -187,7 +190,13 @@ async def seed_db():
                 doc = InventoryItemModel(**i).model_dump()
                 await db.inventory.insert_one(doc)
 
-        print("[startup] Database seeded successfully")
+        # Create Database Indexes for Performance & Reliability
+        import pymongo
+        await db.orders.create_index([("restaurant_id", pymongo.ASCENDING), ("created_at", pymongo.DESCENDING)])
+        await db.menu.create_index([("restaurant_id", pymongo.ASCENDING)])
+        await db.users.create_index([("email", pymongo.ASCENDING)], unique=True)
+
+        print("[startup] Database seeded and indexed successfully")
     except Exception as e:
         print(f"[startup] WARNING: Database seed failed: {e}")
         print("[startup] App will continue — DB operations may fail until connection is restored")

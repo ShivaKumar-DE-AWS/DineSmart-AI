@@ -198,8 +198,8 @@ async def call_staff(session_id: str):
 @router.post("/api/reservations")
 async def create_reservation(
     name: str, phone: str, date: str, time: str,
-    guests: int, notes: Optional[str] = None,
-    restaurant_id: Optional[str] = None,
+    guests: int, restaurant_id: str,
+    notes: Optional[str] = None,
 ):
     if guests < 1 or guests > 30:
         raise HTTPException(status_code=400, detail="Guests must be between 1 and 30")

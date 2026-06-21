@@ -88,9 +88,7 @@ async def create_order(req: OrderCreateReq):
     eta = (datetime.now(timezone.utc) + timedelta(minutes=max(max_prep, 8))).isoformat()
     restaurant_id = req.restaurant_id
     if not restaurant_id:
-        rest = await db.restaurants.find_one({}, {"id": 1})
-        if rest:
-            restaurant_id = rest["id"]
+        raise HTTPException(status_code=400, detail="restaurant_id is required")
     order = {
         "id": str(uuid.uuid4()),
         "token": token,
