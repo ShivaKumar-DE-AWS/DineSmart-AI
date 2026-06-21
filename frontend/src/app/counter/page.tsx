@@ -30,7 +30,7 @@ export default function CounterPage() {
   const { data } = useQuery({
     queryKey: ["counter-orders", user?.restaurant_id],
     queryFn: () => api<{ orders: Order[] }>(`/api/orders?limit=200${user?.restaurant_id ? `&restaurant_id=${user.restaurant_id}` : ""}`),
-    refetchInterval: 60000, // 60s fallback — SSE handles real-time
+    refetchInterval: 15000, // 15s auto-refresh fallback — SSE handles real-time push
   });
   const mut = useMutation({
     mutationFn: ({ id }: { id: string }) => api(`/api/orders/${id}/status`, { method: "PATCH", body: JSON.stringify({ status: "served" }) }),
