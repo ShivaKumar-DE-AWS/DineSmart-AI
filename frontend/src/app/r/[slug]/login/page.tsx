@@ -14,10 +14,9 @@ import { useRestaurantConfig } from "@/hooks/useRestaurantConfig";
 
 type Tab = "guest" | "staff";
 
-// Extract short email slug from config slug: "mehfil-hyderabad" → "mehfil", "spice-garden" → "spice-garden"
+// Extract email slug from config slug: "mehfil-hyderabad" → "mehfil-hyderabad", "spice-garden" → "spice-garden"
 function emailSlug(configSlug: string): string {
-  const parts = configSlug.split("-");
-  return parts.length > 1 ? parts[0] : configSlug;
+  return configSlug;
 }
 
 // Default credentials per restaurant — generated dynamically from slug

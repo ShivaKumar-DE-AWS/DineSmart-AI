@@ -130,9 +130,7 @@ export function getRestaurantConfig(slug: string): any {
 
 export function useAllRestaurantConfigs() {
   const local = Object.entries(LOCAL_CONFIGS).map(([slug, config]: [string, any]) => {
-    const parts = slug.split("-");
-    const shortSlug = parts.length > 1 ? parts[0] : slug;
-    return { slug, name: config.name || slug, email: `${shortSlug}@smartdine.ai` };
+    return { slug, name: config.name || slug, email: `${slug}@smartdine.ai` };
   });
 
   const { data: backendData } = useQuery({

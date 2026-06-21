@@ -376,7 +376,7 @@ async def request_restaurant(req: RestaurantRequestReq):
     if existing:
         raise HTTPException(status_code=409, detail=f"Restaurant '{req.name}' already exists.")
     rest_id = f"rest_{slug}_001"
-    short_slug = slug.split('-')[0]
+    short_slug = slug
     await db.restaurants.insert_one({"id": rest_id, "name": req.name, "slug": slug, "plan": "trial", "created_at": now_iso()})
     users = [
         {"email": f"{short_slug}@smartdine.ai", "password": "Owner@123", "name": f"{req.name} Owner", "role": "admin"},
@@ -425,9 +425,7 @@ async def list_restaurant_configs():
     for d in docs:
         cfg = d.get("config", {})
         slug = d.get("slug", "")
-        parts = slug.split("-")
-        short_slug = parts[0] if len(parts) > 1 else slug
-        out.append({"slug": slug, "name": cfg.get("name", slug), "email": f"{short_slug}@smartdine.ai"})
+        out.append({"slug": slug, "name": cfg.get("name", slug), "email": f"{slug}@smartdine.ai"})
     return {"configs": out}
 
 @router.get("/api/config/{slug}")
