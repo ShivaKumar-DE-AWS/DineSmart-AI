@@ -61,6 +61,7 @@ export default function RestaurantAuthPage() {
       const dest = slug
         ? res.user.role === "kitchen" ? `/r/${slug}/kitchen`
         : res.user.role === "counter" ? `/r/${slug}/counter`
+        : res.user.role === "admin" ? `/admin`
         : `/r/${slug}/menu`
         : "/";
       router.push(dest);
