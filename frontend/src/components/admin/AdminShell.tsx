@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { LayoutDashboard, ShoppingBag, LineChart, Boxes, UtensilsCrossed, Users, CalendarClock, QrCode, LogOut, Sparkles, Menu as MenuIcon, X, CreditCard } from "lucide-react";
+import { LayoutDashboard, ShoppingBag, LineChart, Boxes, UtensilsCrossed, Users, CalendarClock, QrCode, LogOut, Sparkles, Menu as MenuIcon, X, CreditCard, Megaphone, Info, AlertTriangle } from "lucide-react";
 import { RoleGuard } from "@/components/shared/RoleGuard";
 import { useSession } from "@/stores/session";
 import { getRestaurantConfig } from "@/hooks/useRestaurantConfig";
@@ -42,6 +42,12 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     queryKey: ["admin-notifications"],
     queryFn: () => api<{ notifications: any[] }>("/api/notifications"),
     refetchInterval: 5000,
+  });
+
+  const { data: annData } = useQuery({
+    queryKey: ["global-announcement"],
+    queryFn: () => api<{ announcement: any }>("/api/announcements"),
+    refetchInterval: 60000,
   });
 
   const markReadMut = useMutation({
@@ -137,7 +143,22 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           </div>
         )}
 
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">{children}</main>
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 flex flex-col">
+          {annData?.announcement && (
+            <div className={`mb-6 p-4 rounded-xl shadow-sm border flex items-start gap-3 ${
+              annData.announcement.type === 'warning' 
+                ? 'bg-amber-50 border-amber-200 text-amber-900'
+                : 'bg-blue-50 border-blue-200 text-blue-900'
+            }`}>
+              {annData.announcement.type === 'warning' ? <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" /> : <Info className="h-5 w-5 shrink-0 mt-0.5" />}
+              <div>
+                <h4 className="font-semibold">{annData.announcement.title}</h4>
+                <p className="text-sm mt-1 opacity-90">{annData.announcement.message}</p>
+              </div>
+            </div>
+          )}
+          {children}
+        </main>
       </div>
     </RoleGuard>
   );

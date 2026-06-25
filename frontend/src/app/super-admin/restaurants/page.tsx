@@ -1,8 +1,11 @@
 "use client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { Store, Search } from "lucide-react";
+import { Store, Search, UserCircle2, Ban, Play } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { useSession } from "@/stores/session";
 
 interface Restaurant {
   id: string;
@@ -16,9 +19,32 @@ interface Restaurant {
 
 export default function SuperAdminRestaurantsPage() {
   const [search, setSearch] = useState("");
+  const qc = useQueryClient();
+  const router = useRouter();
+  const setSession = useSession((s) => s.setSession);
+
   const { data, isLoading } = useQuery({
     queryKey: ["super-admin-restaurants"],
     queryFn: () => api<{ restaurants: Restaurant[] }>("/api/super-admin/restaurants"),
+  });
+
+  const suspendMut = useMutation({
+    mutationFn: (id: string) => api<{ message: string; new_status: string }>(`/api/super-admin/restaurants/${id}/suspend`, { method: "POST" }),
+    onSuccess: (data) => {
+      toast.success(data.message);
+      qc.invalidateQueries({ queryKey: ["super-admin-restaurants"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const impersonateMut = useMutation({
+    mutationFn: (id: string) => api<{ token: string; user: any }>(`/api/super-admin/restaurants/${id}/impersonate`, { method: "POST" }),
+    onSuccess: (data) => {
+      setSession(data.user, data.token);
+      toast.success(`Impersonating ${data.user.restaurant_slug}`);
+      router.push(`/r/${data.user.restaurant_slug}/admin`);
+    },
+    onError: (err: Error) => toast.error(err.message),
   });
 
   const restaurants = (data?.restaurants ?? []).filter((r) =>
@@ -57,6 +83,7 @@ export default function SuperAdminRestaurantsPage() {
               <th className="text-left py-3 px-4 font-medium text-stone hidden md:table-cell">Status</th>
               <th className="text-left py-3 px-4 font-medium text-stone">Orders</th>
               <th className="text-left py-3 px-4 font-medium text-stone hidden md:table-cell">Created</th>
+              <th className="text-right py-3 px-4 font-medium text-stone">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -81,6 +108,28 @@ export default function SuperAdminRestaurantsPage() {
                   <td className="py-3 px-4 text-ink">{r.order_count}</td>
                   <td className="py-3 px-4 text-stone text-xs hidden md:table-cell">
                     {r.created_at ? new Date(r.created_at).toLocaleDateString() : "—"}
+                  </td>
+                  <td className="py-3 px-4 text-right space-x-2">
+                    <button 
+                      onClick={() => impersonateMut.mutate(r.id)}
+                      disabled={impersonateMut.isPending}
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition text-xs font-medium"
+                      title="Impersonate Admin"
+                    >
+                      <UserCircle2 className="h-3.5 w-3.5" /> <span className="hidden lg:inline">Login As</span>
+                    </button>
+                    <button 
+                      onClick={() => {
+                        if (confirm(`Are you sure you want to ${r.subscription_status === 'suspended' ? 'activate' : 'suspend'} ${r.name}?`)) {
+                          suspendMut.mutate(r.id);
+                        }
+                      }}
+                      disabled={suspendMut.isPending}
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-stone/10 text-stone hover:bg-stone/20 transition text-xs font-medium"
+                      title={r.subscription_status === 'suspended' ? 'Activate' : 'Suspend'}
+                    >
+                      {r.subscription_status === 'suspended' ? <Play className="h-3.5 w-3.5" /> : <Ban className="h-3.5 w-3.5" />}
+                    </button>
                   </td>
                 </tr>
               ))

@@ -102,6 +102,8 @@ from routers.tables import router as tables_router
 from routers.ai_waiter import router as ai_router
 from routers.admin import router as admin_router
 from routers.super_admin import router as super_admin_router
+from routers.audit import router as audit_router
+from routers.announcements import router as announcements_router
 
 app.include_router(auth_router)
 app.include_router(menu_router)
@@ -110,6 +112,8 @@ app.include_router(tables_router)
 app.include_router(ai_router)
 app.include_router(admin_router)
 app.include_router(super_admin_router)
+app.include_router(audit_router)
+app.include_router(announcements_router)
 
 
 # =========================================================

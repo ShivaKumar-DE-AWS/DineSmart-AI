@@ -45,3 +45,66 @@ async def list_restaurants(user=Depends(require_superadmin)):
         r["order_count"] = order_count
 
     return {"restaurants": restaurants}
+
+
+@router.post("/restaurants/{restaurant_id}/suspend")
+async def toggle_suspend_restaurant(restaurant_id: str, user=Depends(require_superadmin)):
+    """Toggle a restaurant's subscription status between active and suspended."""
+    restaurant = await db.restaurants.find_one({"id": restaurant_id})
+    if not restaurant:
+        raise HTTPException(status_code=404, detail="Restaurant not found")
+
+    new_status = "suspended" if restaurant.get("subscription_status") != "suspended" else "active"
+    await db.restaurants.update_one({"id": restaurant_id}, {"$set": {"subscription_status": new_status}})
+
+    from routers.audit import log_audit_event
+    await log_audit_event(
+        user_id=user["id"],
+        user_email=user["email"],
+        action=f"restaurant_{new_status}",
+        target=restaurant_id,
+        details={"restaurant_name": restaurant.get("name")}
+    )
+
+    return {"message": f"Restaurant status changed to {new_status}", "new_status": new_status}
+
+
+@router.post("/restaurants/{restaurant_id}/impersonate")
+async def impersonate_restaurant(restaurant_id: str, user=Depends(require_superadmin)):
+    """Generate a temporary JWT to act as an admin for a specific restaurant."""
+    from deps import jwt_sign
+    
+    restaurant = await db.restaurants.find_one({"id": restaurant_id})
+    if not restaurant:
+        raise HTTPException(status_code=404, detail="Restaurant not found")
+
+    # Generate token masquerading as the restaurant admin
+    token = jwt_sign({
+        "sub": user["id"],
+        "email": user["email"],
+        "role": "admin",
+        "name": f"SmartDine HQ ({user['name']})",
+        "restaurant_id": restaurant_id,
+        "restaurant_slug": restaurant.get("slug"),
+    })
+
+    from routers.audit import log_audit_event
+    await log_audit_event(
+        user_id=user["id"],
+        user_email=user["email"],
+        action="impersonate_tenant",
+        target=restaurant_id,
+        details={"restaurant_name": restaurant.get("name")}
+    )
+
+    return {
+        "token": token,
+        "user": {
+            "id": user["id"],
+            "email": user["email"],
+            "name": f"SmartDine HQ ({user['name']})",
+            "role": "admin",
+            "restaurant_id": restaurant_id,
+            "restaurant_slug": restaurant.get("slug"),
+        }
+    }

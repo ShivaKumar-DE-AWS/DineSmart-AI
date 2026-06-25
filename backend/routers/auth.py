@@ -58,6 +58,14 @@ async def login(req: LoginReq):
     user = await db.users.find_one({"email": req.email})
     stored_hash = user.get("password_hash") or user.get("password") if user else None
     if not user or not verify_password(req.password, stored_hash or ""):
+        from routers.audit import log_audit_event
+        await log_audit_event(
+            user_id=user.get("id") if user else None,
+            user_email=req.email,
+            action="login_failed",
+            target="system",
+            details={"reason": "Invalid email or password"}
+        )
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
     restaurant_id = user.get("restaurant_id")
@@ -70,6 +78,15 @@ async def login(req: LoginReq):
             "name": user["name"], "restaurant_id": None,
             "restaurant_slug": None,
         })
+        from routers.audit import log_audit_event
+        await log_audit_event(
+            user_id=user["id"],
+            user_email=user["email"],
+            action="login_success",
+            target="system",
+            details={"role": "superadmin"}
+        )
+
         return {
             "token": token,
             "user": {
@@ -102,6 +119,16 @@ async def login(req: LoginReq):
         "name": user["name"], "restaurant_id": restaurant_id,
         "restaurant_slug": restaurant_slug,
     })
+
+    from routers.audit import log_audit_event
+    await log_audit_event(
+        user_id=user["id"],
+        user_email=user["email"],
+        action="login_success",
+        target="system",
+        details={"role": user["role"], "restaurant_id": restaurant_id}
+    )
+
     return {
         "token": token,
         "user": {
