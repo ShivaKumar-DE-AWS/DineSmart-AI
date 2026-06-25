@@ -170,7 +170,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
         `}} />
       )}
       <Suspense fallback={null}><TableSessionGuard /></Suspense>
-      <header className={`sticky top-0 z-40 transition-all duration-300 ${scrolled ? "bg-[#FAF5EC]/90 backdrop-blur-md border-b border-[#E7DFCB]" : "bg-transparent"}`}>
+      <header className={`sticky top-0 z-40 transition-all duration-300 pt-[env(safe-area-inset-top)] ${scrolled ? "bg-[#FAF5EC]/90 backdrop-blur-md border-b border-[#E7DFCB]" : "bg-transparent"}`}>
         <div className="max-w-7xl mx-auto px-5 md:px-10 py-3 flex items-center justify-between gap-4">
           <MehfilLogo size="sm" />
           
@@ -344,7 +344,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
         </div>
 
         {/* Bottom Bar */}
-        <div className="border-t border-brand-secondary/15 px-6 md:px-10 py-5">
+        <div className="border-t border-brand-secondary/15 px-6 md:px-10 py-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))]">
           <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-2 text-xs text-[#FAF5EC]/60 font-royal tracking-wider uppercase">
               <span>© {new Date().getFullYear()} {restaurantConfig?.name || "SmartDine"}</span>
