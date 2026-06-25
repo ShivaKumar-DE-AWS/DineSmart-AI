@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { LayoutDashboard, ShoppingBag, LineChart, Boxes, UtensilsCrossed, Users, CalendarClock, QrCode, LogOut, Sparkles, Menu as MenuIcon, X, CreditCard, Megaphone, Info, AlertTriangle } from "lucide-react";
+import { LayoutDashboard, ShoppingBag, LineChart, Boxes, UtensilsCrossed, Users, CalendarClock, QrCode, LogOut, Sparkles, Menu as MenuIcon, X, CreditCard, Megaphone, Info, AlertTriangle, LifeBuoy } from "lucide-react";
 import { RoleGuard } from "@/components/shared/RoleGuard";
 import { useSession } from "@/stores/session";
 import { getRestaurantConfig } from "@/hooks/useRestaurantConfig";
@@ -21,6 +21,7 @@ const nav = [
   { href: "/admin/menu", label: "Menu", icon: UtensilsCrossed, testid: "admin-nav-menu" },
   { href: "/admin/customers", label: "Customers", icon: Users, testid: "admin-nav-customers" },
   { href: "/admin/settings", label: "Brand & Staff Settings", icon: Sparkles, testid: "admin-nav-settings" },
+  { href: "/admin/support", label: "Help & Support", icon: LifeBuoy, testid: "admin-nav-support" },
 ];
 
 export function AdminShell({ children }: { children: React.ReactNode }) {

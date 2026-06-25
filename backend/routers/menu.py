@@ -136,6 +136,14 @@ async def seed_inventory_demo(user=Depends(require_user)):
                 update_q["restaurant_id"] = user["restaurant_id"]
             await db.menu.update_one(update_q, {"$set": {"recipe": recipe}})
 
+        from deps import now_iso
+        if user.get("restaurant_id"):
+            await db.ai_usage_logs.insert_one({
+                "restaurant_id": user["restaurant_id"],
+                "endpoint": "/api/menu/demo-recipes",
+                "timestamp": now_iso()
+            })
+
         return {"message": "Demo data seeded dynamically using AI!"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"AI generation failed: {e}")

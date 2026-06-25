@@ -100,7 +100,7 @@ async def _build_waiter_system_prompt(restaurant_id: str, restaurant_name: str, 
     )
 
 
-def _make_waiter_stream(session_id: str, message: str, system_prompt: str):
+def _make_waiter_stream(session_id: str, message: str, system_prompt: str, restaurant_id: str = None):
     """Return an async generator that yields SSE 'data:' lines for the chat reply."""
     async def event_gen():
         try:
@@ -166,6 +166,12 @@ def _make_waiter_stream(session_id: str, message: str, system_prompt: str):
             await db.chat_messages.insert_one({
                 "session_id": session_id, "role": "assistant", "content": full, "created_at": now_iso(),
             })
+            if restaurant_id:
+                await db.ai_usage_logs.insert_one({
+                    "restaurant_id": restaurant_id,
+                    "endpoint": "/api/ai-waiter/chat",
+                    "timestamp": now_iso()
+                })
             yield f"data: {json.dumps({'done': True})}\n\n"
         except Exception as e:
             yield f"data: {json.dumps({'error': str(e)})}\n\n"
@@ -213,7 +219,7 @@ async def ai_chat(req: ChatReq):
     await db.chat_messages.insert_one({
         "session_id": req.session_id, "role": "user", "content": req.message, "created_at": now_iso(),
     })
-    event_gen = _make_waiter_stream(req.session_id, req.message, system_prompt)
+    event_gen = _make_waiter_stream(req.session_id, req.message, system_prompt, restaurant_id)
     return StreamingResponse(event_gen(), media_type="text/event-stream",
                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no", "Connection": "keep-alive"})
 

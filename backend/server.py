@@ -104,6 +104,8 @@ from routers.admin import router as admin_router
 from routers.super_admin import router as super_admin_router
 from routers.audit import router as audit_router
 from routers.announcements import router as announcements_router
+from routers.tickets import router as tickets_router
+from routers.health import router as health_router
 
 app.include_router(auth_router)
 app.include_router(menu_router)
@@ -114,6 +116,8 @@ app.include_router(admin_router)
 app.include_router(super_admin_router)
 app.include_router(audit_router)
 app.include_router(announcements_router)
+app.include_router(tickets_router)
+app.include_router(health_router)
 
 
 # =========================================================

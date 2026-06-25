@@ -2,13 +2,15 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { LayoutDashboard, Store, Settings, ScrollText, LogOut, Sparkles, Menu as MenuIcon, X } from "lucide-react";
+import { LayoutDashboard, Store, Settings, ScrollText, LogOut, Sparkles, Menu as MenuIcon, X, Activity, LifeBuoy } from "lucide-react";
 import { RoleGuard } from "@/components/shared/RoleGuard";
 import { useSession } from "@/stores/session";
 
 const nav = [
   { href: "/super-admin", label: "Global Dashboard", icon: LayoutDashboard, exact: true, testid: "sa-nav-dashboard" },
   { href: "/super-admin/restaurants", label: "Restaurants", icon: Store, testid: "sa-nav-restaurants" },
+  { href: "/super-admin/tickets", label: "Support Tickets", icon: LifeBuoy, testid: "sa-nav-tickets" },
+  { href: "/super-admin/health", label: "System Health", icon: Activity, testid: "sa-nav-health" },
   { href: "/super-admin/settings", label: "Platform Settings", icon: Settings, testid: "sa-nav-settings" },
   { href: "/super-admin/audit", label: "Audit Logs", icon: ScrollText, testid: "sa-nav-audit" },
 ];
