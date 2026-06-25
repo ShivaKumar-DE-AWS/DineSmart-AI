@@ -65,7 +65,7 @@ export function PricingSection() {
           </div>
 
           <Link
-            href="/auth/login"
+            href="/auth/restaurant"
             className="w-full block text-center bg-white hover:bg-cream text-ink font-semibold py-4 rounded-full transition shadow-lg shadow-white/10"
           >
             Start 14-Day Free Trial

@@ -42,7 +42,7 @@ export function FreeTrialSection() {
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
-              href="/auth/login"
+              href="/auth/restaurant"
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-clay hover:bg-clay-dark text-white rounded-full px-8 py-4 font-semibold transition shadow-xl shadow-clay/20"
             >
               Start Free Trial <ArrowRight className="w-5 h-5" />

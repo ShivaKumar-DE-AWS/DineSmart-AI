@@ -51,7 +51,7 @@ export function HeroSection() {
             className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 mb-8"
           >
             <Link
-              href="/auth/login"
+              href="/auth/restaurant"
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-cream hover:bg-white text-ink rounded-full px-8 py-4 font-semibold transition shadow-[0_0_40px_-10px_rgba(255,255,255,0.3)]"
             >
               Start 14-Day Free Trial

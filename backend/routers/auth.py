@@ -63,6 +63,22 @@ async def login(req: LoginReq):
     restaurant_id = user.get("restaurant_id")
     restaurant_slug = user.get("restaurant_slug")
 
+    # Superadmins are platform-level users — no restaurant_id needed
+    if user.get("role") == "superadmin":
+        token = jwt_sign({
+            "sub": user["id"], "email": user["email"], "role": "superadmin",
+            "name": user["name"], "restaurant_id": None,
+            "restaurant_slug": None,
+        })
+        return {
+            "token": token,
+            "user": {
+                "id": user["id"], "email": user["email"], "name": user["name"],
+                "role": "superadmin", "restaurant_id": None,
+                "restaurant_slug": None,
+            },
+        }
+
     if not restaurant_id:
         email = user.get("email", "")
         restaurants = await db.restaurants.find({}, {"id": 1, "slug": 1}).to_list(100)

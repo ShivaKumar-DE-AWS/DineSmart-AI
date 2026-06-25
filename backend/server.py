@@ -101,6 +101,7 @@ from routers.orders import router as orders_router
 from routers.tables import router as tables_router
 from routers.ai_waiter import router as ai_router
 from routers.admin import router as admin_router
+from routers.super_admin import router as super_admin_router
 
 app.include_router(auth_router)
 app.include_router(menu_router)
@@ -108,6 +109,7 @@ app.include_router(orders_router)
 app.include_router(tables_router)
 app.include_router(ai_router)
 app.include_router(admin_router)
+app.include_router(super_admin_router)
 
 
 # =========================================================

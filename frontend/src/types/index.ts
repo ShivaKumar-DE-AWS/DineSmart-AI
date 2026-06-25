@@ -1,5 +1,5 @@
 // Shared types across portals
-export type Role = "customer" | "admin" | "kitchen" | "counter";
+export type Role = "customer" | "admin" | "kitchen" | "counter" | "superadmin";
 
 export interface User {
   id: string;

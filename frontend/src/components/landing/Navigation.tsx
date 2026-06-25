@@ -17,7 +17,7 @@ export function Navigation() {
         <Link href="/auth/login" className="text-sm font-medium text-cream hover:text-white hidden sm:block transition">
           Staff Login
         </Link>
-        <Link href="/auth/login" className="bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10 text-white px-6 py-2.5 rounded-full text-sm font-medium transition shadow-lg">
+        <Link href="/auth/restaurant" className="bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10 text-white px-6 py-2.5 rounded-full text-sm font-medium transition shadow-lg">
           Create Restaurant
         </Link>
       </div>
