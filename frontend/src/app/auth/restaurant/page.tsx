@@ -59,11 +59,9 @@ export default function RestaurantAuthPage() {
       const restaurantId = res.user.restaurant_id;
       const slug = restaurantId ? slugFromRestaurantId(restaurantId) : null;
       const dest = slug
-        ? res.user.email === "mehfil@smartdine.ai" ? `/r/${slug}`
-        : res.user.role === "kitchen" ? `/r/${slug}/kitchen`
+        ? res.user.role === "kitchen" ? `/r/${slug}/kitchen`
         : res.user.role === "counter" ? `/r/${slug}/counter`
-        : res.user.role === "admin" ? `/admin`
-        : `/r/${slug}/menu`
+        : `/r/${slug}` // All admins and customers go to the customer landing page for demo purposes
         : "/";
       router.push(dest);
     } catch (e) {

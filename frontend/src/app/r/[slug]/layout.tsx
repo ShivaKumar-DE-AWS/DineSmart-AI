@@ -13,6 +13,8 @@ import { useTable } from "@/stores/table";
 import { Order } from "@/types";
 import { toast } from "sonner";
 import { useRestaurantConfig } from "@/hooks/useRestaurantConfig";
+import { useSession } from "@/stores/session";
+
 export default function CustomerLayout({ children }: { children: React.ReactNode }) {
   const params = useParams();
   const slug = params?.slug as string;
@@ -31,8 +33,10 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
   ];
 
   // Secondary nav items (right side)
+  const { user } = useSession();
   const SECONDARY_NAV = [
     { href: `/r/${slug}/smartdine`, label: "SmartDine", testid: "nav-smartdine" },
+    ...(user?.role === "admin" ? [{ href: `/admin`, label: "Admin Dashboard", testid: "nav-admin" }] : []),
     { href: `/r/${slug}/login`, label: "Staff Login", testid: "nav-staff" },
   ];
 
