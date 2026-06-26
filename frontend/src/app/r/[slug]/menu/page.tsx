@@ -6,7 +6,7 @@ import { api } from "@/lib/api";
 import { useCart } from "@/stores/cart";
 import { useRestaurantConfig } from "@/hooks/useRestaurantConfig";
 import { formatCurrency } from "@/lib/utils";
-import { Plus, Minus, BookOpen, Search, ShoppingBag, Sparkles, Flame, Leaf, X, ChevronLeft, ChevronRight, LayoutGrid } from "lucide-react";
+import { Plus, Minus, BookOpen, Search, ShoppingBag, Sparkles, Flame, Leaf, X, ChevronLeft, ChevronRight, LayoutGrid, BotMessageSquare, Send } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -47,10 +47,13 @@ export default function MenuPage() {
   const [dietFilter, setDietFilter] = useState<DietFilter>("all");
   const [showBestSellers, setShowBestSellers] = useState(false);
   const [showChefSpecials, setShowChefSpecials] = useState(false);
-  const [viewMode, setViewMode] = useState<"book" | "quick">("book");
-
-
+    const [viewMode, setViewMode] = useState<"book" | "quick">("book");
+  const [showSpecialsInsert, setShowSpecialsInsert] = useState(true);
+  const [showAIChat, setShowAIChat] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
+  
   const items = useMemo(() => (data?.items ?? []).filter((i) => i.available !== false), [data]);
+  const specialsItems = useMemo(() => items.filter(i => i.tags?.includes("chef-special") || i.tags?.includes("signature")).slice(0, 3), [items]);
 
   // Filter items based on search, diet, and special sections
   const filtered = useMemo(() => {
@@ -127,6 +130,7 @@ export default function MenuPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-10 pt-10 pb-28 overflow-x-hidden" data-testid="menu-page">
+      <audio ref={audioRef} src="https://www.soundjay.com/misc/sounds/page-flip-01a.mp3" preload="auto" />
       {/* Hero */}
       <div className="text-center mb-8 lg:mb-12">
         <div className="hidden lg:block mehfil-divider mb-4 max-w-xs mx-auto"><span className="font-royal tracking-[0.4em] text-xs uppercase">The royal menu</span></div>
@@ -248,7 +252,37 @@ export default function MenuPage() {
           </button>
         </div>
 
-        <div className="w-full max-w-[1000px] flex justify-center perspective-[2000px]">
+        <div className="w-full max-w-[1000px] flex justify-center perspective-[2000px] relative">
+
+          <AnimatePresence>
+            {showSpecialsInsert && specialsItems.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: -50 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 50, scale: 0.9 }}
+                className="absolute z-50 top-10 left-1/2 -translate-x-1/2 w-[320px] bg-[#FAF5EC] p-6 shadow-2xl border border-[#E7DFCB] rounded-md"
+                style={{ backgroundImage: "url('https://www.transparenttextures.com/patterns/cream-paper.png')" }}
+              >
+                <button onClick={() => setShowSpecialsInsert(false)} className="absolute top-3 right-3 text-[#1A1106]/50 hover:text-brand-primary">
+                  <X className="w-4 h-4" />
+                </button>
+                <h3 className="font-royal text-2xl text-brand-primary text-center mb-4 border-b border-brand-secondary/30 pb-2">Today's Specials</h3>
+                <div className="flex flex-col gap-4">
+                  {specialsItems.map(item => (
+                    <div key={item.id} className="flex gap-3">
+                       <div className="w-16 h-16 rounded shadow-sm bg-cover bg-center" style={{ backgroundImage: `url(${item.image_url})`}} />
+                       <div className="flex-1">
+                         <h4 className="font-royal text-sm text-brand-primary leading-tight">{item.name}</h4>
+                         <span className="font-royal text-brand-secondary text-sm">{formatCurrency(item.price)}</span>
+                       </div>
+                    </div>
+                  ))}
+                </div>
+                <button onClick={() => setShowSpecialsInsert(false)} className="w-full mt-5 py-2 bg-brand-primary text-white font-royal text-[10px] uppercase tracking-widest rounded-full hover:bg-[#5C0E1B] transition shadow-md">Explore Full Menu</button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {isLoading ? (
             <div className="flex justify-center items-center h-[70vh]">
               <div className="w-10 h-10 border-4 border-brand-primary border-t-transparent rounded-full animate-spin"></div>
@@ -272,6 +306,7 @@ export default function MenuPage() {
                 showCover={true} 
                 mobileScrollSupport={true} 
                 ref={bookRef}
+              onFlip={(e) => { if(audioRef.current) audioRef.current.play().catch(()=>console.log("Audio blocked")); }}
                 className="mx-auto drop-shadow-2xl rounded-r-xl"
               >
                 {/* FRONT COVER */}
@@ -316,7 +351,7 @@ export default function MenuPage() {
                                 <div className="relative h-[120px] bg-cover bg-center overflow-hidden" style={{ backgroundImage: `url(${item.image_url})` }}>
                                   <div className="absolute inset-0 bg-gradient-to-t from-[#5C0E1B]/70 via-transparent to-transparent" />
                                   {item.tags?.includes("bestseller") && (
-                                    <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-brand-secondary text-[#1A1106] text-[9px] font-royal tracking-wider uppercase shadow-md">Bestseller</div>
+                                    <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-brand-secondary text-[#1A1106] text-[9px] font-royal tracking-wider uppercase shadow-[0_0_10px_rgba(235,178,111,0.6)]">Bestseller</div>
                                   )}
                                 </div>
                                 <div className="p-3 flex-1 flex flex-col bg-white z-10">
@@ -416,7 +451,7 @@ export default function MenuPage() {
                         {item.image_url && (
                           <div className="h-40 w-full rounded-lg bg-cover bg-center mb-4 relative" style={{ backgroundImage: `url(${item.image_url})`}}>
                              {item.tags?.includes("bestseller") && (
-                               <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-brand-secondary text-[#1A1106] text-[9px] font-royal tracking-wider uppercase shadow-md">Bestseller</div>
+                               <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-brand-secondary text-[#1A1106] text-[9px] font-royal tracking-wider uppercase shadow-[0_0_10px_rgba(235,178,111,0.6)]">Bestseller</div>
                              )}
                           </div>
                         )}
@@ -443,6 +478,49 @@ export default function MenuPage() {
           })}
         </div>
       )}
+
+
+      {/* ====== AI WAITER ====== */}
+      <div className="fixed bottom-5 right-4 z-40 flex flex-col items-end">
+        <AnimatePresence>
+          {showAIChat && (
+            <motion.div
+              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.95 }}
+              className="mb-4 w-[320px] bg-white rounded-2xl shadow-2xl border border-brand-secondary/30 overflow-hidden flex flex-col h-[400px]"
+            >
+              <div className="bg-brand-primary text-white p-4 flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <BotMessageSquare className="w-5 h-5 text-brand-secondary" />
+                  <span className="font-royal tracking-widest uppercase text-xs">AI Sommelier</span>
+                </div>
+                <button onClick={() => setShowAIChat(false)}><X className="w-4 h-4 hover:text-brand-secondary" /></button>
+              </div>
+              <div className="flex-1 bg-[#FAF5EC] p-4 overflow-y-auto flex flex-col gap-3">
+                <div className="bg-white p-3 rounded-xl rounded-tl-none shadow-sm text-sm border border-[#E7DFCB] text-[#1A1106] font-editorial leading-relaxed">
+                  Welcome to {restaurantConfig?.name || "our restaurant"}! I am your AI assistant today. Would you like a pairing recommendation or help deciding?
+                </div>
+              </div>
+              <div className="p-3 bg-white border-t border-[#E7DFCB] flex items-center gap-2">
+                <input type="text" placeholder="Ask about the menu..." className="flex-1 bg-[#FAF5EC] border border-[#E7DFCB] rounded-full px-4 py-2 text-xs outline-none focus:border-brand-secondary" />
+                <button className="bg-brand-primary text-white p-2 rounded-full hover:bg-brand-secondary hover:text-brand-primary transition shadow-md">
+                  <Send className="w-4 h-4" />
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        
+        <button 
+          onClick={() => setShowAIChat(!showAIChat)}
+          className={`flex items-center gap-2 bg-white border border-[#E7DFCB] text-brand-primary px-4 py-3 rounded-full shadow-lg hover:shadow-xl transition-all relative ${showAIChat ? 'bg-brand-secondary/10' : ''}`}
+        >
+          <BotMessageSquare className="w-5 h-5" />
+          <span className="font-royal text-[10px] tracking-widest uppercase font-bold">Ask the Chef</span>
+          <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white animate-pulse"></span>
+        </button>
+      </div>
 
       {/* ====== FIXED CHECKOUT BUTTON — bottom left ====== */}
       <AnimatePresence>
