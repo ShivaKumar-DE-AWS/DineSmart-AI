@@ -326,7 +326,7 @@ export default function MenuPage() {
                 initial={{ opacity: 0, y: -50 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 50, scale: 0.9 }}
-                className="absolute z-50 top-10 left-1/2 -translate-x-1/2 w-[320px] bg-[#FAF5EC] p-6 shadow-2xl border border-[#E7DFCB] rounded-md"
+                className="fixed z-[100] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-[320px] bg-[#FAF5EC] p-6 shadow-2xl border border-[#E7DFCB] rounded-md"
                 style={{ backgroundImage: "url('https://www.transparenttextures.com/patterns/cream-paper.png')" }}
               >
                 <button onClick={() => setShowSpecialsInsert(false)} className="absolute top-3 right-3 text-[#1A1106]/50 hover:text-brand-primary">
