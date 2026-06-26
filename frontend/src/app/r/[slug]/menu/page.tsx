@@ -285,14 +285,22 @@ export default function MenuPage() {
       {/* CONDITIONAL RENDERING: BOOK OR QUICK MODE */}
       {viewMode === "book" ? (
         <div className="relative mt-8 flex flex-col items-center">
-        <div className="hidden lg:flex items-center gap-6 mb-6 z-20 relative">
-          <button onClick={() => bookRef.current?.pageFlip()?.flipPrev()} className="p-3 rounded-full bg-[#FAF5EC] border border-[#E7DFCB] shadow-sm hover:shadow-md hover:bg-brand-secondary/20 transition text-brand-primary">
-            <ChevronLeft className="h-6 w-6" />
-          </button>
-          <span className="font-royal uppercase tracking-[0.2em] text-brand-primary">Flip Pages</span>
-          <button onClick={() => bookRef.current?.pageFlip()?.flipNext()} className="p-3 rounded-full bg-[#FAF5EC] border border-[#E7DFCB] shadow-sm hover:shadow-md hover:bg-brand-secondary/20 transition text-brand-primary">
-            <ChevronRight className="h-6 w-6" />
-          </button>
+        <div className="w-full max-w-[320px] sm:max-w-[400px] mb-6 z-20 relative">
+          <div className="flex overflow-x-auto gap-2 py-2 px-1 custom-scrollbar whitespace-nowrap">
+            {categories.map((cat) => {
+               const targetPage = categoryPages[cat];
+               if (targetPage === undefined) return null;
+               return (
+                 <button 
+                   key={cat}
+                   onClick={() => bookRef.current?.pageFlip()?.flip(targetPage)}
+                   className="px-4 py-1.5 rounded-full border border-[#E7DFCB] text-[10px] font-royal tracking-widest uppercase transition bg-[#FAF5EC] text-brand-primary hover:bg-[#5C0E1B] hover:text-[#FAF5EC] shadow-sm flex-shrink-0"
+                 >
+                   {cat}
+                 </button>
+               );
+            })}
+          </div>
         </div>
 
         <div className="w-full max-w-[1000px] flex justify-center perspective-[2000px] relative">
