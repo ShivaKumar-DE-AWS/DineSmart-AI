@@ -20,7 +20,7 @@ export default function MenuPage() {
   const foundedYear = restaurantConfig?.history?.[0]?.year || "2020";
 
   const { data, isLoading } = useQuery({
-    queryKey: ["menu", slug],
+    queryKey: ["menu", slug, restaurantConfig?.id],
     queryFn: () => api<{ items: MenuItem[] }>(`/api/menu?restaurant_id=${restaurantConfig?.id || ""}`),
     refetchInterval: 15000,
     refetchOnWindowFocus: true,
