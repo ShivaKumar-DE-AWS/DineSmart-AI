@@ -50,6 +50,7 @@ export default function MenuPage() {
     const [viewMode, setViewMode] = useState<"book" | "quick">("book");
   const [showSpecialsInsert, setShowSpecialsInsert] = useState(true);
   const [showAIChat, setShowAIChat] = useState(false);
+  const [quickCategory, setQuickCategory] = useState("All");
   const audioRef = useRef<HTMLAudioElement>(null);
   
   const items = useMemo(() => (data?.items ?? []).filter((i) => i.available !== false), [data]);
@@ -96,7 +97,15 @@ export default function MenuPage() {
       return acc;
     }, {} as Record<string, MenuItem[]>);
     
-    const sortedCategories = Object.keys(grouped).sort();
+    const preferredOrder = ['Starters', 'Appetizers', 'Soups', 'Salads', 'Mains', 'Main Course', 'Breads', 'Rice', 'Biryani', 'Desserts', 'Beverages', 'Drinks'];
+    const sortedCategories = Object.keys(grouped).sort((a, b) => {
+      const idxA = preferredOrder.findIndex(cat => a.toLowerCase().includes(cat.toLowerCase()));
+      const idxB = preferredOrder.findIndex(cat => b.toLowerCase().includes(cat.toLowerCase()));
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+      if (idxA !== -1) return -1;
+      if (idxB !== -1) return 1;
+      return a.localeCompare(b);
+    });
     const sorted: MenuItem[] = [];
     sortedCategories.forEach(cat => {
       sorted.push(...grouped[cat]);
@@ -106,7 +115,7 @@ export default function MenuPage() {
   }, [filtered]);
 
   // Paginate items
-  const ITEMS_PER_PAGE = 10;
+  const ITEMS_PER_PAGE = 5;
   const { pages, categoryPages } = useMemo(() => {
     const p = [];
     const catPages: Record<string, number> = {};
@@ -269,11 +278,18 @@ export default function MenuPage() {
                 <h3 className="font-royal text-2xl text-brand-primary text-center mb-4 border-b border-brand-secondary/30 pb-2">Today's Specials</h3>
                 <div className="flex flex-col gap-4">
                   {specialsItems.map(item => (
-                    <div key={item.id} className="flex gap-3">
-                       <div className="w-16 h-16 rounded shadow-sm bg-cover bg-center" style={{ backgroundImage: `url(${item.image_url})`}} />
+                    <div key={item.id} className="flex gap-3 items-center">
+                       {item.image_url && <div className="w-12 h-12 shrink-0 rounded shadow-sm bg-cover bg-center" style={{ backgroundImage: `url(${item.image_url})`}} />}
                        <div className="flex-1">
                          <h4 className="font-royal text-sm text-brand-primary leading-tight">{item.name}</h4>
-                         <span className="font-royal text-brand-secondary text-sm">{formatCurrency(item.price)}</span>
+                         <span className="font-royal text-brand-primary font-semibold text-xs">{formatCurrency(item.price)}</span>
+                       </div>
+                       <div>
+                          {cart.items.find(i => i.item_id === item.id) ? (
+                              <button className="bg-brand-secondary text-[#1A1106] rounded px-3 py-1 text-[9px] font-royal font-bold uppercase shadow-sm cursor-default">Added</button>
+                          ) : (
+                              <button onClick={(e) => { e.stopPropagation(); cart.add(item); toast.success(`${item.name} added`); }} className="bg-brand-primary hover:bg-[#5C0E1B] text-white rounded px-3 py-1 text-[9px] font-royal font-bold uppercase transition shadow-sm border border-[#5C0E1B]">Add</button>
+                          )}
                        </div>
                     </div>
                   ))}
@@ -438,11 +454,13 @@ export default function MenuPage() {
       ) : (
         <div className="max-w-6xl mx-auto px-4 pb-20">
           <div className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-[#E7DFCB] py-3 mb-6 -mx-4 px-4 overflow-x-auto whitespace-nowrap custom-scrollbar flex gap-2">
+            <button onClick={() => setQuickCategory("All")} className={`px-4 py-1.5 rounded-full border border-[#E7DFCB] text-xs font-royal uppercase transition ${quickCategory === "All" ? 'bg-[#5C0E1B] text-[#FAF5EC]' : 'text-brand-primary hover:bg-[#FAF5EC]'}`}>All</button>
             {categories.map(cat => (
-               <button key={cat} onClick={() => { document.getElementById(`cat-${cat.replace(/\s+/g, '-')}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }} className="px-4 py-1.5 rounded-full border border-[#E7DFCB] text-xs font-royal uppercase text-brand-primary hover:bg-[#FAF5EC] transition">{cat}</button>
+               <button key={cat} onClick={() => setQuickCategory(cat)} className={`px-4 py-1.5 rounded-full border border-[#E7DFCB] text-xs font-royal uppercase transition ${quickCategory === cat ? 'bg-[#5C0E1B] text-[#FAF5EC]' : 'text-brand-primary hover:bg-[#FAF5EC]'}`}>{cat}</button>
             ))}
           </div>
           {categories.map((cat) => {
+            if (quickCategory !== "All" && quickCategory !== cat) return null;
             const catItems = sortedFiltered.filter(i => (i.category || "Other") === cat);
             if(catItems.length === 0) return null;
             return (
