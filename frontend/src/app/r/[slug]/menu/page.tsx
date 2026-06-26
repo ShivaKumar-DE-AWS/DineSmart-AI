@@ -6,7 +6,7 @@ import { api } from "@/lib/api";
 import { useCart } from "@/stores/cart";
 import { useRestaurantConfig } from "@/hooks/useRestaurantConfig";
 import { formatCurrency } from "@/lib/utils";
-import { Plus, Minus, BookOpen, Search, ShoppingBag, Sparkles, Flame, Leaf, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Minus, BookOpen, Search, ShoppingBag, Sparkles, Flame, Leaf, X, ChevronLeft, ChevronRight, LayoutGrid } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -47,6 +47,8 @@ export default function MenuPage() {
   const [dietFilter, setDietFilter] = useState<DietFilter>("all");
   const [showBestSellers, setShowBestSellers] = useState(false);
   const [showChefSpecials, setShowChefSpecials] = useState(false);
+  const [viewMode, setViewMode] = useState<"book" | "quick">("book");
+
 
   const items = useMemo(() => (data?.items ?? []).filter((i) => i.available !== false), [data]);
 
@@ -82,16 +84,46 @@ export default function MenuPage() {
 
   const bookRef = useRef<any>(null);
   
-  // Paginate items (2 items per page for optimal fit)
+  // Group and sort filtered items
+  const { categories, sortedFiltered } = useMemo(() => {
+    const grouped = filtered.reduce((acc, item) => {
+      const cat = item.category || "Other";
+      if (!acc[cat]) acc[cat] = [];
+      acc[cat].push(item);
+      return acc;
+    }, {} as Record<string, MenuItem[]>);
+    
+    const sortedCategories = Object.keys(grouped).sort();
+    const sorted: MenuItem[] = [];
+    sortedCategories.forEach(cat => {
+      sorted.push(...grouped[cat]);
+    });
+    
+    return { categories: sortedCategories, sortedFiltered: sorted };
+  }, [filtered]);
+
+  // Paginate items
   const ITEMS_PER_PAGE = 2;
-  const pages = useMemo(() => {
+  const { pages, categoryPages } = useMemo(() => {
     const p = [];
-    for (let i = 0; i < filtered.length; i += ITEMS_PER_PAGE) {
-      p.push(filtered.slice(i, i + ITEMS_PER_PAGE));
+    const catPages: Record<string, number> = {};
+    let currentCategory = "";
+    
+    for (let i = 0; i < sortedFiltered.length; i += ITEMS_PER_PAGE) {
+      const pageItems = sortedFiltered.slice(i, i + ITEMS_PER_PAGE);
+      p.push(pageItems);
+      
+      const pageIndexInBook = p.length - 1 + 2; 
+      if (pageItems[0] && pageItems[0].category !== currentCategory) {
+        currentCategory = pageItems[0].category || "Other";
+        if (catPages[currentCategory] === undefined) {
+          catPages[currentCategory] = pageIndexInBook;
+        }
+      }
     }
     if (p.length % 2 !== 0) p.push([]); 
-    return p;
-  }, [filtered]);
+    return { pages: p, categoryPages: catPages };
+  }, [sortedFiltered]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-10 pt-10 pb-28 overflow-x-hidden" data-testid="menu-page">
@@ -185,8 +217,27 @@ export default function MenuPage() {
         </div>
       </div>
 
-      {/* 3D BOOK RENDERING */}
-      <div className="mt-8 flex flex-col items-center">
+      {/* View Mode Toggle */}
+      <div className="flex justify-center mb-8">
+        <div className="bg-[#FAF5EC] border border-[#E7DFCB] rounded-full p-1 flex items-center shadow-sm">
+          <button 
+            onClick={() => setViewMode("book")}
+            className={`flex items-center gap-2 px-6 py-2 rounded-full text-xs font-royal tracking-widest uppercase transition-all ${viewMode === "book" ? "bg-brand-primary text-white shadow-md" : "text-[#1A1106]/70 hover:text-[#1A1106]"}`}
+          >
+            <BookOpen className="w-4 h-4" /> Experience
+          </button>
+          <button 
+            onClick={() => setViewMode("quick")}
+            className={`flex items-center gap-2 px-6 py-2 rounded-full text-xs font-royal tracking-widest uppercase transition-all ${viewMode === "quick" ? "bg-brand-primary text-white shadow-md" : "text-[#1A1106]/70 hover:text-[#1A1106]"}`}
+          >
+            <LayoutGrid className="w-4 h-4" /> Quick Order
+          </button>
+        </div>
+      </div>
+
+      {/* CONDITIONAL RENDERING: BOOK OR QUICK MODE */}
+      {viewMode === "book" ? (
+        <div className="relative mt-8 flex flex-col items-center">
         <div className="hidden lg:flex items-center gap-6 mb-6 z-20 relative">
           <button onClick={() => bookRef.current?.pageFlip()?.flipPrev()} className="p-3 rounded-full bg-[#FAF5EC] border border-[#E7DFCB] shadow-sm hover:shadow-md hover:bg-brand-secondary/20 transition text-brand-primary">
             <ChevronLeft className="h-6 w-6" />
@@ -207,125 +258,191 @@ export default function MenuPage() {
                 <p className="font-editorial italic text-lg text-[#1A1106]/60">No dish matches your criteria — try adjusting your filters.</p>
              </div>
           ) : (
-            <HTMLFlipBook 
-              key={`book-${pages.length}-${q}-${dietFilter}-${showBestSellers}-${showChefSpecials}`}
-              width={380} 
-              height={700} 
-              size="stretch" 
-              minWidth={315} 
-              maxWidth={500} 
-              minHeight={420} 
-              maxHeight={800} 
-              maxShadowOpacity={0.5} 
-              showCover={true} 
-              mobileScrollSupport={true} 
-              ref={bookRef}
-              className="mx-auto drop-shadow-2xl rounded-r-xl"
-            >
-              {/* FRONT COVER */}
-              <Page density="hard">
-                <div className="h-full bg-brand-primary text-[#FAF5EC] flex flex-col items-center justify-center p-8 border-l-[12px] border-[#5C0E1B] rounded-r-lg relative overflow-hidden">
-                  <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/leather.png')] pointer-events-none mix-blend-overlay"></div>
-                  <div className="z-10 flex flex-col items-center">
-                    <div className="mehfil-divider mb-6 opacity-60"></div>
-                    <h1 className="font-royal text-4xl lg:text-5xl text-center leading-tight">{restaurantConfig?.name || "Menu"}</h1>
-                    <div className="font-editorial italic text-brand-secondary text-xl mt-6 uppercase tracking-widest">Menu</div>
-                    <div className="mehfil-divider mt-6 opacity-60"></div>
+            <>
+              <HTMLFlipBook 
+                key={`book-${pages.length}-${q}-${dietFilter}-${showBestSellers}-${showChefSpecials}`}
+                width={380} 
+                height={700} 
+                size="stretch" 
+                minWidth={315} 
+                maxWidth={500} 
+                minHeight={420} 
+                maxHeight={800} 
+                maxShadowOpacity={0.5} 
+                showCover={true} 
+                mobileScrollSupport={true} 
+                ref={bookRef}
+                className="mx-auto drop-shadow-2xl rounded-r-xl"
+              >
+                {/* FRONT COVER */}
+                <Page density="hard">
+                  <div className="h-full bg-brand-primary text-[#FAF5EC] flex flex-col items-center justify-center p-8 border-l-[12px] border-[#5C0E1B] rounded-r-lg relative overflow-hidden">
+                    <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/leather.png')] pointer-events-none mix-blend-overlay"></div>
+                    <div className="z-10 flex flex-col items-center">
+                      <div className="mehfil-divider mb-6 opacity-60"></div>
+                      <h1 className="font-royal text-4xl lg:text-5xl text-center leading-tight">{restaurantConfig?.name || "Menu"}</h1>
+                      <div className="font-editorial italic text-brand-secondary text-xl mt-6 uppercase tracking-widest">Menu</div>
+                      <div className="mehfil-divider mt-6 opacity-60"></div>
+                    </div>
+                    <div className="absolute bottom-10 font-royal tracking-[0.3em] text-[10px] opacity-50 uppercase">Swipe to open</div>
                   </div>
-                  <div className="absolute bottom-10 font-royal tracking-[0.3em] text-[10px] opacity-50 uppercase">Swipe to open</div>
-                </div>
-              </Page>
-
-              {/* INSIDE FRONT COVER */}
-              <Page density="hard">
-                <div className="h-full bg-[#EADDCA] p-8 flex flex-col items-center justify-center relative">
-                   <div className="absolute inset-0 opacity-30 bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')] pointer-events-none mix-blend-multiply"></div>
-                   <p className="font-editorial italic text-center text-[#1A1106]/70 text-lg max-w-xs">{restaurantConfig?.history_intro || "Our journey began with a passion for great food."}</p>
-                   <div className="mt-8 font-royal tracking-[0.2em] text-[#5C0E1B] text-xs uppercase">Enjoy your meal</div>
-                </div>
-              </Page>
-
-              {/* DISH PAGES */}
-              {pages.map((pageItems, pageIdx) => (
-                <Page key={`page-${pageIdx}`}>
-                  <div className="flex-1 flex flex-col gap-6 pt-2">
-                    {pageItems.map((item) => {
-                      const inCart = cart.items.find((i) => i.item_id === item.id);
-                      const isFlipped = !!flipped[item.id];
-                      return (
-                        <div key={item.id} className="relative w-full h-[300px]" style={{ perspective: "1000px" }} data-testid={`menu-item-${item.id}`}>
-                          <motion.div
-                            className="relative w-full h-full"
-                            style={{ transformStyle: "preserve-3d" }}
-                            animate={{ rotateY: isFlipped ? 180 : 0 }}
-                            transition={{ duration: 0.6 }}
-                          >
-                            <div className="absolute inset-0 bg-white rounded-lg border border-[#E7DFCB] overflow-hidden flex flex-col shadow-sm" style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" }}>
-                              <div className="relative h-[120px] bg-cover bg-center overflow-hidden" style={{ backgroundImage: `url(${item.image_url})` }}>
-                                <div className="absolute inset-0 bg-gradient-to-t from-[#5C0E1B]/70 via-transparent to-transparent" />
-                                {item.tags?.includes("bestseller") && (
-                                  <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-brand-secondary text-[#1A1106] text-[9px] font-royal tracking-wider uppercase shadow-md">Bestseller</div>
-                                )}
-                              </div>
-                              <div className="p-3 flex-1 flex flex-col bg-white z-10">
-                                <h3 className="font-royal text-base text-brand-primary leading-tight">{item.name}</h3>
-                                <div className="font-editorial italic text-xs text-[#1A1106]/70 mt-1 line-clamp-2 flex-1">{item.description}</div>
-                                <div className="mt-2 pt-2 border-t border-[#E7DFCB] flex items-center justify-between">
-                                  <span className="font-royal text-lg text-brand-primary">{formatCurrency(item.price)}</span>
-                                  <div className="flex items-center gap-2 relative z-20">
-                                    <button onClick={() => setFlipped((s) => ({ ...s, [item.id]: !s[item.id] }))} className="text-[9px] font-royal tracking-[0.2em] uppercase text-brand-primary hover:text-brand-secondary transition px-1 py-1">Details</button>
-                                    {inCart ? (
-                                      <div className="flex items-center gap-1 bg-[#5C0E1B] text-[#FAF5EC] rounded-full p-0.5 shadow">
-                                        <button onClick={() => cart.setQty(item.id, inCart.qty - 1)} className="h-6 w-6 rounded-full hover:bg-brand-primary flex items-center justify-center"><Minus className="h-3 w-3" /></button>
-                                        <span className="px-1 font-royal text-xs font-semibold w-4 text-center">{inCart.qty}</span>
-                                        <button onClick={() => cart.setQty(item.id, inCart.qty + 1)} className="h-6 w-6 rounded-full hover:bg-brand-primary flex items-center justify-center"><Plus className="h-3 w-3" /></button>
-                                      </div>
-                                    ) : (
-                                      <button onClick={() => { cart.add(item); toast.success(`${item.name} added`); }} className="bg-[#5C0E1B] hover:bg-brand-primary text-[#FAF5EC] rounded-full px-3 py-1.5 text-[9px] font-royal tracking-wider uppercase transition shadow">Add</button>
-                                    )}
+                </Page>
+  
+                {/* INSIDE FRONT COVER */}
+                <Page density="hard">
+                  <div className="h-full bg-[#EADDCA] p-8 flex flex-col items-center justify-center relative">
+                     <div className="absolute inset-0 opacity-30 bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')] pointer-events-none mix-blend-multiply"></div>
+                     <p className="font-editorial italic text-center text-[#1A1106]/70 text-lg max-w-xs">{restaurantConfig?.history_intro || "Our journey began with a passion for great food."}</p>
+                     <div className="mt-8 font-royal tracking-[0.2em] text-[#5C0E1B] text-xs uppercase">Enjoy your meal</div>
+                  </div>
+                </Page>
+  
+                {/* DISH PAGES */}
+                {pages.map((pageItems, pageIdx) => (
+                  <Page key={`page-${pageIdx}`}>
+                    <div className="flex-1 flex flex-col gap-6 pt-2">
+                      {pageItems.map((item) => {
+                        const inCart = cart.items.find((i) => i.item_id === item.id);
+                        const isFlipped = !!flipped[item.id];
+                        return (
+                          <div key={item.id} className="relative w-full h-[300px]" style={{ perspective: "1000px" }} data-testid={`menu-item-${item.id}`}>
+                            <motion.div
+                              className="relative w-full h-full"
+                              style={{ transformStyle: "preserve-3d" }}
+                              animate={{ rotateY: isFlipped ? 180 : 0 }}
+                              transition={{ duration: 0.6 }}
+                            >
+                              <div className="absolute inset-0 bg-white rounded-lg border border-[#E7DFCB] overflow-hidden flex flex-col shadow-sm" style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" }}>
+                                <div className="relative h-[120px] bg-cover bg-center overflow-hidden" style={{ backgroundImage: `url(${item.image_url})` }}>
+                                  <div className="absolute inset-0 bg-gradient-to-t from-[#5C0E1B]/70 via-transparent to-transparent" />
+                                  {item.tags?.includes("bestseller") && (
+                                    <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-brand-secondary text-[#1A1106] text-[9px] font-royal tracking-wider uppercase shadow-md">Bestseller</div>
+                                  )}
+                                </div>
+                                <div className="p-3 flex-1 flex flex-col bg-white z-10">
+                                  <h3 className="font-royal text-base text-brand-primary leading-tight">{item.name}</h3>
+                                  <div className="font-editorial italic text-xs text-[#1A1106]/70 mt-1 line-clamp-2 flex-1">{item.description}</div>
+                                  <div className="mt-2 pt-2 border-t border-[#E7DFCB] flex items-center justify-between">
+                                    <span className="font-royal text-lg text-brand-primary">{formatCurrency(item.price)}</span>
+                                    <div className="flex items-center gap-2 relative z-20">
+                                      <button onClick={() => setFlipped((s) => ({ ...s, [item.id]: !s[item.id] }))} className="text-[9px] font-royal tracking-[0.2em] uppercase text-brand-primary hover:text-brand-secondary transition px-1 py-1">Details</button>
+                                      {inCart ? (
+                                        <div className="flex items-center gap-1 bg-[#5C0E1B] text-[#FAF5EC] rounded-full p-0.5 shadow">
+                                          <button onClick={() => cart.setQty(item.id, inCart.qty - 1)} className="h-6 w-6 rounded-full hover:bg-brand-primary flex items-center justify-center"><Minus className="h-3 w-3" /></button>
+                                          <span className="px-1 font-royal text-xs font-semibold w-4 text-center">{inCart.qty}</span>
+                                          <button onClick={() => cart.setQty(item.id, inCart.qty + 1)} className="h-6 w-6 rounded-full hover:bg-brand-primary flex items-center justify-center"><Plus className="h-3 w-3" /></button>
+                                        </div>
+                                      ) : (
+                                        <button onClick={() => { cart.add(item); toast.success(`${item.name} added`); }} className="bg-[#5C0E1B] hover:bg-brand-primary text-[#FAF5EC] rounded-full px-3 py-1.5 text-[9px] font-royal tracking-wider uppercase transition shadow">Add</button>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
                               </div>
-                            </div>
-
-                            <div className="absolute inset-0 bg-[#5C0E1B] text-[#FAF5EC] rounded-lg overflow-hidden flex flex-col shadow-md p-4" style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
-                              <div className="font-royal tracking-[0.3em] uppercase text-[9px] text-brand-secondary">Chef&apos;s note</div>
-                              <h3 className="font-royal text-lg text-[#FAF5EC] mt-1">{item.name}</h3>
-                              <div className="mehfil-divider my-2"></div>
-                              <p className="font-editorial italic text-[#FAF5EC]/90 leading-relaxed text-xs overflow-y-auto pr-1 custom-scrollbar">{item.description}</p>
-                              <button onClick={() => setFlipped((s) => ({ ...s, [item.id]: !s[item.id] }))} className="absolute top-3 right-3 text-[#FAF5EC]/60 hover:text-brand-secondary transition z-20">
-                                <BookOpen className="h-4 w-4" />
-                              </button>
-                            </div>
-                          </motion.div>
-                        </div>
-                      );
-                    })}
+  
+                              <div className="absolute inset-0 bg-[#5C0E1B] text-[#FAF5EC] rounded-lg overflow-hidden flex flex-col shadow-md p-4" style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
+                                <div className="font-royal tracking-[0.3em] uppercase text-[9px] text-brand-secondary">Chef&apos;s note</div>
+                                <h3 className="font-royal text-lg text-[#FAF5EC] mt-1">{item.name}</h3>
+                                <div className="mehfil-divider my-2"></div>
+                                <p className="font-editorial italic text-[#FAF5EC]/90 leading-relaxed text-xs overflow-y-auto pr-1 custom-scrollbar">{item.description}</p>
+                                <button onClick={() => setFlipped((s) => ({ ...s, [item.id]: !s[item.id] }))} className="absolute top-3 right-3 text-[#FAF5EC]/60 hover:text-brand-secondary transition z-20">
+                                  <BookOpen className="h-4 w-4" />
+                                </button>
+                              </div>
+                            </motion.div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="absolute bottom-4 right-4 text-[10px] font-royal text-[#1A1106]/40">{pageIdx + 1}</div>
+                  </Page>
+                ))}
+  
+                {/* INSIDE BACK COVER */}
+                <Page density="hard">
+                  <div className="h-full bg-[#EADDCA] p-8 flex flex-col items-center justify-center relative">
+                     <div className="absolute inset-0 opacity-30 bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')] pointer-events-none mix-blend-multiply"></div>
+                     <p className="font-royal tracking-[0.2em] text-brand-primary text-xs uppercase text-center max-w-[200px]">Thank you for dining with us</p>
                   </div>
-                  <div className="absolute bottom-4 right-4 text-[10px] font-royal text-[#1A1106]/40">{pageIdx + 1}</div>
                 </Page>
-              ))}
-
-              {/* INSIDE BACK COVER */}
-              <Page density="hard">
-                <div className="h-full bg-[#EADDCA] p-8 flex flex-col items-center justify-center relative">
-                   <div className="absolute inset-0 opacity-30 bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')] pointer-events-none mix-blend-multiply"></div>
-                   <p className="font-royal tracking-[0.2em] text-brand-primary text-xs uppercase text-center max-w-[200px]">Thank you for dining with us</p>
-                </div>
-              </Page>
-
-              {/* BACK COVER */}
-              <Page density="hard">
-                <div className="h-full bg-brand-primary flex flex-col items-center justify-center p-8 border-l-[12px] border-[#5C0E1B] rounded-l-lg relative overflow-hidden">
-                  <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/leather.png')] pointer-events-none mix-blend-overlay"></div>
-                  <div className="z-10 font-royal text-brand-secondary text-2xl">SmartDine AI</div>
-                  <div className="z-10 font-editorial italic text-[#FAF5EC]/50 text-xs mt-2">© {new Date().getFullYear()}</div>
-                </div>
-              </Page>
-            </HTMLFlipBook>
+  
+                {/* BACK COVER */}
+                <Page density="hard">
+                  <div className="h-full bg-brand-primary flex flex-col items-center justify-center p-8 border-l-[12px] border-[#5C0E1B] rounded-l-lg relative overflow-hidden">
+                    <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/leather.png')] pointer-events-none mix-blend-overlay"></div>
+                    <div className="z-10 font-royal text-brand-secondary text-2xl">SmartDine AI</div>
+                    <div className="z-10 font-editorial italic text-[#FAF5EC]/50 text-xs mt-2">© {new Date().getFullYear()}</div>
+                  </div>
+                </Page>
+              </HTMLFlipBook>
+              
+              {/* BOOKMARKS TABS */}
+              <div className="hidden lg:flex absolute top-10 -right-12 flex-col gap-2 z-10">
+                {categories.map((cat, idx) => {
+                  const targetPage = categoryPages[cat];
+                  if(targetPage === undefined) return null;
+                  const colors = ['bg-[#5C0E1B]', 'bg-[#1A1106]', 'bg-[#8C152B]', 'bg-[#2A2A2A]'];
+                  const color = colors[idx % colors.length];
+                  return (
+                    <button
+                      key={cat}
+                      onClick={() => bookRef.current?.pageFlip()?.flip(targetPage)}
+                      className={`${color} text-[#FAF5EC] px-3 py-2.5 rounded-r-lg font-royal text-[10px] tracking-widest uppercase shadow-xl border-y border-r border-[#E7DFCB]/20 hover:pl-5 transition-all origin-left cursor-pointer flex items-center`}
+                      style={{ writingMode: "vertical-rl", textOrientation: "mixed", height: "100px" }}
+                    >
+                      {cat}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
           )}
         </div>
       </div>
+
+      ) : (
+        <div className="max-w-6xl mx-auto px-4 pb-20">
+          {categories.map((cat) => {
+            const catItems = sortedFiltered.filter(i => (i.category || "Other") === cat);
+            if(catItems.length === 0) return null;
+            return (
+              <div key={cat} className="mb-12">
+                <h2 className="font-royal text-2xl text-brand-primary mb-6 border-b border-[#E7DFCB] pb-2 inline-block pr-10">{cat}</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {catItems.map(item => {
+                    const inCart = cart.items.find(i => i.item_id === item.id);
+                    return (
+                      <div key={item.id} className="bg-white rounded-xl shadow-sm border border-bone p-4 flex flex-col hover:shadow-md transition">
+                        {item.image_url && (
+                          <div className="h-40 w-full rounded-lg bg-cover bg-center mb-4 relative" style={{ backgroundImage: `url(${item.image_url})`}}>
+                             {item.tags?.includes("bestseller") && (
+                               <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-brand-secondary text-[#1A1106] text-[9px] font-royal tracking-wider uppercase shadow-md">Bestseller</div>
+                             )}
+                          </div>
+                        )}
+                        <h3 className="font-royal text-lg text-ink font-bold">{item.name}</h3>
+                        <p className="text-stone text-xs mt-1 flex-1">{item.description}</p>
+                        <div className="mt-4 pt-3 border-t border-bone flex items-center justify-between">
+                          <span className="font-medium text-brand-primary font-royal text-lg">{formatCurrency(item.price)}</span>
+                          {inCart ? (
+                            <div className="flex items-center gap-1 bg-[#5C0E1B] text-[#FAF5EC] rounded-full p-1 shadow">
+                              <button onClick={() => cart.setQty(item.id, inCart.qty - 1)} className="h-6 w-6 rounded-full hover:bg-brand-primary flex items-center justify-center"><Minus className="h-3 w-3" /></button>
+                              <span className="px-1 font-royal text-sm font-semibold w-6 text-center">{inCart.qty}</span>
+                              <button onClick={() => cart.setQty(item.id, inCart.qty + 1)} className="h-6 w-6 rounded-full hover:bg-brand-primary flex items-center justify-center"><Plus className="h-3 w-3" /></button>
+                            </div>
+                          ) : (
+                            <button onClick={() => { cart.add(item); toast.success(`${item.name} added`); }} className="bg-[#5C0E1B] hover:bg-brand-primary text-[#FAF5EC] rounded-full px-4 py-2 text-[10px] font-royal tracking-wider uppercase transition shadow">Add to Thali</button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* ====== FIXED CHECKOUT BUTTON — bottom left ====== */}
       <AnimatePresence>
