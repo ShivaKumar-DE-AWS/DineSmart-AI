@@ -12,6 +12,7 @@ export interface TableSession {
   status: "live" | "expired";
   customer_name?: string | null;
   customer_phone?: string | null;
+  restaurant_id?: string;
 }
 
 interface TableState {
@@ -27,6 +28,6 @@ export const useTable = create<TableState>()(
       setSession: (s) => set({ session: s }),
       clear: () => set({ session: null }),
     }),
-    { name: "mehfil-table" }
+    { name: "sd-table" }
   )
 );
