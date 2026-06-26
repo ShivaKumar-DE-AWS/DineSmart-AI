@@ -603,38 +603,23 @@ export function AIWaiterDock() {
             {mode === "explore" && (<ExploreList menu={menu} />)}
 
             {mode === "chat" && (
-              <ChatPane
-                language={language}
-                setLanguage={setLanguage}
-                tone={tone}
-                setTone={setTone}
-                messages={messages}
-                streaming={streaming}
-                scrollRef={scrollRef}
-                input={input}
-                setInput={setInput}
-                sendText={sendText}
-                trayChips={trayChips}
-                onTapChip={addToTray}
-                dynamicPrompts={dynamicPrompts}
-                onCheckout={() => {
-                  setOpen(false);
-                  router.push(`/r/${slug}/checkout`);
-                }}
-              />
+              <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+                <div className="h-16 w-16 bg-[#5C0E1B]/10 rounded-full flex items-center justify-center mb-4">
+                  <MessageSquare className="h-8 w-8 text-[#5C0E1B]" />
+                </div>
+                <h3 className="font-royal text-2xl text-[#5C0E1B] mb-2">AI Chat</h3>
+                <p className="font-editorial text-[#5C0E1B]/60">Our intelligent dining assistant is currently in training and will be available soon.</p>
+              </div>
             )}
 
             {mode === "voice" && (
-              <VoicePane
-                messages={messages}
-                streaming={streaming}
-                scrollRef={scrollRef}
-                onAdd={addToTray}
-                recording={recording}
-                voiceProcessing={voiceProcessing}
-                startRecording={startRecording}
-                stopRecording={stopRecording}
-              />
+              <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+                <div className="h-16 w-16 bg-[#5C0E1B]/10 rounded-full flex items-center justify-center mb-4">
+                  <Mic className="h-8 w-8 text-[#5C0E1B]" />
+                </div>
+                <h3 className="font-royal text-2xl text-[#5C0E1B] mb-2">Voice Assistant</h3>
+                <p className="font-editorial text-[#5C0E1B]/60">Voice interaction is being perfected and will be coming very soon.</p>
+              </div>
             )}
           </div>
         </div>
@@ -864,11 +849,11 @@ function VoicePane({
 function ExploreList({ menu }: { menu: MenuItem[] }) {
   const cart = useCart();
   const [q, setQ] = useState("");
-  const categories = useMemo(() => Array.from(new Set(menu.map((m) => m.category))), [menu]);
-  const [cat, setCat] = useState<string>("");
-  useEffect(() => { if (!cat && categories.length) setCat(categories[0]); }, [categories, cat]);
+  const categories = useMemo(() => ["All", ...Array.from(new Set(menu.map((m) => m.category)))], [menu]);
+  const [cat, setCat] = useState<string>("All");
+  
   const filtered = menu.filter((m) =>
-    (!cat || m.category === cat) && (!q.trim() || m.name.toLowerCase().includes(q.toLowerCase()))
+    (!q.trim() || m.name.toLowerCase().includes(q.toLowerCase()) || m.description.toLowerCase().includes(q.toLowerCase()))
   );
 
   return (
@@ -881,14 +866,14 @@ function ExploreList({ menu }: { menu: MenuItem[] }) {
           placeholder="Search the menu…"
           className="w-full bg-white border border-brand-secondary/30 rounded-full px-4 py-2 text-sm outline-none font-editorial italic"
         />
-        <div className="flex gap-1.5 overflow-x-auto mt-2 -mx-1 px-1 pb-1">
+        <div className="flex gap-1.5 overflow-x-auto mt-2 -mx-1 px-1 pb-1 custom-scrollbar">
           {categories.map((c) => (
             <button
               key={c}
               data-testid={`ai-explore-cat-${c}`}
               onClick={() => setCat(c)}
               className={`whitespace-nowrap rounded-full px-3 py-1 text-[10px] font-royal tracking-wider uppercase border transition ${
-                cat === c ? "bg-brand-primary text-[#FAF5EC] border-brand-primary" : "bg-white text-brand-primary border-brand-secondary/30"
+                cat === c ? "bg-[#5C0E1B] text-[#FAF5EC] border-[#5C0E1B]" : "bg-white text-brand-primary border-brand-secondary/30"
               }`}
             >
               {c}
@@ -896,50 +881,63 @@ function ExploreList({ menu }: { menu: MenuItem[] }) {
           ))}
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto p-3 space-y-2 bg-[#FAF5EC]">
-        {filtered.map((m) => {
-          const line = cart.items.find((i) => i.item_id === m.id);
-          return (
-            <div key={m.id} className="flex items-center gap-3 bg-white border border-brand-secondary/20 rounded-lg p-2.5" data-testid={`ai-explore-item-${m.id}`}>
-              <div className="h-14 w-14 rounded-md bg-cover bg-center shrink-0" style={{ backgroundImage: `url(${m.image_url})` }} />
-              <div className="flex-1 min-w-0">
-                <div className="font-royal text-[13px] text-brand-primary leading-tight line-clamp-1">{m.name}</div>
-                <div className="font-editorial italic text-[11px] text-[#1A1106]/60 line-clamp-1">{m.description}</div>
-                <div className="font-royal text-xs text-brand-primary mt-0.5">{formatCurrency(m.price)}</div>
-              </div>
-              {line ? (
-                <div className="flex items-center gap-1 bg-[#5C0E1B] text-[#FAF5EC] rounded-full p-1 shadow shrink-0" data-testid={`ai-explore-qty-${m.id}`}>
-                  <button
-                    data-testid={`ai-explore-dec-${m.id}`}
-                    onClick={() => cart.setQty(m.id, line.qty - 1)}
-                    className="h-7 w-7 rounded-full hover:bg-brand-primary flex items-center justify-center"
-                  >
-                    <Minus className="h-3 w-3" />
-                  </button>
-                  <span className="px-1 w-6 text-center font-royal text-sm font-semibold" data-testid={`ai-explore-qty-val-${m.id}`}>{line.qty}</span>
-                  <button
-                    data-testid={`ai-explore-inc-${m.id}`}
-                    onClick={() => cart.setQty(m.id, line.qty + 1)}
-                    className="h-7 w-7 rounded-full hover:bg-brand-primary flex items-center justify-center"
-                  >
-                    <Plus className="h-3 w-3" />
-                  </button>
-                </div>
-              ) : (
-                <button
-                  data-testid={`ai-explore-add-${m.id}`}
-                  onClick={() => { cart.add(m); toast.success(`${m.name} added to your tray`); }}
-                  className="mehfil-btn-royal rounded-full p-2 shrink-0"
-                  title="Tap to add"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                </button>
-              )}
-            </div>
-          );
+      <div className="flex-1 overflow-y-auto p-4 bg-[#FAF5EC]">
+        {categories.filter(c => c !== "All").map(c => {
+           if (cat !== "All" && cat !== c) return null;
+           const catItems = filtered.filter(m => m.category === c);
+           if (catItems.length === 0) return null;
+           
+           return (
+             <div key={c} className="mb-6 last:mb-2">
+               <h3 className="font-royal text-lg text-brand-primary mb-3 border-b border-brand-secondary/30 pb-1">{c}</h3>
+               <div className="space-y-3">
+                 {catItems.map(m => {
+                   const line = cart.items.find((i) => i.item_id === m.id);
+                   return (
+                     <div key={m.id} className="flex items-center gap-3 bg-white border border-brand-secondary/20 rounded-lg p-2.5 shadow-sm" data-testid={`ai-explore-item-${m.id}`}>
+                       <div className="h-16 w-16 rounded-md bg-cover bg-center shrink-0" style={{ backgroundImage: `url(${m.image_url})` }} />
+                       <div className="flex-1 min-w-0">
+                         <div className="font-royal text-[13px] text-brand-primary leading-tight line-clamp-1">{m.name}</div>
+                         <div className="font-editorial italic text-[11px] text-[#1A1106]/60 line-clamp-1 mt-0.5">{m.description}</div>
+                         <div className="font-royal text-xs text-brand-primary mt-1">{formatCurrency(m.price)}</div>
+                       </div>
+                       {line ? (
+                         <div className="flex items-center gap-1 bg-[#5C0E1B] text-[#FAF5EC] rounded-full p-1 shadow shrink-0" data-testid={`ai-explore-qty-${m.id}`}>
+                           <button
+                             data-testid={`ai-explore-dec-${m.id}`}
+                             onClick={() => cart.setQty(m.id, line.qty - 1)}
+                             className="h-6 w-6 rounded-full hover:bg-brand-secondary flex items-center justify-center"
+                           >
+                             <Minus className="h-3 w-3" />
+                           </button>
+                           <span className="px-1 w-4 text-center font-royal text-sm font-semibold" data-testid={`ai-explore-qty-val-${m.id}`}>{line.qty}</span>
+                           <button
+                             data-testid={`ai-explore-inc-${m.id}`}
+                             onClick={() => cart.setQty(m.id, line.qty + 1)}
+                             className="h-6 w-6 rounded-full hover:bg-brand-secondary flex items-center justify-center"
+                           >
+                             <Plus className="h-3 w-3" />
+                           </button>
+                         </div>
+                       ) : (
+                         <button
+                           data-testid={`ai-explore-add-${m.id}`}
+                           onClick={() => { cart.add(m); toast.success(`${m.name} added to your tray`); }}
+                           className="bg-[#5C0E1B] text-white hover:bg-brand-primary rounded px-3 py-1.5 text-[9px] font-royal font-bold uppercase transition shadow-sm border border-[#5C0E1B] shrink-0"
+                           title="Tap to add"
+                         >
+                           Add
+                         </button>
+                       )}
+                     </div>
+                   );
+                 })}
+               </div>
+             </div>
+           );
         })}
         {filtered.length === 0 && (
-          <div className="text-center py-10 font-editorial italic text-[#1A1106]/50 text-sm">No matches in this chapter.</div>
+          <div className="text-center py-10 font-editorial italic text-[#1A1106]/50 text-sm">No matches found.</div>
         )}
       </div>
     </div>
