@@ -303,7 +303,7 @@ export default function MenuPage() {
                  <button 
                    key={cat}
                    onClick={() => {
-                     const flipper = bookRef.current?.getPageFlip();
+                     const flipper = bookRef.current?.pageFlip();
                      if (flipper) {
                        if (typeof flipper.turnToPage === 'function') flipper.turnToPage(targetPage);
                        else if (typeof flipper.flip === 'function') flipper.flip(targetPage);
