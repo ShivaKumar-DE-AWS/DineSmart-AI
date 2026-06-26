@@ -10,9 +10,8 @@ import { Plus, Minus, BookOpen, Search, ShoppingBag, Sparkles, Flame, Leaf, X, C
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
-// @ts-ignore
-import HTMLFlipBookImport from "react-pageflip";
-const HTMLFlipBook = HTMLFlipBookImport as any;
+import dynamic from "next/dynamic";
+const HTMLFlipBook = dynamic(() => import("react-pageflip").then((mod) => mod.default as any), { ssr: false });
 import React from "react";
 
 import type { MenuItem } from "@/types";
