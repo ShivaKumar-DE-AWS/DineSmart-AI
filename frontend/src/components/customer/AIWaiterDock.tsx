@@ -44,8 +44,6 @@ export function AIWaiterDock() {
   const [mode, setMode] = useState<Mode>("chat");
   const [language, setLanguage] = useState<Lang>("auto");
   const [tone, setTone] = useState<Tone>("friendly");
-  const [input, setInput] = useState("");
-  const [streaming, setStreaming] = useState(false);
   const [recording, setRecording] = useState(false);
   const [voiceProcessing, setVoiceProcessing] = useState(false);
   const [ttsOn, setTtsOn] = useState(true);
@@ -124,6 +122,44 @@ export function AIWaiterDock() {
     const pool = bestsellers.length >= 3 ? bestsellers : menu;
     return pool.slice(0, 3);
   }, [menu]);
+
+  const { messages, input, handleInputChange, handleSubmit, setInput, append, isLoading: streaming } = useChat({
+    api: "/api/chat",
+    body: {
+      menu: menu.map((m) => ({ id: m.id, name: m.name, price: m.price, description: m.description, tags: m.tags })),
+      language,
+      tone,
+      restaurantName,
+      cart: cart.items,
+    },
+    initialMessages: [
+      {
+        id: "greeting",
+        role: "assistant",
+        content: `Namaste! I'm your AI Waiter here at ${restaurantName}. I can help you explore the menu, recommend dishes based on your cravings, or add items to your cart. Feel free to type or tap the microphone to speak with me!`,
+      }
+    ],
+    onToolCall: async ({ toolCall }) => {
+      if (toolCall.toolName === "addToTray") {
+        const args = toolCall.args as any;
+        const hit = menu.find((m) => m.id === args.itemId);
+        if (hit) {
+          cart.addItem(hit, args.quantity || 1, args.notes || "");
+          toast.success(`Added ${args.quantity || 1}x ${hit.name}`);
+        }
+        return "Added successfully";
+      } else if (toolCall.toolName === "removeFromTray") {
+        const args = toolCall.args as any;
+        cart.removeItem(args.itemId);
+        toast.success(`Removed item`);
+        return "Removed successfully";
+      } else if (toolCall.toolName === "proceedToCheckout") {
+        router.push(`/r/${slug}/checkout`);
+        setOpen(false);
+        return "Navigated to checkout";
+      }
+    }
+  });
 
   useEffect(() => {
     const onOpen = (e: Event) => {
