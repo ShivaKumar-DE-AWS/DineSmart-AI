@@ -131,7 +131,7 @@ export default function MenuPage() {
       return acc;
     }, {} as Record<string, MenuItem[]>);
     
-    const preferredOrder = ['Starters', 'Appetizers', 'Soups', 'Salads', 'Mains', 'Main Course', 'Breads', 'Rice', 'Biryani', 'Desserts', 'Beverages', 'Drinks'];
+    const preferredOrder = ['Soups', 'Starters', 'Appetizers', 'Salads', 'Mains', 'Main Course', 'Breads', 'Rice & Noodles', 'Rice', 'Biryani', 'Desserts', 'Beverages', 'Drinks'];
     const sortedCategories = Object.keys(grouped).sort((a, b) => {
       const idxA = preferredOrder.findIndex(cat => a.toLowerCase().includes(cat.toLowerCase()));
       const idxB = preferredOrder.findIndex(cat => b.toLowerCase().includes(cat.toLowerCase()));
@@ -303,7 +303,7 @@ export default function MenuPage() {
                  <button 
                    key={cat}
                    onClick={() => {
-                     const flipper = bookRef.current?.pageFlip();
+                     const flipper = bookRef.current?.getPageFlip();
                      if (flipper) {
                        if (typeof flipper.turnToPage === 'function') flipper.turnToPage(targetPage);
                        else if (typeof flipper.flip === 'function') flipper.flip(targetPage);
