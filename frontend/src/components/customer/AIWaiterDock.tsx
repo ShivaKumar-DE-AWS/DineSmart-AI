@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import type { MenuItem } from "@/types";
 import { sortCategories } from "@/utils/categoryOrder";
 
-type Mode = "explore" | "chat" | "voice";
+type Mode = "chat" | "voice";
 type Lang = "auto" | "en" | "hi" | "te" | "ur" | "ta" | "mr";
 type Tone = "friendly" | "formal" | "playful" | "poetic";
 const LANGS: { code: Lang; label: string }[] = [
@@ -564,11 +564,9 @@ export function AIWaiterDock() {
                 </div>
               </div>
               <div className="flex items-center gap-1">
-                {mode !== "explore" && (
-                  <button data-testid="ai-tts-toggle" onClick={() => setTtsOn((v) => !v)} title={ttsOn ? "Mute voice" : "Unmute voice"} className="h-9 w-9 rounded-full hover:bg-brand-secondary/15 flex items-center justify-center text-brand-secondary">
-                    {ttsOn ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-                  </button>
-                )}
+                <button data-testid="ai-tts-toggle" onClick={() => setTtsOn((v) => !v)} title={ttsOn ? "Mute voice" : "Unmute voice"} className="h-9 w-9 rounded-full hover:bg-brand-secondary/15 flex items-center justify-center text-brand-secondary">
+                  {ttsOn ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+                </button>
                 <button data-testid="ai-waiter-close" onClick={() => setOpen(false)} className="h-9 w-9 rounded-full hover:bg-brand-secondary/15 flex items-center justify-center text-[#FAF5EC]">
                   <X className="h-4 w-4" />
                 </button>
@@ -578,10 +576,9 @@ export function AIWaiterDock() {
             {/* Mode tabs */}
             <div className="flex border-b bg-[#FAF5EC] border-[#E7DFCB]" data-testid="ai-mode-tabs">
               {([
-                { k: "explore", label: "Explore", icon: BookOpen },
                 { k: "chat", label: "Chat", icon: MessageSquare },
                 { k: "voice", label: "Talk", icon: Mic },
-              ] as { k: Mode; label: string; icon: typeof BookOpen }[]).map((t) => {
+              ] as { k: Mode; label: string; icon: typeof MessageSquare }[]).map((t) => {
                 const active = mode === t.k;
                 return (
                   <button
@@ -601,7 +598,6 @@ export function AIWaiterDock() {
             </div>
 
             {/* Body */}
-            {mode === "explore" && (<ExploreList menu={menu} />)}
 
             {mode === "chat" && (
               <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
