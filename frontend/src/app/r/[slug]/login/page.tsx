@@ -14,7 +14,7 @@ import { useRestaurantConfig } from "@/hooks/useRestaurantConfig";
 
 type Tab = "guest" | "staff";
 
-// Extract email slug from config slug: "mehfil-hyderabad" → "mehfil-hyderabad", "spice-garden" → "spice-garden"
+// Extract email slug from config slug: "mehfil" → "mehfil", "spice-garden" → "spice-garden"
 function emailSlug(configSlug: string): string {
   return configSlug;
 }

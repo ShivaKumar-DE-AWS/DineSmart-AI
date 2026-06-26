@@ -39,7 +39,7 @@ export function Footer() {
             <ul className="space-y-4 text-sm text-stone">
               <li><Link href="#features" className="hover:text-white transition">Features</Link></li>
               <li><Link href="#pricing" className="hover:text-white transition">Pricing</Link></li>
-              <li><Link href="/r/mehfil-hyderabad" className="hover:text-white transition">Live Demo</Link></li>
+              <li><Link href="/r/mehfil" className="hover:text-white transition">Live Demo</Link></li>
               <li><Link href="#roi" className="hover:text-white transition">ROI Calculator</Link></li>
             </ul>
           </div>

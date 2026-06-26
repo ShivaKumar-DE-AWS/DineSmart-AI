@@ -130,7 +130,7 @@ export function getRestaurantConfig(slug: string): any {
 
 export function useAllRestaurantConfigs() {
   const local = Object.entries(LOCAL_CONFIGS).map(([slug, config]: [string, any]) => {
-    const email = slug === "mehfil-hyderabad" ? "mehfil@smartdine.ai" : `${slug}@smartdine.ai`;
+    const email = `${slug}@smartdine.ai`;
     return { slug, name: config.name || slug, email };
   });
 

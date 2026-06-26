@@ -14,7 +14,6 @@ type Tab = "login" | "register";
 
 // Dynamic slug derivation from restaurant_id
 function slugFromRestaurantId(restaurantId: string): string {
-  if (restaurantId === "mehfil") return "mehfil-hyderabad";
   return restaurantId.replace("rest_", "").replace(/_001$/, "").replace(/_/g, "-");
 }
 

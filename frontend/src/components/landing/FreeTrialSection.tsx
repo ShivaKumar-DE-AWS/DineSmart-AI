@@ -48,7 +48,7 @@ export function FreeTrialSection() {
               Start Free Trial <ArrowRight className="w-5 h-5" />
             </Link>
             <Link
-              href="/r/mehfil-hyderabad"
+              href="/r/mehfil"
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 border border-white/20 hover:bg-white/5 text-white rounded-full px-8 py-4 font-medium transition backdrop-blur-sm"
             >
               Book Live Demo

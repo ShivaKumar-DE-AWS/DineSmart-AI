@@ -237,7 +237,7 @@ backend/
   data/
     restaurants/
       _template.json          ← Copy this for new restaurants
-      mehfil-hyderabad.json   ← Mehfil config
+      mehfil.json   ← Mehfil config
       spice-garden.json       ← Spice Garden config
       your-new-restaurant.json ← ADD YOURS HERE
 
@@ -245,7 +245,7 @@ frontend/
   src/
     data/
       restaurants/
-        mehfil-hyderabad.json   ← Must match backend slug
+        mehfil.json   ← Must match backend slug
         spice-garden.json       ← Must match backend slug
         your-new-restaurant.json ← ADD YOURS HERE
 ```

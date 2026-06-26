@@ -1,7 +1,7 @@
 {
   "id": "rest_mehfil_001",
   "name": "Mehfil",
-  "slug": "mehfil-hyderabad",
+  "slug": "mehfil",
   "plan": "trial",
   "users": [
     {"email": "mehfil@smartdine.ai", "password": "Owner@123", "name": "Restaurant Owner", "role": "admin"},
