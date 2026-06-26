@@ -441,25 +441,7 @@ export default function MenuPage() {
                 </Page>
               </HTMLFlipBook>
               
-              {/* BOOKMARKS TABS */}
-              <div className="hidden lg:flex absolute top-10 -right-12 flex-col gap-2 z-10">
-                {categories.map((cat, idx) => {
-                  const targetPage = categoryPages[cat];
-                  if(targetPage === undefined) return null;
-                  const colors = ['bg-[#5C0E1B]', 'bg-[#1A1106]', 'bg-[#8C152B]', 'bg-[#2A2A2A]'];
-                  const color = colors[idx % colors.length];
-                  return (
-                    <button
-                      key={cat}
-                      onClick={() => bookRef.current?.pageFlip()?.flip(targetPage)}
-                      className={`${color} text-[#FAF5EC] px-3 py-2.5 rounded-r-lg font-royal text-[10px] tracking-widest uppercase shadow-xl border-y border-r border-[#E7DFCB]/20 hover:pl-5 transition-all origin-left cursor-pointer flex items-center`}
-                      style={{ writingMode: "vertical-rl", textOrientation: "mixed", height: "100px" }}
-                    >
-                      {cat}
-                    </button>
-                  );
-                })}
-              </div>
+              
             </>
           )}
         </div>
