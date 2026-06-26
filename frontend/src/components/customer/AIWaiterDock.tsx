@@ -11,6 +11,7 @@ import { useTable } from "@/stores/table";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import type { MenuItem } from "@/types";
+import { sortCategories } from "@/utils/categoryOrder";
 
 type Mode = "explore" | "chat" | "voice";
 type Lang = "auto" | "en" | "hi" | "te" | "ur" | "ta" | "mr";
@@ -849,7 +850,7 @@ function VoicePane({
 function ExploreList({ menu }: { menu: MenuItem[] }) {
   const cart = useCart();
   const [q, setQ] = useState("");
-  const categories = useMemo(() => ["All", ...Array.from(new Set(menu.map((m) => m.category)))], [menu]);
+  const categories = useMemo(() => ["All", ...sortCategories(Array.from(new Set(menu.map((m) => m.category))))], [menu]);
   const [cat, setCat] = useState<string>("All");
   
   const filtered = menu.filter((m) =>

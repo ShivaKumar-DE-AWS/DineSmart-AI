@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import dynamic from "next/dynamic";
 const HTMLFlipBook = dynamic(() => import("react-pageflip") as any, { ssr: false }) as any;
 import React from "react";
+import { sortCategories } from "@/utils/categoryOrder";
 
 import type { MenuItem } from "@/types";
 
@@ -130,15 +131,7 @@ export default function MenuPage() {
       return acc;
     }, {} as Record<string, MenuItem[]>);
     
-    const preferredOrder = ['Soups', 'Starters', 'Appetizers', 'Salads', 'Mains', 'Main Course', 'Breads', 'Rice & Noodles', 'Rice', 'Biryani', 'Desserts', 'Beverages', 'Drinks'];
-    const sortedCategories = Object.keys(grouped).sort((a, b) => {
-      const idxA = preferredOrder.findIndex(cat => a.toLowerCase().includes(cat.toLowerCase()));
-      const idxB = preferredOrder.findIndex(cat => b.toLowerCase().includes(cat.toLowerCase()));
-      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-      if (idxA !== -1) return -1;
-      if (idxB !== -1) return 1;
-      return a.localeCompare(b);
-    });
+    const sortedCategories = sortCategories(Object.keys(grouped));
     const sorted: MenuItem[] = [];
     sortedCategories.forEach(cat => {
       sorted.push(...grouped[cat]);
