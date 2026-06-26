@@ -345,13 +345,13 @@ export default function MenuPage() {
             <>
               <HTMLFlipBook 
                 key={`book-${pages.length}-${q}-${dietFilter}-${showBestSellers}-${showChefSpecials}`}
-                width={380} 
-                height={700} 
+                width={320} 
+                height={520} 
                 size="stretch" 
-                minWidth={315} 
-                maxWidth={500} 
-                minHeight={420} 
-                maxHeight={800} 
+                minWidth={300} 
+                maxWidth={400} 
+                minHeight={400} 
+                maxHeight={600} 
                 maxShadowOpacity={0.5} 
                 showCover={true} 
                 mobileScrollSupport={true} 
@@ -390,53 +390,30 @@ export default function MenuPage() {
                        <div className="flex-1 flex flex-col relative z-10 pt-1">
                       {pageItems.map((item) => {
                         const inCart = cart.items.find((i) => i.item_id === item.id);
-                        const isFlipped = !!flipped[item.id];
                         return (
-                          <div key={item.id} className="relative w-full h-[300px]" style={{ perspective: "1000px" }} data-testid={`menu-item-${item.id}`}>
-                            <motion.div
-                              className="relative w-full h-full"
-                              style={{ transformStyle: "preserve-3d" }}
-                              animate={{ rotateY: isFlipped ? 180 : 0 }}
-                              transition={{ duration: 0.6 }}
-                            >
-                              <div className="absolute inset-0 bg-white rounded-lg border border-[#E7DFCB] overflow-hidden flex flex-col shadow-sm" style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" }}>
-                                <div className="relative h-[120px] bg-cover bg-center overflow-hidden" style={{ backgroundImage: `url(${item.image_url})` }}>
-                                  <div className="absolute inset-0 bg-gradient-to-t from-[#5C0E1B]/70 via-transparent to-transparent" />
-                                  {item.tags?.includes("bestseller") && (
-                                    <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-brand-secondary text-[#1A1106] text-[9px] font-royal tracking-wider uppercase shadow-[0_0_10px_rgba(235,178,111,0.6)]">Bestseller</div>
+                          <div key={item.id} className="w-full bg-transparent mb-5 flex gap-3 items-center" data-testid={`menu-item-${item.id}`}>
+                             {item.image_url && <div className="w-12 h-12 shrink-0 rounded shadow-sm bg-cover bg-center border border-[#E7DFCB]/50" style={{ backgroundImage: `url(${item.image_url})`}} />}
+                             <div className="flex-1 flex flex-col justify-center">
+                               <h4 className="font-royal text-sm text-brand-primary leading-tight font-bold">{item.name}</h4>
+                               <span className="font-royal text-brand-primary font-semibold text-xs mt-0.5">{formatCurrency(item.price)}</span>
+                               <div className="font-editorial italic text-[10px] text-[#1A1106]/70 leading-tight mt-1 line-clamp-2 pr-2">
+                                  {item.description}
+                                  {getPairingSuggestion(item.category || "", item.name) && (
+                                    <span className="text-brand-secondary font-semibold ml-1">✨ {getPairingSuggestion(item.category || "", item.name)}</span>
                                   )}
-                                </div>
-                                <div className="p-3 flex-1 flex flex-col bg-white z-10">
-                                  <h3 className="font-royal text-base text-brand-primary leading-tight">{item.name}</h3>
-                                  <div className="font-editorial italic text-xs text-[#1A1106]/70 mt-1 line-clamp-2 flex-1">{item.description}</div>
-                                  <div className="mt-2 pt-2 border-t border-[#E7DFCB] flex items-center justify-between">
-                                    <span className="font-royal text-lg text-brand-primary">{formatCurrency(item.price)}</span>
-                                    <div className="flex items-center gap-2 relative z-20">
-                                      <button onClick={() => setFlipped((s) => ({ ...s, [item.id]: !s[item.id] }))} className="text-[9px] font-royal tracking-[0.2em] uppercase text-brand-primary hover:text-brand-secondary transition px-1 py-1">Details</button>
-                                      {inCart ? (
-                                        <div className="flex items-center gap-1 bg-[#5C0E1B] text-[#FAF5EC] rounded-full p-0.5 shadow">
-                                          <button onClick={() => cart.setQty(item.id, inCart.qty - 1)} className="h-6 w-6 rounded-full hover:bg-brand-primary flex items-center justify-center"><Minus className="h-3 w-3" /></button>
-                                          <span className="px-1 font-royal text-xs font-semibold w-4 text-center">{inCart.qty}</span>
-                                          <button onClick={() => cart.setQty(item.id, inCart.qty + 1)} className="h-6 w-6 rounded-full hover:bg-brand-primary flex items-center justify-center"><Plus className="h-3 w-3" /></button>
-                                        </div>
-                                      ) : (
-                                        <button onClick={() => { cart.add(item); toast.success(`${item.name} added`); }} className="bg-[#5C0E1B] hover:bg-brand-primary text-[#FAF5EC] rounded-full px-3 py-1.5 text-[9px] font-royal tracking-wider uppercase transition shadow">Add</button>
-                                      )}
-                                    </div>
+                               </div>
+                             </div>
+                             <div className="shrink-0">
+                                {inCart ? (
+                                  <div className="flex items-center gap-1.5 bg-[#FAF5EC] text-brand-primary border border-[#E7DFCB] rounded px-1 py-1 shadow-sm">
+                                    <button onClick={() => cart.setQty(item.id, inCart.qty - 1)} className="h-4 w-4 flex items-center justify-center hover:text-brand-secondary"><Minus className="h-2 w-2" /></button>
+                                    <span className="font-royal text-[9px] font-bold w-2 text-center">{inCart.qty}</span>
+                                    <button onClick={() => cart.setQty(item.id, inCart.qty + 1)} className="h-4 w-4 flex items-center justify-center hover:text-brand-secondary"><Plus className="h-2 w-2" /></button>
                                   </div>
-                                </div>
-                              </div>
-  
-                              <div className="absolute inset-0 bg-[#5C0E1B] text-[#FAF5EC] rounded-lg overflow-hidden flex flex-col shadow-md p-4" style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
-                                <div className="font-royal tracking-[0.3em] uppercase text-[9px] text-brand-secondary">Chef&apos;s note</div>
-                                <h3 className="font-royal text-lg text-[#FAF5EC] mt-1">{item.name}</h3>
-                                <div className="mehfil-divider my-2"></div>
-                                <p className="font-editorial italic text-[#FAF5EC]/90 leading-relaxed text-xs overflow-y-auto pr-1 custom-scrollbar">{item.description}</p>
-                                <button onClick={() => setFlipped((s) => ({ ...s, [item.id]: !s[item.id] }))} className="absolute top-3 right-3 text-[#FAF5EC]/60 hover:text-brand-secondary transition z-20">
-                                  <BookOpen className="h-4 w-4" />
-                                </button>
-                              </div>
-                            </motion.div>
+                                ) : (
+                                    <button onClick={(e) => { e.stopPropagation(); cart.add(item); toast.success(`${item.name} added`); }} className="bg-[#5C0E1B] text-[#FAF5EC] hover:bg-brand-primary rounded px-3 py-1.5 text-[8px] font-royal font-bold uppercase transition shadow-sm border border-[#5C0E1B]">Add</button>
+                                )}
+                             </div>
                           </div>
                         );
                       })}
