@@ -106,7 +106,7 @@ export default function MenuPage() {
   }, [filtered]);
 
   // Paginate items
-  const ITEMS_PER_PAGE = 2;
+  const ITEMS_PER_PAGE = 10;
   const { pages, categoryPages } = useMemo(() => {
     const p = [];
     const catPages: Record<string, number> = {};
@@ -335,7 +335,7 @@ export default function MenuPage() {
                 {/* DISH PAGES */}
                 {pages.map((pageItems, pageIdx) => (
                   <Page key={`page-${pageIdx}`}>
-                    <div className="flex-1 flex flex-col gap-6 pt-2">
+                    <div className="flex-1 flex flex-col pt-1">
                       {pageItems.map((item) => {
                         const inCart = cart.items.find((i) => i.item_id === item.id);
                         const isFlipped = !!flipped[item.id];
@@ -437,37 +437,42 @@ export default function MenuPage() {
 
       ) : (
         <div className="max-w-6xl mx-auto px-4 pb-20">
+          <div className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-[#E7DFCB] py-3 mb-6 -mx-4 px-4 overflow-x-auto whitespace-nowrap custom-scrollbar flex gap-2">
+            {categories.map(cat => (
+               <button key={cat} onClick={() => { document.getElementById(`cat-${cat.replace(/\s+/g, '-')}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }} className="px-4 py-1.5 rounded-full border border-[#E7DFCB] text-xs font-royal uppercase text-brand-primary hover:bg-[#FAF5EC] transition">{cat}</button>
+            ))}
+          </div>
           {categories.map((cat) => {
             const catItems = sortedFiltered.filter(i => (i.category || "Other") === cat);
             if(catItems.length === 0) return null;
             return (
-              <div key={cat} className="mb-12">
+              <div key={cat} id={`cat-${cat.replace(/\s+/g, '-')}`} className="mb-12 scroll-mt-20">
                 <h2 className="font-royal text-2xl text-brand-primary mb-6 border-b border-[#E7DFCB] pb-2 inline-block pr-10">{cat}</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {catItems.map(item => {
                     const inCart = cart.items.find(i => i.item_id === item.id);
                     return (
-                      <div key={item.id} className="bg-white rounded-xl shadow-sm border border-bone p-4 flex flex-col hover:shadow-md transition">
-                        {item.image_url && (
-                          <div className="h-40 w-full rounded-lg bg-cover bg-center mb-4 relative" style={{ backgroundImage: `url(${item.image_url})`}}>
-                             {item.tags?.includes("bestseller") && (
-                               <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-brand-secondary text-[#1A1106] text-[9px] font-royal tracking-wider uppercase shadow-[0_0_10px_rgba(235,178,111,0.6)]">Bestseller</div>
-                             )}
-                          </div>
-                        )}
-                        <h3 className="font-royal text-lg text-ink font-bold">{item.name}</h3>
-                        <p className="text-stone text-xs mt-1 flex-1">{item.description}</p>
-                        <div className="mt-4 pt-3 border-t border-bone flex items-center justify-between">
-                          <span className="font-medium text-brand-primary font-royal text-lg">{formatCurrency(item.price)}</span>
-                          {inCart ? (
-                            <div className="flex items-center gap-1 bg-[#5C0E1B] text-[#FAF5EC] rounded-full p-1 shadow">
-                              <button onClick={() => cart.setQty(item.id, inCart.qty - 1)} className="h-6 w-6 rounded-full hover:bg-brand-primary flex items-center justify-center"><Minus className="h-3 w-3" /></button>
-                              <span className="px-1 font-royal text-sm font-semibold w-6 text-center">{inCart.qty}</span>
-                              <button onClick={() => cart.setQty(item.id, inCart.qty + 1)} className="h-6 w-6 rounded-full hover:bg-brand-primary flex items-center justify-center"><Plus className="h-3 w-3" /></button>
-                            </div>
-                          ) : (
-                            <button onClick={() => { cart.add(item); toast.success(`${item.name} added`); }} className="bg-[#5C0E1B] hover:bg-brand-primary text-[#FAF5EC] rounded-full px-4 py-2 text-[10px] font-royal tracking-wider uppercase transition shadow">Add to Thali</button>
+                      <div key={item.id} className="bg-white rounded-xl shadow-sm border border-bone p-3 flex gap-4 hover:shadow-md transition">
+                        <div className="flex-1 flex flex-col justify-center">
+                          {item.tags?.includes("bestseller") && (
+                            <span className="text-[9px] font-royal text-brand-secondary uppercase tracking-wider mb-1">Bestseller</span>
                           )}
+                          <h3 className="font-royal text-base text-ink font-bold leading-tight">{item.name}</h3>
+                          <span className="font-medium text-brand-primary font-royal text-sm mt-1">{formatCurrency(item.price)}</span>
+                          <p className="text-stone text-[11px] mt-1 line-clamp-2">{item.description}</p>
+                        </div>
+                        <div className="relative w-28 h-28 shrink-0 rounded-xl bg-cover bg-center border border-bone" style={{ backgroundImage: `url(${item.image_url})`}}>
+                          <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 z-10">
+                            {inCart ? (
+                               <div className="flex items-center gap-2 bg-white text-brand-primary border border-bone rounded-lg shadow-md px-2 py-1">
+                                 <button onClick={() => cart.setQty(item.id, inCart.qty - 1)} className="h-5 w-5 flex items-center justify-center hover:text-brand-secondary"><Minus className="h-3 w-3" /></button>
+                                 <span className="font-royal text-xs font-bold w-3 text-center">{inCart.qty}</span>
+                                 <button onClick={() => cart.setQty(item.id, inCart.qty + 1)} className="h-5 w-5 flex items-center justify-center hover:text-brand-secondary"><Plus className="h-3 w-3" /></button>
+                               </div>
+                            ) : (
+                               <button onClick={() => { cart.add(item); toast.success(`${item.name} added`); }} className="bg-white border border-bone text-brand-primary hover:bg-[#FAF5EC] rounded-lg shadow-md px-6 py-1.5 text-[10px] font-royal font-bold uppercase transition">ADD</button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     );
