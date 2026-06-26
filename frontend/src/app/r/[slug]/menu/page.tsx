@@ -1,23 +1,40 @@
 "use client";
 import { useParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useCart } from "@/stores/cart";
 import { useRestaurantConfig } from "@/hooks/useRestaurantConfig";
 import { formatCurrency } from "@/lib/utils";
-import { Plus, Minus, BookOpen, Search, ShoppingBag, Sparkles, Flame, Leaf, SlidersHorizontal, X } from "lucide-react";
+import { Plus, Minus, BookOpen, Search, ShoppingBag, Sparkles, Flame, Leaf, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
+
+// @ts-ignore
+import HTMLFlipBookImport from "react-pageflip";
+const HTMLFlipBook = HTMLFlipBookImport as any;
+import React from "react";
+
 import type { MenuItem } from "@/types";
 
 type DietFilter = "all" | "veg" | "non-veg";
+
+const Page = React.forwardRef<HTMLDivElement, any>((props, ref) => {
+  return (
+    <div className="page bg-[#FAF5EC] shadow-[inset_0_0_20px_rgba(0,0,0,0.05)] border-x border-[#E7DFCB] overflow-hidden" ref={ref} data-density={props.density || "soft"}>
+      <div className="absolute inset-0 opacity-10 pointer-events-none mix-blend-multiply" style={{ backgroundImage: "url('https://www.transparenttextures.com/patterns/cream-paper.png')" }}></div>
+      <div className="p-4 lg:p-6 h-full flex flex-col relative z-10">
+        {props.children}
+      </div>
+    </div>
+  );
+});
+Page.displayName = "Page";
 
 export default function MenuPage() {
   const params = useParams();
   const slug = params?.slug as string;
   const { config: restaurantConfig } = useRestaurantConfig();
-  const foundedYear = restaurantConfig?.history?.[0]?.year || "2020";
 
   const { data, isLoading } = useQuery({
     queryKey: ["menu", slug, restaurantConfig?.id],
@@ -28,97 +45,54 @@ export default function MenuPage() {
   const cart = useCart();
   const [flipped, setFlipped] = useState<Record<string, boolean>>({});
   const [q, setQ] = useState("");
-  const [activeCat, setActiveCat] = useState<string>("");
   const [dietFilter, setDietFilter] = useState<DietFilter>("all");
   const [showBestSellers, setShowBestSellers] = useState(false);
   const [showChefSpecials, setShowChefSpecials] = useState(false);
 
   const items = useMemo(() => (data?.items ?? []).filter((i) => i.available !== false), [data]);
-  const categories = useMemo(() => Array.from(new Set(items.map((i) => i.category))), [items]);
 
   // Filter items based on search, diet, and special sections
   const filtered = useMemo(() => {
     let result = items;
-
-    // Search filter
     const s = q.trim().toLowerCase();
     if (s) {
       result = result.filter((i) => i.name.toLowerCase().includes(s) || i.description.toLowerCase().includes(s));
     }
-
-    // Diet filter
     if (dietFilter === "veg") {
       result = result.filter((i) => i.tags?.includes("veg") || i.tags?.includes("vegetarian"));
     } else if (dietFilter === "non-veg") {
       result = result.filter((i) => !i.tags?.includes("veg") && !i.tags?.includes("vegetarian"));
     }
-
-    // Best sellers filter
     if (showBestSellers) {
       result = result.filter((i) => i.tags?.includes("bestseller"));
     }
-
-    // Chef's specials filter
     if (showChefSpecials) {
       result = result.filter((i) => i.tags?.includes("chef-special") || i.tags?.includes("signature"));
     }
-
     return result;
   }, [items, q, dietFilter, showBestSellers, showChefSpecials]);
 
-  const grouped = useMemo(() => {
-    const map: Record<string, MenuItem[]> = {};
-    for (const c of categories) map[c] = [];
-    for (const i of filtered) (map[i.category] ||= []).push(i);
-    return map;
-  }, [filtered, categories]);
-
-  // Special sections
-  const bestSellers = useMemo(() => items.filter((i) => i.tags?.includes("bestseller")).slice(0, 4), [items]);
-  const chefSpecials = useMemo(() => items.filter((i) => i.tags?.includes("chef-special") || i.tags?.includes("signature")).slice(0, 4), [items]);
-
-  // Set initial category
-  useEffect(() => {
-    if (!categories.length) return;
-    if (!activeCat) setActiveCat(categories[0]);
-  }, [categories, activeCat]);
-
-  // Desktop scroll-spy only
-  useEffect(() => {
-    const onScroll = () => {
-      if (window.innerWidth < 1024) return;
-      const offsets = categories.map((c) => {
-        const el = document.getElementById(`chapter-${c}`);
-        return { c, top: el ? el.getBoundingClientRect().top : Infinity };
-      });
-      const inView = offsets.find((o) => o.top >= 80 && o.top < 240) || offsets.filter((o) => o.top < 80).pop();
-      if (inView) setActiveCat(inView.c);
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, [categories]);
-
-  const scrollTo = (c: string) => {
-    const el = document.getElementById(`chapter-${c}`);
-    if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 100, behavior: "smooth" });
-  };
-
-  // Mobile: only show active category items
-  const mobileItems = useMemo(() => {
-    if (!activeCat) return filtered;
-    return filtered.filter((i) => i.category === activeCat);
-  }, [filtered, activeCat]);
-
-  // Check if any filters are active
   const hasActiveFilters = dietFilter !== "all" || showBestSellers || showChefSpecials;
 
-  // Clear all filters
   const clearFilters = () => {
     setDietFilter("all");
     setShowBestSellers(false);
     setShowChefSpecials(false);
     setQ("");
   };
+
+  const bookRef = useRef<any>(null);
+  
+  // Paginate items (2 items per page for optimal fit)
+  const ITEMS_PER_PAGE = 2;
+  const pages = useMemo(() => {
+    const p = [];
+    for (let i = 0; i < filtered.length; i += ITEMS_PER_PAGE) {
+      p.push(filtered.slice(i, i + ITEMS_PER_PAGE));
+    }
+    if (p.length % 2 !== 0) p.push([]); 
+    return p;
+  }, [filtered]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-10 pt-10 pb-28 overflow-x-hidden" data-testid="menu-page">
@@ -149,8 +123,8 @@ export default function MenuPage() {
       </div>
 
       {/* Filter Bar */}
-      <div className="mb-6 lg:mb-8">
-        <div className="flex flex-wrap items-center gap-3">
+      <div className="mb-6 lg:mb-8 flex flex-col items-center">
+        <div className="flex flex-wrap justify-center items-center gap-3">
           {/* Diet Filter */}
           <div className="flex items-center bg-[#FAF5EC] border border-[#E7DFCB] rounded-full p-1">
             <button
@@ -179,7 +153,6 @@ export default function MenuPage() {
             </button>
           </div>
 
-          {/* Best Sellers Toggle */}
           <button
             onClick={() => { setShowBestSellers(!showBestSellers); setShowChefSpecials(false); }}
             className={`px-4 py-2 rounded-full text-[10px] font-royal tracking-wider uppercase border transition-all inline-flex items-center gap-1.5 ${
@@ -191,7 +164,6 @@ export default function MenuPage() {
             <Sparkles className="h-3 w-3" /> Best Sellers
           </button>
 
-          {/* Chef's Specials Toggle */}
           <button
             onClick={() => { setShowChefSpecials(!showChefSpecials); setShowBestSellers(false); }}
             className={`px-4 py-2 rounded-full text-[10px] font-royal tracking-wider uppercase border transition-all inline-flex items-center gap-1.5 ${
@@ -203,7 +175,6 @@ export default function MenuPage() {
             <Flame className="h-3 w-3" /> Chef&apos;s Specials
           </button>
 
-          {/* Clear Filters */}
           {hasActiveFilters && (
             <button
               onClick={clearFilters}
@@ -213,308 +184,141 @@ export default function MenuPage() {
             </button>
           )}
         </div>
-
-        {/* Active Filter Count */}
-        {hasActiveFilters && (
-          <div className="mt-3 text-xs text-[#1A1106]/60 font-editorial italic">
-            Showing {filtered.length} of {items.length} dishes
-          </div>
-        )}
       </div>
 
-      {/* ====== SPECIAL SECTIONS (when no filters active) ====== */}
-      {!hasActiveFilters && !q && (
-        <>
-          {/* Best Sellers Section */}
-          {bestSellers.length > 0 && (
-            <section className="mb-10" data-testid="section-best-sellers">
-              <div className="flex items-center gap-2 mb-4">
-                <Sparkles className="h-4 w-4 text-brand-secondary" />
-                <h2 className="font-royal text-xl text-brand-primary tracking-wide">Best Sellers</h2>
-              </div>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                {bestSellers.map((item) => {
-                  const inCart = cart.items.find((i) => i.item_id === item.id);
-                  return (
-                    <div key={item.id} className="mehfil-card rounded-lg overflow-hidden group" data-testid={`bestseller-${item.id}`}>
-                      <div className="aspect-[4/3] bg-cover bg-center group-hover:scale-105 transition-transform duration-500" style={{ backgroundImage: `url(${item.image_url})` }} />
-                      <div className="p-3">
-                        <h3 className="font-royal text-sm text-brand-primary leading-tight">{item.name}</h3>
-                        <div className="flex items-center justify-between mt-2">
-                          <span className="font-royal text-sm text-brand-primary">{formatCurrency(item.price)}</span>
-                          {inCart ? (
-                            <span className="text-[10px] font-royal tracking-wider text-brand-secondary">In cart × {inCart.qty}</span>
-                          ) : (
-                            <button onClick={() => { cart.add(item); toast.success(`${item.name} added`); }} className="mehfil-btn-royal rounded-full px-3 py-1 text-[10px] font-royal tracking-wider uppercase">Add</button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-          )}
-
-          {/* Chef's Specials Section */}
-          {chefSpecials.length > 0 && (
-            <section className="mb-10" data-testid="section-chef-specials">
-              <div className="flex items-center gap-2 mb-4">
-                <Flame className="h-4 w-4 text-brand-primary" />
-                <h2 className="font-royal text-xl text-brand-primary tracking-wide">Chef&apos;s Specials</h2>
-              </div>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                {chefSpecials.map((item) => {
-                  const inCart = cart.items.find((i) => i.item_id === item.id);
-                  return (
-                    <div key={item.id} className="mehfil-card rounded-lg overflow-hidden group" data-testid={`chef-special-${item.id}`}>
-                      <div className="aspect-[4/3] bg-cover bg-center group-hover:scale-105 transition-transform duration-500" style={{ backgroundImage: `url(${item.image_url})` }} />
-                      <div className="p-3">
-                        <h3 className="font-royal text-sm text-brand-primary leading-tight">{item.name}</h3>
-                        <div className="flex items-center justify-between mt-2">
-                          <span className="font-royal text-sm text-brand-primary">{formatCurrency(item.price)}</span>
-                          {inCart ? (
-                            <span className="text-[10px] font-royal tracking-wider text-brand-secondary">In cart × {inCart.qty}</span>
-                          ) : (
-                            <button onClick={() => { cart.add(item); toast.success(`${item.name} added`); }} className="mehfil-btn-royal rounded-full px-3 py-1 text-[10px] font-royal tracking-wider uppercase">Add</button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-          )}
-        </>
-      )}
-
-      {/* ====== MOBILE LAYOUT (below lg) ====== */}
-      <div className="lg:hidden">
-        {/* Sticky category filter pills */}
-        <div className="-mx-4 px-4 mb-4 overflow-x-auto sticky top-0 z-20 bg-[#FAF5EC]/95 backdrop-blur-sm py-2.5 border-b border-[#E7DFCB]/60" data-testid="menu-chapters-mobile">
-          <div className="flex gap-2 w-max">
-            {categories.map((c) => (
-              <button
-                key={c}
-                onClick={() => setActiveCat(c)}
-                className={`whitespace-nowrap rounded-full px-4 py-2 text-[11px] font-royal tracking-[0.12em] uppercase border transition-all ${
-                  activeCat === c
-                    ? "bg-brand-primary text-white border-brand-primary shadow-md"
-                    : "bg-white text-[#1A1106] border-[#ddd]"
-                }`}
-              >
-                {c}
-              </button>
-            ))}
-          </div>
+      {/* 3D BOOK RENDERING */}
+      <div className="mt-8 flex flex-col items-center">
+        <div className="hidden lg:flex items-center gap-6 mb-6 z-20 relative">
+          <button onClick={() => bookRef.current?.pageFlip()?.flipPrev()} className="p-3 rounded-full bg-[#FAF5EC] border border-[#E7DFCB] shadow-sm hover:shadow-md hover:bg-brand-secondary/20 transition text-brand-primary">
+            <ChevronLeft className="h-6 w-6" />
+          </button>
+          <span className="font-royal uppercase tracking-[0.2em] text-brand-primary">Flip Pages</span>
+          <button onClick={() => bookRef.current?.pageFlip()?.flipNext()} className="p-3 rounded-full bg-[#FAF5EC] border border-[#E7DFCB] shadow-sm hover:shadow-md hover:bg-brand-secondary/20 transition text-brand-primary">
+            <ChevronRight className="h-6 w-6" />
+          </button>
         </div>
 
-        {/* Category heading */}
-        {activeCat && (
-          <div className="flex items-center gap-3 mb-3">
-            <h2 className="font-royal text-xl text-brand-primary tracking-wide">{activeCat}</h2>
-            <span className="text-xs text-[#1A1106]/40">{mobileItems.length} items</span>
-          </div>
-        )}
-
-        {isLoading && <div className="text-[#1A1106]/60 font-editorial italic py-10 text-center">Unveiling the menu…</div>}
-
-        {/* Item list — Swiggy style */}
-        <div className="divide-y divide-[#E7DFCB]">
-          {mobileItems.map((item) => {
-            const inCart = cart.items.find((i) => i.item_id === item.id);
-            return (
-              <div key={item.id} className="flex gap-3 py-4" data-testid={`menu-item-mobile-${item.id}`}>
-                {/* LEFT: details */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    {item.tags?.includes("bestseller") && (
-                      <span className="flex items-center gap-1 text-[10px] font-bold text-brand-secondary uppercase tracking-wider">
-                        <Sparkles className="h-3 w-3" /> Bestseller
-                      </span>
-                    )}
-                    {item.tags?.includes("spicy") && (
-                      <span className="flex items-center gap-1 text-[10px] font-bold text-orange-600 uppercase tracking-wider">
-                        <Flame className="h-3 w-3" /> Spicy
-                      </span>
-                    )}
-                    {item.tags?.includes("veg") && (
-                      <span className="flex items-center gap-1 text-[10px] font-bold text-green-600 uppercase tracking-wider">
-                        <Leaf className="h-3 w-3" /> Veg
-                      </span>
-                    )}
+        <div className="w-full max-w-[1000px] flex justify-center perspective-[2000px]">
+          {filtered.length === 0 && hasActiveFilters && !isLoading ? (
+             <div className="text-center py-20">
+                <p className="font-editorial italic text-lg text-[#1A1106]/60">No dish matches your criteria — try adjusting your filters.</p>
+             </div>
+          ) : (
+            <HTMLFlipBook 
+              width={380} 
+              height={700} 
+              size="stretch" 
+              minWidth={315} 
+              maxWidth={500} 
+              minHeight={420} 
+              maxHeight={800} 
+              maxShadowOpacity={0.5} 
+              showCover={true} 
+              mobileScrollSupport={true} 
+              ref={bookRef}
+              className="mx-auto drop-shadow-2xl rounded-r-xl"
+            >
+              {/* FRONT COVER */}
+              <Page density="hard">
+                <div className="h-full bg-brand-primary text-[#FAF5EC] flex flex-col items-center justify-center p-8 border-l-[12px] border-[#5C0E1B] rounded-r-lg relative overflow-hidden">
+                  <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/leather.png')] pointer-events-none mix-blend-overlay"></div>
+                  <div className="z-10 flex flex-col items-center">
+                    <div className="mehfil-divider mb-6 opacity-60"></div>
+                    <h1 className="font-royal text-4xl lg:text-5xl text-center leading-tight">{restaurantConfig?.name || "Menu"}</h1>
+                    <div className="font-editorial italic text-brand-secondary text-xl mt-6 uppercase tracking-widest">Menu</div>
+                    <div className="mehfil-divider mt-6 opacity-60"></div>
                   </div>
-                  <h3 className="font-royal text-[15px] text-[#1A1106] leading-snug">{item.name}</h3>
-                  <p className="font-royal text-sm text-[#1A1106] mt-1">{formatCurrency(item.price)}</p>
-                  <p className="text-xs text-[#1A1106]/50 mt-1.5 line-clamp-2 leading-relaxed">{item.description}</p>
+                  <div className="absolute bottom-10 font-royal tracking-[0.3em] text-[10px] opacity-50 uppercase">Swipe to open</div>
                 </div>
+              </Page>
 
-                {/* RIGHT: image + ADD */}
-                <div className="flex-shrink-0 w-[105px] flex flex-col items-center">
-                  <div className="w-[105px] h-[96px] rounded-xl overflow-hidden bg-[#F3EBD8] shadow">
-                    {item.image_url ? (
-                      <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" loading="lazy" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-brand-secondary/40"><BookOpen className="h-7 w-7" /></div>
-                    )}
-                  </div>
-                  {/* ADD / Qty control — overlaps image bottom */}
-                  <div className="-mt-3.5 relative z-10">
-                    {inCart ? (
-                      <div className="flex items-center bg-[#5C0E1B] text-white rounded-lg shadow-lg overflow-hidden border-2 border-white">
-                        <button onClick={() => cart.setQty(item.id, inCart.qty - 1)} className="h-7 w-8 flex items-center justify-center active:bg-brand-primary"><Minus className="h-3 w-3" /></button>
-                        <span className="w-5 text-center font-royal text-sm font-bold">{inCart.qty}</span>
-                        <button onClick={() => cart.setQty(item.id, inCart.qty + 1)} className="h-7 w-8 flex items-center justify-center active:bg-brand-primary"><Plus className="h-3 w-3" /></button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => { cart.add(item); toast.success(`${item.name} added`); }}
-                        className="relative bg-white text-[#5C0E1B] font-royal font-bold text-sm uppercase border border-[#ddd] rounded-lg px-5 py-1 shadow-md active:scale-95 transition-transform"
-                      >
-                        ADD
-                        <span className="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-[#5C0E1B] text-white text-[9px] flex items-center justify-center font-bold leading-none">+</span>
-                      </button>
-                    )}
-                  </div>
+              {/* INSIDE FRONT COVER */}
+              <Page density="hard">
+                <div className="h-full bg-[#EADDCA] p-8 flex flex-col items-center justify-center relative">
+                   <div className="absolute inset-0 opacity-30 bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')] pointer-events-none mix-blend-multiply"></div>
+                   <p className="font-editorial italic text-center text-[#1A1106]/70 text-lg max-w-xs">{restaurantConfig?.history_intro || "Our journey began with a passion for great food."}</p>
+                   <div className="mt-8 font-royal tracking-[0.2em] text-[#5C0E1B] text-xs uppercase">Enjoy your meal</div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              </Page>
 
-        {!isLoading && mobileItems.length === 0 && (
-          <div className="text-center py-16 font-editorial italic text-[#1A1106]/60" data-testid="menu-empty-mobile">
-            No dishes found. Try adjusting your filters.
-          </div>
-        )}
-      </div>
-
-      {/* ====== DESKTOP LAYOUT (lg+) ====== */}
-      <div className="hidden lg:grid lg:grid-cols-[220px_1fr] gap-10">
-        {/* Chapters sidebar */}
-        <aside className="sticky top-24 self-start" data-testid="menu-chapters">
-          <div className="font-royal tracking-[0.3em] text-xs uppercase text-brand-secondary mb-4 flex items-center gap-2">
-            <BookOpen className="h-3.5 w-3.5" /> Chapters
-          </div>
-          <ol className="space-y-1">
-            {categories.map((c, idx) => (
-              <li key={c}>
-                <button
-                  data-testid={`chapter-link-${c}`}
-                  onClick={() => scrollTo(c)}
-                  className={`group w-full flex items-center gap-3 py-2.5 pr-3 pl-2 text-left rounded-md transition-all ${
-                    activeCat === c ? "bg-brand-primary text-[#FAF5EC] shadow-md" : "hover:bg-[#F3EBD8] text-[#1A1106]"
-                  }`}
-                >
-                  <span className={`font-royal text-sm w-7 text-center tracking-wider ${activeCat === c ? "text-brand-secondary" : "text-brand-secondary/70"}`}>
-                    {String(idx + 1).padStart(2, "0")}
-                  </span>
-                  <span className="font-royal tracking-wider uppercase text-[11px]">{c}</span>
-                </button>
-              </li>
-            ))}
-          </ol>
-          <p className="font-editorial italic text-[11px] text-[#1A1106]/60 mt-6 leading-snug">
-            Tap a chapter — scroll to that section of the menu.
-          </p>
-        </aside>
-
-        {/* Desktop items */}
-        <div>
-          {isLoading && <div className="text-[#1A1106]/60 font-editorial italic" data-testid="menu-loading">Unveiling the menu…</div>}
-
-          {categories.map((c, ci) => {
-            const categoryItems = grouped[c] || [];
-            if (categoryItems.length === 0) return null;
-            
-            return (
-              <section key={c} id={`chapter-${c}`} className="mb-16 scroll-mt-24" data-testid={`chapter-section-${c}`}>
-                <div className="flex items-end gap-4 mb-6">
-                  <div className="font-royal text-5xl text-brand-secondary/40 leading-none tabular-nums">{String(ci + 1).padStart(2, "0")}</div>
-                  <div className="flex-1">
-                    <div className="font-royal tracking-[0.3em] uppercase text-[10px] text-brand-primary">Chapter {ci + 1}</div>
-                    <h2 className="font-royal text-3xl text-brand-primary tracking-wide">{c}</h2>
-                  </div>
-                  <div className="h-px flex-1 bg-gradient-to-r from-brand-secondary/40 to-transparent" />
-                </div>
-
-                <div className="grid grid-cols-2 xl:grid-cols-3 gap-6" data-testid={`menu-grid-${c}`}>
-                  {categoryItems.map((item) => {
-                    const inCart = cart.items.find((i) => i.item_id === item.id);
-                    const isFlipped = !!flipped[item.id];
-                    return (
-                      <div key={item.id} className="relative" style={{ perspective: "1000px" }} data-testid={`menu-item-${item.id}`}>
-                        <motion.div
-                          className="relative w-full h-[320px]"
-                          style={{ transformStyle: "preserve-3d" }}
-                          animate={{ rotateY: isFlipped ? 180 : 0 }}
-                          transition={{ duration: 0.6 }}
-                        >
-                          {/* FRONT */}
-                          <div className="absolute inset-0 mehfil-card rounded-lg overflow-hidden flex flex-col shadow-md" style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" }}>
-                            <div className="relative h-[140px] bg-cover bg-center overflow-hidden" style={{ backgroundImage: `url(${item.image_url})` }}>
-                              <div className="absolute inset-0 bg-gradient-to-t from-[#5C0E1B]/70 via-transparent to-transparent" />
-                              {item.tags?.includes("bestseller") && (
-                                <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-brand-secondary text-[#1A1106] text-[10px] font-royal tracking-wider uppercase shadow-md">Bestseller</div>
-                              )}
-                              {item.tags?.includes("spicy") && (
-                                <div className="absolute top-3 right-3 h-7 w-7 rounded-full bg-brand-primary text-[#FAF5EC] flex items-center justify-center shadow-md" title="Spicy"><Flame className="h-3.5 w-3.5" /></div>
-                              )}
-                              {item.tags?.includes("veg") && (
-                                <div className="absolute bottom-3 left-3 h-6 w-6 rounded-full bg-green-600 text-white flex items-center justify-center shadow-md" title="Vegetarian"><Leaf className="h-3 w-3" /></div>
-                              )}
-                            </div>
-                            <div className="p-4 flex-1 flex flex-col">
-                              <h3 className="font-royal text-lg text-brand-primary leading-tight">{item.name}</h3>
-                              <div className="font-editorial italic text-sm text-[#1A1106]/70 mt-1.5 line-clamp-2 flex-1">{item.description}</div>
-                              <div className="mt-3 pt-3 border-t border-[#E7DFCB] flex items-center justify-between">
-                                <span className="font-royal text-xl text-brand-primary">{formatCurrency(item.price)}</span>
-                                <div className="flex items-center gap-2">
-                                  <button data-testid={`flip-btn-${item.id}`} onClick={() => setFlipped((s) => ({ ...s, [item.id]: !s[item.id] }))} className="text-[10px] font-royal tracking-[0.2em] uppercase text-brand-primary hover:text-brand-secondary transition px-2 py-1">Details</button>
-                                  {inCart ? (
-                                    <div className="flex items-center gap-1 bg-[#5C0E1B] text-[#FAF5EC] rounded-full p-1 shadow" data-testid={`qty-control-${item.id}`}>
-                                      <button onClick={() => cart.setQty(item.id, inCart.qty - 1)} className="h-7 w-7 rounded-full hover:bg-brand-primary flex items-center justify-center"><Minus className="h-3 w-3" /></button>
-                                      <span className="px-2 font-royal text-sm font-semibold w-6 text-center">{inCart.qty}</span>
-                                      <button onClick={() => cart.setQty(item.id, inCart.qty + 1)} className="h-7 w-7 rounded-full hover:bg-brand-primary flex items-center justify-center"><Plus className="h-3 w-3" /></button>
-                                    </div>
-                                  ) : (
-                                    <button data-testid={`add-to-cart-${item.id}`} onClick={() => { cart.add(item); toast.success(`${item.name} added to your thali`); }} className="mehfil-btn-royal rounded-full px-4 py-2 text-[11px] font-royal tracking-[0.15em] uppercase inline-flex items-center gap-1.5"><Plus className="h-3 w-3" /> Add</button>
-                                  )}
+              {/* DISH PAGES */}
+              {pages.map((pageItems, pageIdx) => (
+                <Page key={`page-${pageIdx}`}>
+                  <div className="flex-1 flex flex-col gap-6 pt-2">
+                    {pageItems.map((item) => {
+                      const inCart = cart.items.find((i) => i.item_id === item.id);
+                      const isFlipped = !!flipped[item.id];
+                      return (
+                        <div key={item.id} className="relative w-full h-[300px]" style={{ perspective: "1000px" }} data-testid={`menu-item-${item.id}`}>
+                          <motion.div
+                            className="relative w-full h-full"
+                            style={{ transformStyle: "preserve-3d" }}
+                            animate={{ rotateY: isFlipped ? 180 : 0 }}
+                            transition={{ duration: 0.6 }}
+                          >
+                            <div className="absolute inset-0 bg-white rounded-lg border border-[#E7DFCB] overflow-hidden flex flex-col shadow-sm" style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" }}>
+                              <div className="relative h-[120px] bg-cover bg-center overflow-hidden" style={{ backgroundImage: `url(${item.image_url})` }}>
+                                <div className="absolute inset-0 bg-gradient-to-t from-[#5C0E1B]/70 via-transparent to-transparent" />
+                                {item.tags?.includes("bestseller") && (
+                                  <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-brand-secondary text-[#1A1106] text-[9px] font-royal tracking-wider uppercase shadow-md">Bestseller</div>
+                                )}
+                              </div>
+                              <div className="p-3 flex-1 flex flex-col bg-white z-10">
+                                <h3 className="font-royal text-base text-brand-primary leading-tight">{item.name}</h3>
+                                <div className="font-editorial italic text-xs text-[#1A1106]/70 mt-1 line-clamp-2 flex-1">{item.description}</div>
+                                <div className="mt-2 pt-2 border-t border-[#E7DFCB] flex items-center justify-between">
+                                  <span className="font-royal text-lg text-brand-primary">{formatCurrency(item.price)}</span>
+                                  <div className="flex items-center gap-2 relative z-20">
+                                    <button onClick={() => setFlipped((s) => ({ ...s, [item.id]: !s[item.id] }))} className="text-[9px] font-royal tracking-[0.2em] uppercase text-brand-primary hover:text-brand-secondary transition px-1 py-1">Details</button>
+                                    {inCart ? (
+                                      <div className="flex items-center gap-1 bg-[#5C0E1B] text-[#FAF5EC] rounded-full p-0.5 shadow">
+                                        <button onClick={() => cart.setQty(item.id, inCart.qty - 1)} className="h-6 w-6 rounded-full hover:bg-brand-primary flex items-center justify-center"><Minus className="h-3 w-3" /></button>
+                                        <span className="px-1 font-royal text-xs font-semibold w-4 text-center">{inCart.qty}</span>
+                                        <button onClick={() => cart.setQty(item.id, inCart.qty + 1)} className="h-6 w-6 rounded-full hover:bg-brand-primary flex items-center justify-center"><Plus className="h-3 w-3" /></button>
+                                      </div>
+                                    ) : (
+                                      <button onClick={() => { cart.add(item); toast.success(`${item.name} added`); }} className="bg-[#5C0E1B] hover:bg-brand-primary text-[#FAF5EC] rounded-full px-3 py-1.5 text-[9px] font-royal tracking-wider uppercase transition shadow">Add</button>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             </div>
-                          </div>
 
-                          {/* BACK */}
-                          <div className="absolute inset-0 mehfil-royal-bg text-[#FAF5EC] rounded-lg overflow-hidden flex flex-col shadow-2xl p-6" style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
-                            <div className="font-royal tracking-[0.3em] uppercase text-[10px] text-brand-secondary">Chef&apos;s note</div>
-                            <h3 className="font-royal text-xl text-[#FAF5EC] mt-2">{item.name}</h3>
-                            <div className="mehfil-divider my-4"><span className="text-[10px] font-royal tracking-wider uppercase">est · {foundedYear}</span></div>
-                            <p className="font-editorial italic text-[#FAF5EC]/90 leading-relaxed text-sm">{item.description}</p>
-                            <div className="mt-4 grid grid-cols-2 gap-3 text-[11px] font-royal tracking-wider uppercase text-[#FAF5EC]/80">
-                              <div><span className="text-brand-secondary">Prep · </span>{item.prep_time_min} min</div>
-                              <div><span className="text-brand-secondary">Price · </span>{formatCurrency(item.price)}</div>
-                              {item.tags?.length ? <div className="col-span-2"><span className="text-brand-secondary">Notes · </span>{item.tags.join(" · ")}</div> : null}
+                            <div className="absolute inset-0 bg-[#5C0E1B] text-[#FAF5EC] rounded-lg overflow-hidden flex flex-col shadow-md p-4" style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
+                              <div className="font-royal tracking-[0.3em] uppercase text-[9px] text-brand-secondary">Chef&apos;s note</div>
+                              <h3 className="font-royal text-lg text-[#FAF5EC] mt-1">{item.name}</h3>
+                              <div className="mehfil-divider my-2"></div>
+                              <p className="font-editorial italic text-[#FAF5EC]/90 leading-relaxed text-xs overflow-y-auto pr-1 custom-scrollbar">{item.description}</p>
+                              <button onClick={() => setFlipped((s) => ({ ...s, [item.id]: !s[item.id] }))} className="absolute top-3 right-3 text-[#FAF5EC]/60 hover:text-brand-secondary transition z-20">
+                                <BookOpen className="h-4 w-4" />
+                              </button>
                             </div>
-                            <div className="mt-auto flex items-center gap-3">
-                              <button onClick={() => setFlipped((s) => ({ ...s, [item.id]: false }))} className="rounded-full border border-brand-secondary/50 text-[#FAF5EC] px-4 py-2 text-[11px] font-royal tracking-[0.15em] uppercase hover:bg-brand-secondary/10">Close</button>
-                              <button onClick={() => { cart.add(item); toast.success(`${item.name} added`); setFlipped((s) => ({ ...s, [item.id]: false })); }} className="mehfil-btn-gold rounded-full px-5 py-2 text-[11px] font-royal tracking-[0.15em] uppercase inline-flex items-center gap-1.5"><ShoppingBag className="h-3.5 w-3.5" /> Add to thali</button>
-                            </div>
-                          </div>
-                        </motion.div>
-                      </div>
-                    );
-                  })}
+                          </motion.div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="absolute bottom-4 right-4 text-[10px] font-royal text-[#1A1106]/40">{pageIdx + 1}</div>
+                </Page>
+              ))}
+
+              {/* INSIDE BACK COVER */}
+              <Page density="hard">
+                <div className="h-full bg-[#EADDCA] p-8 flex flex-col items-center justify-center relative">
+                   <div className="absolute inset-0 opacity-30 bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')] pointer-events-none mix-blend-multiply"></div>
+                   <p className="font-royal tracking-[0.2em] text-brand-primary text-xs uppercase text-center max-w-[200px]">Thank you for dining with us</p>
                 </div>
-              </section>
-            );
-          })}
+              </Page>
 
-          {!isLoading && filtered.length === 0 && (
-            <div className="text-center py-20 font-editorial italic text-[#1A1106]/60" data-testid="menu-empty">
-              No dish matches your criteria — try adjusting your filters.
-            </div>
+              {/* BACK COVER */}
+              <Page density="hard">
+                <div className="h-full bg-brand-primary flex flex-col items-center justify-center p-8 border-l-[12px] border-[#5C0E1B] rounded-l-lg relative overflow-hidden">
+                  <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/leather.png')] pointer-events-none mix-blend-overlay"></div>
+                  <div className="z-10 font-royal text-brand-secondary text-2xl">SmartDine AI</div>
+                  <div className="z-10 font-editorial italic text-[#FAF5EC]/50 text-xs mt-2">© {new Date().getFullYear()}</div>
+                </div>
+              </Page>
+            </HTMLFlipBook>
           )}
         </div>
       </div>
@@ -532,9 +336,14 @@ export default function MenuPage() {
           >
             <div className="relative">
               <ShoppingBag className="h-5 w-5" />
-              <span className="absolute -top-2 -right-2 h-[18px] w-[18px] rounded-full bg-brand-secondary text-[#1A1106] text-[10px] font-bold flex items-center justify-center">{cart.count()}</span>
+              <div className="absolute -top-2 -right-2 bg-brand-secondary text-[#1A1106] text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center shadow-md">
+                {cart.count()}
+              </div>
             </div>
-            <span className="font-royal text-xs tracking-wider uppercase">{formatCurrency(cart.subtotal())}</span>
+            <div className="flex flex-col items-start border-l border-white/20 pl-2.5 ml-1">
+              <span className="text-[9px] font-royal tracking-wider uppercase text-white/70 leading-none mb-0.5">Your Thali</span>
+              <span className="text-sm font-royal leading-none tracking-wide">{formatCurrency(cart.subtotal())}</span>
+            </div>
           </motion.a>
         )}
       </AnimatePresence>
