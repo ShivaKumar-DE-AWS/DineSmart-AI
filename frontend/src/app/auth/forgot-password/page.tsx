@@ -109,7 +109,7 @@ function ForgotPasswordContent() {
               Send Reset Link
             </Button>
             <div className="text-center mt-4">
-              <Button variant="link" onClick={() => router.push("/auth/login")}>
+              <Button variant="ghost" onClick={() => router.push("/auth/login")}>
                 Back to Login
               </Button>
             </div>
