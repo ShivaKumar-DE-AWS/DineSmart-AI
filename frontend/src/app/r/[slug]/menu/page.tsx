@@ -177,7 +177,7 @@ export default function MenuPage() {
       {/* Hero */}
       <div className="text-center mb-8 lg:mb-12">
         <div className="hidden lg:block mehfil-divider mb-4 max-w-xs mx-auto"><span className="font-royal tracking-[0.4em] text-xs uppercase">The royal menu</span></div>
-        <h1 className="font-royal text-3xl lg:text-6xl text-brand-primary tracking-wide">{timeGreeting} <span className="font-editorial italic mehfil-gold-gradient">Menu</span></h1>
+        <h1 className="font-royal text-3xl lg:text-6xl text-brand-primary tracking-wide">{timeGreeting} <span className="font-editorial italic gold-shimmer">Menu</span></h1>
         <p className="hidden lg:block font-editorial italic text-lg text-[#1A1106]/75 mt-4 max-w-2xl mx-auto leading-relaxed">
           {isDinnerTime ? "Settle in for a royal dinner experience. We've highlighted the Chef's Specials for you." : "Explore our curated daylight favorites. Flip a card to read the chef's notes."}
         </p>
@@ -376,7 +376,7 @@ export default function MenuPage() {
                 {/* INSIDE FRONT COVER */}
                 <Page density="hard">
                   <div className="h-full bg-[#EADDCA] p-8 flex flex-col items-center justify-center relative">
-                     <div className="absolute inset-0 opacity-30 bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')] pointer-events-none mix-blend-multiply"></div>
+                     <div className="absolute inset-0 opacity-50 bg-[url('/parchment.png')] pointer-events-none mix-blend-multiply bg-cover bg-center"></div>
                      <p className="font-editorial italic text-center text-[#1A1106]/70 text-lg max-w-xs">{restaurantConfig?.history_intro || "Our journey began with a passion for great food."}</p>
                      <div className="mt-8 font-royal tracking-[0.2em] text-[#5C0E1B] text-xs uppercase">Enjoy your meal</div>
                   </div>
@@ -385,7 +385,9 @@ export default function MenuPage() {
                 {/* DISH PAGES */}
                 {pages.map((pageItems, pageIdx) => (
                   <Page key={`page-${pageIdx}`}>
-                    <div className="flex-1 flex flex-col pt-1">
+                    <div className="h-full w-full bg-[#FAF5EC] px-4 py-6 flex flex-col relative shadow-[inset_0_0_40px_rgba(0,0,0,0.05)] border-r border-[#E7DFCB]/50">
+                       <div className="absolute inset-0 opacity-40 bg-[url('/parchment.png')] pointer-events-none mix-blend-multiply bg-cover bg-center"></div>
+                       <div className="flex-1 flex flex-col relative z-10 pt-1">
                       {pageItems.map((item) => {
                         const inCart = cart.items.find((i) => i.item_id === item.id);
                         const isFlipped = !!flipped[item.id];
@@ -438,15 +440,16 @@ export default function MenuPage() {
                           </div>
                         );
                       })}
+                       </div>
+                       <div className="absolute bottom-4 right-4 text-[10px] font-royal text-[#1A1106]/40">{pageIdx + 1}</div>
                     </div>
-                    <div className="absolute bottom-4 right-4 text-[10px] font-royal text-[#1A1106]/40">{pageIdx + 1}</div>
                   </Page>
                 ))}
   
                 {/* INSIDE BACK COVER */}
                 <Page density="hard">
                   <div className="h-full bg-[#EADDCA] p-8 flex flex-col items-center justify-center relative">
-                     <div className="absolute inset-0 opacity-30 bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')] pointer-events-none mix-blend-multiply"></div>
+                     <div className="absolute inset-0 opacity-50 bg-[url('/parchment.png')] pointer-events-none mix-blend-multiply bg-cover bg-center"></div>
                      <p className="font-royal tracking-[0.2em] text-brand-primary text-xs uppercase text-center max-w-[200px]">Thank you for dining with us</p>
                   </div>
                 </Page>
@@ -504,7 +507,7 @@ export default function MenuPage() {
                   {catItems.map(item => {
                     const inCart = cart.items.find(i => i.item_id === item.id);
                     return (
-                      <div key={item.id} className="bg-white rounded-xl shadow-sm border border-bone p-3 flex gap-4 hover:shadow-md transition">
+                      <div key={item.id} className="bg-white rounded-xl shadow-sm border border-[#E7DFCB]/50 p-3 flex gap-4 hover:-translate-y-1 hover:shadow-xl hover:shadow-[#5C0E1B]/10 transition-all duration-300">
                         <div className="flex-1 flex flex-col justify-center">
                           {item.tags?.includes("bestseller") && (
                             <span className="text-[9px] font-royal text-brand-secondary uppercase tracking-wider mb-1">Bestseller</span>

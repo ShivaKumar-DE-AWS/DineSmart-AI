@@ -72,3 +72,23 @@ button, a, input, select, textarea {
 /* Hide scrollbars for portal display screens */
 .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
 .scrollbar-thin::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 3px; }
+
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+.gold-shimmer {
+  background: linear-gradient(
+    to right,
+    #b8860b 20%,
+    #ffd700 40%,
+    #ffec8b 50%,
+    #ffd700 60%,
+    #b8860b 80%
+  );
+  background-size: 200% auto;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: shimmer 4s linear infinite;
+}
