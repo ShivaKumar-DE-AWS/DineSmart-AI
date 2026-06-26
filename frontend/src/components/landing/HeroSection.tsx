@@ -1,177 +1,398 @@
 "use client";
 
+import { useMemo, Suspense } from "react";
 import { motion } from "framer-motion";
+import dynamic from "next/dynamic";
 import Link from "next/link";
-import { ArrowUpRight, Play, Sparkles } from "lucide-react";
+
+/* -------------------------------------------------------------------------- */
+/*  3D Restaurant Table Scene (lazy-loaded, ssr: false)                       */
+/* -------------------------------------------------------------------------- */
+
+function TableMesh() {
+  return (
+    <group position={[0, -0.15, 0]}>
+      {/* Table top */}
+      <mesh position={[0, 0, 0]} castShadow receiveShadow>
+        <cylinderGeometry args={[1.6, 1.6, 0.08, 48]} />
+        <meshStandardMaterial color="#1a1a1a" roughness={0.35} metalness={0.2} />
+      </mesh>
+      {/* Table top edge ring */}
+      <mesh position={[0, 0.04, 0]}>
+        <torusGeometry args={[1.6, 0.02, 8, 48]} />
+        <meshStandardMaterial color="#2a2a2a" roughness={0.5} metalness={0.3} />
+      </mesh>
+      {/* Table leg */}
+      <mesh position={[0, -0.55, 0]}>
+        <cylinderGeometry args={[0.12, 0.15, 1.0, 16]} />
+        <meshStandardMaterial color="#111111" roughness={0.6} metalness={0.3} />
+      </mesh>
+      {/* Table base */}
+      <mesh position={[0, -1.05, 0]}>
+        <cylinderGeometry args={[0.6, 0.65, 0.06, 32]} />
+        <meshStandardMaterial color="#111111" roughness={0.5} metalness={0.4} />
+      </mesh>
+    </group>
+  );
+}
+
+function SmartphoneMesh() {
+  return (
+    <group position={[0.3, 0.02, 0.2]} rotation={[-Math.PI / 2, 0, 0.2]}>
+      {/* Phone body */}
+      <mesh castShadow>
+        <boxGeometry args={[0.35, 0.7, 0.03]} />
+        <meshStandardMaterial color="#0a0a0a" roughness={0.2} metalness={0.8} />
+      </mesh>
+      {/* Phone screen (glowing) */}
+      <mesh position={[0, 0, 0.016]}>
+        <planeGeometry args={[0.3, 0.6]} />
+        <meshStandardMaterial
+          color="#1a3a6a"
+          emissive="#2A64F6"
+          emissiveIntensity={0.6}
+          roughness={0.1}
+          metalness={0.1}
+        />
+      </mesh>
+      {/* Screen content lines */}
+      {[0.18, 0.08, -0.02, -0.12].map((y, i) => (
+        <mesh key={i} position={[-0.02, y, 0.018]}>
+          <planeGeometry args={[0.2, 0.025]} />
+          <meshBasicMaterial color="#4a7af5" transparent opacity={0.5} />
+        </mesh>
+      ))}
+      {/* Screen glow point light */}
+      <pointLight
+        position={[0, 0, 0.15]}
+        color="#2A64F6"
+        intensity={0.4}
+        distance={1.5}
+        decay={2}
+      />
+    </group>
+  );
+}
+
+function QRStandMesh() {
+  return (
+    <group position={[-0.5, 0.17, -0.3]} rotation={[0, 0.3, 0]}>
+      {/* Stand base */}
+      <mesh>
+        <boxGeometry args={[0.3, 0.04, 0.15]} />
+        <meshStandardMaterial color="#1a1a1a" roughness={0.4} metalness={0.3} />
+      </mesh>
+      {/* Stand card */}
+      <mesh position={[0, 0.2, -0.04]} rotation={[-0.15, 0, 0]}>
+        <boxGeometry args={[0.25, 0.35, 0.01]} />
+        <meshStandardMaterial color="#f0ede8" roughness={0.8} metalness={0} />
+      </mesh>
+      {/* QR code pattern (grid of small boxes) */}
+      {Array.from({ length: 16 }).map((_, i) => {
+        const row = Math.floor(i / 4);
+        const col = i % 4;
+        const show = [0, 1, 3, 4, 6, 7, 8, 10, 12, 13, 15].includes(i);
+        if (!show) return null;
+        return (
+          <mesh
+            key={i}
+            position={[
+              -0.055 + col * 0.038,
+              0.13 + row * 0.038,
+              -0.033,
+            ]}
+            rotation={[-0.15, 0, 0]}
+          >
+            <boxGeometry args={[0.03, 0.03, 0.002]} />
+            <meshBasicMaterial color="#111111" />
+          </mesh>
+        );
+      })}
+    </group>
+  );
+}
+
+function PlateMesh() {
+  return (
+    <group position={[-0.15, -0.08, 0.55]}>
+      {/* Plate body */}
+      <mesh rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.35, 0.32, 0.03, 32]} />
+        <meshStandardMaterial color="#e8e4dc" roughness={0.6} metalness={0.05} />
+      </mesh>
+      {/* Inner ring */}
+      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0.005, 0]}>
+        <torusGeometry args={[0.22, 0.005, 8, 32]} />
+        <meshStandardMaterial color="#d4d0c8" roughness={0.7} />
+      </mesh>
+    </group>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Floating AI sparkle particles                                             */
+/* -------------------------------------------------------------------------- */
+
+function FloatingSparkles() {
+  const sparkleData = useMemo(
+    () =>
+      Array.from({ length: 12 }).map((_, i) => ({
+        position: [
+          0.3 + (Math.random() - 0.5) * 0.6,
+          0.25 + Math.random() * 0.7,
+          0.2 + (Math.random() - 0.5) * 0.5,
+        ] as [number, number, number],
+        scale: 0.015 + Math.random() * 0.02,
+        speed: 1 + Math.random() * 2,
+        floatIntensity: 0.3 + Math.random() * 0.5,
+        color: i % 3 === 0 ? "#D95333" : i % 3 === 1 ? "#EAB308" : "#2A64F6",
+      })),
+    []
+  );
+
+  // Lazy-import Float from drei inside the component tree (already inside Canvas)
+  const { Float } = require("@react-three/drei");
+
+  return (
+    <>
+      {sparkleData.map((s, i) => (
+        <Float
+          key={i}
+          speed={s.speed}
+          floatIntensity={s.floatIntensity}
+          rotationIntensity={0.2}
+        >
+          <mesh position={s.position}>
+            <sphereGeometry args={[s.scale, 8, 8]} />
+            <meshStandardMaterial
+              color={s.color}
+              emissive={s.color}
+              emissiveIntensity={2}
+              toneMapped={false}
+            />
+          </mesh>
+        </Float>
+      ))}
+    </>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Full 3D Scene (composed)                                                  */
+/* -------------------------------------------------------------------------- */
+
+function RestaurantTableScene() {
+  const { Canvas } = require("@react-three/fiber");
+  const { OrbitControls, Environment } = require("@react-three/drei");
+
+  return (
+    <Canvas
+      camera={{
+        position: [2.2, 2.4, 3.0],
+        fov: 35,
+        near: 0.1,
+        far: 50,
+      }}
+      dpr={[1, 1.5]}
+      style={{ width: "100%", height: "100%" }}
+      gl={{ antialias: true, alpha: true }}
+    >
+      <color attach="background" args={["transparent"]} />
+
+      {/* Lighting */}
+      <ambientLight intensity={0.3} />
+      <directionalLight
+        position={[5, 8, 5]}
+        intensity={1.2}
+        color="#fff5e6"
+        castShadow
+        shadow-mapSize-width={1024}
+        shadow-mapSize-height={1024}
+      />
+      <pointLight position={[-3, 4, -2]} intensity={0.3} color="#2A64F6" />
+      <pointLight position={[3, 3, 3]} intensity={0.2} color="#D95333" />
+
+      <Suspense fallback={null}>
+        {/* Scene objects */}
+        <group rotation={[0, -0.4, 0]}>
+          <TableMesh />
+          <SmartphoneMesh />
+          <QRStandMesh />
+          <PlateMesh />
+          <FloatingSparkles />
+        </group>
+
+        <Environment preset="city" environmentIntensity={0.15} />
+      </Suspense>
+
+      <OrbitControls
+        enableZoom={false}
+        enablePan={false}
+        autoRotate
+        autoRotateSpeed={0.6}
+        maxPolarAngle={Math.PI / 2.2}
+        minPolarAngle={Math.PI / 4}
+      />
+    </Canvas>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Dynamic import wrapper (SSR disabled)                                     */
+/* -------------------------------------------------------------------------- */
+
+const Scene3D = dynamic(
+  () => Promise.resolve({ default: RestaurantTableScene }),
+  {
+    ssr: false,
+    loading: () => null,
+  }
+);
+
+/* -------------------------------------------------------------------------- */
+/*  Animation variants                                                        */
+/* -------------------------------------------------------------------------- */
+
+const fadeUp = (delay: number) => ({
+  initial: { opacity: 0, y: 24 } as const,
+  animate: { opacity: 1, y: 0 } as const,
+  transition: { duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] },
+});
+
+/* -------------------------------------------------------------------------- */
+/*  HeroSection Component                                                     */
+/* -------------------------------------------------------------------------- */
 
 export function HeroSection() {
   return (
-    <section className="relative pt-24 pb-16 md:pt-48 md:pb-32 px-6 lg:px-24 max-w-[1400px] mx-auto overflow-hidden">
-      {/* Background glow effects */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-clay/20 rounded-full blur-[120px] -z-10 mix-blend-screen" />
-      <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-electric-blue/10 rounded-full blur-[150px] -z-10 mix-blend-screen" />
+    <section
+      id="hero"
+      className="relative min-h-screen bg-ink overflow-hidden pt-32"
+    >
+      {/* ─── Background Glow Blobs ─── */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-0 overflow-hidden"
+      >
+        <div className="absolute top-[10%] left-[15%] w-[500px] h-[500px] bg-clay/20 rounded-full blur-[150px]" />
+        <div className="absolute bottom-[15%] right-[10%] w-[600px] h-[600px] bg-electric-blue/10 rounded-full blur-[150px]" />
+        <div className="absolute top-[40%] left-[50%] w-[350px] h-[350px] bg-gold/5 rounded-full blur-[120px]" />
+      </div>
 
-      <div className="flex flex-col lg:flex-row items-center gap-16 relative z-10">
-        <div className="flex-1 text-center lg:text-left">
+      {/* ─── Content Grid ─── */}
+      <div className="relative z-10 mx-auto max-w-[1400px] px-6 lg:px-16 xl:px-24 flex flex-col lg:flex-row items-center gap-12 lg:gap-8 min-h-[calc(100vh-8rem)]">
+        {/* ─── Left: Text Content ─── */}
+        <div className="flex-1 flex flex-col items-center lg:items-start text-center lg:text-left pt-8 lg:pt-0">
+          {/* Badge */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-cream text-sm font-medium mb-8 backdrop-blur-md"
+            {...fadeUp(0)}
+            className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-white/[0.04] border border-white/10 backdrop-blur-xl text-cream text-sm font-medium mb-8"
+            data-testid="hero-badge"
           >
-            <Sparkles className="h-4 w-4 text-gold" />
-            <span>Turn Every Restaurant Into an AI-Powered Dining Experience</span>
+            <span className="text-base">✨</span>
+            <span>AI-Powered Restaurant Platform</span>
           </motion.div>
 
+          {/* Headline */}
           <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="font-heading text-4xl sm:text-5xl md:text-6xl lg:text-7xl leading-[1.1] tracking-tight text-white mb-6"
+            {...fadeUp(0.1)}
+            className="font-heading text-5xl sm:text-6xl md:text-7xl lg:text-8xl leading-[1.05] tracking-tight text-white mb-6"
+            data-testid="hero-headline"
           >
-            Your Restaurant <br />
+            Dining Made Smarter
+            <br />
+            with{" "}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-clay via-gold to-electric-blue">
-              Deserves an AI Waiter
+              AI.
             </span>
           </motion.h1>
 
+          {/* Subheading */}
           <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="text-lg md:text-xl text-stone max-w-2xl mx-auto lg:mx-0 leading-relaxed mb-10"
+            {...fadeUp(0.2)}
+            className="text-stone text-lg md:text-xl leading-relaxed max-w-xl mx-auto lg:mx-0 mb-10"
+            data-testid="hero-subheading"
           >
-            Let customers order through a conversational AI assistant while you automate kitchen operations, order management, analytics, and customer engagement.
+            Scan. Chat. Order. Track. Enjoy.
+            <br />
+            SmartDine transforms every restaurant into an intelligent dining
+            experience.
           </motion.p>
 
+          {/* CTA Buttons */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-            className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 mb-8"
+            {...fadeUp(0.3)}
+            className="flex flex-col sm:flex-row items-center gap-4 mb-10 w-full sm:w-auto"
+            data-testid="hero-cta-group"
           >
             <Link
-              href="/auth/restaurant"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-cream hover:bg-white text-ink rounded-full px-8 py-4 font-semibold transition shadow-[0_0_40px_-10px_rgba(255,255,255,0.3)]"
+              href="/demo"
+              className="w-full sm:w-auto inline-flex items-center justify-center bg-white text-ink rounded-full px-8 py-4 font-semibold text-base shadow-[0_0_50px_-12px_rgba(255,255,255,0.35)] hover:shadow-[0_0_60px_-8px_rgba(255,255,255,0.45)] hover:scale-[1.03] active:scale-[0.98] transition-all duration-200"
+              data-testid="hero-cta-primary"
             >
-              Start 14-Day Free Trial
+              Book a Demo
             </Link>
             <Link
-              href="/r/mehfil-hyderabad"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 border border-white/20 hover:bg-white/5 text-white rounded-full px-8 py-4 font-medium transition backdrop-blur-sm"
+              href="#features"
+              className="w-full sm:w-auto inline-flex items-center justify-center border border-white/20 text-white rounded-full px-8 py-4 font-medium text-base hover:bg-white/5 active:bg-white/10 transition-all duration-200 backdrop-blur-sm"
+              data-testid="hero-cta-secondary"
             >
-              <Play className="h-4 w-4 fill-current" /> Watch Live Demo
+              Explore Features ↓
             </Link>
           </motion.div>
 
+          {/* Trust Line */}
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.5 }}
-            className="flex items-center justify-center lg:justify-start gap-3 text-sm text-stone"
+            {...fadeUp(0.45)}
+            className="flex items-center justify-center lg:justify-start gap-4"
+            data-testid="hero-trust"
           >
-            <div className="flex -space-x-2">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="w-8 h-8 rounded-full border-2 border-ink bg-bone flex items-center justify-center overflow-hidden">
-                  <img src={`https://api.dicebear.com/7.x/notionists/svg?seed=${i}`} alt="user" />
+            {/* Avatar Stack */}
+            <div className="flex -space-x-2.5">
+              {[1, 2, 3, 4].map((seed) => (
+                <div
+                  key={seed}
+                  className="w-9 h-9 rounded-full border-2 border-ink bg-bone overflow-hidden ring-1 ring-white/10"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={`https://api.dicebear.com/7.x/notionists/svg?seed=smartdine${seed}`}
+                    alt={`Restaurant owner ${seed}`}
+                    width={36}
+                    height={36}
+                    loading="lazy"
+                  />
                 </div>
               ))}
             </div>
-            <p>No Credit Card Required • Setup in 15 Minutes</p>
+            <p className="text-sm text-stone">
+              Trusted by{" "}
+              <span className="text-cream font-medium">500+ restaurants</span>{" "}
+              across India
+            </p>
           </motion.div>
         </div>
 
-        <div className="flex-1 w-full max-w-xl lg:max-w-none relative hidden lg:block">
+        {/* ─── Right: 3D Scene ─── */}
+        <div className="flex-1 w-full max-w-xl lg:max-w-none relative">
+          {/* Mobile: scene sits behind text with lower opacity */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, rotateY: 10 }}
-            animate={{ opacity: 1, scale: 1, rotateY: 0 }}
-            transition={{ duration: 0.8, delay: 0.2, type: "spring" }}
-            className="relative"
-            style={{ perspective: "1000px" }}
+            initial={{ opacity: 0, scale: 0.92 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 1, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            className="w-full aspect-square lg:aspect-[4/3] lg:min-h-[520px] xl:min-h-[600px] opacity-40 lg:opacity-100"
+            data-testid="hero-3d-scene"
           >
-            {/* Main Dashboard Mockup */}
-            <div className="bg-graphite/80 backdrop-blur-xl border border-white/10 p-4 rounded-3xl shadow-2xl relative z-10 overflow-hidden transform-gpu">
-              {/* Header */}
-              <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-4">
-                <div className="flex gap-2">
-                  <div className="w-3 h-3 rounded-full bg-[#FF5F56]" />
-                  <div className="w-3 h-3 rounded-full bg-[#FFBD2E]" />
-                  <div className="w-3 h-3 rounded-full bg-[#27C93F]" />
-                </div>
-                <div className="text-xs font-medium text-stone">Live Revenue Dashboard</div>
-              </div>
-
-              {/* Fake Dashboard Content */}
-              <div className="space-y-4">
-                <div className="flex gap-4">
-                  <div className="flex-1 bg-white/5 rounded-2xl p-6 border border-white/5">
-                    <div className="text-stone text-sm mb-2">Today's Revenue</div>
-                    <div className="text-3xl font-heading text-cream">₹ 1,42,850</div>
-                    <div className="text-ready text-xs mt-2 flex items-center gap-1">
-                      <ArrowUpRight className="w-3 h-3" /> +24.5% vs yesterday
-                    </div>
-                  </div>
-                  <div className="flex-1 bg-white/5 rounded-2xl p-6 border border-white/5">
-                    <div className="text-stone text-sm mb-2">Active Orders</div>
-                    <div className="text-3xl font-heading text-cream">42</div>
-                    <div className="text-electric-blue text-xs mt-2 flex items-center gap-1">
-                      12 in kitchen, 30 dining
-                    </div>
-                  </div>
-                </div>
-
-                {/* Animated Chart Bars */}
-                <div className="h-32 bg-white/5 rounded-2xl border border-white/5 p-4 flex items-end gap-2">
-                  {[40, 70, 45, 90, 65, 85, 120, 95, 110].map((h, i) => (
-                    <motion.div
-                      key={i}
-                      initial={{ height: 0 }}
-                      animate={{ height: `${h}%` }}
-                      transition={{ duration: 1, delay: 0.5 + i * 0.1 }}
-                      className="flex-1 bg-gradient-to-t from-clay to-gold rounded-t-sm opacity-80"
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Floating AI Waiter Mobile Mockup */}
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: [0, -10, 0], opacity: 1 }}
-              transition={{ 
-                y: { duration: 4, repeat: Infinity, ease: "easeInOut" },
-                opacity: { duration: 0.5, delay: 0.8 }
-              }}
-              className="absolute -bottom-10 -left-10 w-64 bg-[#0a0a0a] border-[6px] border-slate rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-20 overflow-hidden"
-            >
-              <div className="bg-gradient-to-b from-clay/20 to-transparent p-4 pb-6">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 rounded-full bg-clay/20 flex items-center justify-center">
-                    <Sparkles className="h-5 w-5 text-clay" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-medium text-cream">AI Sommelier</div>
-                    <div className="text-[10px] text-stone">Online</div>
-                  </div>
-                </div>
-                
-                <div className="space-y-3">
-                  <div className="bg-white/10 text-xs text-cream p-3 rounded-2xl rounded-tl-sm w-11/12 backdrop-blur-md">
-                    Hi! The Chicken Dum Biryani is our bestseller today. Would you like to start with Apollo Fish?
-                  </div>
-                  <div className="bg-electric-blue/20 text-xs text-electric-blue p-3 rounded-2xl rounded-tr-sm w-10/12 ml-auto backdrop-blur-md">
-                    Yes, make the Biryani extra spicy please.
-                  </div>
-                  <div className="bg-white/10 text-xs text-cream p-3 rounded-2xl rounded-tl-sm w-11/12 backdrop-blur-md">
-                    Noted! 1x Apollo Fish, 1x Extra Spicy Biryani. Sending to kitchen... 👨‍🍳
-                  </div>
-                </div>
-              </div>
-            </motion.div>
+            <Scene3D />
           </motion.div>
         </div>
       </div>
+
+      {/* ─── Bottom gradient fade ─── */}
+      <div
+        aria-hidden
+        className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-ink to-transparent z-20 pointer-events-none"
+      />
     </section>
   );
 }

@@ -36,7 +36,6 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
   const { user } = useSession();
   const SECONDARY_NAV = [
     { href: `/r/${slug}/smartdine`, label: "SmartDine", testid: "nav-smartdine" },
-    ...(user?.role === "admin" ? [{ href: `/admin`, label: "Admin Dashboard", testid: "nav-admin" }] : []),
     { href: `/r/${slug}/login`, label: "Staff Login", testid: "nav-staff" },
   ];
 
