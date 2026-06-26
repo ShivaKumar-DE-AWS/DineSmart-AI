@@ -153,23 +153,32 @@ export default function MenuPage() {
   const { pages, categoryPages } = useMemo(() => {
     const p = [];
     const catPages: Record<string, number> = {};
-    let currentCategory = "";
     
-    for (let i = 0; i < sortedFiltered.length; i += ITEMS_PER_PAGE) {
-      const pageItems = sortedFiltered.slice(i, i + ITEMS_PER_PAGE);
-      p.push(pageItems);
+    // Group by category to ensure categories start on a fresh page
+    const groupedByCategory: Record<string, typeof sortedFiltered> = {};
+    sortedFiltered.forEach(item => {
+      const cat = item.category || "Other";
+      if (!groupedByCategory[cat]) groupedByCategory[cat] = [];
+      groupedByCategory[cat].push(item);
+    });
+
+    for (const cat of categories) {
+      const catItems = groupedByCategory[cat];
+      if (!catItems || catItems.length === 0) continue;
       
-      const pageIndexInBook = p.length - 1 + 2; 
-      if (pageItems[0] && pageItems[0].category !== currentCategory) {
-        currentCategory = pageItems[0].category || "Other";
-        if (catPages[currentCategory] === undefined) {
-          catPages[currentCategory] = pageIndexInBook;
+      for (let i = 0; i < catItems.length; i += ITEMS_PER_PAGE) {
+        const pageItems = catItems.slice(i, i + ITEMS_PER_PAGE);
+        p.push(pageItems);
+        
+        const pageIndexInBook = p.length - 1 + 2; // +2 for covers
+        if (i === 0) { // first page of this category
+           catPages[cat] = pageIndexInBook;
         }
       }
     }
     if (p.length % 2 !== 0) p.push([]); 
     return { pages: p, categoryPages: catPages };
-  }, [sortedFiltered]);
+  }, [sortedFiltered, categories]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-10 pt-10 pb-28 overflow-x-hidden" data-testid="menu-page">
@@ -293,7 +302,13 @@ export default function MenuPage() {
                return (
                  <button 
                    key={cat}
-                   onClick={() => bookRef.current?.pageFlip()?.flip(targetPage)}
+                   onClick={() => {
+                     const flipper = bookRef.current?.pageFlip();
+                     if (flipper) {
+                       if (typeof flipper.turnToPage === 'function') flipper.turnToPage(targetPage);
+                       else if (typeof flipper.flip === 'function') flipper.flip(targetPage);
+                     }
+                   }}
                    className="px-4 py-1.5 rounded-full border border-[#E7DFCB] text-[10px] font-royal tracking-widest uppercase transition bg-[#FAF5EC] text-brand-primary hover:bg-[#5C0E1B] hover:text-[#FAF5EC] shadow-sm flex-shrink-0"
                  >
                    {cat}
@@ -396,6 +411,11 @@ export default function MenuPage() {
                     <div className="h-full w-full bg-[#FAF5EC] px-4 py-6 flex flex-col relative shadow-[inset_0_0_40px_rgba(0,0,0,0.05)] border-r border-[#E7DFCB]/50">
                        <div className="absolute inset-0 opacity-40 bg-[url('/parchment.png')] pointer-events-none mix-blend-multiply bg-cover bg-center"></div>
                        <div className="flex-1 flex flex-col relative z-10 pt-1">
+                          {pageItems.length > 0 && (
+                            <div className="text-center mb-5">
+                               <h3 className="font-royal text-sm text-[#5C0E1B] uppercase tracking-[0.2em] inline-block border-b border-[#5C0E1B]/30 pb-0.5">{pageItems[0].category || "Menu"}</h3>
+                            </div>
+                          )}
                       {pageItems.map((item) => {
                         const inCart = cart.items.find((i) => i.item_id === item.id);
                         return (
