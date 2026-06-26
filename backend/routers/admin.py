@@ -317,7 +317,7 @@ async def onboard_menu(file: UploadFile = File(...), user=Depends(require_user))
                 result = await asyncio.to_thread(
                     client.models.generate_images,
                     model='imagen-3.0-generate-002',
-                    prompt=f"A professional, mouth-watering food photography shot of {prompt}. High quality, cinematic lighting, restaurant plating.",
+                    prompt=f"A professional, mouth-watering food photography shot STRICTLY representing the dish: '{item.get('name')}'. {prompt}. High quality, cinematic lighting, restaurant plating. The image MUST clearly depict {item.get('name')}.",
                     config=genai_types.GenerateImagesConfig(
                         number_of_images=1,
                         output_mime_type="image/jpeg",

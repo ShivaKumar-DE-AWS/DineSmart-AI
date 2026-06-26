@@ -446,14 +446,14 @@ export default function MenuPage() {
                     return (
                       <div key={item.id} className="relative" style={{ perspective: "1000px" }} data-testid={`menu-item-${item.id}`}>
                         <motion.div
-                          className="relative w-full h-[400px]"
+                          className="relative w-full h-[320px]"
                           style={{ transformStyle: "preserve-3d" }}
                           animate={{ rotateY: isFlipped ? 180 : 0 }}
                           transition={{ duration: 0.6 }}
                         >
                           {/* FRONT */}
                           <div className="absolute inset-0 mehfil-card rounded-lg overflow-hidden flex flex-col shadow-md" style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" }}>
-                            <div className="relative aspect-[5/4] bg-cover bg-center overflow-hidden" style={{ backgroundImage: `url(${item.image_url})` }}>
+                            <div className="relative h-[140px] bg-cover bg-center overflow-hidden" style={{ backgroundImage: `url(${item.image_url})` }}>
                               <div className="absolute inset-0 bg-gradient-to-t from-[#5C0E1B]/70 via-transparent to-transparent" />
                               {item.tags?.includes("bestseller") && (
                                 <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-brand-secondary text-[#1A1106] text-[10px] font-royal tracking-wider uppercase shadow-md">Bestseller</div>
@@ -465,10 +465,10 @@ export default function MenuPage() {
                                 <div className="absolute bottom-3 left-3 h-6 w-6 rounded-full bg-green-600 text-white flex items-center justify-center shadow-md" title="Vegetarian"><Leaf className="h-3 w-3" /></div>
                               )}
                             </div>
-                            <div className="p-5 flex-1 flex flex-col">
+                            <div className="p-4 flex-1 flex flex-col">
                               <h3 className="font-royal text-lg text-brand-primary leading-tight">{item.name}</h3>
                               <div className="font-editorial italic text-sm text-[#1A1106]/70 mt-1.5 line-clamp-2 flex-1">{item.description}</div>
-                              <div className="mt-4 pt-4 border-t border-[#E7DFCB] flex items-center justify-between">
+                              <div className="mt-3 pt-3 border-t border-[#E7DFCB] flex items-center justify-between">
                                 <span className="font-royal text-xl text-brand-primary">{formatCurrency(item.price)}</span>
                                 <div className="flex items-center gap-2">
                                   <button data-testid={`flip-btn-${item.id}`} onClick={() => setFlipped((s) => ({ ...s, [item.id]: !s[item.id] }))} className="text-[10px] font-royal tracking-[0.2em] uppercase text-brand-primary hover:text-brand-secondary transition px-2 py-1">Details</button>
@@ -489,7 +489,7 @@ export default function MenuPage() {
                           {/* BACK */}
                           <div className="absolute inset-0 mehfil-royal-bg text-[#FAF5EC] rounded-lg overflow-hidden flex flex-col shadow-2xl p-6" style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
                             <div className="font-royal tracking-[0.3em] uppercase text-[10px] text-brand-secondary">Chef&apos;s note</div>
-                            <h3 className="font-royal text-2xl text-[#FAF5EC] mt-2">{item.name}</h3>
+                            <h3 className="font-royal text-xl text-[#FAF5EC] mt-2">{item.name}</h3>
                             <div className="mehfil-divider my-4"><span className="text-[10px] font-royal tracking-wider uppercase">est · {foundedYear}</span></div>
                             <p className="font-editorial italic text-[#FAF5EC]/90 leading-relaxed text-sm">{item.description}</p>
                             <div className="mt-4 grid grid-cols-2 gap-3 text-[11px] font-royal tracking-wider uppercase text-[#FAF5EC]/80">
