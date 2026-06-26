@@ -78,7 +78,6 @@ export default function MenuPage() {
     if (hour >= 16 || hour < 4) {
       setIsDinnerTime(true);
       setTimeGreeting("Good Evening, explore our");
-      setShowChefSpecials(true);
     } else {
       setIsDinnerTime(false);
       setTimeGreeting("Good Afternoon, explore our");
@@ -326,12 +325,20 @@ export default function MenuPage() {
           <AnimatePresence>
             {showSpecialsInsert && specialsItems.length > 0 && (
               <motion.div
-                initial={{ opacity: 0, y: -50 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 50, scale: 0.9 }}
-                className="fixed z-[100] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-[320px] bg-[#FAF5EC] p-6 shadow-2xl border border-[#E7DFCB] rounded-md"
-                style={{ backgroundImage: "url('https://www.transparenttextures.com/patterns/cream-paper.png')" }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none"
               >
+                <motion.div
+                  drag
+                  dragMomentum={false}
+                  initial={{ opacity: 0, y: -50 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 50, scale: 0.9 }}
+                  className="pointer-events-auto w-[90%] max-w-[320px] bg-[#FAF5EC] p-6 shadow-2xl border border-[#E7DFCB] rounded-md cursor-grab active:cursor-grabbing"
+                  style={{ backgroundImage: "url('https://www.transparenttextures.com/patterns/cream-paper.png')" }}
+                >
                 <button onClick={() => setShowSpecialsInsert(false)} className="absolute top-3 right-3 text-[#1A1106]/50 hover:text-brand-primary">
                   <X className="w-4 h-4" />
                 </button>
@@ -355,6 +362,7 @@ export default function MenuPage() {
                   ))}
                 </div>
                 <button onClick={() => setShowSpecialsInsert(false)} className="w-full mt-5 py-2 bg-brand-primary text-white font-royal text-[10px] uppercase tracking-widest rounded-full hover:bg-[#5C0E1B] transition shadow-md">Explore Full Menu</button>
+                </motion.div>
               </motion.div>
             )}
           </AnimatePresence>
