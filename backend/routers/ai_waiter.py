@@ -8,7 +8,7 @@ from typing import Dict, Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from fastapi.responses import StreamingResponse, Response
 from deps import (
-    db, now_iso, GEMINI_API_KEY, ChatReq, TTSReq,
+    db, now_iso, GEMINI_API_KEY, ChatReq, TTSReq, require_user
 )
 
 router = APIRouter(tags=["ai-waiter"])
