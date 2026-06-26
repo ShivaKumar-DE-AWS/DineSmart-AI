@@ -304,9 +304,8 @@ export default function MenuPage() {
                    key={cat}
                    onClick={() => {
                      const flipper = bookRef.current?.pageFlip();
-                     if (flipper) {
-                       if (typeof flipper.turnToPage === 'function') flipper.turnToPage(targetPage);
-                       else if (typeof flipper.flip === 'function') flipper.flip(targetPage);
+                     if (flipper && typeof flipper.flip === 'function') {
+                        flipper.flip(targetPage);
                      }
                    }}
                    className="px-4 py-1.5 rounded-full border border-[#E7DFCB] text-[10px] font-royal tracking-widest uppercase transition bg-[#FAF5EC] text-brand-primary hover:bg-[#5C0E1B] hover:text-[#FAF5EC] shadow-sm flex-shrink-0"
@@ -317,8 +316,6 @@ export default function MenuPage() {
             })}
           </div>
         </div>
-
-        <div className="w-full max-w-[1000px] flex justify-center perspective-[2000px] relative">
 
           <AnimatePresence>
             {showSpecialsInsert && specialsItems.length > 0 && (
@@ -355,6 +352,8 @@ export default function MenuPage() {
               </motion.div>
             )}
           </AnimatePresence>
+
+        <div className="w-full max-w-[1000px] flex justify-center perspective-[2000px] relative">
 
           {isLoading ? (
             <div className="flex justify-center items-center h-[70vh]">
