@@ -30,6 +30,25 @@ const Page = React.forwardRef<HTMLDivElement, any>((props, ref) => {
 });
 Page.displayName = "Page";
 
+
+function getPairingSuggestion(category: string, name: string): string | null {
+   const cat = (category || "").toLowerCase();
+   const n = (name || "").toLowerCase();
+   if (cat.includes("starters") || cat.includes("appetizer")) {
+     return "Pairs beautifully with Fresh Lime Soda";
+   }
+   if (cat.includes("biryani") || cat.includes("rice")) {
+     return "Pairs beautifully with Sweet Lassi";
+   }
+   if (cat.includes("main") || cat.includes("curry")) {
+     return "Pairs beautifully with a crisp Cola";
+   }
+   if (cat.includes("dessert") || cat.includes("sweet")) {
+     return "Pairs beautifully with Masala Chai";
+   }
+   return null;
+}
+
 export default function MenuPage() {
   const params = useParams();
   const slug = params?.slug as string;
@@ -51,6 +70,21 @@ export default function MenuPage() {
   const [showSpecialsInsert, setShowSpecialsInsert] = useState(true);
   const [showAIChat, setShowAIChat] = useState(false);
   const [quickCategory, setQuickCategory] = useState("All");
+  const [isDinnerTime, setIsDinnerTime] = useState(false);
+  const [timeGreeting, setTimeGreeting] = useState("Our");
+
+  useEffect(() => {
+    const hour = new Date().getHours();
+    if (hour >= 16 || hour < 4) {
+      setIsDinnerTime(true);
+      setTimeGreeting("Good Evening, explore our");
+      setShowChefSpecials(true);
+    } else {
+      setIsDinnerTime(false);
+      setTimeGreeting("Good Afternoon, explore our");
+    }
+  }, []);
+
   const audioRef = useRef<HTMLAudioElement>(null);
   
   const items = useMemo(() => (data?.items ?? []).filter((i) => i.available !== false), [data]);
@@ -143,9 +177,9 @@ export default function MenuPage() {
       {/* Hero */}
       <div className="text-center mb-8 lg:mb-12">
         <div className="hidden lg:block mehfil-divider mb-4 max-w-xs mx-auto"><span className="font-royal tracking-[0.4em] text-xs uppercase">The royal menu</span></div>
-        <h1 className="font-royal text-3xl lg:text-6xl text-brand-primary tracking-wide">Our <span className="font-editorial italic mehfil-gold-gradient">Menu</span></h1>
+        <h1 className="font-royal text-3xl lg:text-6xl text-brand-primary tracking-wide">{timeGreeting} <span className="font-editorial italic mehfil-gold-gradient">Menu</span></h1>
         <p className="hidden lg:block font-editorial italic text-lg text-[#1A1106]/75 mt-4 max-w-2xl mx-auto leading-relaxed">
-          Explore our curated selection of dishes. Flip a card to read the chef&apos;s notes, tap ADD to seat it on your thali.
+          {isDinnerTime ? "Settle in for a royal dinner experience. We've highlighted the Chef's Specials for you." : "Explore our curated daylight favorites. Flip a card to read the chef's notes."}
         </p>
         
         {/* Search */}
