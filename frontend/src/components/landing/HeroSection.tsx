@@ -280,9 +280,9 @@ export function HeroSection() {
       </div>
 
       {/* ─── Content Grid ─── */}
-      <div className="relative z-10 mx-auto max-w-[1400px] px-6 lg:px-16 xl:px-24 flex flex-col lg:flex-row items-center gap-12 lg:gap-8 min-h-[calc(100vh-8rem)]">
-        {/* ─── Left: Text Content ─── */}
-        <div className="flex-1 flex flex-col items-center lg:items-start text-center lg:text-left pt-8 lg:pt-0">
+      <div className="relative z-10 mx-auto max-w-[1400px] px-6 lg:px-16 xl:px-24 flex flex-col items-center justify-center min-h-[calc(100vh-8rem)]">
+        {/* ─── Text Content ─── */}
+        <div className="flex-1 flex flex-col items-center text-center pt-8 lg:pt-0 max-w-4xl">
           {/* Badge */}
           <motion.div
             {...fadeUp(0)}
@@ -310,7 +310,7 @@ export function HeroSection() {
           {/* Subheading */}
           <motion.p
             {...fadeUp(0.2)}
-            className="text-stone text-lg md:text-xl leading-relaxed max-w-xl mx-auto lg:mx-0 mb-10"
+            className="text-stone text-lg md:text-xl leading-relaxed max-w-2xl mx-auto mb-10"
             data-testid="hero-subheading"
           >
             Scan. Chat. Order. Track. Enjoy.
@@ -322,7 +322,7 @@ export function HeroSection() {
           {/* CTA Buttons */}
           <motion.div
             {...fadeUp(0.3)}
-            className="flex flex-col sm:flex-row items-center gap-4 mb-10 w-full sm:w-auto"
+            className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-10 w-full sm:w-auto"
             data-testid="hero-cta-group"
           >
             <Link
@@ -344,7 +344,7 @@ export function HeroSection() {
           {/* Trust Line */}
           <motion.div
             {...fadeUp(0.45)}
-            className="flex items-center justify-center lg:justify-start gap-4"
+            className="flex flex-col sm:flex-row items-center justify-center gap-4"
             data-testid="hero-trust"
           >
             {/* Avatar Stack */}
@@ -365,25 +365,11 @@ export function HeroSection() {
                 </div>
               ))}
             </div>
-            <p className="text-sm text-stone">
+            <p className="text-sm text-stone text-center sm:text-left">
               Trusted by{" "}
               <span className="text-cream font-medium">500+ restaurants</span>{" "}
               across India
             </p>
-          </motion.div>
-        </div>
-
-        {/* ─── Right: 3D Scene ─── */}
-        <div className="flex-1 w-full max-w-xl lg:max-w-none relative">
-          {/* Mobile: scene sits behind text with lower opacity */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.92 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 1, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
-            className="w-full aspect-square lg:aspect-[4/3] lg:min-h-[520px] xl:min-h-[600px] opacity-40 lg:opacity-100"
-            data-testid="hero-3d-scene"
-          >
-            <Scene3D />
           </motion.div>
         </div>
       </div>

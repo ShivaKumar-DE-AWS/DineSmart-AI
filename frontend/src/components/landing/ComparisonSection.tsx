@@ -23,9 +23,9 @@ export function ComparisonSection() {
       </div>
 
       <div className="max-w-4xl mx-auto">
-        <div className="grid grid-cols-3 gap-4 mb-6 px-4 md:px-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6 px-4 md:px-8">
           <div className="text-stone font-medium text-sm hidden md:block">Feature</div>
-          <div className="text-stone font-medium text-sm md:hidden"></div>
+          <div className="text-stone font-medium text-sm hidden md:block"></div>
           <div className="text-white font-heading text-lg md:text-xl text-center">Traditional</div>
           <div className="text-clay font-heading text-xl md:text-2xl text-center relative">
             SmartDine AI
@@ -43,9 +43,9 @@ export function ComparisonSection() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.3, delay: i * 0.1 }}
-              className="grid grid-cols-3 gap-4 bg-white/[0.02] border border-white/5 rounded-2xl p-4 md:p-6 items-center"
+              className="grid grid-cols-2 md:grid-cols-3 gap-4 bg-white/[0.02] border border-white/5 rounded-2xl p-4 md:p-6 items-center"
             >
-              <div className="text-cream text-sm md:text-base font-medium">
+              <div className="col-span-2 md:col-span-1 text-cream text-base md:text-base font-medium text-center md:text-left mb-2 md:mb-0">
                 {feature.label}
               </div>
               <div className="flex flex-col md:flex-row items-center gap-2 justify-center text-center text-stone text-sm">
