@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
 import dynamic from "next/dynamic";
-const HTMLFlipBook = dynamic(() => import("react-pageflip").then((mod) => mod.default as any), { ssr: false });
+const HTMLFlipBook = dynamic(() => import("react-pageflip") as any, { ssr: false }) as any;
 import React from "react";
 
 import type { MenuItem } from "@/types";
@@ -198,12 +198,17 @@ export default function MenuPage() {
         </div>
 
         <div className="w-full max-w-[1000px] flex justify-center perspective-[2000px]">
-          {filtered.length === 0 && hasActiveFilters && !isLoading ? (
+          {isLoading ? (
+            <div className="flex justify-center items-center h-[70vh]">
+              <div className="w-10 h-10 border-4 border-brand-primary border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          ) : filtered.length === 0 && hasActiveFilters ? (
              <div className="text-center py-20">
                 <p className="font-editorial italic text-lg text-[#1A1106]/60">No dish matches your criteria — try adjusting your filters.</p>
              </div>
           ) : (
             <HTMLFlipBook 
+              key={`book-${pages.length}-${q}-${dietFilter}-${showBestSellers}-${showChefSpecials}`}
               width={380} 
               height={700} 
               size="stretch" 
