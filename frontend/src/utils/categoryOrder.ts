@@ -1,54 +1,41 @@
-export const CATEGORY_ORDER = [
-  "Featured",
-  "Recommended",
-  "Featured / Recommended",
-  "Today's Specials",
-  "Today's Special",
-  "Specials",
-  "Bestseller Items",
-  "Bestsellers",
-  "Signature Biryani",
-  "Family Packs",
-  "Starters",
-  "Kebabs & Tandoori",
-  "Kebabs",
-  "Tandoori",
-  "Main Course",
-  "Chicken Curries",
-  "Mutton Curries",
-  "Seafood",
-  "Veg Curries",
-  "Rice",
-  "Biryani",
-  "Fried Rice",
-  "Jeera Rice",
-  "Chinese",
-  "Noodles",
-  "Manchuria",
-  "Breads",
-  "Naan",
-  "Roti",
-  "Kulcha",
-  "Paratha",
-  "Beverages",
-  "Drinks",
-  "Desserts",
-  "Kids Menu",
-  "Kids Menu (Optional)"
+// The requested flowing order, implemented via keyword matching to handle variations like "Veg Kebab" or "Chicken Spl. Curries"
+export const CATEGORY_GROUPS = [
+  { keywords: ["feature", "recommend"], name: "Featured" },
+  { keywords: ["special", "today"], name: "Specials" },
+  { keywords: ["bestseller", "best seller"], name: "Bestsellers" },
+  { keywords: ["signature biryani", "special biryani", "mandi"], name: "Signature Biryani" },
+  { keywords: ["family pack"], name: "Family Packs" },
+  { keywords: ["soup"], name: "Soups" }, // Soups usually precede starters
+  { keywords: ["starter", "appetizer", "dry item"], name: "Starters" },
+  { keywords: ["kebab", "tandoori", "tikka"], name: "Kebabs & Tandoori" },
+  { keywords: ["curry", "curries", "main", "gravy", "masala", "seafood"], name: "Main Course" },
+  { keywords: ["biryani", "rice", "pulao"], name: "Rice" },
+  { keywords: ["chinese", "noodle", "manchuria", "fried rice"], name: "Chinese" },
+  { keywords: ["bread", "naan", "roti", "kulcha", "paratha"], name: "Breads" },
+  { keywords: ["beverage", "drink", "shake", "juice", "mocktail"], name: "Beverages" },
+  { keywords: ["dessert", "sweet", "ice cream", "brownie"], name: "Desserts" },
+  { keywords: ["kid"], name: "Kids Menu" }
 ];
 
 export function sortCategories(categories: string[]): string[] {
-  return [...categories].sort((a, b) => {
-    const indexA = CATEGORY_ORDER.findIndex(
-      (cat) => a.toLowerCase().includes(cat.toLowerCase())
+  const getCategoryGroupIndex = (catName: string) => {
+    const lowerCat = catName.toLowerCase();
+    return CATEGORY_GROUPS.findIndex(group => 
+      group.keywords.some(kw => lowerCat.includes(kw))
     );
-    const indexB = CATEGORY_ORDER.findIndex(
-      (cat) => b.toLowerCase().includes(cat.toLowerCase())
-    );
+  };
 
-    if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+  return [...categories].sort((a, b) => {
+    const indexA = getCategoryGroupIndex(a);
+    const indexB = getCategoryGroupIndex(b);
+
+    if (indexA !== -1 && indexB !== -1) {
+      if (indexA === indexB) return a.localeCompare(b);
+      return indexA - indexB;
+    }
     if (indexA !== -1) return -1;
     if (indexB !== -1) return 1;
+    
     return a.localeCompare(b);
   });
 }
