@@ -304,8 +304,14 @@ export default function MenuPage() {
                    key={cat}
                    onClick={() => {
                      const flipper = bookRef.current?.pageFlip();
-                     if (flipper && typeof flipper.flip === 'function') {
-                        flipper.flip(targetPage);
+                     if (flipper) {
+                        try {
+                            if (typeof flipper.flip === 'function') flipper.flip(targetPage);
+                            else if (typeof flipper.turnToPage === 'function') flipper.turnToPage(targetPage);
+                        } catch (e) {
+                            console.error("Flip error:", e);
+                            if (typeof flipper.turnToPage === 'function') flipper.turnToPage(targetPage);
+                        }
                      }
                    }}
                    className="px-4 py-1.5 rounded-full border border-[#E7DFCB] text-[10px] font-royal tracking-widest uppercase transition bg-[#FAF5EC] text-brand-primary hover:bg-[#5C0E1B] hover:text-[#FAF5EC] shadow-sm flex-shrink-0"
@@ -353,7 +359,7 @@ export default function MenuPage() {
             )}
           </AnimatePresence>
 
-        <div className="w-full max-w-[1000px] flex justify-center perspective-[2000px] relative">
+        <div className="w-full max-w-[1000px] flex justify-center perspective-[2000px] relative min-h-[500px] md:min-h-[650px]">
 
           {isLoading ? (
             <div className="flex justify-center items-center h-[70vh]">
