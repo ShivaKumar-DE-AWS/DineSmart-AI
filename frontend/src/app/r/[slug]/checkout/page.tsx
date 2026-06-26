@@ -176,12 +176,12 @@ export default function CheckoutPage() {
                 const selected = (line.notes || "").split(/,\s*/).map((s) => s.toLowerCase()).filter(Boolean);
                 return (
                   <div key={line.item_id} className="border border-brand-secondary/20 rounded-xl p-4 bg-white/60" data-testid={`cook-card-${line.item_id}`}>
-                    <div className="flex items-center justify-between gap-3 mb-3">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-3">
                       <div className="flex items-center gap-2">
                         <span className="h-7 w-7 rounded-full bg-brand-primary text-[#FAF5EC] font-royal text-xs flex items-center justify-center">{line.qty}</span>
                         <div className="font-royal text-[15px] text-brand-primary leading-tight">{line.name}</div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end sm:justify-start mt-2 sm:mt-0">
                         <select
                           className="bg-[#FAF5EC] border border-brand-secondary/30 rounded-full px-2 py-1.5 text-[9px] sm:text-[10px] font-royal tracking-[0.1em] uppercase outline-none text-brand-primary focus:border-brand-primary cursor-pointer"
                           value={line.course || "Auto (Natural pace)"}
