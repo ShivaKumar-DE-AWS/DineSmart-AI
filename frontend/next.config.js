@@ -11,8 +11,8 @@ const nextConfig = {
       { protocol: "https", hostname: "customer-assets.emergentagent.com" },
     ],
   },
-  eslint: { ignoreDuringBuilds: true },
-  typescript: { ignoreBuildErrors: true },
+  eslint: { ignoreDuringBuilds: false },
+  typescript: { ignoreBuildErrors: false },
   async rewrites() {
     // Attempt to use NEXT_PUBLIC_BACKEND_URL, fallback to REACT_APP_BACKEND_URL
     const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:8000";
@@ -24,18 +24,7 @@ const nextConfig = {
     ];
   },
   async redirects() {
-    return [
-      {
-        source: '/r/mehfil-hyderabad',
-        destination: '/r/mehfil',
-        permanent: true,
-      },
-      {
-        source: '/r/mehfil-hyderabad/:path*',
-        destination: '/r/mehfil/:path*',
-        permanent: true,
-      },
-    ];
+    return [];
   },
 };
 module.exports = nextConfig;

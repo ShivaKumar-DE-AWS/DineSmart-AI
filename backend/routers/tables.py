@@ -91,8 +91,9 @@ async def delete_table(table_id: str, user=Depends(require_user)):
     q: Dict[str, Any] = {"id": table_id}
     if user.get("restaurant_id"):
         q["restaurant_id"] = user["restaurant_id"]
-    await db.tables.delete_one(q)
-    await db.table_sessions.delete_many({"table_id": table_id})
+    res = await db.tables.delete_one(q)
+    if res.deleted_count > 0:
+        await db.table_sessions.delete_many({"table_id": table_id})
     return {"ok": True}
 
 

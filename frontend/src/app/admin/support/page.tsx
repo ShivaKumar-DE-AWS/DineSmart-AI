@@ -38,7 +38,7 @@ export default function AdminSupportPage() {
       <div className="flex justify-between items-end">
         <div>
           <h1 className="text-2xl font-heading font-bold flex items-center gap-2">
-            <LifeBuoy className="h-6 w-6 text-brand" />
+            <LifeBuoy className="h-6 w-6 text-ink" />
             Help & Support
           </h1>
           <p className="text-stone text-sm">Need help? Open a support ticket with SmartDine HQ.</p>
@@ -46,7 +46,7 @@ export default function AdminSupportPage() {
         {!isCreating && (
           <button 
             onClick={() => setIsCreating(true)}
-            className="bg-brand hover:bg-brand-dark text-white font-medium py-2 px-4 rounded-lg transition flex items-center gap-2"
+            className="bg-ink hover:bg-clay text-cream font-medium py-2 px-4 rounded-lg transition flex items-center gap-2"
           >
             <Plus className="w-4 h-4" /> Open Ticket
           </button>
@@ -105,7 +105,7 @@ export default function AdminSupportPage() {
                 <button 
                   type="submit"
                   disabled={submitMut.isPending}
-                  className="bg-brand hover:bg-brand-dark text-white font-medium py-2 px-6 rounded-lg transition flex items-center justify-center gap-2"
+                  className="bg-ink hover:bg-clay text-cream font-medium py-2 px-6 rounded-lg transition flex items-center justify-center gap-2"
                 >
                   Submit Ticket
                 </button>
@@ -139,7 +139,7 @@ export default function AdminSupportPage() {
                       {ticket.priority}
                     </span>
                     <span className={`px-2 py-0.5 rounded text-xs font-semibold uppercase ${
-                      ticket.status === 'resolved' ? 'bg-emerald-100 text-emerald-700' : 'bg-brand/10 text-brand'
+                      ticket.status === 'resolved' ? 'bg-emerald-100 text-emerald-700' : 'bg-ink/10 text-ink'
                     }`}>
                       {ticket.status}
                     </span>

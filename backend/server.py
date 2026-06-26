@@ -54,6 +54,7 @@ RATE_LIMITS: Dict[str, tuple] = {
     "/api/ai-waiter/speak": (10, 60),
     "/api/reservations": (15, 60),
     "/api/payment/checkout/session": (10, 60),
+    "/api/restaurants/request": (2, 3600),
 }
 
 class RateLimitMiddleware(BaseHTTPMiddleware):

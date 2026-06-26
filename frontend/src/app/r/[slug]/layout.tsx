@@ -55,7 +55,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
     queryKey: ["session-orders", session?.id],
     queryFn: () => api<{ orders: Order[] }>(`/api/orders?table_session_id=${session?.id}`),
     enabled: !!session?.id,
-    refetchInterval: 10000,
+    refetchInterval: 15000,
   });
   const sessionOrders = sessionOrdersData?.orders ?? [];
   const activeOrders = sessionOrders.filter((o) => !["delivered", "cancelled"].includes(o.status));
@@ -97,6 +97,19 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
       setCartSlug(slug);
     }
   }, [slug, cartSlug, clearCart, setCartSlug]);
+
+  const sessionSlug = useSession(s => s.restaurantSlug);
+  const setSessionSlug = useSession(s => s.setRestaurantSlug);
+  const clearSession = useSession(s => s.clear);
+
+  useEffect(() => {
+    if (sessionSlug && sessionSlug !== slug) {
+      clearSession();
+    }
+    if (sessionSlug !== slug) {
+      setSessionSlug(slug);
+    }
+  }, [slug, sessionSlug, clearSession, setSessionSlug]);
 
   useEffect(() => {
     if (!session?.id) return;
@@ -148,30 +161,20 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
 
   if (isStaffPage) {
     return (
-      <div className="mehfil min-h-screen mehfil-paper">
-        {restaurantConfig && (
-          <style dangerouslySetInnerHTML={{ __html: `
-            .mehfil {
-              --brand-primary: ${restaurantConfig.primary_color || '#8A1A2A'};
-              --brand-secondary: ${restaurantConfig.secondary_color || '#C9A348'};
-            }
-          `}} />
-        )}
+      <div className="mehfil min-h-screen mehfil-paper" style={restaurantConfig ? {
+        '--brand-primary': restaurantConfig.primary_color || '#8A1A2A',
+        '--brand-secondary': restaurantConfig.secondary_color || '#C9A348'
+      } as React.CSSProperties : undefined}>
         {children}
       </div>
     );
   }
 
   return (
-    <div className="mehfil min-h-screen mehfil-paper">
-      {restaurantConfig && (
-        <style dangerouslySetInnerHTML={{ __html: `
-          .mehfil {
-            --brand-primary: ${restaurantConfig.primary_color || '#8A1A2A'};
-            --brand-secondary: ${restaurantConfig.secondary_color || '#C9A348'};
-          }
-        `}} />
-      )}
+    <div className="mehfil min-h-screen mehfil-paper" style={restaurantConfig ? {
+      '--brand-primary': restaurantConfig.primary_color || '#8A1A2A',
+      '--brand-secondary': restaurantConfig.secondary_color || '#C9A348'
+    } as React.CSSProperties : undefined}>
       <Suspense fallback={null}><TableSessionGuard /></Suspense>
       <header className={`sticky top-0 z-40 transition-all duration-300 pt-[env(safe-area-inset-top)] ${scrolled ? "bg-[#FAF5EC]/90 backdrop-blur-md border-b border-[#E7DFCB]" : "bg-transparent"}`}>
         <div className="max-w-7xl mx-auto px-5 md:px-10 py-3 flex items-center justify-between gap-4">
@@ -259,7 +262,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
 
       <main>{children}</main>
 
-      {activeOrders.length > 0 && path !== "/customer/track" && !path.startsWith("/customer/track/") && (
+      {activeOrders.length > 0 && !path.includes("/track") && !path.includes("/checkout") && (
         <Link 
           href={`/r/${slug}/track`} 
           className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-brand-primary text-[#FAF5EC] pl-4 pr-5 py-3 rounded-full shadow-2xl flex items-center gap-3 hover:bg-[#7a1523] transition-colors border border-brand-secondary/40 max-w-[90vw] whitespace-nowrap group"

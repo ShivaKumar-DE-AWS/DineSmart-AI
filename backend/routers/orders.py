@@ -77,7 +77,7 @@ async def stream_orders(restaurant_id: Optional[str] = None, token: Optional[str
 # Orders
 # =========================================================
 @router.post("/api/orders")
-async def create_order(req: OrderCreateReq):
+async def create_order(req: OrderCreateReq, user=Depends(require_user)):
     if not req.items:
         raise HTTPException(status_code=400, detail="Cart is empty")
     if not req.restaurant_id:
@@ -86,7 +86,15 @@ async def create_order(req: OrderCreateReq):
     rest = await db.restaurants.find_one({"id": req.restaurant_id})
     if not rest:
         raise HTTPException(status_code=400, detail="Invalid restaurant_id")
-    subtotal = sum(i.price * i.qty for i in req.items)
+    
+    subtotal = 0.0
+    for i in req.items:
+        m = await db.menu.find_one({"id": i.item_id}, {"price": 1})
+        if not m:
+            raise HTTPException(status_code=400, detail=f"Unknown item {i.item_id}")
+        i.price = float(m["price"])
+        subtotal += i.price * i.qty
+        
     tax = round(subtotal * TAX_RATE, 2)
     total = round(subtotal + tax, 2)
     token = await next_token(req.restaurant_id or "")
@@ -338,7 +346,7 @@ async def _materialize_order_from_draft(draft_id: str, payment_method: str, sess
         "id": str(uuid.uuid4()), "order_id": order["id"],
         "type": "order_update", "title": f"Order {token} confirmed",
         "body": f"Estimated ready in ~{max(max_prep, 8)} min.",
-        "read": False, "created_at": now_iso(),
+        "read": False, "restaurant_id": order.get("restaurant_id"), "created_at": now_iso(),
     })
     broadcast_order_update(order.get("restaurant_id"), {"type": "new_order", "order": {k: v for k, v in order.items() if k != "_id"}})
     return order

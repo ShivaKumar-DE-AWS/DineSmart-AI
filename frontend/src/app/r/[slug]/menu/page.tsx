@@ -22,7 +22,7 @@ export default function MenuPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["menu", slug],
     queryFn: () => api<{ items: MenuItem[] }>(`/api/menu?restaurant_id=${restaurantConfig?.id || ""}`),
-    refetchInterval: 8000,
+    refetchInterval: 15000,
     refetchOnWindowFocus: true,
   });
   const cart = useCart();

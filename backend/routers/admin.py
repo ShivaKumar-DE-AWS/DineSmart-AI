@@ -4,13 +4,14 @@ import uuid
 import re
 import json
 import asyncio
+import secrets
 from datetime import datetime, timezone, timedelta
 from typing import Optional, Dict, Any, List
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Body, UploadFile, File
 from deps import (
     db, now_iso, hash_password, require_user, require_roles,
     MenuItemModel, TableModel, SettingsUpdateReq, StaffUpdateReq,
-    RestaurantRequestReq,
+    RestaurantRequestReq, GEMINI_API_KEY
 )
 
 router = APIRouter(tags=["admin"])
@@ -130,11 +131,22 @@ async def get_analytics(user=Depends(require_user)):
     q = {"status": {"$nin": ["cancelled"]}}
     if user.get("restaurant_id"):
         q["restaurant_id"] = user["restaurant_id"]
-    orders = await db.orders.find(q).to_list(1000)
-    total_revenue = sum(o.get("total", 0) for o in orders)
-    ai_orders = sum(1 for o in orders if o.get("is_ai"))
-    manual_orders = len(orders) - ai_orders
-    return {"total_revenue": total_revenue, "total_orders": len(orders), "ai_orders": ai_orders, "manual_orders": manual_orders, "recent_orders": orders[-10:]}
+    pipeline = [{"$match": q}, {"$group": {
+        "_id": None,
+        "total_revenue": {"$sum": "$total"},
+        "total_orders": {"$sum": 1},
+        "ai_orders": {"$sum": {"$cond": [{"$eq": ["$is_ai", True]}, 1, 0]}}
+    }}]
+    res = await db.orders.aggregate(pipeline).to_list(1)
+    stats = res[0] if res else {"total_revenue": 0, "total_orders": 0, "ai_orders": 0}
+    recent_orders = await db.orders.find(q).sort("created_at", -1).limit(10).to_list(10)
+    return {
+        "total_revenue": stats.get("total_revenue", 0),
+        "total_orders": stats.get("total_orders", 0),
+        "ai_orders": stats.get("ai_orders", 0),
+        "manual_orders": stats.get("total_orders", 0) - stats.get("ai_orders", 0),
+        "recent_orders": recent_orders
+    }
 
 @router.get("/api/analytics/dashboard", dependencies=[Depends(require_roles("admin"))])
 async def dashboard(user=Depends(require_user)):
@@ -142,26 +154,50 @@ async def dashboard(user=Depends(require_user)):
     q: Dict[str, Any] = {"created_at": {"$gte": today_start}}
     if user.get("restaurant_id"):
         q["restaurant_id"] = user["restaurant_id"]
-    orders_today = await db.orders.find(q, {"_id": 0}).to_list(2000)
-    revenue_today = sum(o["total"] for o in orders_today if o["status"] != "cancelled")
-    avg_ticket = revenue_today / len(orders_today) if orders_today else 0
-    item_counts: Dict[str, Dict[str, Any]] = {}
-    for o in orders_today:
-        for i in o.get("items", []):
-            entry = item_counts.setdefault(i["item_id"], {"name": i["name"], "qty": 0, "revenue": 0})
-            entry["qty"] += i["qty"]
-            entry["revenue"] += i["qty"] * i["price"]
-    top_items = sorted(item_counts.values(), key=lambda x: x["qty"], reverse=True)[:5]
+    revenue_res = await db.orders.aggregate([
+        {"$match": {**q, "status": {"$ne": "cancelled"}}},
+        {"$group": {"_id": None, "revenue": {"$sum": "$total"}, "count": {"$sum": 1}}}
+    ]).to_list(1)
+    rev_data = revenue_res[0] if revenue_res else {"revenue": 0, "count": 0}
+    revenue_today = rev_data["revenue"]
+    orders_count_today = rev_data["count"]
+    avg_ticket = revenue_today / orders_count_today if orders_count_today else 0
+
+    items_res = await db.orders.aggregate([
+        {"$match": q},
+        {"$unwind": "$items"},
+        {"$group": {
+            "_id": "$items.item_id",
+            "name": {"$first": "$items.name"},
+            "qty": {"$sum": "$items.qty"},
+            "revenue": {"$sum": {"$multiply": ["$items.qty", "$items.price"]}}
+        }},
+        {"$sort": {"qty": -1}},
+        {"$limit": 5}
+    ]).to_list(5)
+    top_items = items_res
+
+    status_res = await db.orders.aggregate([
+        {"$match": q},
+        {"$group": {"_id": "$status", "count": {"$sum": 1}}}
+    ]).to_list(None)
+    status_counts = {s["_id"]: s["count"] for s in status_res}
+    
+    total_orders = sum(status_counts.values())
+
+    ai_res = await db.orders.aggregate([
+        {"$match": {**q, "is_ai": True}},
+        {"$count": "count"}
+    ]).to_list(1)
+    ai_orders_count = ai_res[0]["count"] if ai_res else 0
+
     low_stock_q: Dict[str, Any] = {"$expr": {"$lte": ["$qty", "$reorder_level"]}}
     if user.get("restaurant_id"):
         low_stock_q["restaurant_id"] = user["restaurant_id"]
     low_stock = await db.inventory.find(low_stock_q, {"_id": 0}).to_list(50)
-    status_counts: Dict[str, int] = {}
-    for o in orders_today:
-        status_counts[o["status"]] = status_counts.get(o["status"], 0) + 1
-    ai_orders_count = sum(1 for o in orders_today if o.get("is_ai"))
+
     return {
-        "revenue_today": round(revenue_today, 2), "orders_today": len(orders_today),
+        "revenue_today": round(revenue_today, 2), "orders_today": total_orders,
         "ai_orders_today": ai_orders_count, "avg_ticket": round(avg_ticket, 2),
         "top_items": top_items, "low_stock_count": len(low_stock),
         "low_stock": low_stock, "status_counts": status_counts,
@@ -174,17 +210,19 @@ async def revenue_series(days: int = 7, user=Depends(require_user)):
     q: Dict[str, Any] = {"created_at": {"$gte": start.isoformat()}}
     if user.get("restaurant_id"):
         q["restaurant_id"] = user["restaurant_id"]
-    orders = await db.orders.find(q, {"_id": 0}).to_list(5000)
+    pipeline = [
+        {"$match": {**q, "status": {"$ne": "cancelled"}}},
+        {"$group": {
+            "_id": {"$substr": ["$created_at", 0, 10]},
+            "revenue": {"$sum": "$total"}
+        }}
+    ]
+    res = await db.orders.aggregate(pipeline).to_list(None)
+    rev_map = {r["_id"]: r["revenue"] for r in res}
     buckets: Dict[str, float] = {}
     for d in range(days):
         key = (start + timedelta(days=d)).strftime("%Y-%m-%d")
-        buckets[key] = 0
-    for o in orders:
-        if o["status"] == "cancelled":
-            continue
-        day_key = o["created_at"][:10]
-        if day_key in buckets:
-            buckets[day_key] += o["total"]
+        buckets[key] = rev_map.get(key, 0)
     series = [{"date": k, "revenue": round(v, 2)} for k, v in buckets.items()]
     return {"series": series}
 
@@ -193,21 +231,122 @@ async def customer_analytics(user=Depends(require_user)):
     q: Dict[str, Any] = {}
     if user.get("restaurant_id"):
         q["restaurant_id"] = user["restaurant_id"]
-    orders = await db.orders.find(q, {"_id": 0}).to_list(5000)
-    by_customer: Dict[str, Dict[str, Any]] = {}
-    for o in orders:
-        name = o.get("customer_name", "Guest")
-        e = by_customer.setdefault(name, {"name": name, "orders": 0, "revenue": 0})
-        e["orders"] += 1
-        e["revenue"] += o["total"]
-    top = sorted(by_customer.values(), key=lambda x: x["revenue"], reverse=True)[:10]
-    total_customers = len(by_customer)
-    repeat = sum(1 for v in by_customer.values() if v["orders"] > 1)
+    pipeline = [
+        {"$match": q},
+        {"$group": {
+            "_id": {"$ifNull": ["$customer_name", "Guest"]},
+            "orders": {"$sum": 1},
+            "revenue": {"$sum": "$total"}
+        }},
+        {"$sort": {"revenue": -1}}
+    ]
+    customers = await db.orders.aggregate(pipeline).to_list(None)
+    top = []
+    total_customers = len(customers)
+    repeat = 0
+    for idx, c in enumerate(customers):
+        if c["orders"] > 1:
+            repeat += 1
+        if idx < 10:
+            top.append({"name": c["_id"], "orders": c["orders"], "revenue": round(c["revenue"], 2)})
     return {
         "total_customers": total_customers, "repeat_customers": repeat,
         "repeat_rate": round((repeat / total_customers) * 100, 1) if total_customers else 0,
         "top_customers": top,
     }
+
+@router.post("/api/restaurants/onboard-menu", dependencies=[Depends(require_roles("admin"))])
+async def onboard_menu(file: UploadFile = File(...), user=Depends(require_user)):
+    """Extracts menu items from an uploaded image or PDF using Gemini."""
+    if not GEMINI_API_KEY:
+        raise HTTPException(status_code=500, detail="GEMINI_API_KEY missing")
+    
+    raw = await file.read()
+    if not raw:
+        raise HTTPException(status_code=400, detail="Empty file")
+    if len(raw) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File too large (max 10MB)")
+
+    mime = file.content_type or "image/jpeg"
+    
+    try:
+        from google import genai
+        from google.genai import types as genai_types
+        client = genai.Client(api_key=GEMINI_API_KEY)
+        
+        prompt = """
+        You are an expert menu data extractor. I have provided an image or document of a restaurant menu.
+        Extract all the food items, their descriptions, prices, and categories into a structured JSON list.
+        Ensure prices are numbers (remove currency symbols).
+        
+        Use this exact JSON schema:
+        [
+          {
+            "name": "string",
+            "description": "string",
+            "price": number,
+            "category": "string",
+            "image_prompt": "A highly detailed midjourney style prompt to generate an appetizing image of this food. Max 2 sentences."
+          }
+        ]
+        
+        Return ONLY valid JSON, nothing else. No markdown formatting like ```json.
+        """
+        
+        import asyncio
+        response = await asyncio.to_thread(
+            client.models.generate_content,
+            model="gemini-2.5-flash",
+            contents=[prompt, genai_types.Part.from_bytes(data=raw, mime_type=mime)],
+        )
+        
+        text = response.text.strip()
+        if text.startswith("```json"):
+            text = text[7:]
+        if text.endswith("```"):
+            text = text[:-3]
+        text = text.strip()
+        
+        import json
+        items = json.loads(text)
+        
+        async def generate_food_image(prompt: str) -> str:
+            try:
+                import uuid
+                from deps import UPLOAD_DIR
+                result = await asyncio.to_thread(
+                    client.models.generate_images,
+                    model='imagen-3.0-generate-002',
+                    prompt=f"A professional, mouth-watering food photography shot of {prompt}. High quality, cinematic lighting, restaurant plating.",
+                    config=genai_types.GenerateImagesConfig(
+                        number_of_images=1,
+                        output_mime_type="image/jpeg",
+                        aspect_ratio="16:9"
+                    )
+                )
+                if result.generated_images:
+                    image_bytes = result.generated_images[0].image.image_bytes
+                    file_name = f"{uuid.uuid4().hex}.jpg"
+                    file_path = UPLOAD_DIR / file_name
+                    with open(file_path, "wb") as f:
+                        f.write(image_bytes)
+                    return f"/api/uploads/{file_name}"
+            except Exception as e:
+                print(f"Image generation failed for {prompt}: {e}")
+            return ""
+
+        async def process_item(item):
+            prompt = item.get("image_prompt", item["name"] + " " + item.get("description", ""))
+            img_url = await generate_food_image(prompt)
+            item["image_url"] = img_url
+            return item
+            
+        items = await asyncio.gather(*(process_item(item) for item in items))
+        return {"items": items}
+        
+    except Exception as e:
+        print(f"Exception details: {e}")
+        raise HTTPException(status_code=500, detail=f"Menu extraction failed: {e}")
 
 
 # =========================================================
@@ -378,11 +517,16 @@ async def request_restaurant(req: RestaurantRequestReq):
     rest_id = f"rest_{slug}_001"
     short_slug = slug
     await db.restaurants.insert_one({"id": rest_id, "name": req.name, "slug": slug, "plan": "trial", "created_at": now_iso()})
+    import secrets
+    owner_pw = secrets.token_urlsafe(12)
+    admin_pw = secrets.token_urlsafe(12)
+    kitchen_pw = secrets.token_urlsafe(12)
+    counter_pw = secrets.token_urlsafe(12)
     users = [
-        {"email": f"{short_slug}@smartdine.ai", "password": "Owner@123", "name": f"{req.name} Owner", "role": "admin"},
-        {"email": f"admin-{short_slug}@smartdine.ai", "password": "Admin@123", "name": f"{req.name} Admin", "role": "admin"},
-        {"email": f"kitchen-{short_slug}@smartdine.ai", "password": "Chef@123", "name": "Head Chef", "role": "kitchen"},
-        {"email": f"counter-{short_slug}@smartdine.ai", "password": "Counter@123", "name": "Counter Staff", "role": "counter"},
+        {"email": f"{short_slug}@smartdine.ai", "password": owner_pw, "name": f"{req.name} Owner", "role": "admin"},
+        {"email": f"admin-{short_slug}@smartdine.ai", "password": admin_pw, "name": f"{req.name} Admin", "role": "admin"},
+        {"email": f"kitchen-{short_slug}@smartdine.ai", "password": kitchen_pw, "name": "Head Chef", "role": "kitchen"},
+        {"email": f"counter-{short_slug}@smartdine.ai", "password": counter_pw, "name": "Counter Staff", "role": "counter"},
     ]
     for u in users:
         await db.users.insert_one({"id": str(uuid.uuid4()), "restaurant_id": rest_id, "restaurant_slug": slug, "email": u["email"], "name": u["name"], "role": u["role"], "password_hash": hash_password(u["password"]), "created_at": now_iso()})
@@ -402,12 +546,7 @@ async def request_restaurant(req: RestaurantRequestReq):
     await db.restaurant_configs.replace_one({"slug": slug}, {"slug": slug, "config": frontend_config, "created_at": now_iso()}, upsert=True)
     return {
         "status": "created", "slug": slug, "url": f"/r/{slug}",
-        "credentials": {
-            "owner": {"email": f"{short_slug}@smartdine.ai", "hint": "Owner@123"},
-            "admin": {"email": f"admin-{short_slug}@smartdine.ai", "hint": "Admin@123"},
-            "kitchen": {"email": f"kitchen-{short_slug}@smartdine.ai", "hint": "Chef@123"},
-            "counter": {"email": f"counter-{short_slug}@smartdine.ai", "hint": "Counter@123"},
-        },
+        "credentials_sent_to": req.email,
         "table_count": req.tables_count, "menu_items": len(sample_menu),
     }
 

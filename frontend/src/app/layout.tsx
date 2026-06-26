@@ -17,6 +17,7 @@ const editorial = Cormorant_Garamond({ subsets: ["latin"], weight: ["400", "500"
 export const metadata: Metadata = {
   title: "SmartDine AI — AI-Powered Dining Experience",
   description: "SmartDine AI transforms restaurant dining with AI-powered ordering, smart menu recommendations, kitchen automation and real-time order tracking.",
+  manifest: "/manifest.json",
   icons: {
     icon: "/favicon.png",
     apple: "/favicon.png",

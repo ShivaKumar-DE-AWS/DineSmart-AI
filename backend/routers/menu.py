@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from deps import (
     db, now_iso, require_user, require_roles, UPLOAD_DIR,
     MenuItemModel, InventoryItemModel,
+    MenuItemUpdateModel, InventoryItemUpdateModel,
 )
 
 router = APIRouter(tags=["menu"])
@@ -34,9 +35,10 @@ async def create_menu_item(item: MenuItemModel, user=Depends(require_user)):
 
 
 @router.patch("/api/menu/{item_id}", dependencies=[Depends(require_roles("admin"))])
-async def update_menu_item(item_id: str, patch: Dict[str, Any], user=Depends(require_user)):
-    patch.pop("id", None)
-    patch.pop("_id", None)
+async def update_menu_item(item_id: str, patch_data: MenuItemUpdateModel, user=Depends(require_user)):
+    patch = patch_data.model_dump(exclude_unset=True)
+    if not patch:
+        return {"ok": True}
     q = {"id": item_id}
     if user.get("restaurant_id"):
         q["restaurant_id"] = user["restaurant_id"]
@@ -71,9 +73,9 @@ async def list_inventory(user=Depends(require_user)):
 async def seed_inventory_demo(user=Depends(require_user)):
     """Seed inventory with dynamic AI-generated ingredients and recipes."""
     import json, asyncio, random
-    q_menu: Dict[str, Any] = {}
-    if user.get("restaurant_id"):
-        q_menu["restaurant_id"] = user["restaurant_id"]
+    if not user.get("restaurant_id"):
+        raise HTTPException(status_code=403, detail="No restaurant assigned")
+    q_menu: Dict[str, Any] = {"restaurant_id": user["restaurant_id"]}
     menu = await db.menu.find(q_menu).to_list(length=None)
     if not menu:
         return {"message": "No menu items found to generate inventory from."}
@@ -159,9 +161,10 @@ async def create_inventory_item(item: InventoryItemModel, user=Depends(require_u
 
 
 @router.patch("/api/inventory/{item_id}", dependencies=[Depends(require_roles("admin", "kitchen"))])
-async def update_inventory(item_id: str, patch: Dict[str, Any], user=Depends(require_user)):
-    patch.pop("id", None)
-    patch.pop("_id", None)
+async def update_inventory(item_id: str, patch_data: InventoryItemUpdateModel, user=Depends(require_user)):
+    patch = patch_data.model_dump(exclude_unset=True)
+    if not patch:
+        return {"ok": True}
     q = {"id": item_id}
     if user.get("restaurant_id"):
         q["restaurant_id"] = user["restaurant_id"]
@@ -185,8 +188,9 @@ async def delete_inventory(item_id: str, user=Depends(require_user)):
 # =========================================================
 @router.post("/api/upload/image", dependencies=[Depends(require_roles("admin"))])
 async def upload_image(file: UploadFile = File(...)):
-    """Save an uploaded image to disk and return its public URL."""
+    """Save an uploaded image to S3 (if configured) or disk and return its public URL."""
     import uuid as _uuid
+    import os
     ext = Path(file.filename or "").suffix.lower() or ".jpg"
     if ext not in ALLOWED_IMAGE_EXTS:
         raise HTTPException(status_code=400, detail=f"Unsupported file type {ext}")
@@ -195,7 +199,35 @@ async def upload_image(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="Image too large (max 5MB)")
     if len(raw) == 0:
         raise HTTPException(status_code=400, detail="Empty file")
+    
     fname = f"{_uuid.uuid4().hex}{ext}"
+    
+    aws_bucket = os.environ.get("AWS_BUCKET_NAME")
+    if aws_bucket:
+        import boto3
+        s3 = boto3.client(
+            "s3",
+            aws_access_key_id=os.environ.get("AWS_ACCESS_KEY_ID"),
+            aws_secret_access_key=os.environ.get("AWS_SECRET_ACCESS_KEY"),
+            region_name=os.environ.get("AWS_REGION", "us-east-1")
+        )
+        try:
+            # Upload to S3
+            s3.put_object(
+                Bucket=aws_bucket,
+                Key=f"uploads/{fname}",
+                Body=raw,
+                ContentType=file.content_type or "image/jpeg",
+                ACL="public-read"
+            )
+            # Depending on bucket region, URL might vary, assuming standard format
+            s3_url = f"https://{aws_bucket}.s3.amazonaws.com/uploads/{fname}"
+            return {"url": s3_url, "filename": fname, "size": len(raw)}
+        except Exception as e:
+            # Fallback to local if S3 fails
+            print(f"[S3 UPLOAD ERROR] {e}. Falling back to local storage.")
+    
+    # Local fallback
     out_path = UPLOAD_DIR / fname
     with open(out_path, "wb") as f:
         f.write(raw)

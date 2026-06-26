@@ -4,7 +4,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from deps import (
     db, now_iso, hash_password, verify_password, jwt_sign,
     require_user, SignupReq, LoginReq, GuestReq,
+    ForgotPasswordReq, ResetPasswordReq
 )
+import uuid
+from datetime import datetime, timezone, timedelta
+from email_service import send_password_reset_email
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -52,6 +56,43 @@ async def signup(req: SignupReq):
     token = jwt_sign({"sub": user_id, "email": req.email, "role": req.role, "name": req.name, "restaurant_id": restaurant_id})
     return {"token": token, "user": {"id": user_id, "email": req.email, "name": req.name, "role": req.role, "restaurant_id": restaurant_id}}
 
+
+@router.post("/forgot-password")
+async def forgot_password(req: ForgotPasswordReq):
+    user = await db.users.find_one({"email": req.email})
+    if not user:
+        # Prevent email enumeration by returning success even if not found
+        return {"message": "If an account with that email exists, a reset link has been sent."}
+    
+    reset_token = str(uuid.uuid4())
+    expiry = datetime.now(timezone.utc) + timedelta(hours=1)
+    
+    await db.users.update_one(
+        {"email": req.email},
+        {"$set": {"reset_token": reset_token, "reset_token_expiry": expiry}}
+    )
+    
+    send_password_reset_email(req.email, reset_token)
+    return {"message": "If an account with that email exists, a reset link has been sent."}
+
+@router.post("/reset-password")
+async def reset_password(req: ResetPasswordReq):
+    user = await db.users.find_one({
+        "reset_token": req.token,
+        "reset_token_expiry": {"$gt": datetime.now(timezone.utc)}
+    })
+    
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+        
+    await db.users.update_one(
+        {"_id": user["_id"]},
+        {
+            "$set": {"password_hash": hash_password(req.new_password)},
+            "$unset": {"reset_token": "", "reset_token_expiry": ""}
+        }
+    )
+    return {"message": "Password successfully reset"}
 
 @router.post("/login")
 async def login(req: LoginReq):

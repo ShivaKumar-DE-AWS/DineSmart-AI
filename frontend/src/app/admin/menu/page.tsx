@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, X, ImageIcon, Upload, Link2, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, X, ImageIcon, Upload, Link2, Loader2, Sparkles, CheckCircle2 } from "lucide-react";
 import { useSession } from "@/stores/session";
 import type { MenuItem } from "@/types";
 
@@ -42,6 +42,7 @@ export default function AdminMenu() {
   const { data, isLoading } = useQuery({ queryKey: ["admin-menu", rid], queryFn: () => api<{ items: MenuItem[] }>(`/api/menu${rid ? `?restaurant_id=${rid}` : ""}`) });
   const [editing, setEditing] = useState<MenuForm | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<MenuItem | null>(null);
+  const [showAiImport, setShowAiImport] = useState(false);
 
   const items = data?.items ?? [];
   const categories = Array.from(new Set(items.map((i) => i.category))).sort();
@@ -64,13 +65,21 @@ export default function AdminMenu() {
           <h1 className="font-heading text-3xl md:text-4xl tracking-tight">Manage menu</h1>
           <p className="text-sm text-stone mt-1">{items.length} dishes · changes reflect live on the customer site within seconds.</p>
         </div>
-        <button
-          data-testid="add-dish-btn"
-          onClick={() => setEditing({ ...empty })}
-          className="bg-ink text-cream rounded-full px-5 py-2.5 text-sm font-medium hover:bg-clay transition inline-flex items-center justify-center gap-2 self-start sm:self-auto"
-        >
-          <Plus className="h-4 w-4" /> Add dish
-        </button>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <button
+            onClick={() => setShowAiImport(true)}
+            className="bg-cream text-brand-primary border border-brand-primary/30 rounded-full px-5 py-2.5 text-sm font-medium hover:bg-[#F3EBD8] transition inline-flex items-center justify-center gap-2"
+          >
+            <Sparkles className="h-4 w-4" /> Import via AI
+          </button>
+          <button
+            data-testid="add-dish-btn"
+            onClick={() => setEditing({ ...empty })}
+            className="bg-ink text-cream rounded-full px-5 py-2.5 text-sm font-medium hover:bg-clay transition inline-flex items-center justify-center gap-2"
+          >
+            <Plus className="h-4 w-4" /> Add dish
+          </button>
+        </div>
       </div>
 
       {isLoading && <div className="text-stone">Loading menu…</div>}
@@ -141,6 +150,157 @@ export default function AdminMenu() {
           loading={remove.isPending}
         />
       )}
+
+      {showAiImport && (
+        <AiImportModal 
+          onClose={() => setShowAiImport(false)} 
+          onImported={() => { qc.invalidateQueries({ queryKey: ["admin-menu"] }); qc.invalidateQueries({ queryKey: ["menu"] }); setShowAiImport(false); }} 
+        />
+      )}
+    </div>
+  );
+}
+
+function AiImportModal({ onClose, onImported }: { onClose: () => void; onImported: () => void }) {
+  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [parsedItems, setParsedItems] = useState<any[] | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const token = useSession.getState().token;
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(apiUrl("/api/restaurants/onboard-menu"), {
+        method: "POST",
+        body: fd,
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({ detail: `HTTP ${res.status}` }));
+        throw new Error(j.detail || `HTTP ${res.status}`);
+      }
+      const j = await res.json();
+      setParsedItems(j.items || []);
+      toast.success(`Extracted ${j.items?.length || 0} items`);
+    } catch (e) {
+      toast.error((e as Error).message || "AI extraction failed");
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
+  const confirmImport = async () => {
+    if (!parsedItems || parsedItems.length === 0) return;
+    setSaving(true);
+    try {
+      const token = useSession.getState().token;
+      // We process sequentially so we don't hammer the DB or hit API rate limits if the list is huge
+      for (const item of parsedItems) {
+        const payload = {
+          name: item.name || "Unknown",
+          description: item.description || "",
+          price: Number(item.price) || 0,
+          category: item.category || "Uncategorized",
+          image_url: item.image_url || "",
+          available: true,
+          prep_time_min: 15,
+          tags: []
+        };
+        await fetch(apiUrl("/api/menu"), {
+          method: "POST",
+          headers: { 
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          },
+          body: JSON.stringify(payload)
+        });
+      }
+      toast.success(`Successfully imported ${parsedItems.length} dishes`);
+      onImported();
+    } catch (e) {
+      toast.error("Failed to import some dishes");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto flex flex-col">
+        <header className="flex items-center justify-between p-5 border-b border-bone sticky top-0 bg-white z-10">
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-full bg-brand-primary/10 flex items-center justify-center">
+              <Sparkles className="h-4 w-4 text-brand-primary" />
+            </div>
+            <h2 className="font-heading text-xl font-semibold">AI Menu Import</h2>
+          </div>
+          <button onClick={onClose} className="h-9 w-9 rounded-full hover:bg-cream flex items-center justify-center">
+            <X className="h-4 w-4" />
+          </button>
+        </header>
+
+        <div className="p-6 flex-1">
+          {!parsedItems ? (
+            <div className="text-center py-10">
+              <p className="text-sm text-stone mb-6 max-w-sm mx-auto">Upload a clear photo or PDF of your physical menu. Our AI will automatically extract the dishes, categories, and prices for you.</p>
+              <input ref={fileRef} type="file" accept="image/*,application/pdf" onChange={onFileChange} className="hidden" />
+              <button 
+                onClick={() => fileRef.current?.click()} 
+                disabled={uploading} 
+                className="mx-auto w-full max-w-sm py-10 border-2 border-dashed border-bone rounded-xl flex flex-col items-center gap-3 hover:border-brand-primary hover:bg-cream transition disabled:opacity-50 disabled:hover:bg-transparent"
+              >
+                {uploading ? <Loader2 className="h-8 w-8 animate-spin text-brand-primary" /> : <Upload className="h-8 w-8 text-stone" />}
+                <div className="text-sm font-medium">{uploading ? "Analyzing menu with AI..." : "Click to upload menu image/PDF"}</div>
+              </button>
+            </div>
+          ) : (
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-medium text-sm flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  Found {parsedItems.length} dishes
+                </h3>
+                <button onClick={() => setParsedItems(null)} className="text-xs text-brand-primary hover:underline">Upload different file</button>
+              </div>
+              <div className="border border-bone rounded-lg overflow-hidden divide-y divide-bone max-h-[50vh] overflow-y-auto">
+                {parsedItems.map((item, idx) => (
+                  <div key={idx} className="p-3 bg-cream/30 flex justify-between gap-4">
+                    {item.image_url && (
+                      <div className="h-16 w-16 bg-cover bg-center rounded" style={{ backgroundImage: `url(${resolveImageUrl(item.image_url)})` }} />
+                    )}
+                    <div className="flex-1">
+                      <div className="text-xs uppercase tracking-wider text-stone mb-1">{item.category}</div>
+                      <div className="font-medium text-sm">{item.name}</div>
+                      {item.description && <div className="text-xs text-stone mt-1 line-clamp-2">{item.description}</div>}
+                    </div>
+                    <div className="font-medium">{formatCurrency(item.price)}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {parsedItems && parsedItems.length > 0 && (
+          <footer className="flex justify-end gap-3 p-5 border-t border-bone sticky bottom-0 bg-white">
+            <button onClick={onClose} className="px-5 py-2.5 rounded-full text-sm font-medium border border-bone hover:bg-cream">Cancel</button>
+            <button 
+              disabled={saving} 
+              onClick={confirmImport} 
+              className="px-5 py-2.5 rounded-full text-sm font-medium bg-brand-primary text-white hover:opacity-90 disabled:opacity-50 inline-flex items-center gap-2"
+            >
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              {saving ? "Importing..." : "Confirm & Import to Live Menu"}
+            </button>
+          </footer>
+        )}
+      </div>
     </div>
   );
 }

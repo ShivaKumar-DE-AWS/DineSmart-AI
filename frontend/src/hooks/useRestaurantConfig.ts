@@ -2,39 +2,6 @@
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 
-const configContext = (require as any).context(
-  "@/data/restaurants",
-  false,
-  /\.json$/
-);
-
-function buildConfigMap(): Record<string, any> {
-  const map: Record<string, any> = {};
-  configContext.keys().forEach((key: string) => {
-    const match = key.match(/\.\/(.+)\.json$/);
-    if (match) {
-      const slug = match[1];
-      map[slug] = configContext(key);
-    }
-  });
-  return map;
-}
-
-const LOCAL_CONFIGS: Record<string, any> = buildConfigMap();
-
-const SLUG_ALIASES: Record<string, string> = {};
-Object.keys(LOCAL_CONFIGS).forEach((configSlug) => {
-  const parts = configSlug.split("-");
-  if (parts.length > 1) {
-    const alias = parts[0];
-    if (!SLUG_ALIASES[alias]) {
-      SLUG_ALIASES[alias] = configSlug;
-    } else {
-      delete SLUG_ALIASES[alias];
-    }
-  }
-});
-
 const DEFAULT_CONFIG = {
   id: "default",
   name: "Restaurant",
@@ -85,12 +52,6 @@ const DEFAULT_CONFIG = {
   },
 };
 
-function resolveSlug(slug: string): string | undefined {
-  if (LOCAL_CONFIGS[slug]) return slug;
-  if (SLUG_ALIASES[slug]) return SLUG_ALIASES[slug];
-  return undefined;
-}
-
 async function fetchBackendConfig(slug: string): Promise<any> {
   const res = await fetch(`/api/config/${slug}`);
   if (!res.ok) return null;
@@ -100,13 +61,10 @@ async function fetchBackendConfig(slug: string): Promise<any> {
 export function useRestaurantConfig() {
   const params = useParams();
   const slug = params?.slug as string;
-  const resolved = slug ? resolveSlug(slug) : undefined;
-  const localConfig = resolved ? LOCAL_CONFIGS[resolved] : null;
 
   const { data, isLoading } = useQuery({
     queryKey: ["restaurant-config", slug],
     queryFn: async () => {
-      if (localConfig) return localConfig;
       const backend = await fetchBackendConfig(slug);
       if (backend) return backend;
       return {
@@ -122,18 +80,7 @@ export function useRestaurantConfig() {
   return { config: data || DEFAULT_CONFIG, isLoading, slug };
 }
 
-export function getRestaurantConfig(slug: string): any {
-  const resolved = resolveSlug(slug);
-  if (resolved && LOCAL_CONFIGS[resolved]) return LOCAL_CONFIGS[resolved];
-  return { ...DEFAULT_CONFIG, slug, name: slug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) };
-}
-
 export function useAllRestaurantConfigs() {
-  const local = Object.entries(LOCAL_CONFIGS).map(([slug, config]: [string, any]) => {
-    const email = `${slug}@smartdine.ai`;
-    return { slug, name: config.name || slug, email };
-  });
-
   const { data: backendData } = useQuery({
     queryKey: ["restaurant-config-list"],
     queryFn: async () => {
@@ -145,13 +92,15 @@ export function useAllRestaurantConfigs() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const backend = (backendData?.configs || []).filter(
-    (b: any) => !local.some((l) => l.slug === b.slug)
-  );
+  return backendData?.configs || [];
+}
 
-  return [...local, ...backend];
+export function getRestaurantConfig(slug: string): any {
+  // Fallback for SSR
+  return { ...DEFAULT_CONFIG, slug, name: slug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) };
 }
 
 export function getAllRestaurantSlugs(): string[] {
-  return Object.keys(LOCAL_CONFIGS);
+  // Provide empty for static generation, we will rely on dynamic or backend
+  return [];
 }

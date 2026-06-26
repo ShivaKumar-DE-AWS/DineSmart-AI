@@ -79,16 +79,24 @@ export default function KitchenPage() {
     ? Math.round(queue.filter((o) => o.status === "preparing").reduce((acc, o) => acc + (Date.now() - new Date(o.created_at).getTime()), 0) / queue.filter((o) => o.status === "preparing").length / 60000)
     : 0;
 
+  // --- Filter Logic ---
+  const [filterType, setFilterType] = useState<"all" | "dine_in" | "takeout">("all");
+  const filteredQueue = queue.filter(o => {
+    if (filterType === "all") return true;
+    if (filterType === "dine_in") return o.table_number != null;
+    return o.table_number == null;
+  });
+
   // --- Bump Bar Logic ---
   const [selectedIndex, setSelectedIndex] = useState(0);
   
   useEffect(() => {
-    if (selectedIndex >= queue.length && queue.length > 0) {
-      setSelectedIndex(queue.length - 1);
-    } else if (queue.length === 0 && selectedIndex !== 0) {
+    if (selectedIndex >= filteredQueue.length && filteredQueue.length > 0) {
+      setSelectedIndex(filteredQueue.length - 1);
+    } else if (filteredQueue.length === 0 && selectedIndex !== 0) {
       setSelectedIndex(0);
     }
-  }, [queue.length, selectedIndex]);
+  }, [filteredQueue.length, selectedIndex]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -96,13 +104,13 @@ export default function KitchenPage() {
       
       if (e.key === "ArrowRight") {
         e.preventDefault();
-        setSelectedIndex(i => Math.min(i + 1, Math.max(0, queue.length - 1)));
+        setSelectedIndex(i => Math.min(i + 1, Math.max(0, filteredQueue.length - 1)));
       } else if (e.key === "ArrowLeft") {
         e.preventDefault();
         setSelectedIndex(i => Math.max(i - 1, 0));
       } else if (e.key === " " || e.key === "Enter") {
         e.preventDefault();
-        const selectedOrder = queue[selectedIndex];
+        const selectedOrder = filteredQueue[selectedIndex];
         if (selectedOrder) {
           if (selectedOrder.status === "confirmed") {
             onStart(selectedOrder.id);
@@ -115,7 +123,7 @@ export default function KitchenPage() {
     
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [queue, selectedIndex, onStart, onReady]);
+  }, [filteredQueue, selectedIndex, onStart, onReady]);
 
   const { data: resData } = useQuery({
     queryKey: ["kds-reservations"],
@@ -283,7 +291,28 @@ export default function KitchenPage() {
 
       {/* Orders Grid */}
       <main className="max-w-7xl mx-auto px-6 py-8">
-        {queue.length === 0 ? (
+        <div className="flex items-center gap-2 mb-6">
+          <button 
+            onClick={() => { setFilterType("all"); setSelectedIndex(0); }}
+            className={`px-4 py-2 rounded-full text-sm font-bold tracking-wide uppercase transition-all ${filterType === "all" ? "bg-amber-500 text-white" : "bg-zinc-800 text-zinc-400 hover:text-white"}`}
+          >
+            All Orders
+          </button>
+          <button 
+            onClick={() => { setFilterType("dine_in"); setSelectedIndex(0); }}
+            className={`px-4 py-2 rounded-full text-sm font-bold tracking-wide uppercase transition-all ${filterType === "dine_in" ? "bg-amber-500 text-white" : "bg-zinc-800 text-zinc-400 hover:text-white"}`}
+          >
+            Dine-In
+          </button>
+          <button 
+            onClick={() => { setFilterType("takeout"); setSelectedIndex(0); }}
+            className={`px-4 py-2 rounded-full text-sm font-bold tracking-wide uppercase transition-all ${filterType === "takeout" ? "bg-amber-500 text-white" : "bg-zinc-800 text-zinc-400 hover:text-white"}`}
+          >
+            Takeout
+          </button>
+        </div>
+
+        {filteredQueue.length === 0 ? (
           <div className="text-center py-24" data-testid="kds-empty">
             <div className="h-20 w-20 rounded-3xl bg-gradient-to-br from-emerald-500/20 to-emerald-500/5 border border-emerald-500/20 flex items-center justify-center mx-auto mb-6">
               <Sparkles className="h-10 w-10 text-emerald-400" />
@@ -293,7 +322,7 @@ export default function KitchenPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {queue.map((o, idx) => {
+            {filteredQueue.map((o, idx) => {
               const elapsedMs = Date.now() - new Date(o.created_at).getTime();
               return (
                 <KitchenTicket

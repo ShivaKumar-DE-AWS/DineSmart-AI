@@ -22,7 +22,7 @@ export default function AdminCustomers() {
   const { data, isLoading } = useQuery({
     queryKey: ["admin-customers"],
     queryFn: () => api<{ customers: Customer[] }>("/api/customers"),
-    refetchInterval: 30_000,
+    refetchInterval: 15_000,
   });
   const [q, setQ] = useState("");
 

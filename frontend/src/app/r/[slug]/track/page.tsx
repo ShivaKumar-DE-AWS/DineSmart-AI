@@ -34,7 +34,7 @@ export default function TrackLanding() {
     queryKey: ["session-orders", session?.id],
     queryFn: () => api<{ orders: Order[] }>(`/api/orders?table_session_id=${session?.id}`),
     enabled: !!session?.id,
-    refetchInterval: 10000,
+    refetchInterval: 15000,
   });
   const sessionOrders = sessionOrdersData?.orders ?? [];
 

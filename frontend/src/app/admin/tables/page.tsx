@@ -48,7 +48,7 @@ export default function AdminTables() {
   const { data, isLoading } = useQuery({
     queryKey: ["admin-tables", user?.restaurant_id],
     queryFn: () => api<{ tables: TableDoc[] }>("/api/tables"),
-    refetchInterval: 10_000,
+    refetchInterval: 15_000,
   });
   const [newNumber, setNewNumber] = useState("");
   const [newCapacity, setNewCapacity] = useState("4");

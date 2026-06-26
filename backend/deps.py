@@ -27,6 +27,8 @@ DB_NAME = os.environ["DB_NAME"]
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 JWT_SECRET = os.environ.get("JWT_SECRET", "")
 if not JWT_SECRET:
+    if os.environ.get("NODE_ENV") == "production" or os.environ.get("ENVIRONMENT") == "production":
+        raise RuntimeError("FATAL: JWT_SECRET environment variable is missing in production. Shutting down.")
     import warnings
     warnings.warn("JWT_SECRET env var not set — using insecure dev fallback. NEVER deploy without setting this.")
     JWT_SECRET = "smartdine-dev-secret-change-me"
@@ -164,6 +166,17 @@ class MenuItemModel(BaseModel):
     tags: List[str] = []
     recipe: List[RecipeIngredient] = []
 
+class MenuItemUpdateModel(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    price: Optional[float] = None
+    category: Optional[str] = None
+    image_url: Optional[str] = None
+    available: Optional[bool] = None
+    prep_time_min: Optional[int] = None
+    tags: Optional[List[str]] = None
+    recipe: Optional[List[RecipeIngredient]] = None
+
 class CartItemModel(BaseModel):
     item_id: str
     name: str
@@ -193,6 +206,12 @@ class InventoryItemModel(BaseModel):
     qty: float
     reorder_level: float
 
+class InventoryItemUpdateModel(BaseModel):
+    name: Optional[str] = None
+    unit: Optional[str] = None
+    qty: Optional[float] = None
+    reorder_level: Optional[float] = None
+
 class ChatReq(BaseModel):
     session_id: str
     message: str
@@ -210,6 +229,13 @@ class SignupReq(BaseModel):
 class LoginReq(BaseModel):
     email: EmailStr
     password: str
+
+class ForgotPasswordReq(BaseModel):
+    email: EmailStr
+
+class ResetPasswordReq(BaseModel):
+    token: str
+    new_password: str
 
 class ReservationStatusUpdate(BaseModel):
     status: str

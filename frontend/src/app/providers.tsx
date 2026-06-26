@@ -8,7 +8,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const [client] = useState(() => new QueryClient({
     defaultOptions: { queries: { staleTime: 5_000, refetchOnWindowFocus: false } }
   }));
-  useEffect(() => { setSharedQueryClient(client); }, [client]);
+  useEffect(() => { 
+    setSharedQueryClient(client); 
+    
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch((err) => {
+        console.warn("SW registration failed: ", err);
+      });
+    }
+  }, [client]);
   return (
     <QueryClientProvider client={client}>
       {children}

@@ -10,15 +10,8 @@ export function RoleGuard({ allow, children }: { allow: Role[]; children: React.
   const user = useSession((s) => s.user);
   const [hydrated, setHydrated] = useState(false);
 
-  // Wait for zustand-persist to rehydrate from localStorage before any redirect.
   useEffect(() => {
-    const ph = (useSession as any).persist;
-    if (ph?.hasHydrated?.()) {
-      setHydrated(true);
-      return;
-    }
-    const unsub = ph?.onFinishHydration?.(() => setHydrated(true));
-    return () => { if (typeof unsub === "function") unsub(); };
+    setHydrated(true);
   }, []);
 
   useEffect(() => {

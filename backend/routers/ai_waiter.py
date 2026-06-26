@@ -179,8 +179,11 @@ def _make_waiter_stream(session_id: str, message: str, system_prompt: str, resta
 
 
 @router.post("/api/ai-waiter/chat")
-async def ai_chat(req: ChatReq):
+async def ai_chat(req: ChatReq, user=Depends(require_user)):
     """Streams Gemini's response as SSE."""
+    msg_lower = req.message.lower()
+    if any(p in msg_lower for p in ["ignore previous", "system prompt", "forget instruction", "you are now", "bypass"]):
+        raise HTTPException(status_code=400, detail="Invalid message content")
     if not GEMINI_API_KEY:
         async def mock_event_gen():
             mock_text = "I'm currently operating in offline demo mode since my Gemini brain is disconnected. I can still take your order manually from the menu!"
@@ -225,13 +228,13 @@ async def ai_chat(req: ChatReq):
 
 
 @router.get("/api/ai-waiter/history")
-async def ai_history(session_id: str):
+async def ai_history(session_id: str, user=Depends(require_user)):
     msgs = await db.chat_messages.find({"session_id": session_id}, {"_id": 0}).sort("created_at", 1).to_list(200)
     return {"messages": msgs}
 
 
 @router.post("/api/ai-waiter/transcribe")
-async def ai_transcribe(file: UploadFile = File(...), language: str = Form("")):
+async def ai_transcribe(file: UploadFile = File(...), language: str = Form(""), user=Depends(require_user)):
     """Transcribe audio to text via Gemini."""
     if not GEMINI_API_KEY:
         raise HTTPException(status_code=500, detail="GEMINI_API_KEY missing")
@@ -271,7 +274,7 @@ async def ai_transcribe(file: UploadFile = File(...), language: str = Form("")):
 
 
 @router.post("/api/ai-waiter/speak")
-async def ai_speak(req: TTSReq):
+async def ai_speak(req: TTSReq, user=Depends(require_user)):
     """Convert text to mp3 audio via edge-tts."""
     clean_text = req.text.strip()[:4000]
     if not clean_text:

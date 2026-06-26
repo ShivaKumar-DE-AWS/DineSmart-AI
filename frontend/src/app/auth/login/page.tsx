@@ -96,7 +96,12 @@ export default function HQLoginPage() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-stone pl-1">Password</label>
+              <div className="flex items-center justify-between px-1">
+                <label className="text-sm font-medium text-stone">Password</label>
+                <Link href="/auth/forgot-password" className="text-xs text-electric-blue hover:text-electric-blue/80 transition">
+                  Forgot password?
+                </Link>
+              </div>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone" />
                 <input 
