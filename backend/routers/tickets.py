@@ -70,6 +70,31 @@ async def get_tenant_tickets(user=Depends(require_user)):
     return {"tickets": tickets}
 
 
+@router.delete("/api/tickets/{ticket_id}")
+async def delete_ticket(ticket_id: str, user=Depends(require_user)):
+    """Tenant endpoint to delete a support ticket."""
+    restaurant_id = user.get("restaurant_id")
+    if not restaurant_id:
+        raise HTTPException(status_code=400, detail="User is not associated with a restaurant")
+
+    ticket = await db.support_tickets.find_one({"id": ticket_id, "restaurant_id": restaurant_id})
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found or unauthorized")
+
+    await db.support_tickets.delete_one({"id": ticket_id, "restaurant_id": restaurant_id})
+    
+    from routers.audit import log_audit_event
+    await log_audit_event(
+        user_id=user["id"],
+        user_email=user["email"],
+        action="ticket_deleted",
+        target=ticket_id,
+        details={"restaurant_id": restaurant_id, "title": ticket.get("title")}
+    )
+    
+    return {"message": "Ticket deleted successfully"}
+
+
 @router.get("/api/super-admin/tickets")
 async def get_all_tickets(user=Depends(require_superadmin)):
     """HQ endpoint to view all tickets across the platform."""

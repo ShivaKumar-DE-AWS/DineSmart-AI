@@ -1,7 +1,7 @@
 "use client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { LifeBuoy, Plus, CheckCircle2, Clock } from "lucide-react";
+import { LifeBuoy, Plus, CheckCircle2, Clock, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -28,6 +28,17 @@ export default function AdminSupportPage() {
       setDescription("");
       setPriority("normal");
       setIsCreating(false);
+      qc.invalidateQueries({ queryKey: ["tenant-tickets"] });
+    },
+    onError: (err: Error) => toast.error(err.message)
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: (ticketId: string) => api(`/api/tickets/${ticketId}`, {
+      method: "DELETE"
+    }),
+    onSuccess: () => {
+      toast.success("Ticket deleted");
       qc.invalidateQueries({ queryKey: ["tenant-tickets"] });
     },
     onError: (err: Error) => toast.error(err.message)
@@ -146,6 +157,16 @@ export default function AdminSupportPage() {
                   </div>
                   <div className="text-sm text-ink/80 mt-2 whitespace-pre-wrap">{ticket.description}</div>
                 </div>
+                {ticket.status !== 'resolved' && (
+                  <button 
+                    onClick={() => { if(confirm("Delete this ticket?")) deleteMut.mutate(ticket.id) }}
+                    disabled={deleteMut.isPending}
+                    className="p-2 text-stone hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    title="Delete ticket"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
               </div>
               <div className="mt-4 pt-4 border-t border-bone flex items-center gap-6 text-xs text-stone">
                 <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> Opened: {new Date(ticket.created_at).toLocaleString()}</span>
