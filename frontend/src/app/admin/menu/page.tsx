@@ -279,7 +279,16 @@ function AiImportModal({ onClose, onImported }: { onClose: () => void; onImporte
                       <div className="font-medium text-sm">{item.name}</div>
                       {item.description && <div className="text-xs text-stone mt-1 line-clamp-2">{item.description}</div>}
                     </div>
-                    <div className="font-medium">{formatCurrency(item.price)}</div>
+                    <div className="flex flex-col items-end justify-between">
+                      <div className="font-medium">{formatCurrency(item.price)}</div>
+                      <button 
+                        onClick={() => setParsedItems(prev => prev ? prev.filter((_, i) => i !== idx) : null)}
+                        className="text-stone hover:text-alert p-1.5 rounded hover:bg-cream transition-colors mt-2"
+                        title="Remove item"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
