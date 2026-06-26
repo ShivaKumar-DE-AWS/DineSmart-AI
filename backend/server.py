@@ -295,6 +295,42 @@ async def backfill_restaurant_ids():
 
 
 @app.on_event("startup")
+async def backfill_restaurant_configs():
+    """Migration: backfill missing restaurant_configs for newly signed up restaurants."""
+    try:
+        async for rest in db.restaurants.find():
+            slug = rest.get("slug")
+            rid = rest.get("id")
+            name = rest.get("name", slug)
+            if slug and rid:
+                existing = await db.restaurant_configs.find_one({"slug": slug})
+                if not existing:
+                    print(f"[startup] Backfilling missing config for {slug}")
+                    frontend_config = {
+                        "id": rid, "name": name, "slug": slug,
+                        "tagline": f"Welcome to {name}",
+                        "description": f"A wonderful dining experience at {name}.",
+                        "primary_color": "#8A1A2A", "secondary_color": "#C9A348", "accent_color": "#E8A317",
+                        "hero_images": ["https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1600&q=80"],
+                        "why_us": [
+                            {"icon": "Crown", "title": "Quality Food", "description": "Fresh ingredients daily."},
+                            {"icon": "Heart", "title": "Made with Love", "description": "Crafted with passion."},
+                            {"icon": "Sparkles", "title": "AI Powered", "description": "Smart ordering experience."}
+                        ],
+                        "contact": {"phone": "", "email": "", "address": ""},
+                        "hours": {"lunch": "12:00 PM to 3:00 PM", "dinner": "6:00 PM to 11:00 PM", "open_days": "Open all 7 days"},
+                        "ai_waiter": {"name": f"{name} AI", "personality": "Warm and knowledgeable", "greeting": f"Welcome to {name}!", "languages": ["en"], "tones": ["friendly"]},
+                    }
+                    await db.restaurant_configs.insert_one({
+                        "slug": slug,
+                        "config": frontend_config,
+                        "created_at": now_iso()
+                    })
+    except Exception as e:
+        print(f"[startup] WARNING: Config backfill failed: {e}")
+
+
+@app.on_event("startup")
 async def create_indexes():
     """Create compound indexes for multi-tenant query performance."""
     try:

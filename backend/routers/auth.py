@@ -44,6 +44,27 @@ async def signup(req: SignupReq):
             "created_at": now_iso(),
         })
 
+        frontend_config = {
+            "id": restaurant_id, "name": req.restaurant_name, "slug": slug,
+            "tagline": f"Welcome to {req.restaurant_name}",
+            "description": f"A wonderful dining experience at {req.restaurant_name}.",
+            "primary_color": "#8A1A2A", "secondary_color": "#C9A348", "accent_color": "#E8A317",
+            "hero_images": ["https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1600&q=80"],
+            "why_us": [
+                {"icon": "Crown", "title": "Quality Food", "description": "Fresh ingredients daily."},
+                {"icon": "Heart", "title": "Made with Love", "description": "Crafted with passion."},
+                {"icon": "Sparkles", "title": "AI Powered", "description": "Smart ordering experience."}
+            ],
+            "contact": {"phone": "", "email": req.email, "address": ""},
+            "hours": {"lunch": "12:00 PM to 3:00 PM", "dinner": "6:00 PM to 11:00 PM", "open_days": "Open all 7 days"},
+            "ai_waiter": {"name": f"{req.restaurant_name} AI", "personality": "Warm and knowledgeable", "greeting": f"Welcome to {req.restaurant_name}! How can I help you today?", "languages": ["en"], "tones": ["friendly"]},
+        }
+        await db.restaurant_configs.insert_one({
+            "slug": slug,
+            "config": frontend_config,
+            "created_at": now_iso()
+        })
+
     await db.users.insert_one({
         "id": user_id,
         "email": req.email,
