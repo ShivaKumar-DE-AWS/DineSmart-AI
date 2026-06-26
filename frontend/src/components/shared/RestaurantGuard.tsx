@@ -24,16 +24,21 @@ export function RestaurantGuard({ allow, children }: { allow: Role[]; children: 
 
   useEffect(() => {
     if (!hydrated) return;
+    
+    // Normalize legacy slugs returned from backend
+    const normalizedUserSlug = user?.restaurant_slug === "mehfil-hyderabad" ? "mehfil" : user?.restaurant_slug;
+
     if (!user) {
       router.replace(`/r/${urlSlug}/login`);
     } else if (!allow.includes(user.role)) {
       router.replace("/");
-    } else if (user.restaurant_slug && user.restaurant_slug !== urlSlug) {
-      router.replace(`/r/${user.restaurant_slug}/login`);
+    } else if (normalizedUserSlug && normalizedUserSlug !== urlSlug) {
+      router.replace(`/r/${normalizedUserSlug}/login`);
     }
   }, [hydrated, user, allow, router, urlSlug, path]);
 
-  if (!hydrated || !user || !allow.includes(user.role) || (user.restaurant_slug && user.restaurant_slug !== urlSlug)) {
+  const normalizedUserSlug = user?.restaurant_slug === "mehfil-hyderabad" ? "mehfil" : user?.restaurant_slug;
+  if (!hydrated || !user || !allow.includes(user.role) || (normalizedUserSlug && normalizedUserSlug !== urlSlug)) {
     return (
       <div className="min-h-screen flex items-center justify-center text-stone bg-ink text-cream">
         <div className="text-center">
