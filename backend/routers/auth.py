@@ -120,7 +120,9 @@ async def reset_password(req: ResetPasswordReq):
 async def login(req: LoginReq):
     try:
         user = await db.users.find_one({"email": req.email})
-        stored_hash = (user.get("password_hash") or user.get("password")) if user else None
+        stored_hash = None
+        if user:
+            stored_hash = user.get("password_hash") or user.get("password")
         if not user or not verify_password(req.password, stored_hash or ""):
             from routers.audit import log_audit_event
             await log_audit_event(
