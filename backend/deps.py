@@ -114,7 +114,10 @@ bearer = HTTPBearer(auto_error=False)
 async def current_user(creds: Optional[HTTPAuthorizationCredentials] = Depends(bearer)) -> Optional[Dict[str, Any]]:
     if not creds:
         return None
-    return jwt_verify(creds.credentials)
+    try:
+        return jwt_verify(creds.credentials)
+    except HTTPException:
+        return None
 
 async def require_user(user=Depends(current_user)) -> Dict[str, Any]:
     if not user:
