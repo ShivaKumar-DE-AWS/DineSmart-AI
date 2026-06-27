@@ -77,7 +77,7 @@ async def stream_orders(restaurant_id: Optional[str] = None, token: Optional[str
 # Orders
 # =========================================================
 @router.post("/api/orders")
-async def create_order(req: OrderCreateReq, user=Depends(require_user)):
+async def create_order(req: OrderCreateReq):
     if not req.items:
         raise HTTPException(status_code=400, detail="Cart is empty")
     if not req.restaurant_id:
@@ -175,9 +175,9 @@ async def list_orders(
 
 
 @router.get("/api/orders/{order_id}")
-async def get_order(order_id: str, user=Depends(require_user)):
+async def get_order(order_id: str, user=Depends(current_user)):
     q: Dict[str, Any] = {"id": order_id}
-    if user.get("restaurant_id"):
+    if user and user.get("restaurant_id"):
         q["restaurant_id"] = user["restaurant_id"]
     o = await db.orders.find_one(q, {"_id": 0})
     if not o:
