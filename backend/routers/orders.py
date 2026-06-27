@@ -149,7 +149,7 @@ async def create_order(req: OrderCreateReq, user=Depends(require_user)):
     return {"ok": True, "order_id": order["id"], "token": token, "total": total}
 
 
-@router.get("/api/orders", dependencies=[Depends(require_roles("admin", "kitchen", "counter"))])
+@router.get("/api/orders")
 async def list_orders(
     status_filter: Optional[str] = None,
     table_session_id: Optional[str] = None,
@@ -165,6 +165,11 @@ async def list_orders(
     if not rid:
         raise HTTPException(status_code=403, detail="No restaurant assigned")
     q["restaurant_id"] = rid
+    
+    if user.get("role") == "customer":
+        if not table_session_id:
+            return {"orders": []}
+            
     docs = await db.orders.find(q, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(limit)
     return {"orders": docs}
 
