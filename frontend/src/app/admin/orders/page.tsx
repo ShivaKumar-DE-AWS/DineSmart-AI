@@ -58,8 +58,8 @@ export default function AdminOrders() {
                 <td className="px-4 py-3 text-stone text-xs">{o.items.map((i) => `${i.qty}× ${i.name}`).join(", ")}</td>
                 <td className="px-4 py-3 font-medium">{formatCurrency(o.total)}</td>
                 <td className="px-4 py-3">
-                  <Badge variant={o.payment_method === "upi" ? "sage" : "warn"}>
-                    {o.payment_method === "upi" ? "UPI QR" : "CASH"}
+                  <Badge variant={o.payment_method === "upi" ? "sage" : o.payment_method === "card_machine" ? "alert" : "warn"}>
+                    {o.payment_method === "upi" ? "UPI QR" : o.payment_method === "card_machine" ? "CARD MACHINE" : "CASH"}
                   </Badge>
                 </td>
                 <td className="px-4 py-3"><Badge variant={STATUS_COLOR[o.status] || "default"}>{o.status}</Badge></td>

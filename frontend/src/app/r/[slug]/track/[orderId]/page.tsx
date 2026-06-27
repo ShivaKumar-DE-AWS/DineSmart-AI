@@ -10,6 +10,7 @@ import { playChime, ensureNotificationPermission, notify, isPushSupported, subsc
 import { useRestaurantConfig } from "@/hooks/useRestaurantConfig";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
+import { CreditCard } from "lucide-react";
 
 const STAGES: Array<{ key: Order["status"]; label: string; line: string; icon: React.ElementType }> = [
   { key: "confirmed", label: "Confirmed", line: "The khansama has your scroll.", icon: ClipboardCheck },
@@ -159,22 +160,48 @@ export default function TrackPage() {
         </div>
       )}
 
-      {order.payment_method === "upi" && restaurantConfig?.upi_id && (
+      {(order.payment_method === "upi" || order.payment_method === "card_machine") && (
         <div className="mehfil-card rounded-3xl p-7 md:p-9 mt-6 text-center">
-          <div className="font-royal tracking-[0.2em] text-[10px] uppercase text-brand-primary mb-2">Pay via UPI</div>
-          <p className="font-editorial italic text-xs text-[#1A1106]/60 mb-6">Scan to settle the bill securely from your phone.</p>
-          <div className="bg-white p-3 rounded-2xl inline-block shadow-sm border border-brand-secondary/20 mb-4">
-            <img 
-              src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`upi://pay?pa=${restaurantConfig.upi_id}&pn=${restaurantConfig.name}&am=${order.total}&cu=INR`)}`} 
-              alt="UPI QR Code" 
-              className="w-48 h-48"
-            />
-          </div>
-          <div className="font-mono text-[11px] text-[#1A1106]/70 uppercase tracking-widest">{restaurantConfig.upi_id}</div>
-          <div className="mt-5 pt-5 border-t border-brand-secondary/15">
-            <div className="font-royal text-2xl text-brand-primary">₹{order.total}</div>
-            <div className="font-editorial italic text-[10px] text-[#1A1106]/50 mt-1">Please show the payment success screen to our staff.</div>
-          </div>
+          {order.payment_method === "card_machine" ? (
+            <>
+              <div className="font-royal tracking-[0.2em] text-[10px] uppercase text-brand-primary mb-2">Pay via Card</div>
+              <div className="flex justify-center mb-4 text-brand-primary">
+                <CreditCard className="h-12 w-12" />
+              </div>
+              <p className="font-editorial italic text-sm text-[#1A1106]/70 mb-2">We have notified our staff.</p>
+              <p className="font-editorial italic text-xs text-[#1A1106]/50 mb-6">They will bring the card swipe machine to your table shortly.</p>
+              <div className="mt-5 pt-5 border-t border-brand-secondary/15">
+                <div className="font-royal text-2xl text-brand-primary">₹{order.total}</div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="font-royal tracking-[0.2em] text-[10px] uppercase text-brand-primary mb-2">Pay via UPI</div>
+              <p className="font-editorial italic text-xs text-[#1A1106]/60 mb-6">Scan to settle the bill securely from your phone.</p>
+              
+              {(restaurantConfig?.payment_qr_url || restaurantConfig?.upi_id) ? (
+                <>
+                  <div className="bg-white p-3 rounded-2xl inline-block shadow-sm border border-brand-secondary/20 mb-4">
+                    <img 
+                      src={restaurantConfig?.payment_qr_url || `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`upi://pay?pa=${restaurantConfig?.upi_id}&pn=${restaurantConfig?.name}&am=${order.total}&cu=INR`)}`} 
+                      alt="UPI QR Code" 
+                      className="w-48 h-auto object-contain"
+                    />
+                  </div>
+                  {restaurantConfig?.upi_id && !restaurantConfig?.payment_qr_url && (
+                    <div className="font-mono text-[11px] text-[#1A1106]/70 uppercase tracking-widest">{restaurantConfig.upi_id}</div>
+                  )}
+                </>
+              ) : (
+                <div className="text-xs text-[#1A1106]/50 italic my-4">UPI payment not configured by restaurant.</div>
+              )}
+              
+              <div className="mt-5 pt-5 border-t border-brand-secondary/15">
+                <div className="font-royal text-2xl text-brand-primary">₹{order.total}</div>
+                <div className="font-editorial italic text-[10px] text-[#1A1106]/50 mt-1">Please show the payment success screen to our staff.</div>
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>

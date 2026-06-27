@@ -266,6 +266,8 @@ class SettingsUpdateReq(BaseModel):
     primary_color: Optional[str] = None
     secondary_color: Optional[str] = None
     logo_url: Optional[str] = None
+    upi_id: Optional[str] = None
+    payment_qr_url: Optional[str] = None
 
 class StaffUpdateReq(BaseModel):
     id: Optional[str] = None

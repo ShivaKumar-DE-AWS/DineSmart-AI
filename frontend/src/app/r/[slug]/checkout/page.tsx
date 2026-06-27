@@ -65,7 +65,7 @@ export default function CheckoutPage() {
   const [generalNotes, setGeneralNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [stripeEnabled, setStripeEnabled] = useState<boolean | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<"cash" | "upi">("cash");
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "upi" | "card_machine">("cash");
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
   const subtotal = cart.subtotal();
   const tax = Math.round(subtotal * 0.05);
@@ -251,31 +251,44 @@ export default function CheckoutPage() {
               How would you like to settle the bill?
             </p>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <button
                 type="button"
                 onClick={() => setPaymentMethod("cash")}
-                className={`flex flex-col items-center justify-center gap-2 p-4 rounded-xl border transition-all ${
+                className={`flex flex-col items-center justify-center gap-2 p-3 rounded-xl border transition-all ${
                   paymentMethod === "cash" 
                   ? "bg-brand-primary/5 border-brand-primary text-brand-primary shadow-sm" 
                   : "bg-white border-brand-secondary/30 text-[#1A1106]/70 hover:border-brand-primary/50"
                 }`}
               >
-                <div className="font-royal text-sm uppercase tracking-widest">Pay Cash</div>
-                <div className="font-editorial italic text-[10px] opacity-80 text-center">Pay at counter or to waiter</div>
+                <div className="font-royal text-sm uppercase tracking-widest">Cash</div>
+                <div className="font-editorial italic text-[10px] opacity-80 text-center">At counter</div>
               </button>
               
               <button
                 type="button"
                 onClick={() => setPaymentMethod("upi")}
-                className={`flex flex-col items-center justify-center gap-2 p-4 rounded-xl border transition-all ${
+                className={`flex flex-col items-center justify-center gap-2 p-3 rounded-xl border transition-all ${
                   paymentMethod === "upi" 
                   ? "bg-brand-primary/5 border-brand-primary text-brand-primary shadow-sm" 
                   : "bg-white border-brand-secondary/30 text-[#1A1106]/70 hover:border-brand-primary/50"
                 }`}
               >
-                <div className="font-royal text-sm uppercase tracking-widest">Pay via UPI</div>
-                <div className="font-editorial italic text-[10px] opacity-80 text-center">Scan QR code from your phone</div>
+                <div className="font-royal text-sm uppercase tracking-widest">UPI QR</div>
+                <div className="font-editorial italic text-[10px] opacity-80 text-center">Scan & pay</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setPaymentMethod("card_machine")}
+                className={`flex flex-col items-center justify-center gap-2 p-3 rounded-xl border transition-all ${
+                  paymentMethod === "card_machine" 
+                  ? "bg-brand-primary/5 border-brand-primary text-brand-primary shadow-sm" 
+                  : "bg-white border-brand-secondary/30 text-[#1A1106]/70 hover:border-brand-primary/50"
+                }`}
+              >
+                <div className="font-royal text-sm uppercase tracking-widest">Card</div>
+                <div className="font-editorial italic text-[10px] opacity-80 text-center">Swipe at table</div>
               </button>
             </div>
           </section>

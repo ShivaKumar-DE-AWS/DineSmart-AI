@@ -24,6 +24,8 @@ export default function AdminSettings() {
   const [primaryColor, setPrimaryColor] = useState(settings?.primary_color || "var(--brand-primary)");
   const [secondaryColor, setSecondaryColor] = useState(settings?.secondary_color || "var(--brand-secondary)");
   const [logoUrl, setLogoUrl] = useState(settings?.logo_url || "");
+  const [upiId, setUpiId] = useState(settings?.upi_id || "");
+  const [paymentQrUrl, setPaymentQrUrl] = useState(settings?.payment_qr_url || "");
 
   // Update effect to prefill from fetched data
   useEffect(() => {
@@ -33,6 +35,8 @@ export default function AdminSettings() {
       setPrimaryColor(settings.primary_color || "var(--brand-primary)");
       setSecondaryColor(settings.secondary_color || "var(--brand-secondary)");
       setLogoUrl(settings.logo_url || "");
+      setUpiId(settings.upi_id || "");
+      setPaymentQrUrl(settings.payment_qr_url || "");
     }
   }, [settings]);
 
@@ -46,7 +50,12 @@ export default function AdminSettings() {
   });
 
   const handleSaveSettings = () => {
-    updateSettings.mutate({ name, tagline, primary_color: primaryColor, secondary_color: secondaryColor, logo_url: logoUrl });
+    updateSettings.mutate({ 
+      name, tagline, 
+      primary_color: primaryColor, secondary_color: secondaryColor, 
+      logo_url: logoUrl,
+      upi_id: upiId, payment_qr_url: paymentQrUrl
+    });
   };
 
   return (
@@ -113,6 +122,36 @@ export default function AdminSettings() {
         </section>
 
         <section className="bg-white border border-bone rounded-2xl p-6 shadow-sm">
+          <div className="flex items-center gap-2 mb-6">
+            <Key className="h-5 w-5 text-ink" />
+            <h2 className="text-xl font-heading font-semibold text-ink">Payment Options</h2>
+          </div>
+          
+          <div className="space-y-4">
+            <label className="block">
+              <span className="text-sm font-medium text-stone block mb-1">UPI ID</span>
+              <div className="flex items-center gap-2 bg-cream border border-bone rounded-xl px-3 py-2">
+                <Type className="h-4 w-4 text-stone" />
+                <input value={upiId} onChange={e => setUpiId(e.target.value)} placeholder="e.g. mehfil@upi" className="bg-transparent outline-none flex-1 text-ink" />
+              </div>
+            </label>
+
+            <label className="block">
+              <span className="text-sm font-medium text-stone block mb-1">Custom Payment QR URL</span>
+              <div className="flex items-center gap-2 bg-cream border border-bone rounded-xl px-3 py-2">
+                <LinkIcon className="h-4 w-4 text-stone" />
+                <input value={paymentQrUrl} onChange={e => setPaymentQrUrl(e.target.value)} placeholder="https://..." className="bg-transparent outline-none flex-1 text-ink" />
+              </div>
+              <p className="text-xs text-stone mt-1">If provided, this image will be shown to customers instead of auto-generating a QR code from the UPI ID.</p>
+            </label>
+            
+            <button onClick={handleSaveSettings} disabled={updateSettings.isPending} className="mt-4 w-full bg-ink text-cream font-medium rounded-xl px-4 py-2 hover:opacity-90 flex items-center justify-center gap-2">
+              <Save className="h-4 w-4" /> Save Payment Settings
+            </button>
+          </div>
+        </section>
+
+        <section className="bg-white border border-bone rounded-2xl p-6 shadow-sm md:col-span-2">
           <div className="flex items-center gap-2 mb-6">
             <UserCog className="h-5 w-5 text-ink" />
             <h2 className="text-xl font-heading font-semibold text-ink">Staff Access</h2>
