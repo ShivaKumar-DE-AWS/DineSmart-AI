@@ -14,10 +14,14 @@ export default function TokenPage() {
   const slug = params?.slug as string;
 
   const { orderId } = useParams<{ orderId: string }>();
-  const { data: order, isLoading } = useQuery({
+  const { data: order, isLoading, error } = useQuery({
     queryKey: ["order", orderId],
     queryFn: () => api<Order>(`/api/orders/${orderId}`),
   });
+
+  if (error) {
+    return <div className="py-32 text-center font-editorial text-red-500">Error loading order: {(error as Error).message}</div>;
+  }
 
   if (isLoading || !order) {
     return <div className="py-32 text-center font-editorial italic text-[#1A1106]/60" data-testid="token-loading">Sealing your order…</div>;
