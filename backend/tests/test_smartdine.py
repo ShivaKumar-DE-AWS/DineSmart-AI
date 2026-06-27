@@ -186,15 +186,14 @@ def test_payment_config(s):
     assert r.status_code == 200
     j = r.json()
     assert j["stripe_enabled"] == False
-    assert j["provider"] == "mock"
-    assert j.get("upi_enabled") in (None, False)
+    assert j["provider"] == "upi_qr"
 
 def test_payment_intent(s):
     r = s.post(f"{API}/payment/intent", json={"amount": 540.5, "method": "upi"})
     assert r.status_code == 200
     j = r.json()
     assert j["status"] == "succeeded"
-    assert j["intent_id"].startswith("pi_mock_") or j["intent_id"].startswith("upi_")
+    assert j["intent_id"].startswith("upi_")
     assert abs(j["amount"] - 540.5) < 0.01
 
 # ---------- AI Waiter ----------
