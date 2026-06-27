@@ -4,7 +4,7 @@ import json
 import uuid
 from typing import Dict, Any, List
 from fastapi import APIRouter, Depends, Request, HTTPException
-from deps import db, now_iso, require_user
+from deps import db, now_iso, require_user, current_user
 
 router = APIRouter(tags=["cart"])
 
