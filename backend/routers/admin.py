@@ -567,6 +567,11 @@ async def list_restaurant_configs():
         out.append({"slug": slug, "name": cfg.get("name", slug), "email": f"{slug}@smartdine.ai"})
     return {"configs": out}
 
+@router.get("/api/admin/fix-mehfil")
+async def fix_mehfil_db():
+    res1 = await db.restaurant_configs.update_many({"slug": "mehfil-hyderabad"}, {"$set": {"slug": "mehfil"}})
+    return {"fixed": res1.modified_count}
+
 @router.get("/api/config/{slug}")
 async def get_restaurant_config(slug: str):
     doc = await db.restaurant_configs.find_one({"slug": slug}, {"_id": 0})

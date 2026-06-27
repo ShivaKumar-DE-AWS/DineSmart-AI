@@ -37,7 +37,8 @@ function useRestaurantName(): string {
 }
 
 function tableQrUrl(slug: string, tableNumber: string): string {
-  return `${customerOrigin()}/r/${slug}?table=${tableNumber}`;
+  const finalSlug = slug === "mehfil-hyderabad" ? "mehfil" : slug;
+  return `${customerOrigin()}/r/${finalSlug}?t=${tableNumber}`;
 }
 
 export default function AdminTables() {

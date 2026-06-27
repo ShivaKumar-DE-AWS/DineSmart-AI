@@ -144,7 +144,7 @@ export function AIWaiterDock() {
         const args = toolCall.args as any;
         const hit = menu.find((m) => m.id === args.itemId);
         if (hit) {
-          cart.addItem(hit, args.quantity || 1, args.notes || "");
+          cart.add(hit, args.quantity || 1);
           toast.success(`Added ${args.quantity || 1}x ${hit.name}`);
         }
         return "Added successfully";
