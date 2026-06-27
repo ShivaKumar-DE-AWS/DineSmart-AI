@@ -121,16 +121,6 @@ async def scan_table(req: TableScanReq):
     table = None
     if token:
         table = await db.tables.find_one({"qr_token": token, "is_active": True}, {"_id": 0})
-    
-    if not table and table_num and req.restaurant_slug:
-        # Look up restaurant by slug
-        restaurant = await db.restaurants.find_one({"slug": req.restaurant_slug})
-        if restaurant:
-            try:
-                num = int(table_num)
-                table = await db.tables.find_one({"number": num, "restaurant_id": restaurant["id"], "is_active": True}, {"_id": 0})
-            except ValueError:
-                pass
 
     if not table:
         raise HTTPException(status_code=404, detail="Invalid or inactive table QR")

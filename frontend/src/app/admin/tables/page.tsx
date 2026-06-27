@@ -36,9 +36,9 @@ function useRestaurantName(): string {
   return config?.name || "Restaurant";
 }
 
-function tableQrUrl(slug: string, tableNumber: string): string {
+function tableQrUrl(slug: string, qrToken: string): string {
   const finalSlug = slug === "mehfil-hyderabad" ? "mehfil" : slug;
-  return `${customerOrigin()}/r/${finalSlug}?t=${tableNumber}`;
+  return `${customerOrigin()}/r/${finalSlug}?t=${qrToken}`;
 }
 
 export default function AdminTables() {
@@ -132,7 +132,7 @@ export default function AdminTables() {
 
 function TableCard({ t, onRegen, onDelete, slug, restaurantName }: { t: TableDoc; onRegen: (id: string) => void; onDelete: (id: string) => void; slug: string; restaurantName: string }) {
   const svgRef = useRef<HTMLDivElement>(null);
-  const url = tableQrUrl(slug, t.number.toString());
+  const url = tableQrUrl(slug, t.qr_token);
 
   const downloadPng = async () => {
     const svgEl = svgRef.current?.querySelector("svg");

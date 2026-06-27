@@ -142,15 +142,18 @@ export function AIWaiterDock() {
     onToolCall: async ({ toolCall }) => {
       if (toolCall.toolName === "addToTray") {
         const args = toolCall.args as any;
+        if (!args.itemId) return "No item ID provided";
         const hit = menu.find((m) => m.id === args.itemId);
         if (hit) {
           cart.add(hit, args.quantity || 1);
           toast.success(`Added ${args.quantity || 1}x ${hit.name}`);
+          return "Added successfully";
         }
-        return "Added successfully";
+        return "Item not found on menu";
       } else if (toolCall.toolName === "removeFromTray") {
         const args = toolCall.args as any;
-        cart.removeItem(args.itemId);
+        if (!args.itemId) return "No item ID provided";
+        cart.remove(args.itemId);
         toast.success(`Removed item`);
         return "Removed successfully";
       } else if (toolCall.toolName === "proceedToCheckout") {

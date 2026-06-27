@@ -57,7 +57,6 @@ Remember, you represent a premium dining experience.`;
           parameters: z.object({}),
         }),
       },
-      maxSteps: 5,
     });
 
     return result.toUIMessageStreamResponse();
