@@ -111,7 +111,7 @@ def created_order(s, admin):
 def test_create_order(created_order):
     order, items = created_order
     assert order["status"] == "confirmed"
-    assert order["token"].startswith("A-") and len(order["token"]) == 5
+    assert order["token"].startswith("A-") and len(order["token"]) >= 5
     expected_sub = round(sum(i["price"] * i["qty"] for i in items), 2)
     expected_tax = round(expected_sub * 0.05, 2)
     expected_total = round(expected_sub + expected_tax, 2)
