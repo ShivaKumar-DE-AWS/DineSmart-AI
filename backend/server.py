@@ -37,12 +37,17 @@ from deps import (
 # Rate Limiter (Redis-backed, distributed)
 # =========================================================
 redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
-redis_client = redis.from_url(redis_url, encoding="utf-8", decode_responses=True)
+# ponytail: graceful fallback if Redis is unavailable — rate limiting degrades to no-op
+redis_client = None
+try:
+    redis_client = redis.from_url(redis_url, encoding="utf-8", decode_responses=True)
+except Exception:
+    pass
 
 limiter = Limiter(
     key_func=get_remote_address,
-    storage_uri=redis_url,
-    default_limits=["1000/hour"]  # global fallback
+    storage_uri=redis_url if redis_client else "memory://",
+    default_limits=["1000/hour"],
 )
 
 RATE_LIMITS: Dict[str, str] = {
@@ -65,15 +70,18 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         path = request.url.path
         limit_str = RATE_LIMITS.get(path)
         if limit_str:
-            # Apply rate limit dynamically
-            try:
-                await limiter._check_request_limit(request, limit_str, None)
-            except RateLimitExceeded:
-                return Response(
-                    content=json.dumps({"detail": "Rate limit exceeded. Try again shortly."}),
-                    status_code=429,
-                    media_type="application/json",
-                )
+                # Apply rate limit dynamically
+                try:
+                    await limiter._check_request_limit(request, limit_str, None)
+                except RateLimitExceeded:
+                    return Response(
+                        content=json.dumps({"detail": "Rate limit exceeded. Try again shortly."}),
+                        status_code=429,
+                        media_type="application/json",
+                    )
+                except Exception:
+                    # ponytail: rate limiter unavailable (no Redis) — allow through
+                    pass
         return await call_next(request)
 
 
