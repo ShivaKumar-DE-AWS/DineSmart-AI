@@ -121,7 +121,8 @@ async def scan_table(req: TableScanReq):
     table = None
     if token:
         table = await db.tables.find_one({"qr_token": token, "is_active": True}, {"_id": 0})
-    elif table_num and req.restaurant_slug:
+    
+    if not table and table_num and req.restaurant_slug:
         # Look up restaurant by slug
         restaurant = await db.restaurants.find_one({"slug": req.restaurant_slug})
         if restaurant:
