@@ -67,8 +67,8 @@ export function TableSessionGuard() {
     try {
       // Step 1: Create guest JWT session if not already authenticated
       if (!token) {
-        const guestUrl = restaurantConfig?.id
-          ? `/api/auth/guest?restaurant_id=${encodeURIComponent(restaurantConfig.id)}`
+        const guestUrl = slugFromPath
+          ? `/api/auth/guest?slug=${encodeURIComponent(slugFromPath)}`
           : "/api/auth/guest";
         const guestRes = await api<{ token: string; user: { id: string; email: string; name: string; role: "customer" } }>(
           guestUrl,
