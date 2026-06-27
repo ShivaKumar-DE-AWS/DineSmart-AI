@@ -126,6 +126,28 @@ app = FastAPI(title="SmartDine AI API", version="2.0.0")
 async def public_health():
     return {"status": "ok", "service": "smartdine-ai", "time": now_iso()}
 
+# ponytail: public restaurant config endpoint — reads JSON files directly for speed, no DB dependency
+import glob as _glob, json as _json
+_CONFIG_CACHE = {}
+_CONFIG_DIR = os.path.join(os.path.dirname(__file__), "data", "restaurants")
+for _cf in sorted(_glob.glob(os.path.join(_CONFIG_DIR, "*.json"))):
+    if not os.path.basename(_cf).startswith("_"):
+        with open(_cf, "r", encoding="utf-8") as _f:
+            _data = _json.load(_f)
+        if _data.get("slug"):
+            _CONFIG_CACHE[_data["slug"]] = _data
+
+@app.get("/api/config/{slug}")
+async def get_restaurant_config(slug: str):
+    config = _CONFIG_CACHE.get(slug)
+    if not config:
+        raise HTTPException(status_code=404, detail="Not Found")
+    return config
+
+@app.get("/api/config/list")
+async def list_restaurant_configs():
+    return {"configs": [{"slug": s, "name": c.get("name", ""), "email": next((u.get("email","") for u in c.get("users",[]) if u.get("role")=="admin"),"")} for s, c in _CONFIG_CACHE.items()]}
+
 # ponytail: middleware order matters - rate limit first, then security headers, then size limit
 app.add_middleware(RateLimitMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
