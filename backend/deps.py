@@ -326,13 +326,9 @@ class TTSReq(BaseModel):
 # Token generation (daily per-restaurant sequential token)
 # =========================================================
 async def next_token(restaurant_id: str = "") -> str:
-    """Generate daily token like A-YYYYMMDD-XXXXXX using UUID (no counter collection)."""
-    today = datetime.now(timezone.utc).strftime("%Y%m%d")
-    # ponytail: UUID suffix avoids counter collection + upsert per order
-    suffix = uuid.uuid4().hex[:6].upper()
-    if restaurant_id:
-        return f"A-{today}-{suffix}"
-    return f"A-{today}-{suffix}"
+    # ponytail: UUID-based short token, no counter collection
+    suffix = uuid.uuid4().hex[:4].upper()
+    return f"A-{suffix}"
 
 def clean(doc: Dict[str, Any]) -> Dict[str, Any]:
     if doc and "_id" in doc:
