@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse, Response, JSONResponse
 from deps import (
     db, now_iso, TAX_RATE, require_user, require_roles, current_user, jwt_verify,
-    next_token, OrderCreateReq, OrderStatusUpdate,
+    client, next_token, OrderCreateReq, OrderStatusUpdate,
     PaymentReq, CheckoutSessionReq,
 )
 
