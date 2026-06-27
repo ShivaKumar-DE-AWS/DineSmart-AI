@@ -29,32 +29,37 @@ export async function api<T = any>(path: string, init: RequestInit = {}): Promis
   };
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  const controller = new AbortController();
-  const timeoutMs = Number((init as RequestInit & { timeoutMs?: number }).timeoutMs || 15_000);
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-  if (init.signal) {
-    if (init.signal.aborted) controller.abort();
-    else init.signal.addEventListener("abort", () => controller.abort(), { once: true });
-  }
-  let res: Response;
-  try {
-    res = await fetch(`${BASE}${path}`, { ...init, headers, cache: "no-store", signal: controller.signal });
-  } catch (error) {
-    if (controller.signal.aborted) throw new Error("Request timed out. Please try again.");
-    throw error;
-  } finally {
-    clearTimeout(timeout);
-  }
-  if (!res.ok) {
-    let msg = `HTTP ${res.status}`;
-    try { const j = await res.json(); msg = j.detail || j.message || msg; } catch (parseErr) {
-      console.warn(`[api] could not parse error body for ${path}:`, parseErr);
+  // ponytail: single retry for network errors (Render cold start)
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const controller = new AbortController();
+    const timeoutMs = Number((init as RequestInit & { timeoutMs?: number }).timeoutMs || 15_000);
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    if (init.signal) {
+      if (init.signal.aborted) controller.abort();
+      else init.signal.addEventListener("abort", () => controller.abort(), { once: true });
     }
-    throw new Error(msg);
+    try {
+      const res = await fetch(`${BASE}${path}`, { ...init, headers, cache: "no-store", signal: controller.signal });
+      clearTimeout(timeout);
+      if (!res.ok) {
+        let msg = `HTTP ${res.status}`;
+        try { const j = await res.json(); msg = j.detail || j.message || msg; } catch { /* ignore parse errors */ }
+        throw new Error(msg);
+      }
+      const ct = res.headers.get("content-type") || "";
+      if (ct.includes("application/json")) return res.json();
+      return (await res.text()) as unknown as T;
+    } catch (error) {
+      clearTimeout(timeout);
+      if (attempt === 1) {
+        if (controller.signal.aborted) throw new Error("Request timed out. Please try again.");
+        throw error;
+      }
+      // ponytail: network error — wait 2s for Render cold start, retry once
+      await new Promise(r => setTimeout(r, 2000));
+    }
   }
-  const ct = res.headers.get("content-type") || "";
-  if (ct.includes("application/json")) return res.json();
-  return (await res.text()) as unknown as T;
+  throw new Error("Unreachable");
 }
 
 export const apiUrl = (path: string) => `${BASE}${path}`;
