@@ -33,6 +33,16 @@ export function TableSessionGuard() {
   // Extract slug from current path (needed before alias key)
   const slugFromPath = path?.match(/^\/r\/([^/]+)/)?.[1] || "";
 
+  // Device identity — unique per browser, survives clear/restart, no PII
+  const [deviceId] = useState(() => {
+    if (typeof window === "undefined") return "";
+    const k = localStorage.getItem("sd-did");
+    if (k) return k;
+    const id = crypto.randomUUID();
+    localStorage.setItem("sd-did", id);
+    return id;
+  });
+
   // Alias state — persisted per device+restaurant (no PII)
   const aliasKey = `sd-alias-${typeof window !== "undefined" ? window.location.host : ""}-${slugFromPath}`;
   const [alias, setAlias] = useState(() => {
@@ -65,8 +75,8 @@ export function TableSessionGuard() {
   // Get display name
   const getDisplayName = useCallback(() => {
     if (useCustom && customAlias.trim()) return customAlias.trim();
-    return `${alias.prefix}${alias.suffix}`;
-  }, [alias, useCustom, customAlias]);
+    return `${alias.prefix}${alias.suffix}-${deviceId.slice(0, 4)}`;
+  }, [alias, useCustom, customAlias, deviceId]);
 
   // Join table with alias
   const handleJoin = async () => {
