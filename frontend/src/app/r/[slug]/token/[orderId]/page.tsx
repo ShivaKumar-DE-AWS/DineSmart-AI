@@ -102,7 +102,7 @@ export default function TokenPage() {
           <div className="flex justify-between"><span className="text-[#1A1106]/60 font-editorial italic">Subtotal</span><span className="font-royal text-brand-primary">{formatCurrency(order.subtotal)}</span></div>
           <div className="flex justify-between"><span className="text-[#1A1106]/60 font-editorial italic">Tax</span><span className="font-royal text-brand-primary">{formatCurrency(order.tax)}</span></div>
           <div className="flex justify-between items-end mt-3">
-            <span className="font-royal tracking-wider uppercase text-xs text-brand-primary">Total paid</span>
+            <span className="font-royal tracking-wider uppercase text-xs text-brand-primary">Total due</span>
             <span className="font-royal text-xl text-brand-primary">{formatCurrency(order.total)}</span>
           </div>
         </div>
@@ -118,6 +118,16 @@ export default function TokenPage() {
           <Copy className="h-3 w-3" /> Order ID {order.id.slice(0, 8)}…
         </button>
       </div>
+
+      {(order.payment_method === "upi" || order.payment_method === "card_machine") && (
+        <div className="bg-brand-primary/10 border border-brand-primary/20 rounded-2xl p-5 mb-6 text-center">
+          <p className="font-editorial italic text-brand-primary text-sm mb-3">
+            {order.payment_method === "upi" 
+              ? "You selected UPI payment. Tap 'Track live' below to view the QR code and complete your payment."
+              : "You requested the card machine. Our staff will bring it to your table shortly."}
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Link href={`/r/${slug}/track/${order.id}`} data-testid="token-track-link" className="inline-flex items-center justify-center gap-2 mehfil-btn-royal rounded-full px-6 py-3.5 font-royal tracking-[0.2em] uppercase text-xs">

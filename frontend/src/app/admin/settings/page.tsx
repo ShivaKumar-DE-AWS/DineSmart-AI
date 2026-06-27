@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
-import { Save, UserCog, Key, Settings, Palette, Type, Link as LinkIcon } from "lucide-react";
+import { Save, UserCog, Key, Settings, Palette, Type, Link as LinkIcon, Upload, Loader2 } from "lucide-react";
 
 export default function AdminSettings() {
   const qc = useQueryClient();
@@ -26,6 +26,7 @@ export default function AdminSettings() {
   const [logoUrl, setLogoUrl] = useState(settings?.logo_url || "");
   const [upiId, setUpiId] = useState(settings?.upi_id || "");
   const [paymentQrUrl, setPaymentQrUrl] = useState(settings?.payment_qr_url || "");
+  const [uploadingQr, setUploadingQr] = useState(false);
 
   // Update effect to prefill from fetched data
   useEffect(() => {
@@ -56,6 +57,33 @@ export default function AdminSettings() {
       logo_url: logoUrl,
       upi_id: upiId, payment_qr_url: paymentQrUrl
     });
+  };
+
+  const handleQrUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setUploadingQr(true);
+    const formData = new FormData();
+    formData.append("file", file);
+    
+    try {
+      // Use direct fetch to let browser set multipart/form-data with boundary
+      const token = useSession.getState().token;
+      const res = await fetch("/api/upload/image", {
+        method: "POST",
+        body: formData,
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error("Failed to upload image");
+      const json = await res.json();
+      setPaymentQrUrl(json.url);
+      toast.success("QR Code uploaded!");
+    } catch (err: any) {
+      toast.error(err.message || "Upload failed");
+    } finally {
+      setUploadingQr(false);
+    }
   };
 
   return (
@@ -137,12 +165,43 @@ export default function AdminSettings() {
             </label>
 
             <label className="block">
-              <span className="text-sm font-medium text-stone block mb-1">Custom Payment QR URL</span>
-              <div className="flex items-center gap-2 bg-cream border border-bone rounded-xl px-3 py-2">
-                <LinkIcon className="h-4 w-4 text-stone" />
-                <input value={paymentQrUrl} onChange={e => setPaymentQrUrl(e.target.value)} placeholder="https://..." className="bg-transparent outline-none flex-1 text-ink" />
+              <span className="text-sm font-medium text-stone block mb-1">Custom Payment QR Image</span>
+              
+              <div className="space-y-3">
+                {paymentQrUrl ? (
+                  <div className="relative inline-block border border-bone rounded-xl overflow-hidden p-2 bg-cream">
+                    <img src={paymentQrUrl} alt="Uploaded QR" className="h-24 w-24 object-contain" />
+                    <button 
+                      onClick={() => setPaymentQrUrl("")} 
+                      className="absolute top-1 right-1 bg-white rounded-full p-0.5 text-alert shadow-sm border border-bone hover:bg-alert/10"
+                      title="Remove image"
+                    >
+                      <Type className="h-3 w-3 rotate-45" />
+                    </button>
+                  </div>
+                ) : null}
+
+                <div className="flex items-center gap-2">
+                  <label className="flex items-center justify-center gap-2 bg-cream border border-bone border-dashed rounded-xl px-4 py-3 cursor-pointer hover:bg-stone/5 transition-colors flex-1">
+                    {uploadingQr ? (
+                      <Loader2 className="h-4 w-4 text-stone animate-spin" />
+                    ) : (
+                      <Upload className="h-4 w-4 text-stone" />
+                    )}
+                    <span className="text-sm text-stone font-medium">
+                      {uploadingQr ? "Uploading..." : "Upload QR Image"}
+                    </span>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={handleQrUpload} 
+                      disabled={uploadingQr}
+                      className="hidden" 
+                    />
+                  </label>
+                </div>
               </div>
-              <p className="text-xs text-stone mt-1">If provided, this image will be shown to customers instead of auto-generating a QR code from the UPI ID.</p>
+              <p className="text-xs text-stone mt-2">If provided, this image will be shown to customers instead of auto-generating a QR code from the UPI ID.</p>
             </label>
             
             <button onClick={handleSaveSettings} disabled={updateSettings.isPending} className="mt-4 w-full bg-ink text-cream font-medium rounded-xl px-4 py-2 hover:opacity-90 flex items-center justify-center gap-2">

@@ -195,7 +195,7 @@ export default function TrackPage() {
                   {restaurantConfig?.upi_id && (
                     <a 
                       href={`upi://pay?pa=${restaurantConfig.upi_id}&pn=${encodeURIComponent(restaurantConfig.name)}&am=${order.total}&cu=INR`}
-                      className="mt-4 w-full flex items-center justify-center gap-2 bg-brand-primary text-white py-3 rounded-full font-royal uppercase tracking-widest text-xs md:hidden shadow-md"
+                      className="mt-4 w-full flex items-center justify-center gap-2 bg-brand-primary text-white py-3 rounded-full font-royal uppercase tracking-widest text-xs shadow-md"
                     >
                       <span>Tap to Pay on Mobile</span>
                     </a>
