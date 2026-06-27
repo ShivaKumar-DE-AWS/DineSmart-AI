@@ -98,7 +98,7 @@ def created_order(s, admin):
         {"item_id": menu[0]["id"], "name": menu[0]["name"], "price": menu[0]["price"], "qty": 2},
         {"item_id": menu[1]["id"], "name": menu[1]["name"], "price": menu[1]["price"], "qty": 1},
     ]
-    payload = {"customer_name": "TEST_Pytest", "items": items, "payment_method": "mock_card", "restaurant_id": admin["user"]["restaurant_id"]}
+    payload = {"customer_name": "TEST_Pytest", "items": items, "payment_method": "mock_card", "restaurant_id": admin["user"]["restaurant_id"], "order_type": "takeaway"}
     r = s.post(f"{API}/orders", json=payload, headers=hdr(admin["token"]))
     assert r.status_code == 200, r.text
     # Create returns {ok, order_id, token, total}; fetch full order for assertions
