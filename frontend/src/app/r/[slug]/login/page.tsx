@@ -112,11 +112,11 @@ export default function LoginPage() {
       });
       setSession(res.user, res.token);
       toast.success(`Welcome ${res.user.name}`);
-      const dest = res.user.role === "admin" ? `/r/${slug}/admin`
-        : res.user.role === "kitchen" ? `/r/${slug}/kitchen`
-        : res.user.role === "counter" ? `/r/${slug}/counter`
+      const dest = res.user.role === "admin" ? `/admin`
+        : res.user.role === "kitchen" ? `/kitchen`
+        : res.user.role === "counter" ? `/counter`
         : `/r/${slug}/menu`;
-      router.push(dest);
+      window.location.href = dest;
     } catch (e) {
       const err = e as Error;
       toast.error(err.message || "Sign in failed");
