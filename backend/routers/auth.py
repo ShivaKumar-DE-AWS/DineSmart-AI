@@ -118,29 +118,23 @@ async def reset_password(req: ResetPasswordReq):
 
 @router.post("/login")
 async def login(req: LoginReq):
-    try:
-        user = await db.users.find_one({"email": req.email})
-        stored_hash = None
-        if user:
-            stored_hash = user.get("password_hash") or user.get("password")
-        if not user or not verify_password(req.password, stored_hash or ""):
-            from routers.audit import log_audit_event
-            await log_audit_event(
-                user_id=user.get("id") if user else None,
-                user_email=req.email,
-                action="login_failed",
-                target="system",
-                details={"reason": "Invalid email or password"}
-            )
-            raise HTTPException(status_code=401, detail="Invalid email or password")
+    user = await db.users.find_one({"email": req.email})
+    stored_hash = None
+    if user:
+        stored_hash = user.get("password_hash") or user.get("password")
+    if not user or not verify_password(req.password, stored_hash or ""):
+        from routers.audit import log_audit_event
+        await log_audit_event(
+            user_id=user.get("id") if user else None,
+            user_email=req.email,
+            action="login_failed",
+            target="system",
+            details={"reason": "Invalid email or password"}
+        )
+        raise HTTPException(status_code=401, detail="Invalid email or password")
 
-        restaurant_id = user.get("restaurant_id")
-        restaurant_slug = user.get("restaurant_slug")
-    except Exception as e:
-        print(f"[login] ERROR: {e}")
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+    restaurant_id = user.get("restaurant_id")
+    restaurant_slug = user.get("restaurant_slug")
 
     # Superadmins are platform-level users — no restaurant_id needed
     if user.get("role") == "superadmin":
