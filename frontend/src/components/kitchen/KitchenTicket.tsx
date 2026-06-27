@@ -55,6 +55,14 @@ function KitchenTicketImpl({ order, elapsed, elapsedMs, isSelected, onStart, onR
         )}
         <span className="text-sm text-zinc-300 font-medium">{order.customer_name}</span>
         {order.customer_code ? <span className="text-[10px] text-zinc-600 lowercase">· {order.customer_code}</span> : null}
+        <div className="ml-auto flex items-center gap-1.5">
+          <span className="text-[9px] tracking-wider uppercase font-bold text-zinc-500 bg-zinc-800 px-1.5 py-0.5 rounded">
+            {order.payment_method === "upi" ? "UPI QR" : order.payment_method === "card_machine" ? "CARD" : "CASH"}
+          </span>
+          <span className={`text-[9px] tracking-wider uppercase font-bold px-1.5 py-0.5 rounded ${order.payment_status === "paid" ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-400"}`}>
+            {order.payment_status === "paid" ? "PAID" : "UNPAID"}
+          </span>
+        </div>
       </div>
 
       <div className="space-y-2 mb-5">

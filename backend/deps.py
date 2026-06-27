@@ -199,7 +199,8 @@ class OrderCreateReq(BaseModel):
     is_ai: bool = False
 
 class OrderStatusUpdate(BaseModel):
-    status: str
+    status: Optional[str] = None
+    payment_status: Optional[str] = None
 
 class InventoryItemModel(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))

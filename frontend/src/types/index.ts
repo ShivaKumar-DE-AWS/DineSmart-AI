@@ -58,6 +58,7 @@ export interface Order {
   updated_at: string;
   estimated_ready_at?: string;
   payment_method: string;
+  payment_status?: string;
   notes?: string;
 }
 

@@ -2,7 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { Order } from "@/types";
-import { Check, Clock, ChefHat, Bell, Utensils, Users, Sparkles } from "lucide-react";
+import { Check, Clock, ChefHat, Bell, Utensils, Users, Sparkles, CreditCard } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useSession } from "@/stores/session";
 import { useRestaurantConfig, getRestaurantConfig } from "@/hooks/useRestaurantConfig";
@@ -34,6 +34,11 @@ export default function CounterPage() {
   });
   const mut = useMutation({
     mutationFn: ({ id }: { id: string }) => api(`/api/orders/${id}/status`, { method: "PATCH", body: JSON.stringify({ status: "served" }) }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["counter-orders", user?.restaurant_id] }),
+  });
+
+  const markPaidMut = useMutation({
+    mutationFn: ({ id }: { id: string }) => api(`/api/orders/${id}/status`, { method: "PATCH", body: JSON.stringify({ payment_status: "paid" }) }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["counter-orders", user?.restaurant_id] }),
   });
 
@@ -197,7 +202,17 @@ export default function CounterPage() {
                     </div>
                   )}
                 </div>
-                <div className="text-sm uppercase tracking-wider font-bold mt-1 opacity-90">{o.customer_name}</div>
+                <div className="text-sm uppercase tracking-wider font-bold mt-1 opacity-90 flex items-center justify-between">
+                  <span>{o.customer_name}</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded">
+                      {o.payment_method === "upi" ? "UPI QR" : o.payment_method === "card_machine" ? "CARD" : "CASH"}
+                    </span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${o.payment_status === "paid" ? "bg-white/40" : "bg-red-500/80 text-white"}`}>
+                      {o.payment_status === "paid" ? "PAID" : "UNPAID"}
+                    </span>
+                  </div>
+                </div>
                 {(o.items.some((i) => i.notes) || o.notes) && (
                   <div className="mt-3 space-y-1 text-[11px]" data-testid={`counter-notes-${o.token}`}>
                     {o.items.filter((i) => i.notes).map((i) => (
@@ -206,13 +221,24 @@ export default function CounterPage() {
                     {o.notes && <div className="bg-white/15 border border-white/20 rounded-lg px-2.5 py-1"><span className="font-bold">Note:</span> {o.notes}</div>}
                   </div>
                 )}
-                <button
-                  data-testid={`counter-serve-${o.token}`}
-                  onClick={() => mut.mutate({ id: o.id })}
-                  className="mt-auto pt-3 bg-white text-emerald-600 font-bold py-3 rounded-xl hover:bg-white/90 transition flex items-center justify-center gap-2 text-sm"
-                >
-                  <Check className="h-4 w-4" /> MARK SERVED
-                </button>
+                <div className="mt-auto pt-4 flex gap-2 flex-col sm:flex-row">
+                  {o.payment_status !== "paid" && (
+                    <button
+                      onClick={() => markPaidMut.mutate({ id: o.id })}
+                      className="flex-1 bg-red-500/20 hover:bg-red-500/30 border border-red-400/50 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 text-sm"
+                    >
+                      <CreditCard className="h-4 w-4" /> MARK PAID
+                    </button>
+                  )}
+                  <button
+                    disabled={o.payment_status !== "paid"}
+                    data-testid={`counter-serve-${o.token}`}
+                    onClick={() => mut.mutate({ id: o.id })}
+                    className={`flex-1 font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 text-sm ${o.payment_status === "paid" ? "bg-white text-emerald-600 hover:bg-white/90" : "bg-white/20 text-white/50 cursor-not-allowed"}`}
+                  >
+                    <Check className="h-4 w-4" /> MARK SERVED
+                  </button>
+                </div>
               </div>
             ))}
             {ready.length === 0 && (

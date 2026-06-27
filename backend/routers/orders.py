@@ -187,31 +187,50 @@ async def get_order(order_id: str, user=Depends(current_user)):
 
 @router.patch("/api/orders/{order_id}/status")
 async def update_status(order_id: str, body: OrderStatusUpdate, user=Depends(require_roles("admin", "kitchen", "counter"))):
-    if body.status not in {"pending", "confirmed", "preparing", "ready", "served", "cancelled"}:
-        raise HTTPException(status_code=400, detail="Invalid status")
+    if body.status is None and body.payment_status is None:
+        raise HTTPException(status_code=400, detail="Must provide status or payment_status")
+    
+    update_data = {}
+    if body.status is not None:
+        if body.status not in {"pending", "confirmed", "preparing", "ready", "served", "cancelled"}:
+            raise HTTPException(status_code=400, detail="Invalid status")
+        update_data["status"] = body.status
+        
+    if body.payment_status is not None:
+        if body.payment_status not in {"pending", "paid", "unpaid", "failed"}:
+            raise HTTPException(status_code=400, detail="Invalid payment_status")
+        update_data["payment_status"] = body.payment_status
+        
+    update_data["updated_at"] = now_iso()
+    
     q: Dict[str, Any] = {"id": order_id}
     if user.get("restaurant_id"):
         q["restaurant_id"] = user["restaurant_id"]
-    res = await db.orders.update_one(q, {"$set": {"status": body.status, "updated_at": now_iso()}})
+    res = await db.orders.update_one(q, {"$set": update_data})
     if res.matched_count == 0:
         raise HTTPException(status_code=404, detail="Order not found")
-    rq: Dict[str, Any] = {"id": order_id}
-    if user.get("restaurant_id"):
-        rq["restaurant_id"] = user["restaurant_id"]
-    order = await db.orders.find_one(rq, {"_id": 0})
-    await db.notifications.insert_one({
-        "id": str(uuid.uuid4()),
-        "order_id": order_id,
-        "type": "order_update",
-        "title": f"Order {order['token']} → {body.status}",
-        "body": f"Your order status changed to {body.status}.",
-        "read": False,
-        "restaurant_id": order.get("restaurant_id"),
-        "created_at": now_iso(),
-    })
+        
+    order = await db.orders.find_one(q, {"_id": 0})
+    
     # Broadcast status change to SSE subscribers
-    broadcast_order_update(order.get("restaurant_id"), {"type": "status_update", "order_id": order_id, "token": order["token"], "status": body.status})
-    return {"ok": True, "status": body.status}
+    broadcast_data = {"type": "status_update", "order_id": order_id, "token": order["token"]}
+    if body.status:
+        broadcast_data["status"] = body.status
+        await db.notifications.insert_one({
+            "id": str(uuid.uuid4()),
+            "order_id": order_id,
+            "type": "order_update",
+            "title": f"Order {order['token']} → {body.status}",
+            "body": f"Your order status changed to {body.status}.",
+            "read": False,
+            "restaurant_id": order.get("restaurant_id"),
+            "created_at": now_iso(),
+        })
+    if body.payment_status:
+        broadcast_data["payment_status"] = body.payment_status
+        
+    broadcast_order_update(order.get("restaurant_id"), broadcast_data)
+    return {"ok": True, **update_data}
 
 
 # =========================================================
