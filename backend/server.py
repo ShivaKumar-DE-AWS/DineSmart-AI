@@ -113,6 +113,11 @@ class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
 # App setup
 # =========================================================
 app = FastAPI(title="SmartDine AI API", version="2.0.0")
+
+@app.get("/api/health")
+async def public_health():
+    return {"status": "ok", "service": "smartdine-ai", "time": now_iso()}
+
 # ponytail: middleware order matters - rate limit first, then security headers, then size limit
 app.add_middleware(RateLimitMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
