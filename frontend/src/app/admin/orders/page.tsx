@@ -44,6 +44,7 @@ export default function AdminOrders() {
               <th className="text-left px-4 py-3">Customer</th>
               <th className="text-left px-4 py-3">Items</th>
               <th className="text-left px-4 py-3">Total</th>
+              <th className="text-left px-4 py-3">Payment</th>
               <th className="text-left px-4 py-3">Status</th>
               <th className="text-left px-4 py-3">Placed</th>
               <th className="text-left px-4 py-3">Update</th>
@@ -56,6 +57,11 @@ export default function AdminOrders() {
                 <td className="px-4 py-3">{o.customer_name}</td>
                 <td className="px-4 py-3 text-stone text-xs">{o.items.map((i) => `${i.qty}× ${i.name}`).join(", ")}</td>
                 <td className="px-4 py-3 font-medium">{formatCurrency(o.total)}</td>
+                <td className="px-4 py-3">
+                  <Badge variant={o.payment_method === "upi" ? "sage" : "warn"}>
+                    {o.payment_method === "upi" ? "UPI QR" : "CASH"}
+                  </Badge>
+                </td>
                 <td className="px-4 py-3"><Badge variant={STATUS_COLOR[o.status] || "default"}>{o.status}</Badge></td>
                 <td className="px-4 py-3 text-stone">{fmtTime(o.created_at)}</td>
                 <td className="px-4 py-3">

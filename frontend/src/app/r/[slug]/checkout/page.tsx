@@ -65,6 +65,7 @@ export default function CheckoutPage() {
   const [generalNotes, setGeneralNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [stripeEnabled, setStripeEnabled] = useState<boolean | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "upi">("cash");
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
   const subtotal = cart.subtotal();
   const tax = Math.round(subtotal * 0.05);
@@ -132,7 +133,7 @@ export default function CheckoutPage() {
             notes: finalNotes || undefined,
           };
         }),
-        payment_method: "cash", // ignore payment gateway for now
+        payment_method: paymentMethod,
         notes: generalNotes.trim() || undefined,
         table_session_id: table?.id || undefined,
         table_number: table?.table_number || undefined,
@@ -245,16 +246,38 @@ export default function CheckoutPage() {
 
           <section className="mehfil-card rounded-2xl p-6" data-testid="checkout-payment">
             <div className="mehfil-divider mb-4"><span className="font-royal tracking-[0.3em] text-[10px] uppercase flex items-center gap-1.5"><CreditCard className="h-3 w-3" /> Payment</span></div>
-            {stripeEnabled === true && (
-              <div className="text-sm text-[#1A1106]/75 leading-relaxed font-editorial">
-                <p>You&apos;ll be redirected to Stripe to settle the bill securely. We&apos;ll bring you back with your token in hand.</p>
-                <p className="mt-2 text-xs text-[#1A1106]/60">Test card: <span className="font-mono">4242 4242 4242 4242</span>, any future expiry, any CVC.</p>
-              </div>
-            )}
-            {stripeEnabled === false && (
-              <div className="text-sm text-[#1A1106]/75 font-editorial italic">Mock payment — instant confirmation, no real charge.</div>
-            )}
-            <div className="mt-3 text-[11px] text-[#1A1106]/55 flex items-center gap-1.5 font-royal tracking-wider uppercase"><Lock className="h-3 w-3" /> Secured by Stripe</div>
+            
+            <p className="font-editorial italic text-xs text-[#1A1106]/65 mb-4 leading-relaxed">
+              How would you like to settle the bill?
+            </p>
+
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setPaymentMethod("cash")}
+                className={`flex flex-col items-center justify-center gap-2 p-4 rounded-xl border transition-all ${
+                  paymentMethod === "cash" 
+                  ? "bg-brand-primary/5 border-brand-primary text-brand-primary shadow-sm" 
+                  : "bg-white border-brand-secondary/30 text-[#1A1106]/70 hover:border-brand-primary/50"
+                }`}
+              >
+                <div className="font-royal text-sm uppercase tracking-widest">Pay Cash</div>
+                <div className="font-editorial italic text-[10px] opacity-80 text-center">Pay at counter or to waiter</div>
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => setPaymentMethod("upi")}
+                className={`flex flex-col items-center justify-center gap-2 p-4 rounded-xl border transition-all ${
+                  paymentMethod === "upi" 
+                  ? "bg-brand-primary/5 border-brand-primary text-brand-primary shadow-sm" 
+                  : "bg-white border-brand-secondary/30 text-[#1A1106]/70 hover:border-brand-primary/50"
+                }`}
+              >
+                <div className="font-royal text-sm uppercase tracking-widest">Pay via UPI</div>
+                <div className="font-editorial italic text-[10px] opacity-80 text-center">Scan QR code from your phone</div>
+              </button>
+            </div>
           </section>
         </div>
 
@@ -287,9 +310,8 @@ export default function CheckoutPage() {
               <span className="font-royal text-2xl text-brand-primary" data-testid="checkout-total">{formatCurrency(total)}</span>
             </div>
           </div>
-          <button onClick={submit} disabled={submitting || stripeEnabled === null} data-testid="place-order-btn" className="mt-6 w-full mehfil-btn-royal rounded-full py-3.5 font-royal tracking-[0.2em] uppercase text-xs disabled:opacity-50 inline-flex items-center justify-center gap-2">
-            {stripeEnabled && <ExternalLink className="h-4 w-4" />}
-            {renderPayLabel(submitting, stripeEnabled, total)}
+          <button onClick={submit} disabled={submitting} data-testid="place-order-btn" className="mt-6 w-full mehfil-btn-royal rounded-full py-3.5 font-royal tracking-[0.2em] uppercase text-xs disabled:opacity-50 inline-flex items-center justify-center gap-2">
+            {submitting ? "Sending to the khansama…" : `Confirm Order — ${formatCurrency(total)}`}
           </button>
         </aside>
       </div>

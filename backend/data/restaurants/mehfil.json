@@ -2,6 +2,7 @@
   "id": "rest_mehfil_001",
   "name": "Mehfil",
   "slug": "mehfil",
+  "upi_id": "mehfil@upi",
   "plan": "trial",
   "users": [
     {"email": "mehfil@smartdine.ai", "password": "Owner@123", "name": "Restaurant Owner", "role": "admin"},

@@ -7,6 +7,7 @@ import { CheckCircle2, ChefHat, ConciergeBell, ClipboardCheck, Clock, Bell, Bell
 import type { Order } from "@/types";
 import { useEffect, useRef, useState } from "react";
 import { playChime, ensureNotificationPermission, notify, isPushSupported, subscribeToOrderPush } from "@/lib/notify";
+import { useRestaurantConfig } from "@/hooks/useRestaurantConfig";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 
@@ -19,6 +20,7 @@ const STAGES: Array<{ key: Order["status"]; label: string; line: string; icon: R
 
 export default function TrackPage() {
   const { orderId } = useParams<{ orderId: string }>();
+  const { config: restaurantConfig } = useRestaurantConfig();
   const { data: order } = useQuery({
     queryKey: ["order-track", orderId],
     queryFn: () => api<Order>(`/api/orders/${orderId}`),
@@ -153,6 +155,25 @@ export default function TrackPage() {
           <div>
             <div className="font-royal tracking-wider uppercase text-[10px] text-[#1A1106]/60">Ready by</div>
             <div className="font-royal text-xl text-brand-primary" data-testid="track-eta">{fmtTime(order.estimated_ready_at)}</div>
+          </div>
+        </div>
+      )}
+
+      {order.payment_method === "upi" && restaurantConfig?.upi_id && (
+        <div className="mehfil-card rounded-3xl p-7 md:p-9 mt-6 text-center">
+          <div className="font-royal tracking-[0.2em] text-[10px] uppercase text-brand-primary mb-2">Pay via UPI</div>
+          <p className="font-editorial italic text-xs text-[#1A1106]/60 mb-6">Scan to settle the bill securely from your phone.</p>
+          <div className="bg-white p-3 rounded-2xl inline-block shadow-sm border border-brand-secondary/20 mb-4">
+            <img 
+              src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`upi://pay?pa=${restaurantConfig.upi_id}&pn=${restaurantConfig.name}&am=${order.total}&cu=INR`)}`} 
+              alt="UPI QR Code" 
+              className="w-48 h-48"
+            />
+          </div>
+          <div className="font-mono text-[11px] text-[#1A1106]/70 uppercase tracking-widest">{restaurantConfig.upi_id}</div>
+          <div className="mt-5 pt-5 border-t border-brand-secondary/15">
+            <div className="font-royal text-2xl text-brand-primary">₹{order.total}</div>
+            <div className="font-editorial italic text-[10px] text-[#1A1106]/50 mt-1">Please show the payment success screen to our staff.</div>
           </div>
         </div>
       )}
