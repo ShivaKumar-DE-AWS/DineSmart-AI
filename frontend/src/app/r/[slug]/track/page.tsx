@@ -28,6 +28,11 @@ export default function TrackLanding() {
 
   const router = useRouter();
   const [id, setId] = useState("");
+  const normalizedId = id.trim();
+  const validId = /^[A-Za-z0-9_-]{6,80}$/.test(normalizedId);
+  const goToOrder = () => {
+    if (validId) router.push(`/r/${slug}/track/${encodeURIComponent(normalizedId)}`);
+  };
   
   const { session } = useTable();
   const { data: sessionOrdersData } = useQuery({
@@ -106,17 +111,20 @@ export default function TrackLanding() {
           <Search className="h-4 w-4 text-brand-primary" />
           <input
             data-testid="track-id-input"
+            aria-label="Order ID"
+            aria-describedby="track-id-help"
             placeholder="Order ID"
             value={id}
             onChange={(e) => setId(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && id && router.push(`/r/${slug}/track/${id}`)}
+            onKeyDown={(e) => e.key === "Enter" && goToOrder()}
             className="flex-1 bg-transparent outline-none text-sm placeholder:text-[#1A1106]/40 font-editorial"
           />
         </div>
+        <p id="track-id-help" className="text-xs text-[#1A1106]/60 mt-2">Use the order ID shown on your confirmation.</p>
         <button
           data-testid="track-go-btn"
-          onClick={() => id && router.push(`/r/${slug}/track/${id}`)}
-          disabled={!id}
+          onClick={goToOrder}
+          disabled={!validId}
           className="mt-5 mehfil-btn-royal rounded-full px-7 py-3 font-royal tracking-[0.2em] uppercase text-xs inline-flex items-center gap-2 disabled:opacity-50 transition-opacity"
         >
           Track <ArrowRight className="h-3.5 w-3.5" />

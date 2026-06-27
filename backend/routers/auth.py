@@ -38,9 +38,8 @@ async def signup(req: SignupReq):
             "name": req.restaurant_name,
             "slug": slug,
             "owner_email": req.email,
-            "stripe_customer_id": None,
-            "subscription_status": "trial",
-            "subscription_expiry": (datetime.now(timezone.utc) + timedelta(days=14)).isoformat() + "Z",
+            "plan": "trial",
+            "subscription_status": "active",
             "created_at": now_iso(),
         })
 
@@ -84,17 +83,18 @@ async def forgot_password(req: ForgotPasswordReq):
     if not user:
         # Prevent email enumeration by returning success even if not found
         return {"message": "If an account with that email exists, a reset link has been sent."}
-    
+
     reset_token = str(uuid.uuid4())
     expiry = datetime.now(timezone.utc) + timedelta(hours=1)
-    
+
     await db.users.update_one(
         {"email": req.email},
         {"$set": {"reset_token": reset_token, "reset_token_expiry": expiry}}
     )
-    
+
     send_password_reset_email(req.email, reset_token)
     return {"message": "If an account with that email exists, a reset link has been sent."}
+
 
 @router.post("/reset-password")
 async def reset_password(req: ResetPasswordReq):
@@ -102,10 +102,10 @@ async def reset_password(req: ResetPasswordReq):
         "reset_token": req.token,
         "reset_token_expiry": {"$gt": datetime.now(timezone.utc)}
     })
-    
+
     if not user:
         raise HTTPException(status_code=400, detail="Invalid or expired reset token")
-        
+
     await db.users.update_one(
         {"_id": user["_id"]},
         {
@@ -114,6 +114,7 @@ async def reset_password(req: ResetPasswordReq):
         }
     )
     return {"message": "Password successfully reset"}
+
 
 @router.post("/login")
 async def login(req: LoginReq):

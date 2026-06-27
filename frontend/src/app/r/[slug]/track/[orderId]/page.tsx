@@ -22,10 +22,11 @@ const STAGES: Array<{ key: Order["status"]; label: string; line: string; icon: R
 export default function TrackPage() {
   const { orderId } = useParams<{ orderId: string }>();
   const { config: restaurantConfig } = useRestaurantConfig();
-  const { data: order } = useQuery({
+  const { data: order, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["order-track", orderId],
-    queryFn: () => api<Order>(`/api/orders/${orderId}`),
-    refetchInterval: 3000,
+    queryFn: () => api<Order>(`/api/orders/${encodeURIComponent(orderId)}`, { timeoutMs: 8_000 } as RequestInit),
+    refetchInterval: (query) => query.state.status === "success" ? 3000 : false,
+    retry: 1,
   });
 
   const prevStatusRef = useRef<string | null>(null);
@@ -64,8 +65,25 @@ export default function TrackPage() {
     }
   };
 
-  if (!order) {
-    return <div className="py-32 text-center font-editorial italic text-[#1A1106]/60" data-testid="track-loading">Finding your order…</div>;
+  if (isLoading) {
+    return <div className="py-32 text-center font-editorial italic text-[#1A1106]/60" role="status" aria-live="polite" data-testid="track-loading">Finding your order…</div>;
+  }
+
+  if (isError || !order) {
+    return (
+      <div className="max-w-xl mx-auto px-5 py-24 text-center" data-testid="track-error" role="alert">
+        <h1 className="font-royal text-4xl text-brand-primary">Order not found</h1>
+        <p className="font-editorial italic text-[#1A1106]/70 mt-3">
+          {error instanceof Error && error.message.includes("timed out")
+            ? "Tracking is taking longer than expected. Your order is safe—please retry."
+            : "Check the order ID from your confirmation and try again."}
+        </p>
+        <div className="mt-7 flex flex-wrap justify-center gap-3">
+          <button onClick={() => refetch()} className="mehfil-btn-royal rounded-full px-6 py-3 font-royal text-xs tracking-widest uppercase">Retry</button>
+          <a href="../track" className="rounded-full border border-brand-secondary px-6 py-3 font-royal text-xs tracking-widest uppercase">Enter another ID</a>
+        </div>
+      </div>
+    );
   }
 
   const currentIdx = STAGES.findIndex((s) => s.key === order.status);

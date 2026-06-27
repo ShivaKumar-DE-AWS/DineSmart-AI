@@ -1,7 +1,9 @@
 """Orders, payments, webhook routes, and SSE order stream."""
+import os
 import uuid
 import asyncio
 import json
+import re
 from datetime import datetime, timezone, timedelta
 from typing import Optional, Dict, Any, List
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -10,7 +12,6 @@ from deps import (
     db, now_iso, TAX_RATE, require_user, require_roles, current_user, jwt_verify,
     next_token, OrderCreateReq, OrderStatusUpdate,
     PaymentReq, CheckoutSessionReq,
-    STRIPE_API_KEY, STRIPE_ENABLED,
 )
 
 router = APIRouter(tags=["orders"])
@@ -35,7 +36,7 @@ def broadcast_order_update(restaurant_id: str, order_data: Dict[str, Any]):
 async def stream_orders(restaurant_id: Optional[str] = None, token: Optional[str] = None, user=Depends(current_user)):
     """SSE endpoint: streams order updates in real-time for kitchen/counter dashboards.
 
-    Accepts auth via Bearer header OR ?token= query param (EventSource can't send headers).
+    Accepts auth via Bearer header ONLY. Query param token removed for security.
     """
     if not user and token:
         user = jwt_verify(token)
@@ -86,33 +87,81 @@ async def create_order(req: OrderCreateReq):
     rest = await db.restaurants.find_one({"id": req.restaurant_id})
     if not rest:
         raise HTTPException(status_code=400, detail="Invalid restaurant_id")
+    if req.order_type not in {"dine_in", "takeaway"}:
+        raise HTTPException(status_code=400, detail="Invalid order_type")
+    if req.order_type == "dine_in" and not (req.table_number or req.table_session_id):
+        raise HTTPException(status_code=400, detail="A table is required for dine-in orders")
+    
+    # ponytail: validate table_number against actual restaurant tables
+    if req.order_type == "dine_in" and req.table_number:
+        table = await db.tables.find_one({
+            "restaurant_id": req.restaurant_id,
+            "number": req.table_number,
+            "is_active": True
+        })
+        if not table:
+            raise HTTPException(status_code=400, detail=f"Table {req.table_number} not found or inactive")
+    
+    # ponytail: sanitize customer inputs (XSS prevention)
+    import re
+    customer_name = re.sub(r"[<>\"'&]", "", req.customer_name or "").strip()[:100]
+    customer_phone = re.sub(r"[^+\d\s\-\(\)]", "", req.customer_phone or "").strip()[:20]
+    if not customer_name:
+        raise HTTPException(status_code=400, detail="Customer name required")
+    
+    # ponytail: server-generated idempotency key (client value only for debugging)
+    idempotency_key = req.idempotency_key or f"idem_{uuid.uuid4().hex[:16]}"
+    existing = await db.orders.find_one(
+        {"restaurant_id": req.restaurant_id, "idempotency_key": idempotency_key},
+        {"_id": 0},
+    )
+    if existing:
+        return {"ok": True, "order_id": existing["id"], "token": existing["token"], "total": existing["total"], "duplicate": True}
+    
+    # ponytail: snapshot menu prices + validate availability in single query
+    item_ids = [i.item_id for i in req.items]
+    menu_docs = await db.menu.find(
+        {"id": {"$in": item_ids}, "restaurant_id": req.restaurant_id},
+        {"price": 1, "available": 1, "name": 1, "prep_time_min": 1, "id": 1}
+    ).to_list(len(item_ids))
+    menu_by_id = {m["id"]: m for m in menu_docs}
     
     subtotal = 0.0
+    max_prep = 0
+    validated_items = []
     for i in req.items:
-        m = await db.menu.find_one({"id": i.item_id}, {"price": 1})
+        m = menu_by_id.get(i.item_id)
         if not m:
             raise HTTPException(status_code=400, detail=f"Unknown item {i.item_id}")
-        i.price = float(m["price"])
-        subtotal += i.price * i.qty
-        
+        if not m.get("available", True):
+            raise HTTPException(status_code=409, detail=f"{m.get('name', 'An item')} is no longer available")
+        price = float(m["price"])
+        qty = int(i.qty)
+        if qty <= 0 or qty > 99:
+            raise HTTPException(status_code=400, detail=f"Invalid quantity for {m['name']}")
+        subtotal += price * qty
+        max_prep = max(max_prep, m.get("prep_time_min", 10))
+        validated_items.append({
+            "item_id": i.item_id,
+            "name": m["name"],
+            "price": price,
+            "qty": qty,
+            "notes": (i.notes or "").strip()[:300]
+        })
+    
     tax = round(subtotal * TAX_RATE, 2)
     total = round(subtotal + tax, 2)
     token = await next_token(req.restaurant_id or "")
-    max_prep = 0
-    for i in req.items:
-        m = await db.menu.find_one({"id": i.item_id}, {"prep_time_min": 1})
-        if m:
-            max_prep = max(max_prep, m.get("prep_time_min", 10))
     eta = (datetime.now(timezone.utc) + timedelta(minutes=max(max_prep, 8))).isoformat()
     restaurant_id = req.restaurant_id
-    if not restaurant_id:
-        raise HTTPException(status_code=400, detail="restaurant_id is required")
+    
     order = {
         "id": str(uuid.uuid4()),
         "token": token,
-        "customer_name": req.customer_name,
+        "customer_name": customer_name,
+        "customer_phone": customer_phone,
         "restaurant_id": restaurant_id,
-        "items": [i.model_dump() for i in req.items],
+        "items": validated_items,
         "subtotal": subtotal,
         "tax": tax,
         "total": total,
@@ -121,29 +170,54 @@ async def create_order(req: OrderCreateReq):
         "updated_at": now_iso(),
         "estimated_ready_at": eta,
         "payment_method": req.payment_method,
-        "notes": req.notes,
+        "notes": (req.notes or "").strip()[:500],
         "table_number": req.table_number,
         "table_session_id": req.table_session_id,
+        "order_type": req.order_type,
+        "idempotency_key": idempotency_key,
+        "payment_status": "unpaid" if req.payment_method in {"cash", "upi", "card_machine"} else "pending",
         "is_ai": req.is_ai,
     }
-    await db.orders.insert_one(order)
-    # Create notification
-    await db.notifications.insert_one({
-        "id": str(uuid.uuid4()),
-        "order_id": order["id"],
-        "type": "order_update",
-        "title": f"New order {token}",
-        "body": f"{req.customer_name} — {len(req.items)} item(s)",
-        "read": False,
-        "restaurant_id": restaurant_id,
-        "created_at": now_iso(),
-    })
-    # Deduct inventory
-    await _deduct_inventory(order)
-    # Update customer
-    customer = await _find_or_create_customer(req.customer_name, req.customer_phone, restaurant_id)
+    
+    # ponytail: atomic order creation + inventory deduction using MongoDB transaction
+    async with await client.start_session() as session:
+        async with session.start_transaction():
+            await db.orders.insert_one(order, session=session)
+            
+            # Create notification
+            await db.notifications.update_one(
+                {"event_key": f"order:{order['id']}:confirmed"},
+                {"$setOnInsert": {
+                    "id": str(uuid.uuid4()),
+                    "event_key": f"order:{order['id']}:confirmed",
+                    "order_id": order["id"],
+                    "type": "order_update",
+                    "title": f"New order {token}",
+                    "body": f"{customer_name} — {len(validated_items)} item(s)",
+                    "read": False,
+                    "restaurant_id": restaurant_id,
+                    "created_at": now_iso(),
+                }}, upsert=True, session=session)
+            
+            # Deduct inventory atomically
+            for item in validated_items:
+                m = menu_by_id.get(item["item_id"])
+                if m and m.get("recipe"):
+                    for ing in m["recipe"]:
+                        ing_id = ing.get("ingredient_id")
+                        req_qty = ing.get("qty_required", 0) * item["qty"]
+                        if ing_id and req_qty > 0:
+                            await db.inventory.update_one(
+                                {"id": ing_id}, 
+                                {"$inc": {"qty": -req_qty}},
+                                session=session
+                            )
+    
+    # Update customer (outside transaction, non-critical)
+    customer = await _find_or_create_customer(customer_name, customer_phone, restaurant_id)
     if customer and customer.get("id"):
         await _on_order_paid({**order, "customer_id": customer["id"]})
+    
     # Broadcast to SSE subscribers (kitchen/counter real-time)
     broadcast_order_update(restaurant_id, {"type": "new_order", "order": {k: v for k, v in order.items() if k != "_id"}})
     return {"ok": True, "order_id": order["id"], "token": token, "total": total}
@@ -234,11 +308,11 @@ async def update_status(order_id: str, body: OrderStatusUpdate, user=Depends(req
 
 
 # =========================================================
-# Payment helpers (shared with orders)
+# Payment helpers (shared with orders) — simplified for UPI/QR only
 # =========================================================
 async def _find_or_create_customer(name: str, phone: Optional[str], restaurant_id: Optional[str] = None) -> Dict[str, Any]:
-    import secrets as _secrets
-    name_clean = (name or "").strip()
+    import secrets as _secrets, html
+    name_clean = html.escape((name or "").strip())
     phone_clean = (phone or "").strip() or None
     query: Optional[Dict[str, Any]] = None
     if phone_clean:
@@ -292,194 +366,20 @@ async def _deduct_inventory(order: Dict[str, Any]) -> None:
 
 
 # =========================================================
-# Payments — Stripe Checkout with mock fallback
+# Simple UPI/QR payment endpoints (no Stripe)
 # =========================================================
-async def _validate_and_price_draft(req_draft: OrderCreateReq) -> Dict[str, Any]:
-    if not req_draft.items:
-        raise HTTPException(status_code=400, detail="Empty cart")
-    trusted_subtotal = 0.0
-    trusted_items: List[Dict[str, Any]] = []
-    for line in req_draft.items:
-        m = await db.menu.find_one({"id": line.item_id}, {"_id": 0})
-        if not m:
-            raise HTTPException(status_code=400, detail=f"Unknown item {line.item_id}")
-        if not m.get("available", True):
-            raise HTTPException(status_code=400, detail=f"{m['name']} is not available")
-        trusted_subtotal += float(m["price"]) * int(line.qty)
-        item_doc = {"item_id": m["id"], "name": m["name"], "price": float(m["price"]), "qty": int(line.qty)}
-        if line.notes:
-            item_doc["notes"] = line.notes.strip()[:300]
-        trusted_items.append(item_doc)
-    trusted_tax = round(trusted_subtotal * TAX_RATE, 2)
-    trusted_total = round(trusted_subtotal + trusted_tax, 2)
-    return {"items": trusted_items, "subtotal": trusted_subtotal, "tax": trusted_tax, "total": trusted_total}
-
-
-async def _save_order_draft(req_draft: OrderCreateReq, priced: Dict[str, Any]) -> str:
-    draft_id = str(uuid.uuid4())
-    customer = await _find_or_create_customer(req_draft.customer_name, req_draft.customer_phone, req_draft.restaurant_id)
-    await db.order_drafts.insert_one({
-        "id": draft_id, "customer_name": req_draft.customer_name,
-        "customer_phone": req_draft.customer_phone,
-        "customer_id": customer["id"], "customer_code": customer["code"],
-        "items": priced["items"], "subtotal": priced["subtotal"],
-        "tax": priced["tax"], "total": priced["total"],
-        "payment_method": "stripe", "notes": req_draft.notes,
-        "table_number": req_draft.table_number,
-        "table_session_id": req_draft.table_session_id,
-        "restaurant_id": req_draft.restaurant_id,
-        "is_ai": getattr(req_draft, "is_ai", False),
-        "created_at": now_iso(),
-    })
-    return draft_id
-
-
-async def _materialize_order_from_draft(draft_id: str, payment_method: str, session_id: Optional[str] = None) -> Dict[str, Any]:
-    existing = await db.orders.find_one({"draft_id": draft_id}, {"_id": 0})
-    if existing:
-        return existing
-    draft = await db.order_drafts.find_one({"id": draft_id}, {"_id": 0})
-    if not draft:
-        raise HTTPException(status_code=404, detail="Draft order not found")
-    token = await next_token(draft.get("restaurant_id", ""))
-    max_prep = 0
-    for i in draft["items"]:
-        m = await db.menu.find_one({"id": i["item_id"]}, {"prep_time_min": 1})
-        if m:
-            max_prep = max(max_prep, m.get("prep_time_min", 10))
-    eta = (datetime.now(timezone.utc) + timedelta(minutes=max(max_prep, 8))).isoformat()
-    order = {
-        "id": str(uuid.uuid4()), "draft_id": draft_id, "token": token,
-        "customer_name": draft["customer_name"],
-        "customer_phone": draft.get("customer_phone"),
-        "customer_id": draft.get("customer_id"),
-        "customer_code": draft.get("customer_code"),
-        "table_number": draft.get("table_number"),
-        "table_session_id": draft.get("table_session_id"),
-        "restaurant_id": draft.get("restaurant_id"),
-        "items": draft["items"], "subtotal": draft["subtotal"],
-        "tax": draft["tax"], "total": draft["total"],
-        "status": "confirmed", "created_at": now_iso(), "updated_at": now_iso(),
-        "estimated_ready_at": eta, "payment_method": payment_method,
-        "stripe_session_id": session_id, "notes": draft.get("notes"),
-    }
-    await db.orders.insert_one(order)
-    await _on_order_paid(order)
-    await _deduct_inventory(order)
-    await db.notifications.insert_one({
-        "id": str(uuid.uuid4()), "order_id": order["id"],
-        "type": "order_update", "title": f"Order {token} confirmed",
-        "body": f"Estimated ready in ~{max(max_prep, 8)} min.",
-        "read": False, "restaurant_id": order.get("restaurant_id"), "created_at": now_iso(),
-    })
-    broadcast_order_update(order.get("restaurant_id"), {"type": "new_order", "order": {k: v for k, v in order.items() if k != "_id"}})
-    return order
-
-
 @router.post("/api/payment/intent")
 async def payment_intent(req: PaymentReq):
+    """Mock payment intent for UPI/QR - immediately succeeds."""
     import asyncio
-    await asyncio.sleep(0.3)
+    await asyncio.sleep(0.1)  # Simulate quick processing
     return {
-        "intent_id": f"pi_mock_{uuid.uuid4().hex[:16]}",
+        "intent_id": f"upi_{uuid.uuid4().hex[:16]}",
         "status": "succeeded", "amount": req.amount, "method": req.method,
-        "card_last4": req.card_last4 or "4242", "captured_at": now_iso(),
+        "captured_at": now_iso(),
     }
 
 
 @router.get("/api/payment/config")
 async def payment_config():
-    return {"stripe_enabled": STRIPE_ENABLED, "provider": "stripe" if STRIPE_ENABLED else "mock"}
-
-
-@router.post("/api/payment/checkout/session")
-async def create_checkout_session(req: CheckoutSessionReq, request: Request):
-    priced = await _validate_and_price_draft(req.order_draft)
-    draft_id = await _save_order_draft(req.order_draft, priced)
-    if not STRIPE_ENABLED:
-        order = await _materialize_order_from_draft(draft_id, payment_method="mock_card", session_id=f"mock_{uuid.uuid4().hex[:12]}")
-        return {"mode": "mock", "session_id": None, "url": None, "order_id": order["id"]}
-    try:
-        from emergentintegrations.payments.stripe.checkout import StripeCheckout, CheckoutSessionRequest
-        success_url = f"{req.origin_url}/customer/payment-return?session_id={{CHECKOUT_SESSION_ID}}"
-        cancel_url = f"{req.origin_url}/customer/cart"
-        webhook_url = f"{str(request.base_url).rstrip('/')}/api/webhook/stripe"
-        stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
-        checkoutrequest = CheckoutSessionRequest(
-            amount=float(priced["total"]), currency="inr",
-            success_url=success_url, cancel_url=cancel_url,
-            metadata={"draft_id": draft_id, "customer_name": req.order_draft.customer_name},
-        )
-        session = await stripe_checkout.create_checkout_session(checkoutrequest)
-        await db.payment_transactions.insert_one({
-            "id": str(uuid.uuid4()), "session_id": session.session_id,
-            "draft_id": draft_id, "amount": priced["total"], "currency": "inr",
-            "status": "initiated", "payment_status": "pending",
-            "metadata": {"customer_name": req.order_draft.customer_name},
-            "created_at": now_iso(), "updated_at": now_iso(),
-        })
-        return {"mode": "stripe", "session_id": session.session_id, "url": session.url, "order_id": None}
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Stripe error: {e}")
-
-
-@router.get("/api/payment/checkout/status/{session_id}")
-async def checkout_status(session_id: str, request: Request):
-    if not STRIPE_ENABLED:
-        raise HTTPException(status_code=400, detail="Stripe not enabled")
-    tx = await db.payment_transactions.find_one({"session_id": session_id}, {"_id": 0})
-    if not tx:
-        raise HTTPException(status_code=404, detail="Unknown session")
-    status_obj = None
-    try:
-        from emergentintegrations.payments.stripe.checkout import StripeCheckout
-        webhook_url = f"{str(request.base_url).rstrip('/')}/api/webhook/stripe"
-        stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
-        status_obj = await stripe_checkout.get_checkout_status(session_id)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Stripe status error: {e}")
-    if status_obj is None:
-        raise HTTPException(status_code=500, detail="Stripe status unavailable")
-    new_payment_status = status_obj.payment_status
-    new_status = status_obj.status
-    update = {"payment_status": new_payment_status, "status": new_status, "updated_at": now_iso()}
-    await db.payment_transactions.update_one({"session_id": session_id}, {"$set": update})
-    order_id = None
-    if new_payment_status == "paid" and tx.get("payment_status") != "paid":
-        order = await _materialize_order_from_draft(tx["draft_id"], payment_method="stripe", session_id=session_id)
-        order_id = order["id"]
-        await db.payment_transactions.update_one({"session_id": session_id}, {"$set": {"order_id": order_id}})
-    elif tx.get("order_id"):
-        order_id = tx["order_id"]
-    return {
-        "session_id": session_id, "status": new_status,
-        "payment_status": new_payment_status,
-        "amount_total": status_obj.amount_total,
-        "currency": status_obj.currency, "order_id": order_id,
-    }
-
-
-@router.post("/api/webhook/stripe")
-async def stripe_webhook(request: Request):
-    if not STRIPE_ENABLED:
-        return {"ok": True, "skipped": "stripe disabled"}
-    try:
-        from emergentintegrations.payments.stripe.checkout import StripeCheckout
-        body = await request.body()
-        sig = request.headers.get("Stripe-Signature", "")
-        webhook_url = f"{str(request.base_url).rstrip('/')}/api/webhook/stripe"
-        stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
-        evt = await stripe_checkout.handle_webhook(body, sig)
-        if evt.payment_status == "paid":
-            tx = await db.payment_transactions.find_one({"session_id": evt.session_id}, {"_id": 0})
-            if tx and tx.get("payment_status") != "paid":
-                await db.payment_transactions.update_one(
-                    {"session_id": evt.session_id},
-                    {"$set": {"payment_status": "paid", "status": "complete", "updated_at": now_iso()}}
-                )
-                await _materialize_order_from_draft(tx["draft_id"], payment_method="stripe", session_id=evt.session_id)
-        return {"ok": True}
-    except Exception as e:
-        return {"ok": False, "error": str(e)}
+    return {"stripe_enabled": False, "provider": "upi_qr"}

@@ -17,8 +17,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.responses import Response
-from collections import defaultdict
 import time as _time
+
+# ponytail: slowapi with Redis backend for distributed rate limiting
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+import redis.asyncio as redis
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
@@ -29,43 +34,41 @@ from deps import (
 )
 
 # =========================================================
-# Rate Limiter (in-memory, per-IP sliding window)
+# Rate Limiter (Redis-backed, distributed)
 # =========================================================
-class RateLimiter:
-    def __init__(self):
-        self._hits: Dict[str, list] = defaultdict(list)
-    def is_limited(self, key: str, limit: int, window: int) -> bool:
-        now = _time.time()
-        self._hits[key] = [t for t in self._hits[key] if now - t < window]
-        if len(self._hits[key]) >= limit:
-            return True
-        self._hits[key].append(now)
-        return False
+redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+redis_client = redis.from_url(redis_url, encoding="utf-8", decode_responses=True)
 
-_rate_limiter = RateLimiter()
+limiter = Limiter(
+    key_func=get_remote_address,
+    storage_uri=redis_url,
+    default_limits=["1000/hour"]  # global fallback
+)
 
-RATE_LIMITS: Dict[str, tuple] = {
-    "/api/auth/login": (5, 60),
-    "/api/auth/signup": (5, 60),
-    "/api/auth/guest": (20, 60),
-    "/api/orders": (30, 60),
-    "/api/ai-waiter/chat": (15, 60),
-    "/api/ai-waiter/transcribe": (10, 60),
-    "/api/ai-waiter/speak": (10, 60),
-    "/api/reservations": (15, 60),
-    "/api/payment/checkout/session": (10, 60),
-    "/api/restaurants/request": (2, 3600),
+RATE_LIMITS: Dict[str, str] = {
+    "/api/auth/login": "5/minute",
+    "/api/auth/signup": "5/minute",
+    "/api/auth/guest": "20/minute",
+    "/api/orders": "30/minute",
+    "/api/ai-waiter/chat": "15/minute",
+    "/api/ai-waiter/transcribe": "10/minute",
+    "/api/ai-waiter/speak": "10/minute",
+    "/api/reservations": "15/minute",
+    "/api/payment/checkout/session": "10/minute",
+    "/api/restaurants/request": "2/hour",
+    "/api/tables": "50/minute",  # ponytail: rate limit cart SSE endpoints
 }
 
+# Custom rate limit middleware using slowapi's limiter
 class RateLimitMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
-        rule = RATE_LIMITS.get(path)
-        if rule:
-            limit, window = rule
-            ip = request.client.host if request.client else "unknown"
-            key = f"{path}:{ip}"
-            if _rate_limiter.is_limited(key, limit, window):
+        limit_str = RATE_LIMITS.get(path)
+        if limit_str:
+            # Apply rate limit dynamically
+            try:
+                await limiter._check_request_limit(request, limit_str, None)
+            except RateLimitExceeded:
                 return Response(
                     content=json.dumps({"detail": "Rate limit exceeded. Try again shortly."}),
                     status_code=429,
@@ -75,10 +78,45 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
 
 # =========================================================
+# Security Headers Middleware
+# =========================================================
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        # ponytail: basic security headers
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' wss: https:;"
+        return response
+
+
+# =========================================================
+# Request Size Limit Middleware (1MB)
+# =========================================================
+class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
+    MAX_SIZE = 1024 * 1024  # 1MB
+    
+    async def dispatch(self, request: Request, call_next):
+        content_length = request.headers.get("content-length")
+        if content_length and int(content_length) > self.MAX_SIZE:
+            return Response(
+                content=json.dumps({"detail": "Request too large. Maximum 1MB."}),
+                status_code=413,
+                media_type="application/json",
+            )
+        return await call_next(request)
+
+
+# =========================================================
 # App setup
 # =========================================================
 app = FastAPI(title="SmartDine AI API", version="2.0.0")
+# ponytail: middleware order matters - rate limit first, then security headers, then size limit
 app.add_middleware(RateLimitMiddleware)
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(RequestSizeLimitMiddleware)
 ALLOWED_ORIGINS = os.environ.get("ALLOWED_ORIGINS", "https://dine-smart-ai.vercel.app,http://localhost:3000,http://localhost:3001").split(",")
 
 app.add_middleware(
@@ -101,24 +139,36 @@ from routers.menu import router as menu_router
 from routers.orders import router as orders_router
 from routers.tables import router as tables_router
 from routers.ai_waiter import router as ai_router
-from routers.admin import router as admin_router
 from routers.super_admin import router as super_admin_router
 from routers.audit import router as audit_router
 from routers.announcements import router as announcements_router
 from routers.tickets import router as tickets_router
 from routers.health import router as health_router
+from routers.analytics import router as analytics_router
+from routers.billing import router as billing_router
+from routers.notifications import router as notifications_router
+from routers.push import router as push_router
+from routers.onboarding import router as onboarding_router
+from routers.settings import router as settings_router
+from routers.cart import router as cart_router
 
 app.include_router(auth_router)
 app.include_router(menu_router)
 app.include_router(orders_router)
 app.include_router(tables_router)
 app.include_router(ai_router)
-app.include_router(admin_router)
 app.include_router(super_admin_router)
 app.include_router(audit_router)
 app.include_router(announcements_router)
 app.include_router(tickets_router)
 app.include_router(health_router)
+app.include_router(analytics_router)
+app.include_router(billing_router)
+app.include_router(notifications_router)
+app.include_router(push_router)
+app.include_router(onboarding_router)
+app.include_router(settings_router)
+app.include_router(cart_router)
 
 
 # =========================================================
@@ -343,6 +393,10 @@ async def create_indexes():
             [("restaurant_id", ASCENDING), ("created_at", ASCENDING)],
             background=True, name="idx_orders_rest_time"
         )
+        await db.orders.create_index(
+            [("restaurant_id", ASCENDING), ("idempotency_key", ASCENDING)],
+            unique=True, sparse=True, name="idx_orders_rest_idempotency"
+        )
         await db.menu.create_index(
             [("restaurant_id", ASCENDING), ("category", ASCENDING)],
             background=True, name="idx_menu_rest_category"
@@ -385,6 +439,9 @@ async def create_indexes():
         await db.notifications.create_index(
             [("restaurant_id", ASCENDING), ("read", ASCENDING)],
             background=True, name="idx_notifs_rest_read"
+        )
+        await db.notifications.create_index(
+            [("event_key", ASCENDING)], unique=True, sparse=True, name="idx_notifs_event_key"
         )
         await db.customers.create_index(
             [("restaurant_id", ASCENDING), ("last_order_at", ASCENDING)],

@@ -61,7 +61,8 @@ export default function RestaurantAuthPage() {
       const dest = slug
         ? res.user.role === "kitchen" ? `/r/${slug}/kitchen`
         : res.user.role === "counter" ? `/r/${slug}/counter`
-        : `/r/${slug}` // All admins and customers go to the customer landing page for demo purposes
+        : res.user.role === "admin" ? `/admin`
+        : `/r/${slug}`
         : "/";
       router.push(dest);
     } catch (e) {

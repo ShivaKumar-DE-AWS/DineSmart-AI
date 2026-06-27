@@ -1,10 +1,10 @@
 """Menu CRUD, inventory, and image upload routes."""
 import uuid
-from pathlib import Path
+import html
 from typing import Optional, Dict, Any, List
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from deps import (
-    db, now_iso, require_user, require_roles, UPLOAD_DIR,
+    db, now_iso, require_user, require_roles, current_user, UPLOAD_DIR,
     MenuItemModel, InventoryItemModel,
     MenuItemUpdateModel, InventoryItemUpdateModel,
 )
@@ -19,7 +19,10 @@ MAX_IMAGE_BYTES = 5 * 1024 * 1024  # 5MB
 # Menu
 # =========================================================
 @router.get("/api/menu")
-async def list_menu(restaurant_id: str):
+async def list_menu(restaurant_id: str, user=Depends(current_user)):
+    # ponytail: if authenticated, enforce tenant boundary
+    if user and user.get("restaurant_id") and user["restaurant_id"] != restaurant_id:
+        raise HTTPException(status_code=403, detail="Access denied: restaurant not associated with this account")
     q: Dict[str, Any] = {"available": True, "restaurant_id": restaurant_id}
     items = await db.menu.find(q, {"_id": 0}).sort("category", 1).to_list(500)
     return {"items": items}

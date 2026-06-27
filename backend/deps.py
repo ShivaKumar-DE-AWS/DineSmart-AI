@@ -4,10 +4,8 @@ import os
 import asyncio
 import json
 import uuid
-import hmac
-import hashlib
-import base64
 import secrets
+import re
 from datetime import datetime, timezone, timedelta
 from typing import Optional, List, Dict, Any
 from pathlib import Path
@@ -15,9 +13,20 @@ from pathlib import Path
 from dotenv import load_dotenv
 from fastapi import HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field, EmailStr, field_validator
 from motor.motor_asyncio import AsyncIOMotorClient
 import certifi
+import jwt  # pyjwt
+from passlib.hash import pbkdf2_sha256
+
+# ponytail: password strength checking
+try:
+    from zxcvbn import zxcvbn
+    HAS_ZXCVBN = True
+except ImportError:
+    HAS_ZXCVBN = False
+    def zxcvbn(password: str, user_inputs=None) -> dict:
+        return {"score": 3}  # permissive fallback
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
@@ -27,13 +36,12 @@ DB_NAME = os.environ.get("DB_NAME") or os.environ.get("MONGODB_DB_NAME") or "sma
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 JWT_SECRET = os.environ.get("JWT_SECRET", "")
 if not JWT_SECRET:
-    if os.environ.get("NODE_ENV") == "production" or os.environ.get("ENVIRONMENT") == "production":
-        raise RuntimeError("FATAL: JWT_SECRET environment variable is missing in production. Shutting down.")
+    env = os.environ.get("ENVIRONMENT", "development").lower()
+    if env in ("production", "prod", "staging", "stage"):
+        raise RuntimeError(f"FATAL: JWT_SECRET environment variable is missing in {env}. Shutting down.")
     import warnings
     warnings.warn("JWT_SECRET env var not set — using insecure dev fallback. NEVER deploy without setting this.")
     JWT_SECRET = "smartdine-dev-secret-change-me"
-STRIPE_API_KEY = os.environ.get("STRIPE_API_KEY", "")
-STRIPE_ENABLED = os.environ.get("STRIPE_ENABLED", "false").lower() == "true" and bool(STRIPE_API_KEY)
 
 UPLOAD_DIR = ROOT_DIR / "uploads"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
@@ -56,53 +64,30 @@ def now_iso() -> str:
 TAX_RATE = 0.05
 
 # =========================================================
-# JWT helpers (minimal HS256, no external dep)
+# JWT helpers (using pyjwt)
 # =========================================================
-def _b64u(data: bytes) -> str:
-    return base64.urlsafe_b64encode(data).rstrip(b"=").decode()
-
-def _b64u_decode(s: str) -> bytes:
-    pad = "=" * (-len(s) % 4)
-    return base64.urlsafe_b64decode(s + pad)
-
 def jwt_sign(payload: Dict[str, Any], ttl_hours: int = 24 * 7) -> str:
-    header = {"alg": "HS256", "typ": "JWT"}
     payload = {**payload, "exp": int((datetime.now(timezone.utc) + timedelta(hours=ttl_hours)).timestamp())}
-    h = _b64u(json.dumps(header, separators=(",", ":")).encode())
-    p = _b64u(json.dumps(payload, separators=(",", ":")).encode())
-    msg = f"{h}.{p}".encode()
-    sig = hmac.new(JWT_SECRET.encode(), msg, hashlib.sha256).digest()
-    return f"{h}.{p}.{_b64u(sig)}"
+    return jwt.encode(payload, JWT_SECRET, algorithm="HS256")
 
 def jwt_verify(token: str) -> Dict[str, Any]:
     try:
-        h, p, s = token.split(".")
-        msg = f"{h}.{p}".encode()
-        expected = hmac.new(JWT_SECRET.encode(), msg, hashlib.sha256).digest()
-        if not hmac.compare_digest(expected, _b64u_decode(s)):
-            raise ValueError("bad sig")
-        payload = json.loads(_b64u_decode(p))
-        if payload.get("exp", 0) < int(datetime.now(timezone.utc).timestamp()):
-            raise ValueError("expired")
-        return payload
-    except HTTPException:
-        raise
-    except Exception:
+        return jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid authentication token")
 
 # =========================================================
-# Password helpers
+# Password helpers (using passlib)
 # =========================================================
 def hash_password(password: str, salt: Optional[str] = None) -> str:
-    salt = salt or secrets.token_hex(16)
-    dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 100_000)
-    return f"{salt}${dk.hex()}"
+    # ponytail: passlib handles salt generation and storage internally
+    return pbkdf2_sha256.hash(password)
 
 def verify_password(password: str, stored: str) -> bool:
     try:
-        salt, hexdk = stored.split("$")
-        dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 100_000)
-        return hmac.compare_digest(dk.hex(), hexdk)
+        return pbkdf2_sha256.verify(password, stored)
     except Exception:
         return False
 
@@ -148,7 +133,6 @@ class RestaurantModel(BaseModel):
     name: str
     slug: str
     owner_email: str
-    stripe_customer_id: Optional[str] = None
     subscription_status: str = "active"
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -169,6 +153,13 @@ class MenuItemModel(BaseModel):
     tags: List[str] = []
     recipe: List[RecipeIngredient] = []
 
+    @field_validator("name", "description", "category")
+    @classmethod
+    def limit_length(cls, v: str) -> str:
+        if len(v) > 500:
+            raise ValueError(f"Field exceeds 500 character limit ({len(v)} chars)")
+        return v
+
 class MenuItemUpdateModel(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
@@ -184,7 +175,7 @@ class CartItemModel(BaseModel):
     item_id: str
     name: str
     price: float
-    qty: int
+    qty: int = Field(ge=1, le=99)
     notes: Optional[str] = None
 
 class OrderCreateReq(BaseModel):
@@ -197,6 +188,8 @@ class OrderCreateReq(BaseModel):
     table_number: Optional[int] = None
     table_session_id: Optional[str] = None
     is_ai: bool = False
+    order_type: str = "dine_in"
+    idempotency_key: Optional[str] = None
 
 class OrderStatusUpdate(BaseModel):
     status: Optional[str] = None
@@ -229,6 +222,16 @@ class SignupReq(BaseModel):
     name: str
     role: str = "customer"
     restaurant_name: Optional[str] = None
+    
+    @field_validator("password")
+    @classmethod
+    def validate_password_strength(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters")
+        result = zxcvbn(v)
+        if result["score"] < 3:
+            raise ValueError("Password too weak. Use a mix of upper/lower case, numbers, and symbols.")
+        return v
 
 class LoginReq(BaseModel):
     email: EmailStr
@@ -240,6 +243,16 @@ class ForgotPasswordReq(BaseModel):
 class ResetPasswordReq(BaseModel):
     token: str
     new_password: str
+    
+    @field_validator("new_password")
+    @classmethod
+    def validate_password_strength(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters")
+        result = zxcvbn(v)
+        if result["score"] < 3:
+            raise ValueError("Password too weak. Use a mix of upper/lower case, numbers, and symbols.")
+        return v
 
 class ReservationStatusUpdate(BaseModel):
     status: str
@@ -310,21 +323,16 @@ class TTSReq(BaseModel):
     voice: str = "nova"
 
 # =========================================================
-# Token generation (scoped per restaurant per day)
+# Token generation (daily per-restaurant sequential token)
 # =========================================================
 async def next_token(restaurant_id: str = "") -> str:
-    """Generate sequential daily token like A-001, A-002... scoped by restaurant."""
+    """Generate daily token like A-YYYYMMDD-XXXXXX using UUID (no counter collection)."""
     today = datetime.now(timezone.utc).strftime("%Y%m%d")
-    counter_key = f"token-{today}"
+    # ponytail: UUID suffix avoids counter collection + upsert per order
+    suffix = uuid.uuid4().hex[:6].upper()
     if restaurant_id:
-        counter_key = f"token-{restaurant_id}-{today}"
-    counter = await db.counters.find_one_and_update(
-        {"_id": counter_key},
-        {"$inc": {"seq": 1}},
-        upsert=True, return_document=True
-    )
-    seq = counter.get("seq", 1) if counter else 1
-    return f"A-{seq:03d}"
+        return f"A-{today}-{suffix}"
+    return f"A-{today}-{suffix}"
 
 def clean(doc: Dict[str, Any]) -> Dict[str, Any]:
     if doc and "_id" in doc:

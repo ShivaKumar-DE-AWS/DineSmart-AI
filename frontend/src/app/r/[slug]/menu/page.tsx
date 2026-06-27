@@ -1,6 +1,6 @@
 "use client";
 import { useParams } from "next/navigation";
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useCart } from "@/stores/cart";
@@ -73,6 +73,26 @@ export default function MenuPage() {
   const [quickCategory, setQuickCategory] = useState("All");
   const [isDinnerTime, setIsDinnerTime] = useState(false);
   const [timeGreeting, setTimeGreeting] = useState("Our");
+  const [aiChatInput, setAiChatInput] = useState("");
+  const [aiChatMessages, setAiChatMessages] = useState<{ role: string; content: string }[]>([
+    { role: "assistant", content: `Welcome to ${restaurantConfig?.name || "our restaurant"}! I am your AI assistant today. Would you like a pairing recommendation or help deciding?` }
+  ]);
+  const aiChatScrollRef = useRef<HTMLDivElement>(null);
+
+  const sendAiChat = useCallback(() => {
+    const text = aiChatInput.trim();
+    if (!text) return;
+    setAiChatMessages((prev) => [...prev, { role: "user", content: text }]);
+    setAiChatInput("");
+    // Auto-reply with a simple echo + suggestion as ponytail: full AI integration via /api/chat would go here
+    setTimeout(() => {
+      setAiChatMessages((prev) => [...prev, { role: "assistant", content: `Great choice! I'd recommend pairing ${text} with our chef's special tonight. Would you like to add it to your tray?` }]);
+    }, 600);
+  }, [aiChatInput]);
+
+  useEffect(() => {
+    aiChatScrollRef.current?.scrollTo({ top: aiChatScrollRef.current.scrollHeight, behavior: "smooth" });
+  }, [aiChatMessages]);
 
   useEffect(() => {
     const hour = new Date().getHours();
@@ -551,14 +571,23 @@ export default function MenuPage() {
                 </div>
                 <button onClick={() => setShowAIChat(false)}><X className="w-4 h-4 hover:text-brand-secondary" /></button>
               </div>
-              <div className="flex-1 bg-[#FAF5EC] p-4 overflow-y-auto flex flex-col gap-3">
-                <div className="bg-white p-3 rounded-xl rounded-tl-none shadow-sm text-sm border border-[#E7DFCB] text-[#1A1106] font-editorial leading-relaxed">
-                  Welcome to {restaurantConfig?.name || "our restaurant"}! I am your AI assistant today. Would you like a pairing recommendation or help deciding?
-                </div>
+              <div className="flex-1 bg-[#FAF5EC] p-4 overflow-y-auto flex flex-col gap-3" ref={aiChatScrollRef}>
+                {aiChatMessages.map((msg, i) => (
+                  <div key={i} className={`${msg.role === "user" ? "ml-auto bg-brand-primary text-[#FAF5EC]" : "bg-white text-[#1A1106]"} p-3 rounded-xl rounded-tl-none shadow-sm text-sm border border-[#E7DFCB] font-editorial leading-relaxed max-w-[85%]`}>
+                    {msg.content}
+                  </div>
+                ))}
               </div>
               <div className="p-3 bg-white border-t border-[#E7DFCB] flex items-center gap-2">
-                <input type="text" placeholder="Ask about the menu..." className="flex-1 bg-[#FAF5EC] border border-[#E7DFCB] rounded-full px-4 py-2 text-xs outline-none focus:border-brand-secondary" />
-                <button className="bg-brand-primary text-white p-2 rounded-full hover:bg-brand-secondary hover:text-brand-primary transition shadow-md">
+                <input
+                  type="text"
+                  value={aiChatInput}
+                  onChange={(e) => setAiChatInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && sendAiChat()}
+                  placeholder="Ask about the menu..."
+                  className="flex-1 bg-[#FAF5EC] border border-[#E7DFCB] rounded-full px-4 py-2 text-xs outline-none focus:border-brand-secondary"
+                />
+                <button onClick={sendAiChat} className="bg-brand-primary text-white p-2 rounded-full hover:bg-brand-secondary hover:text-brand-primary transition shadow-md">
                   <Send className="w-4 h-4" />
                 </button>
               </div>

@@ -20,7 +20,12 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
   const slug = params?.slug as string;
   
   // Get restaurant config from local JSON files
-  const { config: restaurantConfig } = useRestaurantConfig();
+  const {
+    config: restaurantConfig,
+    isLoading: restaurantLoading,
+    isError: restaurantError,
+    retry: retryRestaurant,
+  } = useRestaurantConfig();
 
   // Enhanced navigation with new pages
   const NAV = [
@@ -159,6 +164,33 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
 
   const isStaffPage = path?.includes("/kitchen") || path?.includes("/counter") || path?.includes("/admin");
 
+  if (restaurantLoading) {
+    return (
+      <div className="mehfil min-h-screen mehfil-paper grid place-items-center" role="status" aria-live="polite">
+        <div className="text-center px-6">
+          <div className="h-10 w-10 rounded-full border-2 border-brand-secondary border-t-brand-primary animate-spin mx-auto" aria-hidden="true" />
+          <p className="font-editorial italic text-[#1A1106]/70 mt-4">Preparing your dining experience…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (restaurantError || !restaurantConfig.id) {
+    return (
+      <div className="mehfil min-h-screen mehfil-paper grid place-items-center px-6">
+        <div className="max-w-lg text-center mehfil-card rounded-3xl p-8" role="alert">
+          <h1 className="font-royal text-3xl text-brand-primary">Restaurant unavailable</h1>
+          <p className="font-editorial italic text-[#1A1106]/70 mt-3">
+            We could not safely load this restaurant. No placeholder menu or payment details have been shown.
+          </p>
+          <button onClick={() => retryRestaurant()} className="mt-6 mehfil-btn-royal rounded-full px-6 py-3 font-royal text-xs tracking-widest uppercase">
+            Try again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (isStaffPage) {
     return (
       <div className="mehfil min-h-screen mehfil-paper" style={restaurantConfig ? {
@@ -176,6 +208,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
       '--brand-secondary': restaurantConfig.secondary_color || '#C9A348'
     } as React.CSSProperties : undefined}>
       <Suspense fallback={null}><TableSessionGuard /></Suspense>
+      <a href="#customer-content" className="sr-only focus:not-sr-only focus:fixed focus:z-[100] focus:top-2 focus:left-2 focus:bg-white focus:px-4 focus:py-2">Skip to content</a>
       <header className={`sticky top-0 z-40 transition-all duration-300 pt-[env(safe-area-inset-top)] ${scrolled ? "bg-[#FAF5EC]/90 backdrop-blur-md border-b border-[#E7DFCB]" : "bg-transparent"}`}>
         <div className="max-w-7xl mx-auto px-5 md:px-10 py-3 flex items-center justify-between gap-4">
           <MehfilLogo size="sm" />
@@ -206,12 +239,13 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
                 disabled={callingStaff}
                 className="flex items-center justify-center h-[38px] w-[38px] md:h-auto md:w-auto md:px-4 md:py-2.5 text-xs font-royal tracking-widest uppercase border border-brand-secondary/40 bg-[#FAF5EC] text-brand-primary rounded-full hover:bg-brand-primary hover:text-[#FAF5EC] transition-colors disabled:opacity-50"
                 title="Call Staff"
+                aria-label={callingStaff ? "Calling restaurant staff" : "Call restaurant staff"}
               >
                 <BellRing className="h-4 w-4" />
                 <span className="hidden md:inline ml-2">Call Staff</span>
               </button>
             )}
-            <Link href={`/r/${slug}/cart`} data-testid="cart-link" className="relative inline-flex items-center gap-2 mehfil-btn-royal px-4 md:px-5 py-2.5 rounded-full text-xs md:text-sm font-medium tracking-wider uppercase">
+            <Link href={`/r/${slug}/cart`} data-testid="cart-link" aria-label={`Cart, ${cartCount} item${cartCount === 1 ? "" : "s"}`} className="relative inline-flex items-center gap-2 mehfil-btn-royal px-4 md:px-5 py-2.5 rounded-full text-xs md:text-sm font-medium tracking-wider uppercase">
               <ShoppingBag className="h-4 w-4" />
               <span className="hidden sm:inline">Cart</span>
               {cartCount > 0 && (
@@ -220,7 +254,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
                 </span>
               )}
             </Link>
-            <button data-testid="mobile-menu-btn" onClick={() => setMobileOpen((o) => !o)} className="lg:hidden h-10 w-10 rounded-full border border-[#E7DFCB] flex items-center justify-center text-brand-primary">
+            <button data-testid="mobile-menu-btn" aria-label={mobileOpen ? "Close navigation menu" : "Open navigation menu"} aria-expanded={mobileOpen} aria-controls="mobile-navigation" onClick={() => setMobileOpen((o) => !o)} className="lg:hidden h-11 w-11 rounded-full border border-[#E7DFCB] flex items-center justify-center text-brand-primary">
               {mobileOpen ? <X className="h-4 w-4" /> : <MenuIcon className="h-4 w-4" />}
             </button>
           </div>
@@ -228,7 +262,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
 
         {/* Mobile Menu */}
         {mobileOpen && (
-          <div className="lg:hidden border-t border-[#E7DFCB] bg-[#FAF5EC] backdrop-blur-md" data-testid="mobile-menu">
+          <div id="mobile-navigation" className="lg:hidden border-t border-[#E7DFCB] bg-[#FAF5EC] backdrop-blur-md" data-testid="mobile-menu">
             <div className="max-w-7xl mx-auto px-5 py-4">
               {NAV.map((n) => (
                 <Link key={n.href} href={n.href} onClick={() => setMobileOpen(false)} className="block px-4 py-3 text-sm tracking-[0.15em] uppercase font-royal border-b border-[#E7DFCB]/50 text-[#1A1106] hover:text-brand-primary transition-colors">
@@ -260,7 +294,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
         )}
       </header>
 
-      <main>{children}</main>
+      <main id="customer-content">{children}</main>
 
       {activeOrders.length > 0 && !path.includes("/track") && !path.includes("/checkout") && (
         <Link 
@@ -298,17 +332,17 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
               {/* Social Links */}
               <div className="flex items-center gap-4 mt-6">
                 {restaurantConfig?.social_links?.instagram && (
-                  <a href={restaurantConfig.social_links.instagram} target="_blank" rel="noopener noreferrer" className="h-10 w-10 rounded-full border border-[#FAF5EC]/20 flex items-center justify-center hover:bg-brand-secondary hover:text-[#1A1106] transition-colors">
+                  <a aria-label={`${restaurantConfig.name} on Instagram`} href={restaurantConfig.social_links.instagram} target="_blank" rel="noopener noreferrer" className="h-11 w-11 rounded-full border border-[#FAF5EC]/20 flex items-center justify-center hover:bg-brand-secondary hover:text-[#1A1106] transition-colors">
                     <Instagram className="h-4 w-4" />
                   </a>
                 )}
                 {restaurantConfig?.social_links?.facebook && (
-                  <a href={restaurantConfig.social_links.facebook} target="_blank" rel="noopener noreferrer" className="h-10 w-10 rounded-full border border-[#FAF5EC]/20 flex items-center justify-center hover:bg-brand-secondary hover:text-[#1A1106] transition-colors">
+                  <a aria-label={`${restaurantConfig.name} on Facebook`} href={restaurantConfig.social_links.facebook} target="_blank" rel="noopener noreferrer" className="h-11 w-11 rounded-full border border-[#FAF5EC]/20 flex items-center justify-center hover:bg-brand-secondary hover:text-[#1A1106] transition-colors">
                     <Facebook className="h-4 w-4" />
                   </a>
                 )}
                 {restaurantConfig?.social_links?.twitter && (
-                  <a href={restaurantConfig.social_links.twitter} target="_blank" rel="noopener noreferrer" className="h-10 w-10 rounded-full border border-[#FAF5EC]/20 flex items-center justify-center hover:bg-brand-secondary hover:text-[#1A1106] transition-colors">
+                  <a aria-label={`${restaurantConfig.name} on X`} href={restaurantConfig.social_links.twitter} target="_blank" rel="noopener noreferrer" className="h-11 w-11 rounded-full border border-[#FAF5EC]/20 flex items-center justify-center hover:bg-brand-secondary hover:text-[#1A1106] transition-colors">
                     <Twitter className="h-4 w-4" />
                   </a>
                 )}
@@ -361,8 +395,6 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
               </Link>
             </div>
             <div className="flex gap-6 text-xs text-[#FAF5EC]/60 font-royal tracking-wider uppercase">
-              <Link href="#" className="hover:text-brand-secondary transition-colors">Privacy</Link>
-              <Link href="#" className="hover:text-brand-secondary transition-colors">Terms</Link>
               <Link href={`/r/${slug}/login`} className="hover:text-brand-secondary transition-colors">Staff</Link>
             </div>
           </div>

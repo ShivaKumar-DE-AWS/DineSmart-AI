@@ -86,7 +86,8 @@ export default function AdminInventory() {
                     <Input
                       data-testid={`inv-qty-${i.id}`}
                       type="number"
-                      defaultValue={i.qty}
+                      step="0.01"
+                      defaultValue={Number(i.qty.toFixed(2))}
                       className="h-9 w-24"
                       onBlur={(e) => {
                         const v = parseFloat(e.target.value);

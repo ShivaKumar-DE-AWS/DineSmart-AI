@@ -29,7 +29,22 @@ export async function api<T = any>(path: string, init: RequestInit = {}): Promis
   };
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  const res = await fetch(`${BASE}${path}`, { ...init, headers, cache: "no-store" });
+  const controller = new AbortController();
+  const timeoutMs = Number((init as RequestInit & { timeoutMs?: number }).timeoutMs || 15_000);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  if (init.signal) {
+    if (init.signal.aborted) controller.abort();
+    else init.signal.addEventListener("abort", () => controller.abort(), { once: true });
+  }
+  let res: Response;
+  try {
+    res = await fetch(`${BASE}${path}`, { ...init, headers, cache: "no-store", signal: controller.signal });
+  } catch (error) {
+    if (controller.signal.aborted) throw new Error("Request timed out. Please try again.");
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
   if (!res.ok) {
     let msg = `HTTP ${res.status}`;
     try { const j = await res.json(); msg = j.detail || j.message || msg; } catch (parseErr) {

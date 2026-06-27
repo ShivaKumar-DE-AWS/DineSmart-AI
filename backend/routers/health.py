@@ -1,6 +1,6 @@
 """System Health and AI Usage endpoints for Super Admin."""
 from fastapi import APIRouter, Depends, HTTPException
-from deps import db, require_user, GEMINI_API_KEY, STRIPE_API_KEY
+from deps import db, require_user, GEMINI_API_KEY
 
 router = APIRouter(prefix="/api/super-admin", tags=["health"])
 
@@ -31,10 +31,6 @@ async def get_system_health(user=Depends(require_superadmin)):
             "ai": {
                 "name": "Gemini API",
                 "status": "configured" if GEMINI_API_KEY else "missing_key",
-            },
-            "billing": {
-                "name": "Stripe",
-                "status": "configured" if STRIPE_API_KEY else "missing_key",
             }
         }
     }

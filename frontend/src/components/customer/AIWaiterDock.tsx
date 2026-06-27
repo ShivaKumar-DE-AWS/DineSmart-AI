@@ -38,7 +38,7 @@ export function AIWaiterDock() {
   const params = useParams();
   const slug = params?.slug as string;
   const { config: restaurantConfig } = useRestaurantConfig();
-  const restaurantName = restaurantConfig?.name || slug?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || "Restaurant";
+  const restaurantName = restaurantConfig?.name || "this restaurant";
 
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>("chat");
@@ -92,8 +92,9 @@ export function AIWaiterDock() {
   };
 
   const { data: menuData } = useQuery({
-    queryKey: ["menu"],
+    queryKey: ["menu", restaurantConfig?.id],
     queryFn: () => api<{ items: MenuItem[] }>(`/api/menu?restaurant_id=${restaurantConfig?.id || ""}`),
+    enabled: Boolean(restaurantConfig?.id),
     staleTime: 30_000,
   });
   const menu = useMemo(() => (menuData?.items ?? []).filter((i) => i.available !== false), [menuData]);
@@ -123,7 +124,7 @@ export function AIWaiterDock() {
     return pool.slice(0, 3);
   }, [menu]);
 
-  const { messages, input, handleInputChange, handleSubmit, setInput, append, isLoading: streaming } = useChat({
+  const { messages, input, setInput, append, isLoading: streaming } = useChat({
     api: "/api/chat",
     body: {
       menu: menu.map((m) => ({ id: m.id, name: m.name, price: m.price, description: m.description, tags: m.tags })),
@@ -225,9 +226,10 @@ export function AIWaiterDock() {
     }
   }, [ttsOn]);
 
-  const sendText = useCallback((text: string) => {
-    if (!text.trim() || streaming) return;
-    append({ role: "user", content: text });
+  const sendText = useCallback((text?: string) => {
+    const normalized = typeof text === "string" ? text.trim() : "";
+    if (!normalized || streaming) return;
+    append({ role: "user", content: normalized });
   }, [append, streaming]);
 
   // Update vadPausedRef whenever state changes
@@ -404,7 +406,9 @@ export function AIWaiterDock() {
   return (
     <>
       {!open && dockPos.x >= 0 && (
-        <div
+        <button
+          type="button"
+          aria-label={`Open ${restaurantConfig?.ai_waiter?.name || "AI"} Waiter`}
           data-testid="ai-waiter-dock-btn"
           className="fixed z-40 touch-none select-none cursor-grab active:cursor-grabbing"
           style={{ left: dockPos.x, top: dockPos.y }}
@@ -420,13 +424,13 @@ export function AIWaiterDock() {
             <Sparkles className="h-5 w-5 text-brand-secondary group-hover:rotate-12 transition" />
             <span className="font-royal tracking-wider uppercase text-xs">{restaurantConfig?.ai_waiter?.name || "AI"} Waiter</span>
           </div>
-        </div>
+        </button>
       )}
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:justify-end p-0 sm:p-6" data-testid="ai-waiter-panel">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setOpen(false)} />
-          <div className="relative z-10 w-full sm:w-[460px] sm:max-w-md h-[90vh] sm:h-[680px] sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden border bg-[#FAF5EC] border-brand-secondary/40">
+          <button type="button" aria-label="Close AI Waiter" className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setOpen(false)} />
+          <div role="dialog" aria-modal="true" aria-labelledby="ai-waiter-title" className="relative z-10 w-full sm:w-[460px] sm:max-w-md h-[90vh] sm:h-[680px] sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden border bg-[#FAF5EC] border-brand-secondary/40">
             {/* Header */}
             <header className="px-5 py-4 flex items-center justify-between border-b mehfil-royal-bg text-[#FAF5EC] border-brand-secondary/30">
               <div className="flex items-center gap-3">
@@ -434,15 +438,15 @@ export function AIWaiterDock() {
                   <Sparkles className="h-5 w-5 text-[#5C0E1B]" />
                 </div>
                 <div>
-                  <div className="font-royal tracking-wider uppercase text-sm">{restaurantConfig?.ai_waiter?.name || "AI"} Concierge</div>
+                  <div id="ai-waiter-title" className="font-royal tracking-wider uppercase text-sm">{restaurantConfig?.ai_waiter?.name || "AI"} Concierge</div>
                   <div className="font-editorial italic text-[10px] text-[#FAF5EC]/80">Your personal sommelier · live</div>
                 </div>
               </div>
               <div className="flex items-center gap-1">
-                <button data-testid="ai-tts-toggle" onClick={() => setTtsOn((v) => !v)} title={ttsOn ? "Mute voice" : "Unmute voice"} className="h-9 w-9 rounded-full hover:bg-brand-secondary/15 flex items-center justify-center text-brand-secondary">
+                <button aria-label={ttsOn ? "Mute AI voice" : "Unmute AI voice"} data-testid="ai-tts-toggle" onClick={() => setTtsOn((v) => !v)} title={ttsOn ? "Mute voice" : "Unmute voice"} className="h-11 w-11 rounded-full hover:bg-brand-secondary/15 flex items-center justify-center text-brand-secondary">
                   {ttsOn ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
                 </button>
-                <button data-testid="ai-waiter-close" onClick={() => setOpen(false)} className="h-9 w-9 rounded-full hover:bg-brand-secondary/15 flex items-center justify-center text-[#FAF5EC]">
+                <button aria-label="Close AI Waiter" data-testid="ai-waiter-close" onClick={() => setOpen(false)} className="h-11 w-11 rounded-full hover:bg-brand-secondary/15 flex items-center justify-center text-[#FAF5EC]">
                   <X className="h-4 w-4" />
                 </button>
               </div>
@@ -459,6 +463,7 @@ export function AIWaiterDock() {
                   <button
                     key={t.k}
                     data-testid={`ai-mode-${t.k}`}
+                    aria-pressed={active}
                     onClick={() => setMode(t.k)}
                     className={`flex-1 py-3 text-[11px] font-royal tracking-[0.2em] uppercase border-b-2 transition flex items-center justify-center gap-1.5 ${
                       active
@@ -483,7 +488,7 @@ export function AIWaiterDock() {
                 messages={messages}
                 streaming={streaming}
                 scrollRef={scrollRef}
-                input={input}
+                input={typeof input === "string" ? input : ""}
                 setInput={setInput}
                 sendText={sendText}
                 trayChips={trayChips}
@@ -528,7 +533,7 @@ function ChatPane({
   scrollRef: React.RefObject<HTMLDivElement>;
   input: string;
   setInput: (v: string) => void;
-  sendText: (t: string) => void;
+  sendText: (t?: string) => void;
   trayChips: MenuItem[];
   onTapChip: (it: MenuItem) => void;
   dynamicPrompts: string[];
@@ -650,7 +655,8 @@ function ChatPane({
           <button
             data-testid="ai-waiter-send"
             onClick={() => sendText(input)}
-            disabled={streaming || !input.trim()}
+            aria-label="Send message"
+            disabled={streaming || !(input || "").trim()}
             className="h-9 w-9 rounded-full mehfil-btn-royal flex items-center justify-center disabled:opacity-40"
           >
             {streaming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
@@ -737,7 +743,7 @@ function ExploreList({ menu }: { menu: MenuItem[] }) {
   const [cat, setCat] = useState<string>("All");
   
   const filtered = menu.filter((m) =>
-    (!q.trim() || m.name.toLowerCase().includes(q.toLowerCase()) || m.description.toLowerCase().includes(q.toLowerCase()))
+    (!q.trim() || (m.name || "").toLowerCase().includes(q.toLowerCase()) || (m.description || "").toLowerCase().includes(q.toLowerCase()))
   );
 
   return (

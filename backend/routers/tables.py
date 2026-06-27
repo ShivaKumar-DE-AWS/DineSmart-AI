@@ -4,7 +4,7 @@ from datetime import datetime, timezone, timedelta
 from typing import Optional, Dict, Any, List
 from fastapi import APIRouter, Depends, HTTPException
 from deps import (
-    db, now_iso, require_user, require_roles,
+    db, now_iso, require_user, require_roles, current_user,
     TableModel, TableScanReq, CustomerLookupReq, ReservationStatusUpdate,
 )
 
@@ -27,7 +27,7 @@ async def list_customers(limit: int = 500, user=Depends(require_user)):
 
 
 @router.post("/api/customers/lookup")
-async def lookup_customer(req: CustomerLookupReq, restaurant_id: Optional[str] = None):
+async def lookup_customer(req: CustomerLookupReq, restaurant_id: Optional[str] = None, user=Depends(current_user)):
     """Look up an existing customer by phone or name, scoped by restaurant."""
     phone = (req.phone or "").strip() or None
     name = (req.name or "").strip() or None
@@ -38,7 +38,10 @@ async def lookup_customer(req: CustomerLookupReq, restaurant_id: Optional[str] =
         q = {"name": name, "phone": None}
     if not q:
         return {"customer": None}
-    if restaurant_id:
+    # ponytail: if authenticated, enforce tenant boundary
+    if user and user.get("restaurant_id"):
+        q["restaurant_id"] = user["restaurant_id"]
+    elif restaurant_id:
         q["restaurant_id"] = restaurant_id
     doc = await db.customers.find_one(q, {"_id": 0})
     return {"customer": doc}

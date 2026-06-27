@@ -167,6 +167,43 @@ export default function CheckoutPage() {
       <div className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-5">
 
+          {/* Customer Identity — name is REQUIRED for order */}
+          <section className="mehfil-card rounded-2xl p-6" data-testid="checkout-customer">
+            <div className="mehfil-divider mb-4"><span className="font-royal tracking-[0.3em] text-[10px] uppercase flex items-center gap-1.5"><User2 className="h-3 w-3" /> Your Name</span></div>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <label className="font-royal tracking-wider uppercase text-[10px] text-[#8A6A1B]">Name *</label>
+                <input
+                  required
+                  data-testid="checkout-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Your name"
+                  className="mt-1.5 w-full bg-white border border-brand-secondary/30 rounded-full px-4 py-2.5 text-sm outline-none font-editorial focus:border-brand-primary"
+                />
+              </div>
+              <div>
+                <label className="font-royal tracking-wider uppercase text-[10px] text-[#8A6A1B]">Phone (optional)</label>
+                <input
+                  data-testid="checkout-phone"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="For order updates"
+                  type="tel"
+                  className="mt-1.5 w-full bg-white border border-brand-secondary/30 rounded-full px-4 py-2.5 text-sm outline-none font-editorial focus:border-brand-primary"
+                />
+              </div>
+            </div>
+            {profile && (
+              <div className="mt-3 flex items-center gap-2 bg-brand-secondary/10 rounded-xl px-3 py-2 border border-brand-secondary/30">
+                <Gift className="h-4 w-4 text-brand-secondary" />
+                <span className="font-royal text-[11px] text-brand-primary tracking-wider">
+                  Welcome back, {profile.name}! {profile.points > 0 ? `${profile.points} points · ` : ""}{profile.orders_count} past orders
+                </span>
+              </div>
+            )}
+          </section>
+
           <section className="mehfil-card rounded-2xl p-6" data-testid="checkout-cooking-instructions">
             <div className="mehfil-divider mb-4"><span className="font-royal tracking-[0.3em] text-[10px] uppercase flex items-center gap-1.5"><ChefHat className="h-3 w-3" /> Cooking instructions</span></div>
             <p className="font-editorial italic text-xs text-[#1A1106]/65 mb-5 leading-relaxed">

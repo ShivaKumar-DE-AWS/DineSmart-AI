@@ -2,9 +2,6 @@
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { useCart } from "@/stores/cart";
-import { formatCurrency } from "@/lib/utils";
-import { toast } from "sonner";
 import { 
   Crown, Heart, Users, ChefHat, Flame, Sparkles, 
   Star, Quote, ArrowRight, Award, Utensils, Clock 
@@ -57,7 +54,6 @@ const ICON_MAP: Record<string, any> = {
 export default function AboutPage() {
   const params = useParams();
   const slug = params?.slug as string;
-  const cart = useCart();
 
   // Get restaurant config from local JSON files
   const { config: restaurantConfig } = useRestaurantConfig();
@@ -205,19 +201,18 @@ export default function AboutPage() {
           
           <div className="mt-14 grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {famousDishes.map((item) => {
-              const inCart = cart.items.find((i) => i.item_id === item.id);
               return (
                 <motion.div 
-                  key={item.id}
+                  key={item.name}
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   className="mehfil-card rounded-lg overflow-hidden group"
                 >
                   <div className="aspect-[4/3] bg-cover bg-center group-hover:scale-105 transition-transform duration-500 relative" style={{ backgroundImage: `url(${item.image_url})` }}>
-                    {item.tags?.includes("bestseller") && (
+                    {item.popularity_badge && (
                       <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-brand-secondary text-[#1A1106] text-[10px] font-royal tracking-wider uppercase shadow-md">
-                        Bestseller
+                        {item.popularity_badge}
                       </div>
                     )}
                   </div>
@@ -229,18 +224,10 @@ export default function AboutPage() {
                     </div>
                     <h3 className="font-royal text-lg text-brand-primary">{item.name}</h3>
                     <p className="font-editorial italic text-sm text-[#1A1106]/70 mt-2 line-clamp-2">{item.description}</p>
-                    <div className="flex items-center justify-between mt-4 pt-4 border-t border-[#E7DFCB]">
-                      <span className="font-royal text-xl text-brand-primary">{formatCurrency(item.price)}</span>
-                      {inCart ? (
-                        <span className="text-xs font-royal tracking-wider text-brand-secondary">In cart × {inCart.qty}</span>
-                      ) : (
-                        <button 
-                          onClick={() => { cart.add(item); toast.success(`${item.name} added`); }} 
-                          className="mehfil-btn-royal rounded-full px-4 py-2 text-[11px] font-royal tracking-wider uppercase"
-                        >
-                          Add
-                        </button>
-                      )}
+                    <div className="flex items-center justify-end mt-4 pt-4 border-t border-[#E7DFCB]">
+                      <Link href={`/r/${slug}/menu`} className="mehfil-btn-royal rounded-full px-4 py-2 text-[11px] font-royal tracking-wider uppercase">
+                        View live menu
+                      </Link>
                     </div>
                   </div>
                 </motion.div>

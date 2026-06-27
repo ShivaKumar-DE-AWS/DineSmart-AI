@@ -36,7 +36,14 @@ def s():
 
 @pytest.fixture(scope="module")
 def admin_tok(s):
-    r = s.post(f"{API}/auth/login", json={"email": "admin-mehfil@smartdine.ai", "password": "Owner@123"})
+    import time
+    # ponytail: retry once after rate-limit window if needed
+    for attempt in range(3):
+        r = s.post(f"{API}/auth/login", json={"email": "mehfil@smartdine.ai", "password": "Owner@123"})
+        if r.status_code == 200:
+            return r.json()["token"]
+        if r.status_code == 429 and attempt < 2:
+            time.sleep(35)
     assert r.status_code == 200, r.text
     return r.json()["token"]
 
@@ -46,18 +53,19 @@ def H(tok):
 
 
 # ---------- /api/auth/guest ----------
+_RID = "rest_mehfil_001"
 class TestGuestAuth:
     def test_guest_empty_payload(self, s):
-        r = s.post(f"{API}/auth/guest", json={})
+        r = s.post(f"{API}/auth/guest", params={"restaurant_id": _RID}, json={})
         assert r.status_code == 200, r.text
         j = r.json()
         assert "token" in j and isinstance(j["token"], str) and len(j["token"]) > 20
         assert j["user"]["role"] == "customer"
-        assert j["user"]["name"] == "Mehfil Guest"
+        assert j["user"]["name"] == "Guest"
         assert j["user"]["id"].startswith("guest_")
 
     def test_guest_with_name_phone(self, s):
-        r = s.post(f"{API}/auth/guest", json={"name": "TEST_Diner", "phone": "9999999999"})
+        r = s.post(f"{API}/auth/guest", params={"restaurant_id": _RID}, json={"name": "TEST_Diner", "phone": "9999999999"})
         assert r.status_code == 200
         j = r.json()
         assert j["user"]["name"] == "TEST_Diner"
@@ -65,7 +73,7 @@ class TestGuestAuth:
         assert j["user"]["role"] == "customer"
 
     def test_guest_token_works_with_me(self, s):
-        r = s.post(f"{API}/auth/guest", json={"name": "TEST_MeCheck"})
+        r = s.post(f"{API}/auth/guest", params={"restaurant_id": _RID}, json={"name": "TEST_MeCheck"})
         tok = r.json()["token"]
         r2 = s.get(f"{API}/auth/me", headers=H(tok))
         assert r2.status_code == 200
@@ -94,7 +102,7 @@ class TestMenuCrud:
         item_id = created["id"]
 
         # GET (public)
-        r2 = s.get(f"{API}/menu")
+        r2 = s.get(f"{API}/menu", params={"restaurant_id": _RID})
         assert r2.status_code == 200
         names = [i["name"] for i in r2.json()["items"]]
         assert payload["name"] in names
@@ -103,14 +111,14 @@ class TestMenuCrud:
         r3 = s.patch(f"{API}/menu/{item_id}", json={"price": 399.0}, headers=H(admin_tok))
         assert r3.status_code == 200
         # verify
-        r4 = s.get(f"{API}/menu")
+        r4 = s.get(f"{API}/menu", params={"restaurant_id": _RID})
         match = [i for i in r4.json()["items"] if i["id"] == item_id][0]
         assert match["price"] == 399.0
 
         # DELETE
         r5 = s.delete(f"{API}/menu/{item_id}", headers=H(admin_tok))
         assert r5.status_code == 200
-        r6 = s.get(f"{API}/menu")
+        r6 = s.get(f"{API}/menu", params={"restaurant_id": _RID})
         ids = [i["id"] for i in r6.json()["items"]]
         assert item_id not in ids
 
@@ -203,22 +211,22 @@ class TestImageUpload:
 
 # ---------- /api/ai-waiter/transcribe ----------
 class TestTranscribe:
-    def test_transcribe_empty_returns_400(self, s):
+    def test_transcribe_empty_returns_400(self, s, admin_tok):
         files = {"file": ("a.webm", io.BytesIO(b""), "audio/webm")}
-        r = s.post(f"{API}/ai-waiter/transcribe", files=files)
+        r = s.post(f"{API}/ai-waiter/transcribe", files=files, headers=H(admin_tok))
         assert r.status_code == 400
 
 
 # ---------- /api/ai-waiter/speak ----------
 class TestTTS:
-    def test_speak_returns_audio(self, s):
-        r = s.post(f"{API}/ai-waiter/speak", json={"text": "Hello from Mehfil", "voice": "nova"}, timeout=30)
+    def test_speak_returns_audio(self, s, admin_tok):
+        r = s.post(f"{API}/ai-waiter/speak", json={"text": "Hello from Mehfil", "voice": "nova"}, headers=H(admin_tok), timeout=30)
         assert r.status_code == 200, r.text
         ct = r.headers.get("content-type", "")
         assert "audio" in ct, f"content-type was {ct}"
         # MP3 frames typically start with ID3 or 0xFFFB / 0xFFFA / 0xFFE0 etc.
         assert len(r.content) > 1000, f"audio too small: {len(r.content)}"
 
-    def test_speak_empty_text_rejected(self, s):
-        r = s.post(f"{API}/ai-waiter/speak", json={"text": "  ", "voice": "nova"})
+    def test_speak_empty_text_rejected(self, s, admin_tok):
+        r = s.post(f"{API}/ai-waiter/speak", json={"text": "  ", "voice": "nova"}, headers=H(admin_tok))
         assert r.status_code == 400
