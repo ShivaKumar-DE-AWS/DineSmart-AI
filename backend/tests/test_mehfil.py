@@ -43,7 +43,7 @@ def admin_tok(s):
         if r.status_code == 200:
             return r.json()["token"]
         if r.status_code == 429 and attempt < 2:
-            time.sleep(35)
+            time.sleep(65)  # ponytail: wait out full rate-limit window
     assert r.status_code == 200, r.text
     return r.json()["token"]
 
