@@ -133,6 +133,10 @@ export interface RestaurantConfig {
 
   // Menu Config
   menu_config: MenuConfig;
+
+  // Payments
+  upi_id?: string;
+  payment_qr_url?: string;
 }
 
 export interface RestaurantHistoryItem {
