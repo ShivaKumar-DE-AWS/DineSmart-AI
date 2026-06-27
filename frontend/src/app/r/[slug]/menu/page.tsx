@@ -384,6 +384,7 @@ export default function MenuPage() {
                 maxShadowOpacity={0.5} 
                 showCover={true} 
                 mobileScrollSupport={true} 
+                disableFlipByClick={true}
                 ref={bookRef}
               onFlip={(e) => { if(audioRef.current) audioRef.current.play().catch(()=>console.log("Audio blocked")); }}
                 className="mx-auto drop-shadow-2xl rounded-r-xl"

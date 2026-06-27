@@ -364,7 +364,20 @@ async def update_admin_settings(req: SettingsUpdateReq, user=Depends(require_use
     update_data = req.model_dump(exclude_unset=True)
     if not update_data:
         return {"status": "success", "message": "No changes"}
+    
+    # 1. Update basic fields in restaurants collection
     await db.restaurants.update_one({"id": user["restaurant_id"]}, {"$set": update_data})
+    
+    # 2. Update config fields in restaurant_configs collection
+    rest = await db.restaurants.find_one({"id": user["restaurant_id"]}, {"_id": 0, "slug": 1})
+    if rest and rest.get("slug"):
+        slug = rest["slug"]
+        set_payload = {}
+        for k, v in update_data.items():
+            set_payload[f"config.{k}"] = v
+        if set_payload:
+            await db.restaurant_configs.update_one({"slug": slug}, {"$set": set_payload})
+            
     return {"status": "success"}
 
 @router.get("/api/admin/staff", dependencies=[Depends(require_roles("admin"))])
