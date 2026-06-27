@@ -17,7 +17,7 @@ export function RoleGuard({ allow, children }: { allow: Role[]; children: React.
   useEffect(() => {
     if (!hydrated) return;
     if (!user) {
-      router.replace(`/auth/login?next=${encodeURIComponent(path || "/")}`);
+      router.replace(`/auth/restaurant?next=${encodeURIComponent(path || "/")}`);
     } else if (!allow.includes(user.role)) {
       router.replace("/");
     }
