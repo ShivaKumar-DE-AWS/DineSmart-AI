@@ -39,10 +39,10 @@ export function TableSessionGuard() {
   const slugFromPath = path?.match(/^\/r\/([^/]+)/)?.[1] || "";
   const restaurantName = restaurantConfig?.name || slugFromPath.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || "Restaurant";
 
-  // Effect 1: capture QR token from URL
+  // Effect 1: capture table identifier from URL
   useEffect(() => {
-    const t = search.get("t");
-    if (t) setQrToken(t);
+    const tableId = search.get("table") || search.get("t");
+    if (tableId) setQrToken(tableId);
   }, [search]);
 
   // Regenerate alias
@@ -77,10 +77,10 @@ export function TableSessionGuard() {
         setAuthSession(guestRes.user, guestRes.token);
       }
 
-      // Step 2: Join table via QR scan
+      // Step 2: Join table via QR scan or table number
       const res = await api<{ table: { number: number; restaurant_id?: string }; session: import("@/stores/table").TableSession & { restaurant_id?: string } }>(
         "/api/tables/scan",
-        { method: "POST", body: JSON.stringify({ qr_token: qrToken, customer_name: displayName }) }
+        { method: "POST", body: JSON.stringify({ qr_token: qrToken, table_number: qrToken, restaurant_slug: slugFromPath, customer_name: displayName }) }
       );
 
       // Verify the table belongs to this restaurant

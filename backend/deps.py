@@ -250,7 +250,9 @@ class TableModel(BaseModel):
     created_at: str = Field(default_factory=now_iso)
 
 class TableScanReq(BaseModel):
-    qr_token: str
+    qr_token: Optional[str] = None
+    table_number: Optional[str] = None
+    restaurant_slug: Optional[str] = None
     customer_name: Optional[str] = None
     customer_phone: Optional[str] = None
 

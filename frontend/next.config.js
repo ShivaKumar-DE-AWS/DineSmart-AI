@@ -24,7 +24,13 @@ const nextConfig = {
     ];
   },
   async redirects() {
-    return [];
+    return [
+      {
+        source: "/r/mehfil-hyderabad/:path*",
+        destination: "/r/mehfil/:path*",
+        permanent: true,
+      },
+    ];
   },
 };
 module.exports = nextConfig;

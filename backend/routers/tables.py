@@ -113,9 +113,24 @@ async def regenerate_table_qr(table_id: str, user=Depends(require_user)):
 async def scan_table(req: TableScanReq):
     """Public: a guest scanned the QR. Returns table info + starts/refreshes a 10-min live session."""
     token = (req.qr_token or "").strip()
-    if not token:
-        raise HTTPException(status_code=400, detail="qr_token required")
-    table = await db.tables.find_one({"qr_token": token, "is_active": True}, {"_id": 0})
+    table_num = (req.table_number or "").strip()
+    
+    if not token and not table_num:
+        raise HTTPException(status_code=400, detail="qr_token or table_number required")
+        
+    table = None
+    if token:
+        table = await db.tables.find_one({"qr_token": token, "is_active": True}, {"_id": 0})
+    elif table_num and req.restaurant_slug:
+        # Look up restaurant by slug
+        restaurant = await db.restaurants.find_one({"slug": req.restaurant_slug})
+        if restaurant:
+            try:
+                num = int(table_num)
+                table = await db.tables.find_one({"number": num, "restaurant_id": restaurant["id"], "is_active": True}, {"_id": 0})
+            except ValueError:
+                pass
+
     if not table:
         raise HTTPException(status_code=404, detail="Invalid or inactive table QR")
     now = datetime.now(timezone.utc)
