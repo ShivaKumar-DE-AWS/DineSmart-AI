@@ -472,23 +472,35 @@ export function AIWaiterDock() {
             {/* Body */}
 
             {mode === "chat" && (
-              <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
-                <div className="h-16 w-16 bg-[#5C0E1B]/10 rounded-full flex items-center justify-center mb-4">
-                  <MessageSquare className="h-8 w-8 text-[#5C0E1B]" />
-                </div>
-                <h3 className="font-royal text-2xl text-[#5C0E1B] mb-2">AI Chat</h3>
-                <p className="font-editorial text-[#5C0E1B]/60">Our intelligent dining assistant is currently in training and will be available soon.</p>
-              </div>
+              <ChatPane
+                language={language}
+                setLanguage={setLanguage}
+                tone={tone}
+                setTone={setTone}
+                messages={messages}
+                streaming={streaming}
+                scrollRef={scrollRef}
+                input={input}
+                setInput={setInput}
+                sendText={sendText}
+                trayChips={trayChips}
+                onTapChip={(m) => { cart.add(m); toast.success(`${m.name} added to your tray`); }}
+                dynamicPrompts={dynamicPrompts}
+                onCheckout={() => { router.push(`/r/${slug}/checkout`); setOpen(false); }}
+              />
             )}
 
             {mode === "voice" && (
-              <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
-                <div className="h-16 w-16 bg-[#5C0E1B]/10 rounded-full flex items-center justify-center mb-4">
-                  <Mic className="h-8 w-8 text-[#5C0E1B]" />
-                </div>
-                <h3 className="font-royal text-2xl text-[#5C0E1B] mb-2">Voice Assistant</h3>
-                <p className="font-editorial text-[#5C0E1B]/60">Voice interaction is being perfected and will be coming very soon.</p>
-              </div>
+              <VoicePane
+                messages={messages}
+                streaming={streaming}
+                scrollRef={scrollRef}
+                onAdd={(m) => { cart.add(m); toast.success(`${m.name} added to your tray`); }}
+                recording={recording}
+                voiceProcessing={voiceProcessing}
+                startRecording={startRecording}
+                stopRecording={stopRecording}
+              />
             )}
           </div>
         </div>

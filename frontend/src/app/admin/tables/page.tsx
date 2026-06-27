@@ -131,7 +131,7 @@ export default function AdminTables() {
 
 function TableCard({ t, onRegen, onDelete, slug, restaurantName }: { t: TableDoc; onRegen: (id: string) => void; onDelete: (id: string) => void; slug: string; restaurantName: string }) {
   const svgRef = useRef<HTMLDivElement>(null);
-  const url = tableQrUrl(slug, t.number);
+  const url = tableQrUrl(slug, t.number.toString());
 
   const downloadPng = async () => {
     const svgEl = svgRef.current?.querySelector("svg");
