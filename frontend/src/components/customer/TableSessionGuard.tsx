@@ -30,13 +30,21 @@ export function TableSessionGuard() {
   const [qrToken, setQrToken] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
 
-  // Alias state
-  const [alias, setAlias] = useState(() => generateFunAlias());
+  // Extract slug from current path (needed before alias key)
+  const slugFromPath = path?.match(/^\/r\/([^/]+)/)?.[1] || "";
+
+  // Alias state — persisted per device+restaurant (no PII)
+  const aliasKey = `sd-alias-${typeof window !== "undefined" ? window.location.host : ""}-${slugFromPath}`;
+  const [alias, setAlias] = useState(() => {
+    if (typeof window === "undefined") return generateFunAlias();
+    const stored = localStorage.getItem(aliasKey);
+    if (stored) try { return JSON.parse(stored); } catch {}
+    const fresh = generateFunAlias();
+    localStorage.setItem(aliasKey, JSON.stringify(fresh));
+    return fresh;
+  });
   const [customAlias, setCustomAlias] = useState("");
   const [useCustom, setUseCustom] = useState(false);
-
-  // Extract slug from current path
-  const slugFromPath = path?.match(/^\/r\/([^/]+)/)?.[1] || "";
   const restaurantName = restaurantConfig?.name || slugFromPath.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || "Restaurant";
 
   // Effect 1: capture table identifier from URL
@@ -47,10 +55,12 @@ export function TableSessionGuard() {
 
   // Regenerate alias
   const regenerateAlias = useCallback(() => {
-    setAlias(generateFunAlias());
+    const fresh = generateFunAlias();
+    setAlias(fresh);
     setUseCustom(false);
     setCustomAlias("");
-  }, []);
+    localStorage.setItem(aliasKey, JSON.stringify(fresh));
+  }, [aliasKey]);
 
   // Get display name
   const getDisplayName = useCallback(() => {
