@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { Save, UserCog, Key, Settings, Palette, Type, Link as LinkIcon, Upload, Loader2 } from "lucide-react";
+import { useSession } from "@/stores/session";
 
 export default function AdminSettings() {
   const qc = useQueryClient();
