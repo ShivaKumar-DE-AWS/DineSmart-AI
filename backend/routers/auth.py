@@ -140,7 +140,7 @@ async def login(req: LoginReq):
         print(f"[login] ERROR: {e}")
         import traceback
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail="Internal server error. Please try again.")
+        raise HTTPException(status_code=500, detail=str(e))
 
     # Superadmins are platform-level users — no restaurant_id needed
     if user.get("role") == "superadmin":
