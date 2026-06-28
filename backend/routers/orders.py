@@ -383,7 +383,7 @@ async def download_bill(order_id: str, user=Depends(current_user)):
         pdf.cell(text=f"Payment: {str(pay_status).upper()} ({str(pay_method).upper()})", new_x="LMARGIN", new_y="NEXT", align="C")
         pdf.ln(15)
         pdf.set_font("Helvetica", "I", 8)
-        pdf.cell(text="Powered by SmartDine AI — smartdine.com", new_x="LMARGIN", new_y="NEXT", align="C")
+        pdf.cell(text="Powered by SmartDine AI - smartdine.com", new_x="LMARGIN", new_y="NEXT", align="C")
         pdf_bytes = bytes(pdf.output())
         return Response(content=pdf_bytes, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=bill_{order['token']}.pdf"})
     except HTTPException:
