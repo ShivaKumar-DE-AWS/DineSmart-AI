@@ -317,6 +317,15 @@ function StaffRow({ staff }: { staff: any }) {
     onError: (e: Error) => toast.error(e.message || "Update failed"),
   });
 
+  const deleteStaff = useMutation({
+    mutationFn: () => api(`/api/admin/staff/${staff.id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-staff"] });
+      toast.success(`${staff.name} deleted`);
+    },
+    onError: (e: Error) => toast.error(e.message || "Delete failed"),
+  });
+
   return (
     <div className="border-b border-bone pb-4 last:border-0 last:pb-0">
       <div className="flex items-center justify-between mb-2">
@@ -339,6 +348,16 @@ function StaffRow({ staff }: { staff: any }) {
           </div>
           <button onClick={() => updateStaff.mutate({ name, password: password || undefined })} className="bg-ink text-cream font-medium text-xs px-4 rounded-xl hover:opacity-90 shrink-0">
             {updateStaff.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Update"}
+          </button>
+          <button
+            onClick={() => {
+              if (confirm(`Delete ${staff.name} (${staff.role})?`))
+                deleteStaff.mutate();
+            }}
+            disabled={deleteStaff.isPending}
+            className="text-alert text-xs font-medium px-2 rounded-xl hover:bg-alert/10 shrink-0 transition"
+          >
+            {deleteStaff.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Delete"}
           </button>
         </div>
       </div>

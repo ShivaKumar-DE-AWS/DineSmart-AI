@@ -71,3 +71,13 @@ async def update_admin_staff(req: StaffUpdateReq, user=Depends(require_user)):
             "created_at": now_iso(),
         })
     return {"status": "success"}
+
+
+@router.delete("/api/admin/staff/{staff_id}", dependencies=[Depends(require_roles("admin"))])
+async def delete_admin_staff(staff_id: str, user=Depends(require_user)):
+    result = await db.users.delete_one(
+        {"id": staff_id, "restaurant_id": user["restaurant_id"]}
+    )
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Staff not found")
+    return {"status": "success"}
