@@ -138,6 +138,9 @@ export interface RestaurantConfig {
   // Payments
   upi_id?: string;
   payment_qr_url?: string;
+
+  // Location / address for takeaway directions
+  address?: string;
 }
 
 export interface RestaurantHistoryItem {
