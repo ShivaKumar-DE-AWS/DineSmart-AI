@@ -146,7 +146,18 @@ async def get_restaurant_config(slug: str):
 
 @app.get("/api/config/list")
 async def list_restaurant_configs():
-    return {"configs": [{"slug": s, "name": c.get("name", ""), "email": next((u.get("email","") for u in c.get("users",[]) if u.get("role")=="admin"),"")} for s, c in _CONFIG_CACHE.items()]}
+    items = []
+    for s, c in _CONFIG_CACHE.items():
+        try:
+            admin_email = ""
+            for u in c.get("users", []):
+                if u.get("role") == "admin":
+                    admin_email = u.get("email", "")
+                    break
+            items.append({"slug": s, "name": c.get("name", ""), "email": admin_email})
+        except Exception:
+            items.append({"slug": s, "name": "", "email": ""})
+    return {"configs": items}
 
 # ponytail: demo credentials endpoints — direct file reads, no auth, for onboarding UX only
 @app.get("/api/admin/demo-creds")
