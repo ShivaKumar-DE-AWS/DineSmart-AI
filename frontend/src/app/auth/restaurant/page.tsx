@@ -64,7 +64,7 @@ export default function RestaurantAuthPage() {
         : res.user.role === "admin" ? `/admin`
         : `/r/${slug}`
         : "/";
-      window.location.href = dest;
+      if (typeof window !== "undefined") window.location.href = dest;
     } catch (e) {
       const err = e as Error;
       toast.error(err.message || "Sign in failed. Please check your credentials.");
