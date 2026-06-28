@@ -519,4 +519,24 @@ async def create_indexes():
         print(f"[startup] WARNING: Index creation failed: {e}")
 
 
+@app.on_event("startup")
+async def seed_superadmin():
+    """Idempotent superadmin seed hook for Render deploys."""
+    from deps import hash_password
+    try:
+        email = "admin@smartdine.ai"
+        existing = await db.users.find_one({"email": email})
+        if not existing:
+            user_id = str(uuid.uuid4())
+            await db.users.insert_one({
+                "id": user_id, "email": email, "name": "Super Admin",
+                "role": "superadmin", "restaurant_id": None,
+                "password_hash": hash_password("Admin@123"),
+                "created_at": now_iso(),
+            })
+            print(f"[startup] ✓ Superadmin created: {email} / Admin@123")
+    except Exception as e:
+        print(f"[startup] WARNING: Superadmin seed failed: {e}")
+
+
 
