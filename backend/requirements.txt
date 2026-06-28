@@ -33,4 +33,4 @@ google-genai>=2.8.0
 edge-tts>=7.0.0
 zxcvbn>=4.4.28
 fpdf2>=2.7.9
-
+stripe>=9.0.0

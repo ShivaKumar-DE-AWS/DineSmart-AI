@@ -163,7 +163,10 @@ class RestaurantModel(BaseModel):
     slug: str
     owner_email: str
     subscription_status: str = "trial"
+    plan_tier: str = "starter"
     trial_ends_at: Optional[datetime] = Field(default_factory=lambda: datetime.now(timezone.utc) + timedelta(days=14))
+    stripe_customer_id: Optional[str] = None
+    stripe_subscription_id: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class RecipeIngredient(BaseModel):

@@ -1,125 +1,158 @@
 "use client";
-
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { Crown, CheckCircle2, Clock, AlertCircle } from "lucide-react";
+import { CreditCard, CheckCircle2, AlertTriangle, ShieldCheck, Zap } from "lucide-react";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useEffect } from "react";
 
 export default function BillingPage() {
-  const queryClient = useQueryClient();
-  const [isSubscribing, setIsSubscribing] = useState(false);
+  const searchParams = useSearchParams();
+  
+  useEffect(() => {
+    if (searchParams.get("success")) {
+      toast.success("Subscription updated successfully!");
+    }
+    if (searchParams.get("canceled")) {
+      toast.error("Checkout was canceled.");
+    }
+  }, [searchParams]);
 
-  const { data, isLoading } = useQuery({
+  const { data: billing, isLoading } = useQuery({
     queryKey: ["billing-status"],
-    queryFn: () => api<{ subscription_status: string; subscription_expiry: string }>("/api/billing/status"),
+    queryFn: () => api<any>("/api/billing/status"),
   });
 
-  const subscribeMutation = useMutation({
-    mutationFn: () => api("/api/billing/subscribe", { method: "POST" }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["billing-status"] });
-      toast.success("Subscription activated successfully!");
-      setIsSubscribing(false);
+  const checkoutMut = useMutation({
+    mutationFn: () => api<{ url: string }>("/api/billing/create-checkout-session", { method: "POST" }),
+    onSuccess: (data) => {
+      window.location.href = data.url;
     },
-    onError: (error) => {
-      toast.error("Failed to activate subscription. " + error.message);
-      setIsSubscribing(false);
-    }
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const portalMut = useMutation({
+    mutationFn: () => api<{ url: string }>("/api/billing/create-portal-session", { method: "POST" }),
+    onSuccess: (data) => {
+      window.location.href = data.url;
+    },
+    onError: (err: Error) => toast.error(err.message),
   });
 
   if (isLoading) {
-    return <div className="p-8 text-stone animate-pulse">Loading billing details...</div>;
+    return <div className="p-8 text-center text-stone">Loading billing info...</div>;
   }
 
-  const isTrial = data?.subscription_status === "trial";
-  const isActive = data?.subscription_status === "active";
-  const isExpired = data?.subscription_status === "expired";
-  
-  const expiryDate = data?.subscription_expiry ? new Date(data.subscription_expiry).toLocaleDateString() : "Unknown";
-  
-  const handleSubscribe = () => {
-    setIsSubscribing(true);
-    // Simulating a brief payment gateway delay for realistic feel
-    setTimeout(() => {
-      subscribeMutation.mutate();
-    }, 1500);
-  };
+  const isTrial = billing?.subscription_status === "trial";
+  const isPro = billing?.plan_tier === "pro";
+  const daysLeft = billing?.trial_ends_at 
+    ? Math.max(0, Math.ceil((new Date(billing.trial_ends_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    : null;
 
   return (
-    <div className="p-8 max-w-4xl mx-auto animate-fade-up">
-      <h1 className="font-heading text-3xl tracking-tight mb-8">Billing & Subscription</h1>
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white border border-bone rounded-2xl p-6 shadow-sm flex flex-col items-center justify-center text-center">
-          <div className={`h-12 w-12 rounded-full flex items-center justify-center mb-4 ${isActive ? 'bg-sage/10 text-sage' : isTrial ? 'bg-clay/10 text-clay' : 'bg-red-100 text-red-600'}`}>
-            {isActive ? <CheckCircle2 className="h-6 w-6" /> : isTrial ? <Clock className="h-6 w-6" /> : <AlertCircle className="h-6 w-6" />}
-          </div>
-          <div className="text-sm font-medium text-stone uppercase tracking-widest mb-1">Status</div>
-          <div className="font-heading text-2xl capitalize">{data?.subscription_status || "Unknown"}</div>
-        </div>
-        
-        <div className="bg-white border border-bone rounded-2xl p-6 shadow-sm flex flex-col items-center justify-center text-center">
-          <div className="h-12 w-12 rounded-full bg-ink/5 flex items-center justify-center mb-4 text-ink">
-            <Clock className="h-6 w-6" />
-          </div>
-          <div className="text-sm font-medium text-stone uppercase tracking-widest mb-1">Valid Until</div>
-          <div className="font-heading text-2xl">{expiryDate}</div>
-        </div>
-        
-        <div className="bg-white border border-bone rounded-2xl p-6 shadow-sm flex flex-col items-center justify-center text-center">
-          <div className="h-12 w-12 rounded-full bg-ink/5 flex items-center justify-center mb-4 text-ink">
-            <Crown className="h-6 w-6" />
-          </div>
-          <div className="text-sm font-medium text-stone uppercase tracking-widest mb-1">Current Plan</div>
-          <div className="font-heading text-2xl">{isTrial ? "Free Trial" : "Premium"}</div>
-        </div>
+    <div className="max-w-4xl mx-auto space-y-8">
+      <div>
+        <h1 className="text-2xl font-heading font-bold text-ink flex items-center gap-2">
+          <CreditCard className="h-6 w-6 text-brand" />
+          Billing & Subscription
+        </h1>
+        <p className="text-stone mt-1">Manage your restaurant's subscription plan and billing methods.</p>
       </div>
 
-      <div className="bg-ink text-white rounded-3xl p-8 relative overflow-hidden shadow-2xl">
-        <div className="absolute -top-24 -right-24 h-64 w-64 bg-clay rounded-full blur-3xl opacity-20 pointer-events-none" />
-        <div className="relative z-10">
-          <div className="flex items-center gap-3 mb-4">
-            <Crown className="h-8 w-8 text-clay" />
-            <h2 className="font-heading text-3xl">SmartDine Premium</h2>
-          </div>
-          <p className="text-white/70 max-w-xl mb-8 leading-relaxed">
-            Unlock the full potential of your restaurant with AI waiters, unlimited tables, real-time analytics, and Priority support.
-          </p>
-          
-          <div className="flex flex-col sm:flex-row items-end gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        
+        {/* Current Status Card */}
+        <div className="col-span-1 md:col-span-2 bg-white rounded-2xl shadow-sm border border-bone p-6">
+          <div className="flex justify-between items-start mb-6">
             <div>
-              <div className="text-sm text-white/50 uppercase tracking-widest mb-1">Subscription Fee</div>
-              <div className="flex items-baseline gap-1">
-                <span className="font-heading text-5xl">₹10,000</span>
-                <span className="text-white/50">/month</span>
+              <h2 className="text-lg font-semibold text-ink">Current Plan</h2>
+              <div className="mt-2 flex items-center gap-3">
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  isPro ? 'bg-emerald-100 text-emerald-800' : 'bg-brand/10 text-brand'
+                }`}>
+                  {billing?.plan_tier === 'pro' ? 'Pro Plan' : 'Starter Plan'}
+                </span>
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  isTrial ? 'bg-amber-100 text-amber-800' : 
+                  billing?.subscription_status === 'active' ? 'bg-emerald-100 text-emerald-800' :
+                  'bg-red-100 text-red-800'
+                }`}>
+                  {billing?.subscription_status?.toUpperCase() || 'UNKNOWN'}
+                </span>
               </div>
             </div>
-            
-            <button
-              onClick={handleSubscribe}
-              disabled={isSubscribing || isActive}
-              className={`px-8 py-4 rounded-full font-medium transition ml-auto flex items-center gap-2 ${isActive ? 'bg-white/10 text-white/50 cursor-not-allowed' : 'bg-clay hover:bg-clay-dark text-white shadow-lg shadow-clay/20'}`}
-            >
-              {isSubscribing ? (
-                <><span className="animate-spin h-5 w-5 border-2 border-white/30 border-t-white rounded-full"></span> Processing Payment...</>
-              ) : isActive ? (
-                <><CheckCircle2 className="h-5 w-5" /> Active Plan</>
-              ) : (
-                "Subscribe Now"
-              )}
-            </button>
           </div>
-          
-          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-10 pt-10 border-t border-white/10">
-            {['Unlimited AI Waiter interactions', 'Unlimited POS & Kitchen Display connections', 'Real-time revenue analytics & exports', 'Priority 24/7 technical support'].map((feature, i) => (
-              <li key={i} className="flex items-center gap-3 text-sm text-white/80">
-                <CheckCircle2 className="h-4 w-4 text-clay shrink-0" />
-                {feature}
-              </li>
-            ))}
+
+          {isTrial && daysLeft !== null && (
+            <div className={`p-4 rounded-xl border ${daysLeft <= 4 ? 'bg-red-50 border-red-200 text-red-900' : 'bg-amber-50 border-amber-200 text-amber-900'} mb-6`}>
+              <div className="flex items-center gap-3 mb-2">
+                <AlertTriangle className="h-5 w-5" />
+                <h3 className="font-semibold">Your trial ends in {daysLeft} days</h3>
+              </div>
+              <p className="text-sm opacity-90">
+                You will lose access to premium features and order taking capabilities on {new Date(billing.trial_ends_at).toLocaleDateString()}.
+              </p>
+            </div>
+          )}
+
+          <div className="flex gap-4">
+            {!isPro ? (
+              <button
+                onClick={() => checkoutMut.mutate()}
+                disabled={checkoutMut.isPending}
+                className="flex items-center gap-2 bg-brand text-white px-6 py-2.5 rounded-lg font-medium hover:bg-brand/90 transition"
+              >
+                <Zap className="h-4 w-4" />
+                {checkoutMut.isPending ? 'Loading...' : 'Upgrade to Pro'}
+              </button>
+            ) : (
+              <button
+                disabled
+                className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-6 py-2.5 rounded-lg font-medium border border-emerald-200"
+              >
+                <CheckCircle2 className="h-4 w-4" />
+                You are on the Pro Plan
+              </button>
+            )}
+            
+            {billing?.has_payment_method && (
+              <button
+                onClick={() => portalMut.mutate()}
+                disabled={portalMut.isPending}
+                className="flex items-center gap-2 bg-sand text-ink px-6 py-2.5 rounded-lg font-medium hover:bg-bone transition border border-bone"
+              >
+                Manage Billing
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Feature List Card */}
+        <div className="col-span-1 bg-white rounded-2xl shadow-sm border border-bone p-6">
+          <h2 className="text-lg font-semibold text-ink flex items-center gap-2 mb-4">
+            <ShieldCheck className="h-5 w-5 text-brand" />
+            Pro Features
+          </h2>
+          <ul className="space-y-3 text-sm text-stone">
+            <li className="flex items-start gap-2">
+              <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+              <span>Unlimited monthly orders</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+              <span>AI Waiter capabilities</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+              <span>Advanced analytics dashboard</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+              <span>Priority customer support</span>
+            </li>
           </ul>
         </div>
+
       </div>
     </div>
   );

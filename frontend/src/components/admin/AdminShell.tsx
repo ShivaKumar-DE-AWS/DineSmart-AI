@@ -51,6 +51,12 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     refetchInterval: 60000,
   });
 
+  const { data: billingData } = useQuery({
+    queryKey: ["billing-status"],
+    queryFn: () => api<any>("/api/billing/status"),
+    staleTime: 5 * 60 * 1000, // 5 mins
+  });
+
   const markReadMut = useMutation({
     mutationFn: (n_id: string) => api(`/api/notifications/${n_id}/read`, { method: "POST" }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-notifications"] }); },
@@ -158,6 +164,27 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               </div>
             </div>
           )}
+
+          {billingData?.subscription_status === "trial" && billingData?.trial_ends_at && (() => {
+            const daysLeft = Math.ceil((new Date(billingData.trial_ends_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+            if (daysLeft <= 4 && daysLeft >= 0) {
+              return (
+                <div className="mb-6 p-4 rounded-xl shadow-sm border bg-red-50 border-red-200 text-red-900 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <AlertTriangle className="h-5 w-5 shrink-0" />
+                    <div>
+                      <h4 className="font-semibold">Trial ends in {daysLeft} day{daysLeft === 1 ? '' : 's'}</h4>
+                      <p className="text-sm opacity-90">Please upgrade to a paid plan to avoid losing access.</p>
+                    </div>
+                  </div>
+                  <Link href="/admin/billing" className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition">
+                    Subscribe Now
+                  </Link>
+                </div>
+              );
+            }
+            return null;
+          })()}
           {children}
         </main>
       </div>
