@@ -1,5 +1,4 @@
 """Orders, payments, webhook routes, and SSE order stream."""
-import logging
 import os
 import uuid
 import asyncio
@@ -17,7 +16,6 @@ from deps import (
 )
 
 router = APIRouter(tags=["orders"])
-logger = logging.getLogger(__name__)
 
 
 # =========================================================
