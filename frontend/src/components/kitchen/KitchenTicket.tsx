@@ -35,6 +35,13 @@ function KitchenTicketImpl({ order, elapsed, elapsedMs, isSelected, onStart, onR
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className="text-3xl font-bold text-white">{order.token}</div>
+          <div className={`text-[10px] tracking-wider uppercase font-bold px-2 py-0.5 rounded-lg ${
+            order.order_type === "takeaway"
+              ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+              : "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+          }`}>
+            {order.order_type === "takeaway" ? "TAKEAWAY" : "DINE-IN"}
+          </div>
           {isLate && (
             <div className="flex items-center gap-1 bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] font-bold px-2 py-0.5 rounded-lg animate-pulse">
               <AlertTriangle className="h-3 w-3" /> LATE

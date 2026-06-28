@@ -70,11 +70,20 @@ export default function TokenPage() {
             {order.token}
           </motion.div>
           <div className="mehfil-divider mt-4 max-w-[120px] mx-auto" />
-          {order.table_number && (
-            <p className="font-royal uppercase text-[12px] tracking-widest text-brand-secondary mt-3">
-              Table {order.table_number}
-            </p>
-          )}
+          <div className="flex items-center justify-center gap-3 mt-3">
+            {order.table_number && (
+              <p className="font-royal uppercase text-[12px] tracking-widest text-brand-secondary">
+                Table {order.table_number}
+              </p>
+            )}
+            <span className={`font-royal uppercase text-[10px] tracking-widest px-2.5 py-0.5 rounded-full ${
+              order.order_type === "takeaway"
+                ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+            }`}>
+              {order.order_type === "takeaway" ? "TAKEAWAY" : "DINE-IN"}
+            </span>
+          </div>
           <p className="font-editorial italic text-[#FAF5EC]/80 mt-2">
             Ready by <span className="font-royal text-brand-secondary tracking-wider" data-testid="token-eta">{fmtTime(order.estimated_ready_at)}</span>
           </p>

@@ -152,7 +152,7 @@ async def create_order(req: OrderCreateReq):
     
     tax = round(subtotal * TAX_RATE, 2)
     total = round(subtotal + tax, 2)
-    token = await next_token(req.restaurant_id or "")
+    token = await next_token(req.restaurant_id or "", req.order_type)
     eta = (datetime.now(timezone.utc) + timedelta(minutes=max(max_prep, 8))).isoformat()
     restaurant_id = req.restaurant_id
     

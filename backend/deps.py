@@ -325,10 +325,11 @@ class TTSReq(BaseModel):
 # =========================================================
 # Token generation (daily per-restaurant sequential token)
 # =========================================================
-async def next_token(restaurant_id: str = "") -> str:
-    # ponytail: UUID-based short token, no counter collection
+async def next_token(restaurant_id: str = "", order_type: str = "dine_in") -> str:
+    # ponytail: UUID-based short token with order_type prefix
     suffix = uuid.uuid4().hex[:4].upper()
-    return f"A-{suffix}"
+    prefix = "T" if order_type == "takeaway" else "D"
+    return f"{prefix}-{suffix}"
 
 def clean(doc: Dict[str, Any]) -> Dict[str, Any]:
     if doc and "_id" in doc:

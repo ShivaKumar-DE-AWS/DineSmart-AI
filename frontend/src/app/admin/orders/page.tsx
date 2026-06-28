@@ -61,6 +61,7 @@ export default function AdminOrders() {
           <thead className="bg-cream border-b border-bone text-stone uppercase text-xs tracking-wider">
             <tr>
               <th className="text-left px-4 py-3">Token</th>
+              <th className="text-left px-4 py-3">Type</th>
               <th className="text-left px-4 py-3">Customer</th>
               <th className="text-left px-4 py-3">Items</th>
               <th className="text-left px-4 py-3">Total</th>
@@ -76,6 +77,15 @@ export default function AdminOrders() {
             {(data?.orders ?? []).map((o) => (
               <tr key={o.id} className="border-b border-bone last:border-0" data-testid={`admin-order-row-${o.token}`}>
                 <td className="px-4 py-3 font-mono font-semibold text-clay">{o.token}</td>
+                <td className="px-4 py-3">
+                  <span className={`inline-flex items-center text-[10px] tracking-wider uppercase font-bold px-2 py-0.5 rounded-full ${
+                    o.order_type === "takeaway"
+                      ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                      : "bg-amber-50 text-amber-700 border border-amber-200"
+                  }`}>
+                    {o.order_type === "takeaway" ? "TAKEAWAY" : "DINE-IN"}
+                  </span>
+                </td>
                 <td className="px-4 py-3">{o.customer_name}</td>
                 <td className="px-4 py-3 text-stone text-xs">{o.items.map((i) => `${i.qty}× ${i.name}`).join(", ")}</td>
                 <td className="px-4 py-3 font-medium">{formatCurrency(o.total)}</td>
@@ -130,7 +140,7 @@ export default function AdminOrders() {
               </tr>
             ))}
             {data?.orders.length === 0 && (
-              <tr><td colSpan={10} className="px-4 py-10 text-center text-stone">No orders to show.</td></tr>
+            <tr><td colSpan={11} className="px-4 py-10 text-center text-stone">No orders to show.</td></tr>
             )}
           </tbody>
         </table>

@@ -220,6 +220,13 @@ export default function CounterPage() {
             {preparing.map((o) => (
               <div key={o.id} className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5 text-center hover:border-blue-500/30 transition-colors group" data-testid={`counter-prep-${o.token}`}>
                 <div className="text-4xl font-bold text-white mb-1 group-hover:text-blue-400 transition-colors">{o.token}</div>
+                <div className={`absolute top-2 right-2 text-[8px] tracking-wider uppercase font-bold px-1.5 py-0.5 rounded-full ${
+                  o.order_type === "takeaway"
+                    ? "bg-emerald-500/20 text-emerald-400"
+                    : "bg-amber-500/20 text-amber-400"
+                }`}>
+                  {o.order_type === "takeaway" ? "TAKEAWAY" : "DINE-IN"}
+                </div>
                 <div className="text-[10px] uppercase text-zinc-500 tracking-wider">{o.customer_name}</div>
                 {o.table_number != null && (
                   <div className="mt-2 inline-flex items-center gap-1 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10px] font-bold px-2 py-0.5 rounded-lg">
@@ -269,6 +276,13 @@ export default function CounterPage() {
               <div key={o.id} className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-2xl p-6 flex flex-col shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 transition-shadow" data-testid={`counter-ready-${o.token}`}>
                 <div className="flex items-center justify-between mb-2">
                   <div className="text-5xl font-bold leading-none">{o.token}</div>
+                  <div className={`text-[9px] tracking-wider uppercase font-bold px-2 py-0.5 rounded-full ${
+                    o.order_type === "takeaway"
+                      ? "bg-white/25 text-white"
+                      : "bg-amber-500/30 text-white"
+                  }`}>
+                    {o.order_type === "takeaway" ? "TAKEAWAY" : "DINE-IN"}
+                  </div>
                   {o.table_number != null && (
                     <div className="bg-white/20 backdrop-blur-sm text-white px-3 py-1.5 rounded-xl font-bold text-sm" data-testid={`counter-table-${o.token}`}>
                       Table {o.table_number}
