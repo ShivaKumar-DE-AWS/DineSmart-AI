@@ -1,19 +1,22 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { api, apiUrl } from "@/lib/api";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { formatCurrency, fmtTime } from "@/lib/utils";
-import { CheckCircle2, Eye, Sparkles, Copy } from "lucide-react";
+import { CheckCircle2, Eye, Sparkles, Copy, CreditCard } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import type { Order } from "@/types";
+import { useRestaurantConfig } from "@/hooks/useRestaurantConfig";
+import { useState } from "react";
 
 export default function TokenPage() {
   const params = useParams();
   const slug = params?.slug as string;
 
   const { orderId } = useParams<{ orderId: string }>();
+  const { config: restaurantConfig } = useRestaurantConfig();
   const { data: order, isLoading, error } = useQuery({
     queryKey: ["order", orderId],
     queryFn: () => api<Order>(`/api/orders/${orderId}`),
@@ -132,15 +135,89 @@ export default function TokenPage() {
         </button>
       </div>
 
-      {(order.payment_method === "upi" || order.payment_method === "card_machine") && (
-        <div className="bg-brand-primary/10 border border-brand-primary/20 rounded-2xl p-5 mb-6 text-center">
-          <p className="font-editorial italic text-brand-primary text-sm mb-3">
-            {order.payment_method === "upi" 
-              ? "You selected UPI payment. Tap 'Track live' below to view the QR code and complete your payment."
-              : "You requested the card machine. Our staff will bring it to your table shortly."}
-          </p>
+      {order.payment_method === "upi" && (
+        <div className="mehfil-card rounded-3xl p-7 md:p-9 mb-6 text-center">
+          <div className="font-royal tracking-[0.2em] text-[10px] uppercase text-brand-primary mb-2">Pay via UPI</div>
+          <p className="font-editorial italic text-xs text-[#1A1106]/60 mb-6">Scan to settle the bill securely from your phone.</p>
+          
+          {(restaurantConfig?.payment_qr_url || restaurantConfig?.upi_id) ? (
+            <>
+              <div className="bg-white p-3 rounded-2xl inline-block shadow-sm border border-brand-secondary/20 mb-4">
+                <img 
+                  src={restaurantConfig?.payment_qr_url || `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`upi://pay?pa=${restaurantConfig?.upi_id}&pn=${restaurantConfig?.name}&am=${order.total}&cu=INR`)}`} 
+                  alt="UPI QR Code" 
+                  className="w-48 h-auto object-contain"
+                />
+              </div>
+              {restaurantConfig?.upi_id && !restaurantConfig?.payment_qr_url && (
+                <div className="font-mono text-[11px] text-[#1A1106]/70 uppercase tracking-widest">{restaurantConfig.upi_id}</div>
+              )}
+              {restaurantConfig?.upi_id && (
+                <a 
+                  href={`upi://pay?pa=${restaurantConfig.upi_id}&pn=${encodeURIComponent(restaurantConfig.name)}&am=${order.total}&cu=INR`}
+                  className="mt-4 w-full flex items-center justify-center gap-2 bg-brand-primary text-white py-3 rounded-full font-royal uppercase tracking-widest text-xs shadow-md"
+                >
+                  <span>Tap to Pay on Mobile</span>
+                </a>
+              )}
+            </>
+          ) : (
+            <div className="text-xs text-[#1A1106]/50 italic my-4">UPI payment not configured by restaurant.</div>
+          )}
+          
+          <div className="mt-5 pt-5 border-t border-brand-secondary/15">
+            <div className="font-royal text-2xl text-brand-primary">₹{order.total}</div>
+            <div className="font-editorial italic text-[10px] text-[#1A1106]/50 mt-1">Please show the payment success screen to our staff.</div>
+          </div>
         </div>
       )}
+
+      {order.payment_method === "card_machine" && (
+        <div className="mehfil-card rounded-3xl p-7 md:p-9 mb-6 text-center">
+          <div className="font-royal tracking-[0.2em] text-[10px] uppercase text-brand-primary mb-2">Pay via Card</div>
+          <div className="flex justify-center mb-4 text-brand-primary">
+            <CreditCard className="h-12 w-12" />
+          </div>
+          <p className="font-editorial italic text-sm text-[#1A1106]/70 mb-2">We have notified our staff.</p>
+          <p className="font-editorial italic text-xs text-[#1A1106]/50 mb-6">They will bring the card swipe machine to your table shortly.</p>
+          <div className="mt-5 pt-5 border-t border-brand-secondary/15">
+            <div className="font-royal text-2xl text-brand-primary">₹{order.total}</div>
+          </div>
+        </div>
+      )}
+
+      {/* Restaurant address for takeaway */}
+      {order.order_type === "takeaway" && restaurantConfig?.address && (
+        <div className="mehfil-card rounded-2xl p-5 mb-6">
+          <div className="font-royal tracking-[0.2em] text-[10px] uppercase text-brand-primary mb-2">Collect from</div>
+          <p className="font-editorial text-sm text-[#1A1106]/85">{restaurantConfig.address}</p>
+        </div>
+      )}
+
+      {/* Download Receipt */}
+      <div className="mb-6 flex justify-center">
+        <button
+          onClick={async () => {
+            try {
+              const res = await fetch(apiUrl(`/api/orders/${orderId}/bill`));
+              if (!res.ok) throw new Error("Download failed");
+              const blob = await res.blob();
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = `bill_${order.token}.pdf`;
+              a.click();
+              URL.revokeObjectURL(url);
+            } catch (e) {
+              toast.error("Failed to download receipt");
+            }
+          }}
+          className="w-full flex items-center justify-center gap-2 rounded-full border border-brand-secondary/40 px-6 py-3 font-royal text-xs tracking-widest uppercase text-brand-primary hover:bg-brand-primary/5 transition"
+        >
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+          Download Receipt
+        </button>
+      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Link href={`/r/${slug}/track/${order.id}`} data-testid="token-track-link" className="inline-flex items-center justify-center gap-2 mehfil-btn-royal rounded-full px-6 py-3.5 font-royal tracking-[0.2em] uppercase text-xs">

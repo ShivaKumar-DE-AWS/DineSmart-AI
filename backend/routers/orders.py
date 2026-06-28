@@ -326,36 +326,11 @@ async def download_bill(order_id: str, user=Depends(current_user)):
 
         pdf = FPDF()
         pdf.add_page()
-        # Try to use DejaVu TrueType fonts for Unicode support; fall back to Helvetica
-        dejavu_dirs = [
-            "/usr/share/fonts/truetype/dejavu/",
-            "/usr/share/fonts/dejavu/",
-            "/System/Library/Fonts/",  # macOS
-        ]
-        font_ok = False
-        for d in dejavu_dirs:
-            import os
-            if os.path.exists(os.path.join(d, "DejaVuSans.ttf")):
-                pdf.add_font("DejaVu", "", os.path.join(d, "DejaVuSans.ttf"), uni=True)
-                pdf.add_font("DejaVu", "B", os.path.join(d, "DejaVuSans-Bold.ttf"), uni=True)
-                pdf.add_font("DejaVu", "I", os.path.join(d, "DejaVuSans-Oblique.ttf"), uni=True)
-                font_ok = True
-                break
-        if not font_ok:
-            try:
-                # fpdf2 ships with its own DejaVu via built-in fonts
-                from fpdf.fonts import FontFace
-            except ImportError:
-                pass
-        if font_ok:
-            FONT = "DejaVu"
-        else:
-            FONT = "Helvetica"
-        pdf.set_font(FONT, "B", 20)
+        pdf.set_font("Helvetica", "B", 20)
         pdf.cell(text=rest_name, new_x="LMARGIN", new_y="NEXT", align="C")
-        pdf.set_font(FONT, "B", 28)
+        pdf.set_font("Helvetica", "B", 28)
         pdf.cell(text=f"Token #{order['token']}", new_x="LMARGIN", new_y="NEXT", align="C")
-        pdf.set_font(FONT, "", 10)
+        pdf.set_font("Helvetica", "", 10)
         created = order.get("created_at", "")
         if created:
             try:
@@ -365,7 +340,7 @@ async def download_bill(order_id: str, user=Depends(current_user)):
                 pass
         pdf.cell(text=f"Date: {created}", new_x="LMARGIN", new_y="NEXT", align="C")
         pdf.ln(5)
-        pdf.set_font(FONT, "", 11)
+        pdf.set_font("Helvetica", "", 11)
         pdf.cell(text=f"Customer: {order.get('customer_name', 'N/A')}", new_x="LMARGIN", new_y="NEXT")
         if order.get("order_type") == "dine_in" and order.get("table_number"):
             pdf.cell(text=f"Table: {order['table_number']}", new_x="LMARGIN", new_y="NEXT")
@@ -373,7 +348,7 @@ async def download_bill(order_id: str, user=Depends(current_user)):
             pdf.cell(text=f"Order: {order.get('order_type', 'dine_in').title()}", new_x="LMARGIN", new_y="NEXT")
         pdf.ln(8)
         col_w = [80, 20, 30, 40]
-        pdf.set_font(FONT, "B", 10)
+        pdf.set_font("Helvetica", "B", 10)
         for h, w in zip(["Item", "Qty", "Unit Price", "Total"], col_w):
             pdf.cell(text=h, w=w, align="L" if h == "Item" else "C", border=1)
         pdf.ln()
@@ -387,18 +362,25 @@ async def download_bill(order_id: str, user=Depends(current_user)):
             pdf.cell(text=f"INR {price:.2f}", w=col_w[2], align="C", border=1)
             pdf.cell(text=f"INR {price*qty:.2f}", w=col_w[3], align="C", border=1)
             pdf.ln()
+            # Show item notes if present
+            notes = item.get("notes", "")
+            if notes:
+                pdf.set_font(FONT, "I", 8)
+                pdf.cell(text="  " + str(notes)[:120], w=sum(col_w), align="L", border=0)
+                pdf.ln()
+                pdf.set_font(FONT, "", 10)
         subtotal = float(order.get("subtotal", 0))
         tax = float(order.get("tax", 0))
         total = float(order.get("total", 0))
         gap_w = sum(col_w[:3])
-        pdf.set_font(FONT, "", 10)
+        pdf.set_font("Helvetica", "", 10)
         pdf.cell(text="", w=gap_w, border=0)
         pdf.cell(text=f"Subtotal: INR {subtotal:.2f}", w=col_w[3], align="C", border=1)
         pdf.ln()
         pdf.cell(text="", w=gap_w, border=0)
         pdf.cell(text=f"Tax (5%): INR {tax:.2f}", w=col_w[3], align="C", border=1)
         pdf.ln()
-        pdf.set_font(FONT, "B", 11)
+        pdf.set_font("Helvetica", "B", 11)
         pdf.cell(text="", w=gap_w, border=0)
         pdf.cell(text=f"Total: INR {total:.2f}", w=col_w[3], align="C", border=1)
         pdf.ln(10)
