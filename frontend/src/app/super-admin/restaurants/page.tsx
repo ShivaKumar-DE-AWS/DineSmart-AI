@@ -51,7 +51,7 @@ export default function SuperAdminRestaurantsPage() {
   });
 
   const extendTrialMut = useMutation({
-    mutationFn: (id: string) => api<{ message: string }>(`/api/super-admin/restaurants/${id}/extend-trial`, { method: "POST", body: { days: 7 } }),
+    mutationFn: (id: string) => api<{ message: string }>(`/api/super-admin/restaurants/${id}/extend-trial`, { method: "POST", body: JSON.stringify({ days: 7 }) }),
     onSuccess: (data) => {
       toast.success(data.message);
       qc.invalidateQueries({ queryKey: ["super-admin-restaurants"] });
@@ -60,7 +60,7 @@ export default function SuperAdminRestaurantsPage() {
   });
 
   const addMut = useMutation({
-    mutationFn: (body: typeof addForm) => api<{ message: string }>(`/api/super-admin/restaurants`, { method: "POST", body }),
+    mutationFn: (body: typeof addForm) => api<{ message: string }>(`/api/super-admin/restaurants`, { method: "POST", body: JSON.stringify(body) }),
     onSuccess: (data) => {
       toast.success(data.message);
       setShowAddModal(false);
