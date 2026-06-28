@@ -19,6 +19,36 @@ function getRestaurantName(restaurantId?: string, restaurantSlug?: string): stri
   return restaurantId.replace("rest_", "").replace(/_001$/, "").replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase());
 }
 
+function printTakeawayMenuQr(slug: string, restaurantName: string) {
+  const menuUrl = `${window.location.origin}/r/${slug}/menu`;
+  const w = window.open("", "_blank");
+  if (!w) { toast.error("Popup blocked — allow popups to print"); return; }
+  w.document.write(`<!doctype html><html><head><title>${restaurantName} — Takeaway QR</title>
+    <style>
+      @page { margin: 0; size: 1200px 1600px; }
+      body { margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #FAF5EC; font-family: Georgia, serif; }
+      .card { width: 1200px; height: 1600px; background: #FAF5EC; border: 8px solid #5C0E1B; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px; }
+      .badge { font-size: 28px; background: #5C0E1B; color: #FAF5EC; padding: 10px 40px; border-radius: 40px; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 20px; }
+      .name { font-size: 56px; font-weight: bold; color: #5C0E1B; margin-bottom: 10px; }
+      .divider { width: 300px; height: 3px; background: #5C0E1B; margin: 20px auto; }
+      .subtitle { font-size: 32px; color: #8A6A1B; margin-bottom: 20px; }
+      .qr-wrap { margin: 40px 0; }
+      .qr-wrap img { width: 500px; height: 500px; }
+      .footer { font-size: 18px; color: #8A6A1B; margin-top: auto; }
+    </style></head><body>
+    <div class="card">
+      <div class="badge">Takeaway Menu</div>
+      <div class="name">${restaurantName}</div>
+      <div class="divider"></div>
+      <div class="subtitle">Scan to order takeaway</div>
+      <div class="qr-wrap"><img src="https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(menuUrl)}" alt="QR" /></div>
+      <div class="footer">Powered by SmartDine AI</div>
+    </div>
+    <script>window.onload=()=>{setTimeout(()=>window.print(),500)};</script>
+    </body></html>`);
+  w.document.close();
+}
+
 function printTakeawayQr(order: Order, slug: string, restaurantName: string) {
   const trackUrl = `${window.location.origin}/r/${slug}/track/${order.id}`;
   const w = window.open("", "_blank");
@@ -144,7 +174,10 @@ export default function CounterPage() {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <div className="hidden md:flex items-center gap-6 text-xs">
+          <button onClick={() => printTakeawayMenuQr(slug, restaurantName)} className="inline-flex items-center gap-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-medium text-xs px-3 py-2 rounded-xl transition-all">
+            <QrCode className="h-4 w-4" /> Takeaway QR
+          </button>
+          <div className="hidden md:flex items-center gap-6 text-xs">
               <div className="flex items-center gap-2 bg-zinc-900/80 border border-zinc-800 rounded-xl px-4 py-2.5">
                 <ChefHat className="h-4 w-4 text-blue-400" />
                 <span className="text-zinc-400">Cooking</span>

@@ -8,6 +8,7 @@ from datetime import datetime, timezone, timedelta
 from typing import Optional, Dict, Any, List
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse, Response, JSONResponse
+from fpdf import FPDF
 from deps import (
     db, now_iso, TAX_RATE, require_user, require_roles, current_user, jwt_verify,
     client, next_token, OrderCreateReq, OrderStatusUpdate,
@@ -321,8 +322,6 @@ async def download_bill(order_id: str, user=Depends(current_user)):
 
     rest = await db.restaurants.find_one({"id": order["restaurant_id"]}, {"_id": 0, "name": 1})
     rest_name = rest["name"] if rest else "SmartDine AI Restaurant"
-
-    from fpdf import FPDF
 
     pdf = FPDF()
     pdf.add_page()
