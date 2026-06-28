@@ -137,13 +137,6 @@ for _cf in sorted(_glob.glob(os.path.join(_CONFIG_DIR, "*.json"))):
         if _data.get("slug"):
             _CONFIG_CACHE[_data["slug"]] = _data
 
-@app.get("/api/config/{slug}")
-async def get_restaurant_config(slug: str):
-    config = _CONFIG_CACHE.get(slug)
-    if not config:
-        raise HTTPException(status_code=404, detail="Not Found")
-    return config
-
 @app.get("/api/config/list")
 async def list_restaurant_configs():
     items = []
@@ -158,6 +151,13 @@ async def list_restaurant_configs():
         except Exception:
             items.append({"slug": s, "name": "", "email": ""})
     return {"configs": items}
+
+@app.get("/api/config/{slug}")
+async def get_restaurant_config(slug: str):
+    config = _CONFIG_CACHE.get(slug)
+    if not config:
+        raise HTTPException(status_code=404, detail="Not Found")
+    return config
 
 # ponytail: demo credentials endpoints — direct file reads, no auth, for onboarding UX only
 @app.get("/api/admin/demo-creds")
