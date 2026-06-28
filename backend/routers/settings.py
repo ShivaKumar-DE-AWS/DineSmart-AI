@@ -35,32 +35,39 @@ async def update_admin_settings(req: SettingsUpdateReq, user=Depends(require_use
 
 @router.get("/api/admin/staff", dependencies=[Depends(require_roles("admin"))])
 async def get_admin_staff(user=Depends(require_user)):
-    # ponytail: find_one per role guarantees 1 kitchen + 1 counter max, even if DB has duplicates
-    kitchen = await db.users.find_one(
-        {"restaurant_id": user["restaurant_id"], "role": "kitchen"},
+    # ponytail: returns ALL kitchen/counter — shifts need multiple per role
+    staff = await db.users.find(
+        {"restaurant_id": user["restaurant_id"], "role": {"$in": ["kitchen", "counter"]}},
         {"_id": 0, "password_hash": 0}
-    )
-    counter = await db.users.find_one(
-        {"restaurant_id": user["restaurant_id"], "role": "counter"},
-        {"_id": 0, "password_hash": 0}
-    )
-    staff = []
-    if kitchen: staff.append(kitchen)
-    if counter: staff.append(counter)
+    ).to_list(100)
     return {"staff": staff}
 
 @router.post("/api/admin/staff", dependencies=[Depends(require_roles("admin"))])
 async def update_admin_staff(req: StaffUpdateReq, user=Depends(require_user)):
+    import uuid
     if req.role not in {"kitchen", "counter"}:
         raise HTTPException(status_code=400, detail="Invalid role")
-    update_data = {"name": req.name}
-    if req.password:
-        update_data["password_hash"] = hash_password(req.password)
+
     if req.id:
+        update_data = {"name": req.name}
+        if req.password:
+            update_data["password_hash"] = hash_password(req.password)
         await db.users.update_one(
             {"id": req.id, "restaurant_id": user["restaurant_id"]},
             {"$set": update_data}
         )
     else:
-        raise HTTPException(status_code=400, detail="ID required")
+        # Create new staff user
+        slug = user.get("restaurant_slug", "restaurant")
+        email = f"{slug}-{req.role}-{uuid.uuid4().hex[:4]}@smartdine.ai"
+        await db.users.insert_one({
+            "id": str(uuid.uuid4()),
+            "email": email,
+            "name": req.name,
+            "role": req.role,
+            "restaurant_id": user["restaurant_id"],
+            "restaurant_slug": slug,
+            "password_hash": hash_password(req.password or f"{req.role.capitalize()}@123"),
+            "created_at": now_iso(),
+        })
     return {"status": "success"}

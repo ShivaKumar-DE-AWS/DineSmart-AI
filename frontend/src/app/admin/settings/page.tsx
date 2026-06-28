@@ -29,6 +29,12 @@ export default function AdminSettings() {
   const [paymentQrUrl, setPaymentQrUrl] = useState(settings?.payment_qr_url || "");
   const [uploadingQr, setUploadingQr] = useState(false);
 
+  // Add Staff form state
+  const [showAddStaff, setShowAddStaff] = useState(false);
+  const [newStaffRole, setNewStaffRole] = useState<"kitchen" | "counter">("kitchen");
+  const [newStaffName, setNewStaffName] = useState("");
+  const [newStaffPassword, setNewStaffPassword] = useState("");
+
   // Update effect to prefill from fetched data
   useEffect(() => {
     if (settings) {
@@ -49,6 +55,19 @@ export default function AdminSettings() {
       toast.success("Brand settings updated successfully");
     },
     onError: (e: Error) => toast.error(e.message || "Failed to update settings"),
+  });
+
+  const addStaff = useMutation({
+    mutationFn: (data: { role: string; name: string; password?: string }) =>
+      api("/api/admin/staff", { method: "POST", body: JSON.stringify(data) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-staff"] });
+      toast.success("Staff added");
+      setShowAddStaff(false);
+      setNewStaffName("");
+      setNewStaffPassword("");
+    },
+    onError: (e: Error) => toast.error(e.message || "Failed to add staff"),
   });
 
   const handleSaveSettings = () => {
@@ -228,6 +247,49 @@ export default function AdminSettings() {
               ))
             )}
           </div>
+
+          <button
+            onClick={() => setShowAddStaff(!showAddStaff)}
+            className="mt-4 text-sm font-medium text-electric-blue hover:text-electric-blue/80 transition"
+          >
+            {showAddStaff ? "− Cancel" : "+ Add Staff Member"}
+          </button>
+
+          {showAddStaff && (
+            <div className="mt-3 p-4 bg-cream border border-bone rounded-xl space-y-3">
+              <select
+                value={newStaffRole}
+                onChange={(e) => setNewStaffRole(e.target.value as "kitchen" | "counter")}
+                className="w-full bg-white border border-bone rounded-lg px-3 py-2 text-sm outline-none text-ink"
+              >
+                <option value="kitchen">Kitchen</option>
+                <option value="counter">Counter</option>
+              </select>
+              <input
+                value={newStaffName}
+                onChange={(e) => setNewStaffName(e.target.value)}
+                placeholder="Staff name"
+                className="w-full bg-white border border-bone rounded-lg px-3 py-2 text-sm outline-none text-ink"
+              />
+              <input
+                value={newStaffPassword}
+                onChange={(e) => setNewStaffPassword(e.target.value)}
+                placeholder="Password (auto-generated if blank)"
+                className="w-full bg-white border border-bone rounded-lg px-3 py-2 text-sm outline-none text-ink"
+              />
+              <button
+                onClick={() => addStaff.mutate({
+                  role: newStaffRole,
+                  name: newStaffName,
+                  password: newStaffPassword || undefined,
+                })}
+                disabled={!newStaffName.trim() || addStaff.isPending}
+                className="w-full bg-ink text-cream font-medium rounded-lg px-4 py-2 text-sm hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {addStaff.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Add Staff"}
+              </button>
+            </div>
+          )}
         </section>
       </div>
     </div>
