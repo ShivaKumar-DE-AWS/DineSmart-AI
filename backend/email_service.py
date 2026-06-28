@@ -19,3 +19,18 @@ def send_password_reset_email(to_email: str, reset_token: str, frontend_url: str
     print("="*50 + "\n")
     
     return True
+
+def send_welcome_email(to_email: str, restaurant_name: str, creds: dict, otp: str):
+    """Send welcome email with credentials and OTP."""
+    print("\n" + "="*50)
+    print(f"📧 EMAIL MOCK (To: {to_email})")
+    print(f"Subject: Welcome to SmartDine AI, {restaurant_name}!")
+    print(f"Body: Your 14-day Pro Trial is now active.\n")
+    print(f"To unlock your customer-facing QR codes, enter this Verification Code:")
+    print(f"🔥 {otp} 🔥\n")
+    print(f"Your Admin Credentials:")
+    print(f"Email: {creds['admin']['email']}")
+    print(f"Password: {creds['admin']['password']}")
+    print("="*50 + "\n")
+    
+    return True

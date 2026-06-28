@@ -155,8 +155,21 @@ async def list_restaurant_configs():
 @app.get("/api/config/{slug}")
 async def get_restaurant_config(slug: str):
     config = _CONFIG_CACHE.get(slug)
+    
+    if not config:
+        # Check database for dynamic configs
+        db_config = await db.restaurant_configs.find_one({"slug": slug})
+        if db_config and "config" in db_config:
+            config = db_config["config"]
+            
     if not config:
         raise HTTPException(status_code=404, detail="Not Found")
+        
+    # Check if restaurant is in sandbox mode
+    rest = await db.restaurants.find_one({"slug": slug})
+    if rest:
+        config["sandbox_mode"] = rest.get("sandbox_mode", False)
+        
     return config
 
 # ponytail: demo credentials endpoints — direct file reads, no auth, for onboarding UX only

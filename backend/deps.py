@@ -165,6 +165,8 @@ class RestaurantModel(BaseModel):
     subscription_status: str = "trial"
     plan_tier: str = "starter"
     trial_ends_at: Optional[datetime] = Field(default_factory=lambda: datetime.now(timezone.utc) + timedelta(days=14))
+    is_verified: bool = False
+    sandbox_mode: bool = True
     stripe_customer_id: Optional[str] = None
     stripe_subscription_id: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

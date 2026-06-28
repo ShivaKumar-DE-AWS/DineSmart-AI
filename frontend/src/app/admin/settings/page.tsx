@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
-import { Save, UserCog, Key, Settings, Palette, Type, Link as LinkIcon, Upload, Loader2, Eye, EyeOff } from "lucide-react";
+import { Save, UserCog, Key, Settings, Palette, Type, Link as LinkIcon, Upload, Loader2, Eye, EyeOff, ShieldAlert, ShieldCheck } from "lucide-react";
 import { useSession } from "@/stores/session";
 
 export default function AdminSettings() {
@@ -112,6 +112,10 @@ export default function AdminSettings() {
         <h1 className="text-3xl font-heading font-semibold text-ink">Brand & Staff Settings</h1>
         <p className="text-stone mt-1">Manage your restaurant identity and staff access.</p>
       </div>
+
+      {settings && settings.is_verified === false && (
+        <VerificationSection />
+      )}
 
       <div className="grid md:grid-cols-2 gap-8">
         <section className="bg-white border border-bone rounded-2xl p-6 shadow-sm">
@@ -360,6 +364,69 @@ function StaffRow({ staff }: { staff: any }) {
             {deleteStaff.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Delete"}
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function VerificationSection() {
+  const [otp, setOtp] = useState("");
+  const [mapsUrl, setMapsUrl] = useState("");
+  const qc = useQueryClient();
+
+  const verifyMut = useMutation({
+    mutationFn: (data: { otp: string, google_maps_url?: string }) => 
+      api("/api/admin/verify", { method: "POST", body: JSON.stringify(data) }),
+    onSuccess: (res: any) => {
+      toast.success(res.message || "Verified successfully");
+      qc.invalidateQueries({ queryKey: ["admin-settings"] });
+    },
+    onError: (e: Error) => toast.error(e.message || "Verification failed")
+  });
+
+  return (
+    <div className="bg-alert/10 border border-alert/20 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row gap-6 items-start">
+      <div className="bg-alert/20 p-3 rounded-xl text-alert shrink-0">
+        <ShieldAlert className="h-6 w-6" />
+      </div>
+      <div className="flex-1 space-y-4">
+        <div>
+          <h2 className="text-xl font-heading font-semibold text-alert">Action Required: Verify Restaurant</h2>
+          <p className="text-stone text-sm mt-1">
+            Your restaurant is currently in <b>Sandbox Mode</b>. Customers will see a warning banner, and orders will not be sent to the kitchen. 
+            Enter the 6-digit Verification Code sent to your email to unlock live mode.
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-4">
+          <label className="block">
+            <span className="text-sm font-medium text-ink block mb-1">Verification Code (OTP) *</span>
+            <input 
+              value={otp} 
+              onChange={e => setOtp(e.target.value)} 
+              placeholder="123456" 
+              maxLength={6}
+              className="w-full bg-white border border-bone rounded-xl px-3 py-2 text-ink outline-none" 
+            />
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium text-ink block mb-1">Google Maps Link (Optional)</span>
+            <input 
+              value={mapsUrl} 
+              onChange={e => setMapsUrl(e.target.value)} 
+              placeholder="https://maps.google.com/..." 
+              className="w-full bg-white border border-bone rounded-xl px-3 py-2 text-ink outline-none" 
+            />
+          </label>
+        </div>
+
+        <button 
+          onClick={() => verifyMut.mutate({ otp, google_maps_url: mapsUrl || undefined })}
+          disabled={!otp || verifyMut.isPending}
+          className="bg-alert text-white font-medium rounded-xl px-4 py-2 hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
+        >
+          {verifyMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Verify Now"}
+        </button>
       </div>
     </div>
   );

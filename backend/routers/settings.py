@@ -1,5 +1,6 @@
 """Admin settings, branding, and staff management routes."""
 from typing import Optional, Dict, Any
+from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, Body, UploadFile, File
 from deps import db, now_iso, hash_password, require_user, require_roles, SettingsUpdateReq, StaffUpdateReq
 
@@ -32,6 +33,39 @@ async def update_admin_settings(req: SettingsUpdateReq, user=Depends(require_use
         if set_payload:
             await db.restaurant_configs.update_many({"slug": slug}, {"$set": set_payload})
     return {"status": "success"}
+
+class VerifyReq(BaseModel):
+    otp: str
+    google_maps_url: Optional[str] = None
+
+@router.post("/api/admin/verify", dependencies=[Depends(require_roles("admin"))])
+async def verify_restaurant(req: VerifyReq, user=Depends(require_user)):
+    rid = user["restaurant_id"]
+    
+    # Find OTP
+    verification = await db.verifications.find_one({
+        "restaurant_id": rid,
+        "otp": req.otp
+    }, sort=[("created_at", -1)])
+    
+    if not verification:
+        raise HTTPException(status_code=400, detail="Invalid or expired verification code.")
+        
+    # Update restaurant
+    update_fields = {
+        "is_verified": True,
+        "sandbox_mode": False
+    }
+    
+    if req.google_maps_url:
+        update_fields["google_maps_url"] = req.google_maps_url
+        
+    await db.restaurants.update_one(
+        {"id": rid}, 
+        {"$set": update_fields}
+    )
+    
+    return {"status": "success", "message": "Restaurant successfully verified. Sandbox mode lifted."}
 
 @router.get("/api/admin/staff", dependencies=[Depends(require_roles("admin"))])
 async def get_admin_staff(user=Depends(require_user)):

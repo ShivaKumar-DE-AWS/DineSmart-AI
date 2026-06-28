@@ -7,6 +7,7 @@ from datetime import datetime, timezone, timedelta
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from deps import db, now_iso, require_user, require_roles, GEMINI_API_KEY, hash_password
+from email_service import send_welcome_email
 
 router = APIRouter(tags=["onboarding"])
 
@@ -188,6 +189,8 @@ async def request_restaurant_access(req: RestaurantRequest):
         "plan_tier": "pro", 
         "subscription_status": "trial", 
         "trial_ends_at": trial_ends,
+        "is_verified": False,
+        "sandbox_mode": True,
         "created_at": now_iso(),
     })
     
@@ -238,6 +241,16 @@ async def request_restaurant_access(req: RestaurantRequest):
             "created_at": now_iso()
         })
         creds[r] = {"email": email, "password": pw}
+        
+    # 6. Generate Verification OTP and Send Email
+    otp = str(random.randint(100000, 999999))
+    await db.verifications.insert_one({
+        "restaurant_id": rest_id,
+        "otp": otp,
+        "created_at": now_iso()
+    })
+    
+    send_welcome_email(req.email, req.name, creds, otp)
         
     return {
         "ok": True,

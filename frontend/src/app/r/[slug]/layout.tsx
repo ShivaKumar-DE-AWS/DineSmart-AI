@@ -202,12 +202,29 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
     );
   }
 
+
+  if (isStaffPage) {
+    return (
+      <div className="mehfil min-h-screen mehfil-paper" style={restaurantConfig ? {
+        '--brand-primary': restaurantConfig.primary_color || '#8A1A2A',
+        '--brand-secondary': restaurantConfig.secondary_color || '#C9A348'
+      } as React.CSSProperties : undefined}>
+        {children}
+      </div>
+    );
+  }
+
   return (
     <div className="mehfil min-h-screen mehfil-paper" style={restaurantConfig ? {
       '--brand-primary': restaurantConfig.primary_color || '#8A1A2A',
       '--brand-secondary': restaurantConfig.secondary_color || '#C9A348'
     } as React.CSSProperties : undefined}>
       <Suspense fallback={null}><TableSessionGuard /></Suspense>
+      {restaurantConfig?.sandbox_mode && (
+        <div className="bg-alert text-white text-center py-2 px-4 text-xs font-medium tracking-wide sticky top-0 z-[60]">
+          ⚠️ SANDBOX MODE: Orders placed here will not be sent to the kitchen.
+        </div>
+      )}
       <a href="#customer-content" className="sr-only focus:not-sr-only focus:fixed focus:z-[100] focus:top-2 focus:left-2 focus:bg-white focus:px-4 focus:py-2">Skip to content</a>
       <header className={`sticky top-0 z-40 transition-all duration-300 pt-[env(safe-area-inset-top)] ${scrolled ? "bg-[#FAF5EC]/90 backdrop-blur-md border-b border-[#E7DFCB]" : "bg-transparent"}`}>
         <div className="max-w-7xl mx-auto px-5 md:px-10 py-3 flex items-center justify-between gap-4">
