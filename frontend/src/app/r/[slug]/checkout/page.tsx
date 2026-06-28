@@ -123,6 +123,7 @@ export default function CheckoutPage() {
 
       const payload = {
         restaurant_id: restId,
+        order_type: table?.id ? "dine_in" : "takeaway",
         customer_name: finalName,
         customer_phone: phone.trim() || undefined,
         items: cart.items.map((i) => {
