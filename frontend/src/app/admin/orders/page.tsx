@@ -105,7 +105,7 @@ export default function AdminOrders() {
                     >
                       <QrCode className="h-4 w-4 text-clay" />
                     </button>
-                  ) : null}
+                  ) : <span className="text-stone/30 text-xs">—</span>}
                 </td>
                 <td className="px-4 py-3"><Badge variant={STATUS_COLOR[o.status] || "default"}>{o.status}</Badge></td>
                 <td className="px-4 py-3 text-stone">{fmtTime(o.created_at)}</td>

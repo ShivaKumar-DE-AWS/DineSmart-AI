@@ -402,7 +402,7 @@ async def download_bill(order_id: str, user=Depends(current_user)):
     pdf.set_font("Helvetica", "I", 8)
     pdf.cell(text="Powered by SmartDine AI — smartdine.com", new_x="LMARGIN", new_y="NEXT", align="C")
 
-    pdf_bytes = pdf.output(dest="S").encode("latin-1")
+    pdf_bytes = bytes(pdf.output())
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",

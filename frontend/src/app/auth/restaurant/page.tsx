@@ -395,7 +395,16 @@ function DemoCredentialsSection() {
                 </span>
                 <span className="text-white truncate">{u.email}</span>
               </div>
-              <span className="shrink-0 text-stone ml-2">{u.password}</span>
+              <div className="shrink-0 flex items-center gap-2">
+                <span className="text-stone">{u.password}</span>
+                <button
+                  onClick={() => { navigator.clipboard.writeText(`${u.email}:${u.password}`); toast.success("Copied email:password"); }}
+                  className="text-[10px] text-electric-blue/60 hover:text-electric-blue transition-colors"
+                  title="Copy email:password"
+                >
+                  📋
+                </button>
+              </div>
             </div>
           ))}
         </div>
