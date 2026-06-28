@@ -14,6 +14,8 @@ interface Restaurant {
   owner_email?: string;
   subscription_status?: string;
   trial_ends_at?: string;
+  plan_tier?: string;
+  plan?: string;
   order_count: number;
   created_at?: string;
 }
