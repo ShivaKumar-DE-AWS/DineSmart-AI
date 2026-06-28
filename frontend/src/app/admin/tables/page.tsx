@@ -41,6 +41,36 @@ function tableQrUrl(slug: string, qrToken: string): string {
   return `${customerOrigin()}/r/${finalSlug}?t=${qrToken}`;
 }
 
+function printTakeawayMenuQr(slug: string, restaurantName: string) {
+  const menuUrl = `${window.location.origin}/r/${slug}/menu`;
+  const w = window.open("", "_blank");
+  if (!w) { toast.error("Popup blocked — allow popups to print"); return; }
+  w.document.write(`<!doctype html><html><head><title>${restaurantName} — Takeaway QR</title>
+    <style>
+      @page { margin: 0; size: 1200px 1600px; }
+      body { margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #FAF5EC; font-family: Georgia, serif; }
+      .card { width: 1200px; height: 1600px; background: #FAF5EC; border: 8px solid #5C0E1B; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px; }
+      .badge { font-size: 28px; background: #5C0E1B; color: #FAF5EC; padding: 10px 40px; border-radius: 40px; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 20px; }
+      .name { font-size: 56px; font-weight: bold; color: #5C0E1B; margin-bottom: 10px; }
+      .divider { width: 300px; height: 3px; background: #5C0E1B; margin: 20px auto; }
+      .subtitle { font-size: 32px; color: #8A6A1B; margin-bottom: 20px; }
+      .qr-wrap { margin: 40px 0; }
+      .qr-wrap img { width: 500px; height: 500px; }
+      .footer { font-size: 18px; color: #8A6A1B; margin-top: auto; }
+    </style></head><body>
+    <div class="card">
+      <div class="badge">Takeaway Menu</div>
+      <div class="name">${restaurantName}</div>
+      <div class="divider"></div>
+      <div class="subtitle">Scan to order takeaway</div>
+      <div class="qr-wrap"><img src="https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(menuUrl)}" alt="QR" /></div>
+      <div class="footer">Powered by SmartDine AI</div>
+    </div>
+    <script>window.onload=()=>{setTimeout(()=>window.print(),500)};</script>
+    </body></html>`);
+  w.document.close();
+}
+
 export default function AdminTables() {
   const qc = useQueryClient();
   const slug = useRestaurantSlug();
@@ -118,6 +148,36 @@ export default function AdminTables() {
       {isLoading && <div className="text-stone">Loading tables…</div>}
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        {/* Takeaway QR card — always shown */}
+        <div className="bg-gradient-to-br from-emerald-500/5 to-emerald-600/5 border-2 border-emerald-400/30 rounded-2xl p-5 flex flex-col relative overflow-hidden">
+          <div className="absolute top-0 right-0 mt-2 mr-2">
+            <span className="bg-emerald-500/20 text-emerald-600 border border-emerald-400/30 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">Takeaway</span>
+          </div>
+          <div className="flex items-center gap-2 mb-7">
+            <div className="h-9 w-9 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center">
+              <QrCode className="h-5 w-5 text-emerald-600" />
+            </div>
+            <div>
+              <h3 className="font-heading font-semibold leading-tight">Takeaway Menu QR</h3>
+              <p className="text-[10px] text-stone">All-orders takeaway link</p>
+            </div>
+          </div>
+          <div className="bg-cream rounded-xl p-4 flex items-center justify-center mb-3">
+            <QRCodeSVG value={`${window.location.origin}/r/${slug}/menu`} size={180} bgColor="#FAF5EC" fgColor="#2D6A4F" level="M" includeMargin={false} />
+          </div>
+          <p className="text-[10px] text-stone text-center mb-3">Scan to browse menu &amp; place takeaway order</p>
+          <div className="mt-auto flex gap-2">
+            <button onClick={() => printTakeawayMenuQr(slug, restaurantName)} className="flex-1 inline-flex items-center justify-center gap-1.5 bg-emerald-600 text-white rounded-full py-2 text-xs font-medium hover:bg-emerald-700">
+              <Printer className="h-3.5 w-3.5" /> Print
+            </button>
+            <button onClick={async () => {
+              try { await navigator.clipboard.writeText(`${window.location.origin}/r/${slug}/menu`); toast.success("Menu URL copied"); }
+              catch { toast.error("Could not copy"); }
+            }} className="flex-1 inline-flex items-center justify-center gap-1.5 bg-white border border-bone rounded-full py-2 text-xs font-medium hover:bg-cream">
+              <QrCode className="h-3.5 w-3.5" /> Copy URL
+            </button>
+          </div>
+        </div>
         {tables.map((t) => <TableCard key={t.id} t={t} onRegen={(id) => regen.mutate(id)} onDelete={(id) => remove.mutate(id)} slug={slug} restaurantName={restaurantName} />)}
       </div>
 
