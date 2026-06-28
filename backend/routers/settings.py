@@ -35,10 +35,18 @@ async def update_admin_settings(req: SettingsUpdateReq, user=Depends(require_use
 
 @router.get("/api/admin/staff", dependencies=[Depends(require_roles("admin"))])
 async def get_admin_staff(user=Depends(require_user)):
-    staff = await db.users.find(
-        {"restaurant_id": user["restaurant_id"], "role": {"$in": ["kitchen", "counter"]}},
+    # ponytail: find_one per role guarantees 1 kitchen + 1 counter max, even if DB has duplicates
+    kitchen = await db.users.find_one(
+        {"restaurant_id": user["restaurant_id"], "role": "kitchen"},
         {"_id": 0, "password_hash": 0}
-    ).to_list(100)
+    )
+    counter = await db.users.find_one(
+        {"restaurant_id": user["restaurant_id"], "role": "counter"},
+        {"_id": 0, "password_hash": 0}
+    )
+    staff = []
+    if kitchen: staff.append(kitchen)
+    if counter: staff.append(counter)
     return {"staff": staff}
 
 @router.post("/api/admin/staff", dependencies=[Depends(require_roles("admin"))])

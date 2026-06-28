@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
-import { Save, UserCog, Key, Settings, Palette, Type, Link as LinkIcon, Upload, Loader2 } from "lucide-react";
+import { Save, UserCog, Key, Settings, Palette, Type, Link as LinkIcon, Upload, Loader2, Eye, EyeOff } from "lucide-react";
 import { useSession } from "@/stores/session";
 
 export default function AdminSettings() {
@@ -238,6 +238,12 @@ function StaffRow({ staff }: { staff: any }) {
   const qc = useQueryClient();
   const [name, setName] = useState(staff.name);
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+
+  // Sync name from server when staff data refetches
+  useEffect(() => {
+    setName(staff.name);
+  }, [staff.name]);
 
   const updateStaff = useMutation({
     mutationFn: (data: any) => api("/api/admin/staff", { method: "POST", body: JSON.stringify({ ...data, id: staff.id, role: staff.role }) }),
@@ -258,12 +264,19 @@ function StaffRow({ staff }: { staff: any }) {
       <div className="space-y-3">
         <input value={name} onChange={e => setName(e.target.value)} placeholder="Display Name" className="w-full bg-cream border border-bone rounded-xl px-3 py-1.5 text-sm outline-none text-ink" />
         <div className="flex gap-2">
-          <div className="flex items-center gap-2 bg-cream border border-bone rounded-xl px-3 py-1.5 flex-1">
-            <Key className="h-3 w-3 text-stone" />
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="New Password (leave blank to keep)" className="bg-transparent outline-none flex-1 text-sm text-ink" />
+          <div className="flex items-center gap-2 bg-cream border border-bone rounded-xl px-3 py-1.5 flex-1 relative">
+            <Key className="h-3 w-3 text-stone shrink-0" />
+            <input type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} placeholder="New Password (leave blank to keep)" className="bg-transparent outline-none flex-1 text-sm text-ink pr-8" />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-stone hover:text-ink transition"
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
           </div>
-          <button onClick={() => updateStaff.mutate({ name, password: password || undefined })} className="bg-bone text-ink font-medium text-xs px-3 rounded-xl hover:bg-stone/20">
-            Update
+          <button onClick={() => updateStaff.mutate({ name, password: password || undefined })} className="bg-ink text-cream font-medium text-xs px-4 rounded-xl hover:opacity-90 shrink-0">
+            {updateStaff.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Update"}
           </button>
         </div>
       </div>
