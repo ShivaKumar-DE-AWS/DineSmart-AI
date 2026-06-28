@@ -49,6 +49,7 @@ export interface Order {
   customer_code?: string | null;
   table_number?: number | null;
   table_session_id?: string | null;
+  order_type?: string;
   items: CartItem[];
   subtotal: number;
   tax: number;

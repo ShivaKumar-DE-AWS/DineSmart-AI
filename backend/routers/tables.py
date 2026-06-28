@@ -112,6 +112,15 @@ async def regenerate_table_qr(table_id: str, user=Depends(require_user)):
     return {"qr_token": new_token}
 
 
+@router.get("/api/tables/by-token/{qr_token}")
+async def get_table_by_qr_token(qr_token: str):
+    """Public: return table + restaurant info for a QR token. Used by branded QR page."""
+    table = await db.tables.find_one({"qr_token": qr_token}, {"_id": 0})
+    if not table:
+        raise HTTPException(status_code=404, detail="Table not found")
+    restaurant = await db.restaurants.find_one({"id": table.get("restaurant_id")}, {"_id": 0, "name": 1, "slug": 1})
+    return {"table": table, "restaurant": restaurant}
+
 @router.post("/api/tables/scan")
 async def scan_table(req: TableScanReq):
     """Public: a guest scanned the QR. Returns table info + starts/refreshes a 10-min live session."""

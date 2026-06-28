@@ -1,12 +1,13 @@
 "use client";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { api, apiUrl } from "@/lib/api";
 import { formatCurrency, fmtTime } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import type { Order } from "@/types";
 import { toast } from "sonner";
 import { useSession } from "@/stores/session";
+import { QrCode } from "lucide-react";
 
 const STATUS_OPTIONS: Order["status"][] = ["confirmed", "preparing", "ready", "served", "cancelled"];
 const STATUS_COLOR: Record<string, "clay" | "warn" | "ready" | "sage" | "alert"> = {
@@ -22,6 +23,25 @@ export default function AdminOrders() {
     mutationFn: ({ id, status }: { id: string; status: string }) => api(`/api/orders/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-orders", undefined, user?.restaurant_id] }); toast.success("Status updated"); },
   });
+
+  const downloadBill = async (orderId: string, tokenName: string) => {
+    try {
+      const t = useSession.getState().token;
+      const res = await fetch(apiUrl(`/api/orders/${orderId}/bill`), {
+        headers: t ? { Authorization: "Bearer " + t } : {},
+      });
+      if (!res.ok) throw new Error("Download failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "bill_" + tokenName + ".pdf";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      toast.error("Failed to download bill");
+    }
+  };
 
   return (
     <div>
@@ -45,9 +65,11 @@ export default function AdminOrders() {
               <th className="text-left px-4 py-3">Items</th>
               <th className="text-left px-4 py-3">Total</th>
               <th className="text-left px-4 py-3">Payment</th>
+              <th className="text-left px-4 py-3">QR</th>
               <th className="text-left px-4 py-3">Status</th>
               <th className="text-left px-4 py-3">Placed</th>
               <th className="text-left px-4 py-3">Update</th>
+              <th className="text-left px-4 py-3">Bill</th>
             </tr>
           </thead>
           <tbody>
@@ -62,6 +84,29 @@ export default function AdminOrders() {
                     {o.payment_method === "upi" ? "UPI QR" : o.payment_method === "card_machine" ? "CARD MACHINE" : "CASH"}
                   </Badge>
                 </td>
+                <td className="px-4 py-3">
+                  {o.order_type === "takeaway" ? (
+                    <button
+                      onClick={() => {
+                        const slug = user?.restaurant_slug || "";
+                        const trackUrl = `${window.location.origin}/r/${slug}/track/${o.id}`;
+                        const w = window.open("", "_blank");
+                        if (!w) { toast.error("Popup blocked"); return; }
+                        const name = o.customer_name;
+                        w.document.write(`<!doctype html><html><head><title>Takeaway QR</title>
+                          <style>@page{margin:0;size:1200px 1600px}body{margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;background:#FAF5EC;font-family:Georgia,serif}.card{width:1200px;height:1600px;background:#FAF5EC;border:8px solid #5C0E1B;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px}.badge{font-size:18px;background:#5C0E1B;color:#FAF5EC;padding:6px 24px;border-radius:40px;letter-spacing:.2em;text-transform:uppercase;margin-bottom:20px}.token{font-size:96px;font-weight:bold;color:#5C0E1B;margin:10px 0}.customer{font-size:28px;color:#8A6A1B;margin-bottom:30px}img{width:400px;height:400px}.footer{font-size:18px;color:#8A6A1B;margin-top:auto}</style></head><body>
+                          <div class="card"><div class="badge">Takeaway</div><div class="token">${o.token}</div><div class="customer">${name}</div><img src="https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(trackUrl)}" /><div class="footer">Powered by SmartDine AI</div></div>
+                          <script>window.onload=()=>{setTimeout(()=>window.print(),500)}</script>
+                          </body></html>`);
+                        w.document.close();
+                      }}
+                      className="inline-flex items-center justify-center w-8 h-8 rounded-full hover:bg-cream transition-colors"
+                      title="Print takeaway QR"
+                    >
+                      <QrCode className="h-4 w-4 text-clay" />
+                    </button>
+                  ) : null}
+                </td>
                 <td className="px-4 py-3"><Badge variant={STATUS_COLOR[o.status] || "default"}>{o.status}</Badge></td>
                 <td className="px-4 py-3 text-stone">{fmtTime(o.created_at)}</td>
                 <td className="px-4 py-3">
@@ -74,10 +119,18 @@ export default function AdminOrders() {
                     {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </td>
+                <td className="px-4 py-3">
+                  <button
+                    onClick={() => downloadBill(o.id, o.token)}
+                    className="h-8 rounded-full border border-bone px-3 text-xs bg-white hover:bg-cream transition-colors"
+                  >
+                    PDF
+                  </button>
+                </td>
               </tr>
             ))}
             {data?.orders.length === 0 && (
-              <tr><td colSpan={7} className="px-4 py-10 text-center text-stone">No orders to show.</td></tr>
+              <tr><td colSpan={10} className="px-4 py-10 text-center text-stone">No orders to show.</td></tr>
             )}
           </tbody>
         </table>

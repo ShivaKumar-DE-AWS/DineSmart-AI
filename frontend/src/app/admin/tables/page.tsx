@@ -5,7 +5,7 @@ import { api } from "@/lib/api";
 import { useSession } from "@/stores/session";
 import { getRestaurantConfig } from "@/hooks/useRestaurantConfig";
 import { toast } from "sonner";
-import { Plus, QrCode, RefreshCw, Trash2, Download, Printer, Users, Clock, MapPin } from "lucide-react";
+import { Plus, QrCode, RefreshCw, Trash2, Download, Printer, Users, Clock, MapPin, Eye } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { QRCodeSVG } from "qrcode.react";
 
@@ -141,13 +141,44 @@ function TableCard({ t, onRegen, onDelete, slug, restaurantName }: { t: TableDoc
     const svgUrl = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(xml)));
     const img = new Image();
     img.onload = () => {
-      const size = 1024;
+      const w = 1200, h = 1600;
       const canvas = document.createElement("canvas");
-      canvas.width = size; canvas.height = size;
+      canvas.width = w; canvas.height = h;
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
-      ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, size, size);
-      ctx.drawImage(img, 0, 0, size, size);
+      // Cream background
+      ctx.fillStyle = "#FAF5EC"; ctx.fillRect(0, 0, w, h);
+      // Brand border
+      ctx.strokeStyle = "#5C0E1B"; ctx.lineWidth = 8;
+      ctx.strokeRect(40, 40, w - 80, h - 80);
+      // Restaurant name
+      ctx.fillStyle = "#5C0E1B"; ctx.textAlign = "center";
+      ctx.font = "bold 48px Georgia, serif";
+      ctx.fillText(restaurantName || "RESTAURANT", w / 2, 160);
+      // Decorative divider
+      ctx.strokeStyle = "#5C0E1B"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(w / 2 - 120, 190); ctx.lineTo(w / 2 + 120, 190); ctx.stroke();
+      // Table number
+      ctx.font = "bold 96px Georgia, serif";
+      ctx.fillStyle = "#5C0E1B";
+      ctx.fillText(`Table ${t.number}`, w / 2, 310);
+      // QR (center area 480-1080)
+      const qrSize = 540, qrX = (w - qrSize) / 2, qrY = 400;
+      ctx.drawImage(img, qrX, qrY, qrSize, qrSize);
+      // White border around QR
+      ctx.strokeStyle = "#5C0E1B"; ctx.lineWidth = 3;
+      ctx.strokeRect(qrX - 8, qrY - 8, qrSize + 16, qrSize + 16);
+      // Instructions
+      ctx.fillStyle = "#5C0E1B";
+      ctx.font = "italic 28px Georgia, serif";
+      ctx.fillText("Scan to order from your seat", w / 2, 1040);
+      ctx.font = "22px Georgia, serif";
+      ctx.fillStyle = "#8A6A1B";
+      ctx.fillText("No app. No signup. Just scan and enjoy.", w / 2, 1090);
+      // Footer branding
+      ctx.font = "18px Georgia, serif";
+      ctx.fillStyle = "#8A6A1B";
+      ctx.fillText("Powered by SmartDine AI", w / 2, h - 100);
       const link = document.createElement("a");
       link.download = `${slug}-table-${t.number}.png`;
       link.href = canvas.toDataURL("image/png");
@@ -225,12 +256,15 @@ function TableCard({ t, onRegen, onDelete, slug, restaurantName }: { t: TableDoc
 
       <div className="mt-3 text-[10px] text-stone font-mono break-all" data-testid={`qr-url-${t.number}`}>{url}</div>
 
-      <div className="mt-4 grid grid-cols-2 gap-2">
+      <div className="mt-4 grid grid-cols-3 gap-2">
         <button data-testid={`download-qr-${t.number}`} onClick={downloadPng} className="inline-flex items-center justify-center gap-1.5 bg-ink text-cream rounded-full py-2 text-xs font-medium hover:bg-clay">
           <Download className="h-3.5 w-3.5" /> PNG
         </button>
         <button data-testid={`print-qr-${t.number}`} onClick={printQr} className="inline-flex items-center justify-center gap-1.5 bg-white border border-bone rounded-full py-2 text-xs font-medium hover:bg-cream">
           <Printer className="h-3.5 w-3.5" /> Print
+        </button>
+        <button data-testid={`card-qr-${t.number}`} onClick={() => window.open(`/r/${slug}/qr/${t.qr_token}`, '_blank')} className="inline-flex items-center justify-center gap-1.5 bg-white border border-bone rounded-full py-2 text-xs font-medium hover:bg-cream">
+          <Eye className="h-3.5 w-3.5" /> Card
         </button>
         <button data-testid={`copy-url-${t.number}`} onClick={copyUrl} className="inline-flex items-center justify-center gap-1.5 bg-white border border-bone rounded-full py-2 text-xs font-medium hover:bg-cream">
           <QrCode className="h-3.5 w-3.5" /> Copy URL

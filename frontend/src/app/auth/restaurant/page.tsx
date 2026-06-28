@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -59,8 +59,8 @@ export default function RestaurantAuthPage() {
       const restaurantId = res.user.restaurant_id;
       const slug = restaurantId ? slugFromRestaurantId(restaurantId) : null;
       const dest = slug
-        ? res.user.role === "kitchen" ? `/r/${slug}/kitchen`
-        : res.user.role === "counter" ? `/r/${slug}/counter`
+        ? res.user.role === "kitchen" ? `/kitchen`
+        : res.user.role === "counter" ? `/counter`
         : res.user.role === "admin" ? `/admin`
         : `/r/${slug}`
         : "/";
@@ -325,26 +325,7 @@ export default function RestaurantAuthPage() {
         </div>
 
         {tab === "login" && (
-          <div className="mt-8 bg-white/5 border border-white/10 rounded-2xl p-4 text-xs text-stone space-y-2 backdrop-blur-md">
-            <div className="font-semibold text-white mb-2">Demo Credentials:</div>
-            <div className="grid grid-cols-2 gap-1">
-              {allRestaurants.map((r) => (
-                <div key={r.slug}>
-                  <span className="text-gold">{r.name}:</span> {r.email}
-                </div>
-              ))}
-            </div>
-            <div className="grid grid-cols-2 gap-1">
-              {allRestaurants.map((r) => (
-                <div key={r.slug}>
-                  <span className="text-white">Pass:</span> Owner@123
-                </div>
-              ))}
-            </div>
-            <div className="text-[10px] text-stone/60 mt-2 border-t border-white/10 pt-2">
-              Staff logins available from each restaurant&apos;s login page.
-            </div>
-          </div>
+          <DemoCredentialsSection />
         )}
 
         <div className="mt-6 text-center">
@@ -353,6 +334,78 @@ export default function RestaurantAuthPage() {
           </Link>
         </div>
       </motion.div>
+    </div>
+  );
+}
+
+// ponytail: inline demo-cred component, no Suspense boundary — window.location is fine for onboarding
+function DemoCredentialsSection() {
+  const allRestaurants = useAllRestaurantConfigs();
+  const [creds, setCreds] = useState<{ users: Array<{ email: string; password: string; name: string; role: string }> } | null>(null);
+  const [selected, setSelected] = useState("");
+
+  useEffect(() => {
+    const s = new URLSearchParams(window.location.search).get("slug");
+    if (s) setSelected(s);
+  }, []);
+
+  useEffect(() => {
+    if (!selected) { setCreds(null); return; }
+    fetch(`/api/admin/demo-creds?slug=${encodeURIComponent(selected)}`)
+      .then(r => r.json()).then(d => setCreds(d))
+      .catch(() => setCreds({ users: [] }));
+  }, [selected]);
+
+  const roleColors: Record<string, string> = {
+    admin: "bg-electric-blue/20 text-electric-blue",
+    kitchen: "bg-clay/20 text-clay",
+    counter: "bg-gold/20 text-gold",
+    customer: "bg-emerald-500/20 text-emerald-400",
+  };
+
+  return (
+    <div className="mt-8 bg-graphite/50 backdrop-blur-xl border border-white/10 rounded-2xl p-4 text-xs space-y-3 shadow-2xl">
+      <div className="flex items-center justify-between">
+        <span className="font-semibold text-white">Demo Credentials</span>
+        <select
+          value={selected}
+          onChange={e => setSelected(e.target.value)}
+          className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-stone text-xs focus:outline-none focus:ring-1 focus:ring-electric-blue/50"
+        >
+          <option value="">Select a restaurant...</option>
+          {allRestaurants.map(r => (
+            <option key={r.slug} value={r.slug}>{r.name}</option>
+          ))}
+        </select>
+      </div>
+
+      {selected && !creds && <div className="text-stone animate-pulse">Loading...</div>}
+
+      {creds && creds.users.length === 0 && (
+        <div className="text-stone">No demo credentials available for this restaurant.</div>
+      )}
+
+      {creds && creds.users.length > 0 && (
+        <div className="space-y-2">
+          {creds.users.map((u, i) => (
+            <div key={i} className="flex items-center justify-between bg-white/5 rounded-lg px-3 py-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] font-medium ${roleColors[u.role] || "bg-white/10 text-stone"}`}>
+                  {u.role}
+                </span>
+                <span className="text-white truncate">{u.email}</span>
+              </div>
+              <span className="shrink-0 text-stone ml-2">{u.password}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!selected && (
+        <div className="text-stone/60 text-[10px]">
+          Select a restaurant above to view demo login credentials for all staff roles.
+        </div>
+      )}
     </div>
   );
 }

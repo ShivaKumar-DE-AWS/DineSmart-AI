@@ -148,6 +148,23 @@ async def get_restaurant_config(slug: str):
 async def list_restaurant_configs():
     return {"configs": [{"slug": s, "name": c.get("name", ""), "email": next((u.get("email","") for u in c.get("users",[]) if u.get("role")=="admin"),"")} for s, c in _CONFIG_CACHE.items()]}
 
+# ponytail: demo credentials endpoints — direct file reads, no auth, for onboarding UX only
+@app.get("/api/admin/demo-creds")
+async def admin_demo_creds(slug: str | None = None):
+    config = _CONFIG_CACHE.get(slug) if slug else None
+    if not config:
+        return {"users": []}
+    return {"users": [{"email": u["email"], "password": u["password"], "name": u["name"], "role": u["role"]} for u in config.get("users", [])]}
+
+@app.get("/api/super-admin/demo-creds")
+async def super_admin_demo_creds():
+    import json as _j, os as _o
+    p = _o.path.join(_o.path.dirname(__file__), "data", "superadmin.json")
+    if not _o.path.exists(p):
+        return {"users": []}
+    with open(p, "r", encoding="utf-8") as f:
+        return _j.load(f)
+
 # ponytail: middleware order matters - rate limit first, then security headers, then size limit
 app.add_middleware(RateLimitMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)

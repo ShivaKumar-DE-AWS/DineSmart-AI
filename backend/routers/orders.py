@@ -308,6 +308,109 @@ async def update_status(order_id: str, body: OrderStatusUpdate, user=Depends(req
 
 
 # =========================================================
+# Bill PDF download
+# =========================================================
+@router.get("/api/orders/{order_id}/bill")
+async def download_bill(order_id: str, user=Depends(current_user)):
+    q: Dict[str, Any] = {"id": order_id}
+    if user and user.get("restaurant_id"):
+        q["restaurant_id"] = user["restaurant_id"]
+    order = await db.orders.find_one(q, {"_id": 0})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    rest = await db.restaurants.find_one({"id": order["restaurant_id"]}, {"_id": 0, "name": 1})
+    rest_name = rest["name"] if rest else "SmartDine AI Restaurant"
+
+    from fpdf import FPDF
+
+    pdf = FPDF()
+    pdf.add_page()
+
+    # Restaurant name
+    pdf.set_font("Helvetica", "B", 20)
+    pdf.cell(text=rest_name, new_x="LMARGIN", new_y="NEXT", align="C")
+
+    # Token
+    pdf.set_font("Helvetica", "B", 28)
+    pdf.cell(text=f"Token #{order['token']}", new_x="LMARGIN", new_y="NEXT", align="C")
+
+    # Date/time
+    pdf.set_font("Helvetica", "", 10)
+    created = order.get("created_at", "")
+    if created:
+        try:
+            dt = datetime.fromisoformat(created)
+            created = dt.strftime("%d %b %Y, %I:%M %p")
+        except ValueError:
+            pass
+    pdf.cell(text=f"Date: {created}", new_x="LMARGIN", new_y="NEXT", align="C")
+
+    # Customer & table info
+    pdf.ln(5)
+    pdf.set_font("Helvetica", "", 11)
+    pdf.cell(text=f"Customer: {order.get('customer_name', 'N/A')}", new_x="LMARGIN", new_y="NEXT")
+    if order.get("order_type") == "dine_in" and order.get("table_number"):
+        pdf.cell(text=f"Table: {order['table_number']}", new_x="LMARGIN", new_y="NEXT")
+    else:
+        pdf.cell(text=f"Order: {order.get('order_type', 'dine_in').title()}", new_x="LMARGIN", new_y="NEXT")
+
+    # Item table
+    pdf.ln(8)
+    col_w = [80, 20, 30, 40]
+    pdf.set_font("Helvetica", "B", 10)
+    for h, w in zip(["Item", "Qty", "Unit Price", "Total"], col_w):
+        pdf.cell(text=h, w=w, align="L" if h == "Item" else "C", border=1)
+    pdf.ln()
+
+    pdf.set_font("Helvetica", "", 10)
+    for item in order.get("items", []):
+        name = item.get("name", "Unknown")[:70]
+        qty = item.get("qty", 1)
+        price = float(item.get("price", 0))
+        pdf.cell(text=name, w=col_w[0], align="L", border=1)
+        pdf.cell(text=str(qty), w=col_w[1], align="C", border=1)
+        pdf.cell(text=f"INR {price:.2f}", w=col_w[2], align="C", border=1)
+        pdf.cell(text=f"INR {price*qty:.2f}", w=col_w[3], align="C", border=1)
+        pdf.ln()
+
+    # Totals
+    subtotal = float(order.get("subtotal", 0))
+    tax = float(order.get("tax", 0))
+    total = float(order.get("total", 0))
+    gap_w = sum(col_w[:3])
+    pdf.set_font("Helvetica", "", 10)
+    pdf.cell(text="", w=gap_w, border=0)
+    pdf.cell(text=f"Subtotal: INR {subtotal:.2f}", w=col_w[3], align="C", border=1)
+    pdf.ln()
+    pdf.cell(text="", w=gap_w, border=0)
+    pdf.cell(text=f"Tax (5%): INR {tax:.2f}", w=col_w[3], align="C", border=1)
+    pdf.ln()
+    pdf.set_font("Helvetica", "B", 11)
+    pdf.cell(text="", w=gap_w, border=0)
+    pdf.cell(text=f"Total: INR {total:.2f}", w=col_w[3], align="C", border=1)
+    pdf.ln(10)
+
+    # Payment status
+    pay_status = order.get("payment_status", "unpaid").upper()
+    pay_method = order.get("payment_method", "").upper()
+    pdf.set_font("Helvetica", "", 10)
+    pdf.cell(text=f"Payment: {pay_status} ({pay_method})", new_x="LMARGIN", new_y="NEXT", align="C")
+
+    # Branding
+    pdf.ln(15)
+    pdf.set_font("Helvetica", "I", 8)
+    pdf.cell(text="Powered by SmartDine AI — smartdine.com", new_x="LMARGIN", new_y="NEXT", align="C")
+
+    pdf_bytes = pdf.output(dest="S").encode("latin-1")
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=bill_{order['token']}.pdf"},
+    )
+
+
+# =========================================================
 # Payment helpers (shared with orders) — simplified for UPI/QR only
 # =========================================================
 async def _find_or_create_customer(name: str, phone: Optional[str], restaurant_id: Optional[str] = None) -> Dict[str, Any]:
