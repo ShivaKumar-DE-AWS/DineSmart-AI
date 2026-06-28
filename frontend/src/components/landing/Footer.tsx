@@ -51,8 +51,13 @@ export function Footer() {
               <li><Link href="#" className="hover:text-white transition">Careers</Link></li>
               <li><Link href="#" className="hover:text-white transition">Blog</Link></li>
               <li className="pt-2">
-                <a href="mailto:smartdine.ai2@gmail.com" className="hover:text-white transition flex items-center gap-2">
-                  <span className="text-[#D95333]">✉</span> smartdine.ai2@gmail.com
+                <a href="mailto:admin@smartdineai.co.in" className="hover:text-white transition flex items-center gap-2">
+                  <span className="text-[#D95333]">✉</span> admin@smartdineai.co.in
+                </a>
+              </li>
+              <li>
+                <a href="mailto:info@smartdineai.co.in" className="hover:text-white transition flex items-center gap-2">
+                  <span className="text-[#D95333]">✉</span> info@smartdineai.co.in
                 </a>
               </li>
               <li>
