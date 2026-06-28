@@ -1,7 +1,7 @@
 "use client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { Store, Search, UserCircle2, Ban, Play } from "lucide-react";
+import { Store, Search, UserCircle2, Ban, Play, Trash2, Plus, Clock, X } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -13,12 +13,16 @@ interface Restaurant {
   slug: string;
   owner_email?: string;
   subscription_status?: string;
+  trial_ends_at?: string;
   order_count: number;
   created_at?: string;
 }
 
 export default function SuperAdminRestaurantsPage() {
   const [search, setSearch] = useState("");
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addForm, setAddForm] = useState({ name: "", slug: "", owner_email: "" });
+  
   const qc = useQueryClient();
   const router = useRouter();
   const setSession = useSession((s) => s.setSession);
@@ -32,6 +36,35 @@ export default function SuperAdminRestaurantsPage() {
     mutationFn: (id: string) => api<{ message: string; new_status: string }>(`/api/super-admin/restaurants/${id}/suspend`, { method: "POST" }),
     onSuccess: (data) => {
       toast.success(data.message);
+      qc.invalidateQueries({ queryKey: ["super-admin-restaurants"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: (id: string) => api<{ message: string }>(`/api/super-admin/restaurants/${id}`, { method: "DELETE" }),
+    onSuccess: (data) => {
+      toast.success(data.message);
+      qc.invalidateQueries({ queryKey: ["super-admin-restaurants"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const extendTrialMut = useMutation({
+    mutationFn: (id: string) => api<{ message: string }>(`/api/super-admin/restaurants/${id}/extend-trial`, { method: "POST", body: { days: 7 } }),
+    onSuccess: (data) => {
+      toast.success(data.message);
+      qc.invalidateQueries({ queryKey: ["super-admin-restaurants"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const addMut = useMutation({
+    mutationFn: (body: typeof addForm) => api<{ message: string }>(`/api/super-admin/restaurants`, { method: "POST", body }),
+    onSuccess: (data) => {
+      toast.success(data.message);
+      setShowAddModal(false);
+      setAddForm({ name: "", slug: "", owner_email: "" });
       qc.invalidateQueries({ queryKey: ["super-admin-restaurants"] });
     },
     onError: (err: Error) => toast.error(err.message),
@@ -61,6 +94,12 @@ export default function SuperAdminRestaurantsPage() {
           </h1>
           <p className="text-stone text-sm">All registered restaurants on the platform.</p>
         </div>
+        <button 
+          onClick={() => setShowAddModal(true)}
+          className="flex items-center gap-2 bg-brand text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand/90 transition shadow-sm"
+        >
+          <Plus className="h-4 w-4" /> Add Restaurant
+        </button>
       </div>
 
       <div className="relative max-w-sm">
@@ -82,15 +121,15 @@ export default function SuperAdminRestaurantsPage() {
               <th className="text-left py-3 px-4 font-medium text-stone">Slug</th>
               <th className="text-left py-3 px-4 font-medium text-stone hidden md:table-cell">Status</th>
               <th className="text-left py-3 px-4 font-medium text-stone">Orders</th>
-              <th className="text-left py-3 px-4 font-medium text-stone hidden md:table-cell">Created</th>
+              <th className="text-left py-3 px-4 font-medium text-stone hidden md:table-cell">Trial Ends</th>
               <th className="text-right py-3 px-4 font-medium text-stone">Actions</th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan={5} className="text-center py-8 text-stone">Loading...</td></tr>
+              <tr><td colSpan={6} className="text-center py-8 text-stone">Loading...</td></tr>
             ) : restaurants.length === 0 ? (
-              <tr><td colSpan={5} className="text-center py-8 text-stone">No restaurants found.</td></tr>
+              <tr><td colSpan={6} className="text-center py-8 text-stone">No restaurants found.</td></tr>
             ) : (
               restaurants.map((r) => (
                 <tr key={r.id || r.slug} className="border-b border-bone last:border-0 hover:bg-sand/50 transition">
@@ -107,16 +146,32 @@ export default function SuperAdminRestaurantsPage() {
                   </td>
                   <td className="py-3 px-4 text-ink">{r.order_count}</td>
                   <td className="py-3 px-4 text-stone text-xs hidden md:table-cell">
-                    {r.created_at ? new Date(r.created_at).toLocaleDateString() : "—"}
+                    {r.subscription_status === "trial" && r.trial_ends_at 
+                      ? new Date(r.trial_ends_at).toLocaleDateString() 
+                      : (r.subscription_status === "trial" ? "No Date Set" : "—")}
                   </td>
-                  <td className="py-3 px-4 text-right space-x-2">
+                  <td className="py-3 px-4 text-right space-x-2 whitespace-nowrap">
+                    {r.subscription_status === "trial" && (
+                      <button 
+                        onClick={() => {
+                          if (confirm(`Extend trial by 7 days for ${r.name}?`)) {
+                            extendTrialMut.mutate(r.id);
+                          }
+                        }}
+                        disabled={extendTrialMut.isPending}
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 transition text-xs font-medium"
+                        title="Extend Trial"
+                      >
+                        <Clock className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                     <button 
                       onClick={() => impersonateMut.mutate(r.id)}
                       disabled={impersonateMut.isPending}
                       className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition text-xs font-medium"
                       title="Impersonate Admin"
                     >
-                      <UserCircle2 className="h-3.5 w-3.5" /> <span className="hidden lg:inline">Login As</span>
+                      <UserCircle2 className="h-3.5 w-3.5" />
                     </button>
                     <button 
                       onClick={() => {
@@ -130,6 +185,18 @@ export default function SuperAdminRestaurantsPage() {
                     >
                       {r.subscription_status === 'suspended' ? <Play className="h-3.5 w-3.5" /> : <Ban className="h-3.5 w-3.5" />}
                     </button>
+                    <button 
+                      onClick={() => {
+                        if (confirm(`Are you sure you want to PERMANENTLY DELETE ${r.name}? This action cannot be undone.`)) {
+                          deleteMut.mutate(r.id);
+                        }
+                      }}
+                      disabled={deleteMut.isPending}
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition text-xs font-medium"
+                      title="Delete Restaurant"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
                   </td>
                 </tr>
               ))
@@ -137,6 +204,83 @@ export default function SuperAdminRestaurantsPage() {
           </tbody>
         </table>
       </div>
+
+      {showAddModal && (
+        <div className="fixed inset-0 bg-ink/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-heading font-bold text-ink">Add Restaurant</h2>
+                <button 
+                  onClick={() => setShowAddModal(false)}
+                  className="text-stone hover:text-ink transition p-1"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              
+              <form 
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  addMut.mutate(addForm);
+                }}
+                className="space-y-4"
+              >
+                <div>
+                  <label className="block text-sm font-medium text-ink mb-1">Restaurant Name</label>
+                  <input 
+                    type="text" 
+                    required
+                    value={addForm.name}
+                    onChange={(e) => setAddForm({...addForm, name: e.target.value})}
+                    className="w-full border border-bone rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
+                    placeholder="e.g. The Golden Dragon"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-ink mb-1">Slug</label>
+                  <input 
+                    type="text" 
+                    required
+                    value={addForm.slug}
+                    onChange={(e) => setAddForm({...addForm, slug: e.target.value})}
+                    className="w-full border border-bone rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
+                    placeholder="e.g. golden-dragon"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-ink mb-1">Owner Email</label>
+                  <input 
+                    type="email" 
+                    required
+                    value={addForm.owner_email}
+                    onChange={(e) => setAddForm({...addForm, owner_email: e.target.value})}
+                    className="w-full border border-bone rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
+                    placeholder="owner@example.com"
+                  />
+                </div>
+                
+                <div className="pt-4 flex gap-3">
+                  <button 
+                    type="button"
+                    onClick={() => setShowAddModal(false)}
+                    className="flex-1 px-4 py-2 bg-sand text-ink rounded-lg text-sm font-medium hover:bg-bone transition"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit"
+                    disabled={addMut.isPending}
+                    className="flex-1 px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand/90 transition flex justify-center items-center"
+                  >
+                    {addMut.isPending ? "Creating..." : "Create Restaurant"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

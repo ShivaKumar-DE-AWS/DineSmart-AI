@@ -111,10 +111,39 @@ async def require_user(user=Depends(current_user)) -> Dict[str, Any]:
 
 def require_roles(*roles: str):
     async def dep(user=Depends(require_user)):
-        if user.get("role") not in roles:
+        role = user.get("role")
+        # Superadmin bypasses all role/restaurant checks
+        if role == "superadmin":
+            return user
+        if role not in roles:
             raise HTTPException(status_code=403, detail="Forbidden")
-        if not user.get("restaurant_id"):
+        
+        rid = user.get("restaurant_id")
+        if not rid:
             raise HTTPException(status_code=403, detail="No restaurant assigned to this account")
+            
+        from deps import db
+        restaurant = await db.restaurants.find_one({"id": rid}, {"subscription_status": 1, "trial_ends_at": 1})
+        if not restaurant:
+            raise HTTPException(status_code=403, detail="Restaurant not found")
+            
+        status = restaurant.get("subscription_status")
+        if status == "suspended":
+            raise HTTPException(status_code=403, detail="Restaurant is suspended")
+            
+        if status == "trial":
+            trial_ends_at = restaurant.get("trial_ends_at")
+            if trial_ends_at:
+                # Ensure trial_ends_at is timezone-aware for comparison
+                if trial_ends_at.tzinfo is None:
+                    trial_ends_at = trial_ends_at.replace(tzinfo=timezone.utc)
+                if datetime.now(timezone.utc) > trial_ends_at:
+                    raise HTTPException(status_code=403, detail="Trial period has expired. Please contact support.")
+            else:
+                # If no trial_ends_at is set but status is trial, default to denying or allowing? 
+                # We'll let them pass until a migration sets it, or we could block. Allowing for safety.
+                pass
+                
         return user
     return dep
 
@@ -133,7 +162,8 @@ class RestaurantModel(BaseModel):
     name: str
     slug: str
     owner_email: str
-    subscription_status: str = "active"
+    subscription_status: str = "trial"
+    trial_ends_at: Optional[datetime] = Field(default_factory=lambda: datetime.now(timezone.utc) + timedelta(days=14))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class RecipeIngredient(BaseModel):

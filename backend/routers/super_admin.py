@@ -35,7 +35,7 @@ async def list_restaurants(user=Depends(require_superadmin)):
     """List all restaurants with basic stats."""
     restaurants = await db.restaurants.find(
         {}, {"_id": 0, "id": 1, "name": 1, "slug": 1, "owner_email": 1,
-             "subscription_status": 1, "created_at": 1}
+             "subscription_status": 1, "trial_ends_at": 1, "created_at": 1}
     ).to_list(500)
 
     # Enrich with order counts per restaurant
@@ -59,7 +59,7 @@ async def toggle_suspend_restaurant(restaurant_id: str, user=Depends(require_sup
 
     from routers.audit import log_audit_event
     await log_audit_event(
-        user_id=user["id"],
+        user_id=user["sub"],
         user_email=user["email"],
         action=f"restaurant_{new_status}",
         target=restaurant_id,
@@ -80,7 +80,7 @@ async def impersonate_restaurant(restaurant_id: str, user=Depends(require_supera
 
     # Generate token masquerading as the restaurant admin
     token = jwt_sign({
-        "sub": user["id"],
+        "sub": user.get("sub"),
         "email": user["email"],
         "role": "admin",
         "name": f"SmartDine HQ ({user['name']})",
@@ -90,7 +90,7 @@ async def impersonate_restaurant(restaurant_id: str, user=Depends(require_supera
 
     from routers.audit import log_audit_event
     await log_audit_event(
-        user_id=user["id"],
+        user_id=user.get("sub"),
         user_email=user["email"],
         action="impersonate_tenant",
         target=restaurant_id,
@@ -100,7 +100,7 @@ async def impersonate_restaurant(restaurant_id: str, user=Depends(require_supera
     return {
         "token": token,
         "user": {
-            "id": user["id"],
+            "id": user.get("sub"),
             "email": user["email"],
             "name": f"SmartDine HQ ({user['name']})",
             "role": "admin",
@@ -108,3 +108,83 @@ async def impersonate_restaurant(restaurant_id: str, user=Depends(require_supera
             "restaurant_slug": restaurant.get("slug"),
         }
     }
+
+from pydantic import BaseModel
+from deps import RestaurantModel
+
+class CreateRestaurantReq(BaseModel):
+    name: str
+    slug: str
+    owner_email: str
+
+@router.post("/restaurants")
+async def create_restaurant(req: CreateRestaurantReq, user=Depends(require_superadmin)):
+    restaurant = RestaurantModel(
+        name=req.name,
+        slug=req.slug,
+        owner_email=req.owner_email
+    )
+    await db.restaurants.insert_one(restaurant.model_dump())
+    
+    from routers.audit import log_audit_event
+    await log_audit_event(
+        user_id=user.get("sub"),
+        user_email=user["email"],
+        action="restaurant_created",
+        target=restaurant.id,
+        details={"restaurant_name": restaurant.name}
+    )
+    return {"message": "Restaurant created", "restaurant": restaurant.model_dump()}
+
+@router.delete("/restaurants/{restaurant_id}")
+async def delete_restaurant(restaurant_id: str, user=Depends(require_superadmin)):
+    result = await db.restaurants.delete_one({"id": restaurant_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Restaurant not found")
+        
+    from routers.audit import log_audit_event
+    await log_audit_event(
+        user_id=user.get("sub"),
+        user_email=user["email"],
+        action="restaurant_deleted",
+        target=restaurant_id,
+        details={}
+    )
+    return {"message": "Restaurant deleted"}
+
+class ExtendTrialReq(BaseModel):
+    days: int = 7
+
+@router.post("/restaurants/{restaurant_id}/extend-trial")
+async def extend_trial(restaurant_id: str, req: ExtendTrialReq, user=Depends(require_superadmin)):
+    restaurant = await db.restaurants.find_one({"id": restaurant_id})
+    if not restaurant:
+        raise HTTPException(status_code=404, detail="Restaurant not found")
+        
+    from datetime import datetime, timezone, timedelta
+    current_ends_at = restaurant.get("trial_ends_at")
+    
+    if current_ends_at:
+        if current_ends_at.tzinfo is None:
+            current_ends_at = current_ends_at.replace(tzinfo=timezone.utc)
+        # If expired, add from today. If still active, add to existing end date.
+        base_date = max(current_ends_at, datetime.now(timezone.utc))
+    else:
+        base_date = datetime.now(timezone.utc)
+        
+    new_ends_at = base_date + timedelta(days=req.days)
+    
+    await db.restaurants.update_one(
+        {"id": restaurant_id}, 
+        {"$set": {"trial_ends_at": new_ends_at, "subscription_status": "trial"}}
+    )
+    
+    from routers.audit import log_audit_event
+    await log_audit_event(
+        user_id=user.get("sub"),
+        user_email=user["email"],
+        action="trial_extended",
+        target=restaurant_id,
+        details={"days_added": req.days, "new_ends_at": new_ends_at.isoformat()}
+    )
+    return {"message": f"Trial extended by {req.days} days", "trial_ends_at": new_ends_at}
