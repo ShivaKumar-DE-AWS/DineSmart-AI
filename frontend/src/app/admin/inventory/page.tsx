@@ -5,15 +5,25 @@ import { api } from "@/lib/api";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, X, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Loader2, Lock, Sparkles, CheckCircle2 } from "lucide-react";
 import type { InventoryItem } from "@/types";
+import Link from "next/link";
 
 interface InvForm { id?: string; name: string; unit: string; qty: number; reorder_level: number }
 const empty: InvForm = { name: "", unit: "kg", qty: 0, reorder_level: 0 };
 
 export default function AdminInventory() {
   const qc = useQueryClient();
-  const { data, isLoading } = useQuery({ queryKey: ["inventory"], queryFn: () => api<{ items: InventoryItem[] }>("/api/inventory") });
+  const { data: billing, isLoading: isBillingLoading } = useQuery({
+    queryKey: ["billing-status"],
+    queryFn: () => api<any>("/api/billing/status"),
+  });
+  
+  const { data, isLoading } = useQuery({ 
+    queryKey: ["inventory"], 
+    queryFn: () => api<{ items: InventoryItem[] }>("/api/inventory"),
+    enabled: !!billing && (billing.plan_tier === "pro" || billing.plan_tier === "enterprise" || (billing.subscription_status === "trial" && new Date(billing.trial_ends_at) > new Date()))
+  });
   const [editing, setEditing] = useState<InvForm | null>(null);
   const [confirmDel, setConfirmDel] = useState<InventoryItem | null>(null);
 
@@ -28,6 +38,48 @@ export default function AdminInventory() {
 
   const items = data?.items ?? [];
   const lowCount = items.filter((i) => i.qty <= i.reorder_level).length;
+
+  const hasProAccess = 
+    billing?.plan_tier === "pro" || 
+    billing?.plan_tier === "enterprise" || 
+    (billing?.subscription_status === "trial" && billing?.trial_ends_at && new Date(billing.trial_ends_at) > new Date());
+
+  if (isBillingLoading) {
+    return <div className="p-8 text-stone text-center animate-pulse">Checking access...</div>;
+  }
+
+  if (!hasProAccess) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[70vh] max-w-2xl mx-auto text-center px-4">
+        <div className="w-20 h-20 bg-brand/10 text-brand rounded-full flex items-center justify-center mb-6">
+          <Lock className="w-10 h-10" />
+        </div>
+        <h1 className="font-heading text-3xl md:text-4xl text-ink mb-4">Unlock Inventory Management</h1>
+        <p className="text-stone text-lg mb-8">
+          Inventory tracking is a premium feature. Upgrade to the Pro Plan to manage stock, get low-inventory alerts, and keep your kitchen running smoothly.
+        </p>
+        
+        <div className="bg-white border border-bone rounded-2xl p-6 w-full text-left mb-8 shadow-sm">
+          <h3 className="font-semibold text-ink flex items-center gap-2 mb-4">
+            <Sparkles className="w-5 h-5 text-brand" />
+            Pro Plan Benefits
+          </h3>
+          <ul className="space-y-3">
+            {["Inventory Tracking & Low Stock Alerts", "Full Conversational AI Ordering", "Automated Upselling & Pairings", "Multi-lingual Voice Recognition", "Unlimited Orders"].map((benefit, i) => (
+              <li key={i} className="flex items-center gap-3 text-stone text-sm">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                {benefit}
+              </li>
+            ))}
+          </ul>
+        </div>
+        
+        <Link href="/admin/billing" className="bg-brand text-white px-8 py-3 rounded-full font-medium hover:bg-brand/90 transition shadow-lg shadow-brand/20">
+          Upgrade to Pro
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div data-testid="admin-inventory-page">

@@ -6,10 +6,21 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from deps import (
     db, now_iso, require_user, require_roles, current_user, UPLOAD_DIR,
     MenuItemModel, InventoryItemModel,
-    MenuItemUpdateModel, InventoryItemUpdateModel,
+    MenuItemUpdateModel, InventoryItemUpdateModel, check_pro_access
 )
 
 router = APIRouter(tags=["menu"])
+
+async def _verify_pro_access(user: dict):
+    restaurant_id = user.get("restaurant_id")
+    if not restaurant_id:
+        return
+    rest = await db.restaurants.find_one({"id": restaurant_id})
+    if rest and not check_pro_access(rest):
+        raise HTTPException(
+            status_code=403, 
+            detail="Inventory Management is a Premium feature. Please upgrade to the Pro plan to access this."
+        )
 
 ALLOWED_IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 MAX_IMAGE_BYTES = 5 * 1024 * 1024  # 5MB
@@ -65,6 +76,7 @@ async def delete_menu_item(item_id: str, user=Depends(require_user)):
 # =========================================================
 @router.get("/api/inventory", dependencies=[Depends(require_roles("admin", "kitchen"))])
 async def list_inventory(user=Depends(require_user)):
+    await _verify_pro_access(user)
     q: Dict[str, Any] = {}
     if user.get("restaurant_id"):
         q["restaurant_id"] = user["restaurant_id"]
@@ -74,6 +86,7 @@ async def list_inventory(user=Depends(require_user)):
 
 @router.post("/api/inventory/seed-demo", dependencies=[Depends(require_roles("admin"))])
 async def seed_inventory_demo(user=Depends(require_user)):
+    await _verify_pro_access(user)
     """Seed inventory with dynamic AI-generated ingredients and recipes."""
     import json, asyncio, random
     if not user.get("restaurant_id"):
@@ -156,6 +169,7 @@ async def seed_inventory_demo(user=Depends(require_user)):
 
 @router.post("/api/inventory", dependencies=[Depends(require_roles("admin"))])
 async def create_inventory_item(item: InventoryItemModel, user=Depends(require_user)):
+    await _verify_pro_access(user)
     item_dict = item.model_dump()
     if user.get("restaurant_id"):
         item_dict["restaurant_id"] = user["restaurant_id"]
@@ -165,6 +179,7 @@ async def create_inventory_item(item: InventoryItemModel, user=Depends(require_u
 
 @router.patch("/api/inventory/{item_id}", dependencies=[Depends(require_roles("admin", "kitchen"))])
 async def update_inventory(item_id: str, patch_data: InventoryItemUpdateModel, user=Depends(require_user)):
+    await _verify_pro_access(user)
     patch = patch_data.model_dump(exclude_unset=True)
     if not patch:
         return {"ok": True}
@@ -179,6 +194,7 @@ async def update_inventory(item_id: str, patch_data: InventoryItemUpdateModel, u
 
 @router.delete("/api/inventory/{item_id}", dependencies=[Depends(require_roles("admin"))])
 async def delete_inventory(item_id: str, user=Depends(require_user)):
+    await _verify_pro_access(user)
     q = {"id": item_id}
     if user.get("restaurant_id"):
         q["restaurant_id"] = user["restaurant_id"]

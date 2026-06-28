@@ -7,7 +7,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from fastapi.responses import StreamingResponse, Response
 from deps import (
-    db, now_iso, GEMINI_API_KEY, ChatReq, TTSReq, require_user
+    db, now_iso, GEMINI_API_KEY, ChatReq, TTSReq, require_user, check_pro_access
 )
 
 router = APIRouter(tags=["ai-waiter"])
@@ -168,6 +168,14 @@ async def ai_chat(req: ChatReq, user=Depends(require_user)):
 
     if not restaurant_id:
         raise HTTPException(status_code=400, detail="Could not determine restaurant for this session")
+
+    # FEATURE GATE: AI Waiter requires Pro Plan
+    if rest and not check_pro_access(rest):
+        async def restricted_event_gen():
+            yield f"data: {json.dumps({'delta': 'The AI Waiter is a Premium feature. Please ask the restaurant staff to upgrade to the Pro Plan to unlock conversational ordering!'})}\n\n"
+            yield f"data: {json.dumps({'done': True})}\n\n"
+        return StreamingResponse(restricted_event_gen(), media_type="text/event-stream",
+                                headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no", "Connection": "keep-alive"})
 
     system_prompt = await _build_waiter_system_prompt(
         restaurant_id=restaurant_id, restaurant_name=restaurant_name,

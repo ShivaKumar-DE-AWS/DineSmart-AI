@@ -169,6 +169,31 @@ class RestaurantModel(BaseModel):
     stripe_subscription_id: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
+def check_pro_access(restaurant: dict) -> bool:
+    """Check if a restaurant has access to Pro features."""
+    if not restaurant:
+        return False
+        
+    plan_tier = restaurant.get("plan_tier", "starter")
+    if plan_tier in ["pro", "enterprise"]:
+        return True
+        
+    sub_status = restaurant.get("subscription_status")
+    if sub_status == "trial":
+        trial_ends_at = restaurant.get("trial_ends_at")
+        if trial_ends_at:
+            if isinstance(trial_ends_at, str):
+                try:
+                    trial_ends_at = datetime.fromisoformat(trial_ends_at.replace("Z", "+00:00"))
+                except ValueError:
+                    return False
+            # Ensure aware datetime
+            if trial_ends_at.tzinfo is None:
+                trial_ends_at = trial_ends_at.replace(tzinfo=timezone.utc)
+            if trial_ends_at > datetime.now(timezone.utc):
+                return True
+    return False
+
 class RecipeIngredient(BaseModel):
     ingredient_id: str
     qty_required: float
