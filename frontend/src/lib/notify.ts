@@ -2,7 +2,7 @@
 
 /**
  * Plays a short chime using Web Audio API — zero external assets.
- * Variants: "new-order" (kitchen) = double rising beep; "ready" (customer/counter) = loud busy bell.
+ * Variants: "new-order" (kitchen) = loud descending alarm; "ready" (customer/counter) = loud ascending bell.
  */
 export function playChime(variant: "new-order" | "ready" = "new-order") {
   if (typeof window === "undefined") return;
@@ -13,19 +13,24 @@ export function playChime(variant: "new-order" | "ready" = "new-order") {
     const now = ctx.currentTime;
 
     if (variant === "new-order") {
-      // Kitchen — double rising beep (kept as-is)
-      const tones = [{ f: 660, t: 0.0 }, { f: 880, t: 0.18 }];
+      // Kitchen — loud descending alarm (square wave, attention-grabbing)
+      const tones = [
+        { f: 880, t: 0.0 },
+        { f: 622, t: 0.15 },
+        { f: 880, t: 0.35 },
+        { f: 622, t: 0.5 },
+      ];
       for (const tone of tones) {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
-        osc.type = "sine";
+        osc.type = "square";
         osc.frequency.setValueAtTime(tone.f, now + tone.t);
         gain.gain.setValueAtTime(0, now + tone.t);
-        gain.gain.linearRampToValueAtTime(0.25, now + tone.t + 0.02);
+        gain.gain.linearRampToValueAtTime(0.45, now + tone.t + 0.03);
         gain.gain.exponentialRampToValueAtTime(0.001, now + tone.t + 0.28);
         osc.connect(gain).connect(ctx.destination);
         osc.start(now + tone.t);
-        osc.stop(now + tone.t + 0.3);
+        osc.stop(now + tone.t + 0.32);
       }
     } else {
       // Ready — loud busy bell (square wave, layered, higher gain)
