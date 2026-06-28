@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api, apiUrl } from "@/lib/api";
 import { useParams } from "next/navigation";
 import { fmtTime } from "@/lib/utils";
-import { CheckCircle2, ChefHat, ConciergeBell, ClipboardCheck, Clock, Bell, BellRing, BellOff } from "lucide-react";
+import { CheckCircle2, ChefHat, ConciergeBell, ClipboardCheck, Clock, Bell, BellRing, BellOff, MapPin } from "lucide-react";
 import type { Order } from "@/types";
 import { useEffect, useRef, useState } from "react";
 import { playChime, ensureNotificationPermission, notify, isPushSupported, subscribeToOrderPush } from "@/lib/notify";
@@ -121,6 +121,16 @@ export default function TrackPage() {
       {pushState === "subscribed" && !isCancelled && (
         <div data-testid="track-push-on" className="mx-auto w-fit mb-6 bg-[#FAF5EC] border border-brand-secondary/40 rounded-full px-4 py-2 text-[10px] font-royal tracking-[0.2em] uppercase text-brand-primary inline-flex items-center gap-2">
           <BellRing className="h-3.5 w-3.5 text-brand-secondary" /> You&apos;ll be pinged on every stage
+        </div>
+      )}
+
+      {/* Restaurant address for takeaway */}
+      {order.order_type === "takeaway" && restaurantConfig?.address && (
+        <div className="mehfil-card rounded-2xl p-5 mb-6">
+          <div className="font-royal tracking-[0.2em] text-[10px] uppercase text-brand-primary mb-2 flex items-center gap-1.5">
+            <MapPin className="h-3 w-3" /> Collect from
+          </div>
+          <p className="font-editorial text-sm text-[#1A1106]/85">{restaurantConfig.address}</p>
         </div>
       )}
 

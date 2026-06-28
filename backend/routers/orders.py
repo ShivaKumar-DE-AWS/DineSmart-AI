@@ -1,4 +1,5 @@
 """Orders, payments, webhook routes, and SSE order stream."""
+import logging
 import os
 import uuid
 import asyncio
@@ -16,6 +17,7 @@ from deps import (
 )
 
 router = APIRouter(tags=["orders"])
+logger = logging.getLogger(__name__)
 
 
 # =========================================================
@@ -352,7 +354,7 @@ async def download_bill(order_id: str, user=Depends(current_user)):
         for h, w in zip(["Item", "Qty", "Unit Price", "Total"], col_w):
             pdf.cell(text=h, w=w, align="L" if h == "Item" else "C", border=1)
         pdf.ln()
-        pdf.set_font(FONT, "", 10)
+        pdf.set_font("Helvetica", "", 10)
         for item in order.get("items", []):
             name = item.get("name", "Unknown")[:70]
             qty = item.get("qty", 1)
@@ -365,10 +367,10 @@ async def download_bill(order_id: str, user=Depends(current_user)):
             # Show item notes if present
             notes = item.get("notes", "")
             if notes:
-                pdf.set_font(FONT, "I", 8)
+                pdf.set_font("Helvetica", "I", 8)
                 pdf.cell(text="  " + str(notes)[:120], w=sum(col_w), align="L", border=0)
                 pdf.ln()
-                pdf.set_font(FONT, "", 10)
+                pdf.set_font("Helvetica", "", 10)
         subtotal = float(order.get("subtotal", 0))
         tax = float(order.get("tax", 0))
         total = float(order.get("total", 0))
@@ -386,10 +388,10 @@ async def download_bill(order_id: str, user=Depends(current_user)):
         pdf.ln(10)
         pay_status = order.get("payment_status", "unpaid")
         pay_method = order.get("payment_method", "")
-        pdf.set_font(FONT, "", 10)
+        pdf.set_font("Helvetica", "", 10)
         pdf.cell(text=f"Payment: {str(pay_status).upper()} ({str(pay_method).upper()})", new_x="LMARGIN", new_y="NEXT", align="C")
         pdf.ln(15)
-        pdf.set_font(FONT, "I", 8)
+        pdf.set_font("Helvetica", "I", 8)
         pdf.cell(text="Powered by SmartDine AI - smartdine.com", new_x="LMARGIN", new_y="NEXT", align="C")
         pdf_bytes = bytes(pdf.output())
         return Response(content=pdf_bytes, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=bill_{order['token']}.pdf"})

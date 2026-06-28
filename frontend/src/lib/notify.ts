@@ -2,7 +2,7 @@
 
 /**
  * Plays a short chime using Web Audio API — zero external assets.
- * Variants: "new-order" (kitchen) = double rising beep; "ready" (customer/counter) = bright bell.
+ * Variants: "new-order" (kitchen) = double rising beep; "ready" (customer/counter) = loud busy bell.
  */
 export function playChime(variant: "new-order" | "ready" = "new-order") {
   if (typeof window === "undefined") return;
@@ -12,23 +12,43 @@ export function playChime(variant: "new-order" | "ready" = "new-order") {
     const ctx: AudioContext = new AudioCtx();
     const now = ctx.currentTime;
 
-    const tones = variant === "new-order"
-      ? [{ f: 660, t: 0.0 }, { f: 880, t: 0.18 }]
-      : [{ f: 880, t: 0.0 }, { f: 1175, t: 0.12 }, { f: 1568, t: 0.24 }];
-
-    for (const tone of tones) {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(tone.f, now + tone.t);
-      gain.gain.setValueAtTime(0, now + tone.t);
-      gain.gain.linearRampToValueAtTime(0.25, now + tone.t + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + tone.t + 0.28);
-      osc.connect(gain).connect(ctx.destination);
-      osc.start(now + tone.t);
-      osc.stop(now + tone.t + 0.3);
+    if (variant === "new-order") {
+      // Kitchen — double rising beep (kept as-is)
+      const tones = [{ f: 660, t: 0.0 }, { f: 880, t: 0.18 }];
+      for (const tone of tones) {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(tone.f, now + tone.t);
+        gain.gain.setValueAtTime(0, now + tone.t);
+        gain.gain.linearRampToValueAtTime(0.25, now + tone.t + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + tone.t + 0.28);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(now + tone.t);
+        osc.stop(now + tone.t + 0.3);
+      }
+    } else {
+      // Ready — loud busy bell (square wave, layered, higher gain)
+      const tones = [
+        { f: 523, t: 0.0 },  // C5
+        { f: 659, t: 0.15 }, // E5
+        { f: 784, t: 0.3 },  // G5
+        { f: 1047, t: 0.45 }, // C6
+      ];
+      for (const tone of tones) {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "square";
+        osc.frequency.setValueAtTime(tone.f, now + tone.t);
+        gain.gain.setValueAtTime(0, now + tone.t);
+        gain.gain.linearRampToValueAtTime(0.45, now + tone.t + 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + tone.t + 0.5);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(now + tone.t);
+        osc.stop(now + tone.t + 0.55);
+      }
     }
-    setTimeout(() => ctx.close().catch((err) => console.warn("[notify] AudioContext close failed:", err)), 1200);
+    setTimeout(() => ctx.close().catch((err) => console.warn("[notify] AudioContext close failed:", err)), 1800);
   } catch (err) {
     console.warn("[notify] playChime failed:", err);
   }
