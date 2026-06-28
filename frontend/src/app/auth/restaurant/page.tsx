@@ -129,12 +129,12 @@ export default function RestaurantAuthPage() {
             <span className="text-electric-blue ml-1">AI</span>
           </div>
           <h1 className="font-heading text-3xl text-white mb-2">
-            {tab === "login" ? "Partner Login" : "Create Restro"}
+            {tab === "login" ? "Partner Login" : "Start Free Trial"}
           </h1>
           <p className="text-stone text-sm">
             {tab === "login" 
               ? "Sign in to manage your AI-powered restaurant."
-              : "Request a custom portal tailored for your restaurant."}
+              : "Get a 14-day free trial of our Pro plan. No credit card required."}
           </p>
         </div>
 
@@ -155,7 +155,7 @@ export default function RestaurantAuthPage() {
                 tab === "register" ? "bg-white/10 text-white shadow-sm" : "text-stone hover:text-white"
               }`}
             >
-              Create Restro
+              Start Free Trial
             </button>
           </div>
 
@@ -288,7 +288,7 @@ export default function RestaurantAuthPage() {
                   disabled={busy}
                   className="w-full bg-clay hover:bg-clay-dark text-white font-semibold rounded-xl py-3 transition flex items-center justify-center gap-2 mt-4 shadow-lg shadow-clay/20"
                 >
-                  {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : "Create My Restaurant Portal"}
+                  {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : "Start My 14-Day Pro Trial"}
                 </button>
 
                 {result && (
@@ -297,7 +297,7 @@ export default function RestaurantAuthPage() {
                     animate={{ opacity: 1, height: "auto" }}
                     className="mt-6 bg-emerald-900/30 border border-emerald-500/30 rounded-xl p-4 text-xs space-y-3"
                   >
-                    <div className="text-emerald-400 font-semibold text-sm">Restaurant Created!</div>
+                    <div className="text-emerald-400 font-semibold text-sm">Trial Activated Successfully!</div>
                     <div>
                       <span className="text-stone">Your URL:</span>{" "}
                       <a href={result.url} className="text-electric-blue hover:underline">{result.url}</a>

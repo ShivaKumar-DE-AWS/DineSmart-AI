@@ -1,8 +1,12 @@
 """Restaurant onboarding, sample menus, and config generation."""
 import uuid
+import random
+import string
 from typing import Optional
+from datetime import datetime, timezone, timedelta
+from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
-from deps import db, now_iso, require_user, require_roles, GEMINI_API_KEY
+from deps import db, now_iso, require_user, require_roles, GEMINI_API_KEY, hash_password
 
 router = APIRouter(tags=["onboarding"])
 
@@ -153,6 +157,94 @@ async def onboard_menu(file: UploadFile = File(...), user=Depends(require_user))
     except Exception as e:
         print(f"Exception details: {e}")
         raise HTTPException(status_code=500, detail=f"Menu extraction failed: {e}")
+
+class RestaurantRequest(BaseModel):
+    name: str
+    email: str
+    phone: str
+    tables_count: int = 15
+    cuisine: str = ""
+    notes: str = ""
+
+@router.post("/api/restaurants/request")
+async def request_restaurant_access(req: RestaurantRequest):
+    """Public endpoint for self-serve onboarding. Grants a 14-day Pro trial instantly."""
+    slug = req.name.lower().replace(" ", "-").replace("'", "")
+    
+    # check slug unique
+    existing = await db.restaurants.find_one({"slug": slug})
+    if existing:
+        slug = f"{slug}-{uuid.uuid4().hex[:4]}"
+        
+    rest_id = f"rest_{slug.replace('-', '_')}_{uuid.uuid4().hex[:4]}"
+    
+    # 1. Create restaurant with 14-day trial of Pro plan
+    trial_ends = (datetime.now(timezone.utc) + timedelta(days=14)).isoformat()
+    await db.restaurants.insert_one({
+        "id": rest_id, 
+        "name": req.name, 
+        "slug": slug, 
+        "owner_email": req.email,
+        "plan_tier": "pro", 
+        "subscription_status": "trial", 
+        "trial_ends_at": trial_ends,
+        "created_at": now_iso(),
+    })
+    
+    # 2. Create frontend config
+    config = generate_frontend_config(req.name, slug, rest_id, req.phone, req.email, req.cuisine or "global")
+    await db.restaurant_configs.insert_one({
+        "slug": slug, "config": config, "created_at": now_iso()
+    })
+    
+    # 3. Seed sample menu based on cuisine
+    menu_key = req.cuisine.lower() if req.cuisine.lower() in SAMPLE_MENUS else "generic"
+    sample_menu = SAMPLE_MENUS[menu_key]
+    for item in sample_menu:
+        item_doc = item.copy()
+        item_doc["restaurant_id"] = rest_id
+        item_doc["id"] = str(uuid.uuid4())
+        item_doc["available"] = True
+        item_doc["tags"] = item_doc.get("tags", [])
+        await db.menu.insert_one(item_doc)
+        
+    # 4. Create tables
+    for i in range(1, req.tables_count + 1):
+        await db.tables.insert_one({
+            "id": str(uuid.uuid4()), "number": i, "capacity": 4,
+            "qr_token": uuid.uuid4().hex[:12], "is_active": True,
+            "restaurant_id": rest_id, "created_at": now_iso()
+        })
+        
+    # 5. Generate credentials
+    def gen_pw(): return "".join(random.choices(string.ascii_letters + string.digits, k=8))
+    
+    roles = ["admin", "kitchen", "counter"]
+    creds = {}
+    
+    for r in roles:
+        pw = gen_pw()
+        email = f"{r}@{slug}.com"
+        # Only use req.email for the admin account if we want, but let's keep it isolated.
+        if r == "admin": email = req.email
+        
+        await db.users.insert_one({
+            "id": str(uuid.uuid4()),
+            "email": email,
+            "password_hash": hash_password(pw),
+            "name": f"{req.name} {r.capitalize()}",
+            "role": r,
+            "restaurant_id": rest_id,
+            "created_at": now_iso()
+        })
+        creds[r] = {"email": email, "password": pw}
+        
+    return {
+        "ok": True,
+        "url": f"/r/{slug}",
+        "credentials": creds,
+        "message": "Restaurant created with 14-day Pro trial!"
+    }
 
 @router.post("/api/restaurants/onboard", dependencies=[Depends(require_roles("admin"))])
 async def onboard_restaurant(name: str, email: str, phone: str, tables_count: int = 10, cuisine: str = "", notes: str = "", user=Depends(require_user)):
