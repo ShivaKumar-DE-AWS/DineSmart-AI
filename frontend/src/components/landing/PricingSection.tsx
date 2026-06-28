@@ -9,7 +9,7 @@ export function PricingSection() {
     {
       name: "Starter",
       description: "Essential tools for small cafes and takeaways.",
-      price: "₹2,000",
+      price: "₹4,999",
       popular: false,
       features: [
         { text: "Digital QR Code Menu", included: true },
@@ -26,7 +26,7 @@ export function PricingSection() {
     {
       name: "Pro",
       description: "Everything you need to run an AI-powered restaurant.",
-      price: "₹5,000",
+      price: "₹9,999",
       popular: true,
       features: [
         { text: "Digital QR Code Menu", included: true },
