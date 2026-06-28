@@ -119,6 +119,7 @@ export default function SuperAdminRestaurantsPage() {
             <tr className="border-b border-bone bg-sand">
               <th className="text-left py-3 px-4 font-medium text-stone">Name</th>
               <th className="text-left py-3 px-4 font-medium text-stone">Slug</th>
+              <th className="text-left py-3 px-4 font-medium text-stone hidden md:table-cell">Plan</th>
               <th className="text-left py-3 px-4 font-medium text-stone hidden md:table-cell">Status</th>
               <th className="text-left py-3 px-4 font-medium text-stone">Orders</th>
               <th className="text-left py-3 px-4 font-medium text-stone hidden md:table-cell">Trial Ends</th>
@@ -135,6 +136,11 @@ export default function SuperAdminRestaurantsPage() {
                 <tr key={r.id || r.slug} className="border-b border-bone last:border-0 hover:bg-sand/50 transition">
                   <td className="py-3 px-4 font-medium text-ink">{r.name}</td>
                   <td className="py-3 px-4 text-stone font-mono text-xs">{r.slug}</td>
+                  <td className="py-3 px-4 hidden md:table-cell">
+                    <span className="inline-block px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-200 text-xs font-medium capitalize">
+                      {r.plan_tier || r.plan || "starter"}
+                    </span>
+                  </td>
                   <td className="py-3 px-4 hidden md:table-cell">
                     <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
                       r.subscription_status === "active" ? "bg-emerald-100 text-emerald-700" :
