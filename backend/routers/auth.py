@@ -1,6 +1,6 @@
 """Authentication routes: signup, login, me, guest."""
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from deps import (
     db, now_iso, hash_password, verify_password, jwt_sign,
     require_user, SignupReq, LoginReq, GuestReq,
@@ -78,7 +78,7 @@ async def signup(req: SignupReq):
 
 
 @router.post("/forgot-password")
-async def forgot_password(req: ForgotPasswordReq):
+async def forgot_password(req: ForgotPasswordReq, background_tasks: BackgroundTasks):
     user = await db.users.find_one({"email": req.email})
     if not user:
         # Prevent email enumeration by returning success even if not found
@@ -93,7 +93,7 @@ async def forgot_password(req: ForgotPasswordReq):
     )
 
     frontend_url = os.environ.get("FRONTEND_URL", "https://smartdineai.co.in")
-    send_password_reset_email(req.email, reset_token, frontend_url)
+    background_tasks.add_task(send_password_reset_email, req.email, reset_token, frontend_url)
     return {"message": "If an account with that email exists, a reset link has been sent."}
 
 
