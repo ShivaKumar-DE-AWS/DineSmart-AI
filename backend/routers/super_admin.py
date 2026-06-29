@@ -196,7 +196,7 @@ async def cleanup_test_data(user=Depends(require_superadmin)):
     result = {}
 
     # Remove the fake "access denied" ticket created during QA
-    td = await db.tickets.delete_many({
+    td = await db.support_tickets.delete_many({
         "title": {"$regex": "access denied", "$options": "i"}
     })
     result["tickets_deleted"] = td.deleted_count
