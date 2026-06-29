@@ -20,7 +20,13 @@ def _send_email(to_email: str, subject: str, html_content: str) -> tuple[bool, s
     import re
     text_content = re.sub(r'<[^>]+>', ' ', html_content)
     text_content = re.sub(r'\s+', ' ', text_content).strip()
-    print(f"Content: {text_content[:200]}...")
+    
+    # Try to extract a 6 digit code for easy visibility
+    otp_match = re.search(r'\b(\d{6})\b', text_content)
+    if otp_match:
+        print(f"🔑 FOUND VERIFICATION OTP: {otp_match.group(1)} 🔑")
+        
+    print(f"Content: {text_content[:800]}...")
     print("=" * 60)
 
     if not SMTP_PASSWORD:
