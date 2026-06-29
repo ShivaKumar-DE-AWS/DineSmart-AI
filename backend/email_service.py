@@ -140,16 +140,16 @@ def send_verification_success_email(to_email: str, restaurant_name: str, creds: 
         <p>Keep these credentials safe. You can use them to access different parts of the system:</p>
         <div style="background: #f5f5f5; padding: 16px; border-radius: 8px;">
             <h4 style="margin-top: 0; color: #8A1A2A;">Admin Dashboard</h4>
-            <p style="margin: 4px 0;"><strong>Email:</strong> {creds.get('admin', {{}}).get('email', '')}</p>
-            <p style="margin: 4px 0;"><strong>Password:</strong> {creds.get('admin', {{}}).get('password', '')}</p>
+            <p style="margin: 4px 0;"><strong>Email:</strong> {creds.get('admin', dict()).get('email', '')}</p>
+            <p style="margin: 4px 0;"><strong>Password:</strong> {creds.get('admin', dict()).get('password', '')}</p>
             
             <h4 style="margin-top: 16px; color: #8A1A2A;">Kitchen Display System (KDS)</h4>
-            <p style="margin: 4px 0;"><strong>Email:</strong> {creds.get('kitchen', {{}}).get('email', '')}</p>
-            <p style="margin: 4px 0;"><strong>Password:</strong> {creds.get('kitchen', {{}}).get('password', '')}</p>
+            <p style="margin: 4px 0;"><strong>Email:</strong> {creds.get('kitchen', dict()).get('email', '')}</p>
+            <p style="margin: 4px 0;"><strong>Password:</strong> {creds.get('kitchen', dict()).get('password', '')}</p>
             
-            <h4 style="margin-top: 16px; color: #8A1A2A;">Counter / Billing</h4>
-            <p style="margin: 4px 0;"><strong>Email:</strong> {creds.get('counter', {{}}).get('email', '')}</p>
-            <p style="margin: 4px 0;"><strong>Password:</strong> {creds.get('counter', {{}}).get('password', '')}</p>
+            <h4 style="margin-top: 16px; color: #8A1A2A;">Counter & Billing</h4>
+            <p style="margin: 4px 0;"><strong>Email:</strong> {creds.get('counter', dict()).get('email', '')}</p>
+            <p style="margin: 4px 0;"><strong>Password:</strong> {creds.get('counter', dict()).get('password', '')}</p>
         </div>
 
         <p style="margin-top: 30px;">If you need any help, reply to this email or contact us at <a href="mailto:admin@smartdineai.co.in">admin@smartdineai.co.in</a>.</p>
