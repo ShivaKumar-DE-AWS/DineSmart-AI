@@ -23,6 +23,8 @@ export default function AdminDashboard() {
     { label: "Orders today", value: dash ? dash.orders_today : "—", icon: ShoppingBag, testid: "kpi-orders" },
     { label: "AI Influence", value: dash ? (dash.orders_today > 0 ? Math.round((dash.ai_orders_today / dash.orders_today) * 100) + "%" : "0%") : "—", icon: Receipt, testid: "kpi-ai" },
     { label: "Low stock items", value: dash ? dash.low_stock_count : "—", icon: AlertTriangle, testid: "kpi-low-stock" },
+  ];
+
   const { data: tablesData } = useQuery({ queryKey: ["admin-tables-dashboard", user?.restaurant_id], queryFn: () => api<any>("/api/tables") });
   const tablesCount = tablesData?.tables?.length || 0;
 
