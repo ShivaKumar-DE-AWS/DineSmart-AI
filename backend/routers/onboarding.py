@@ -5,7 +5,7 @@ import string
 from typing import Optional
 from datetime import datetime, timezone, timedelta
 from pydantic import BaseModel
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, HTTPException, UploadFile, File
 from deps import db, now_iso, require_user, require_roles, GEMINI_API_KEY, hash_password
 from email_service import send_welcome_email
 
@@ -168,7 +168,7 @@ class RestaurantRequest(BaseModel):
     notes: str = ""
 
 @router.post("/api/restaurants/request")
-async def request_restaurant_access(req: RestaurantRequest):
+async def request_restaurant_access(req: RestaurantRequest, background_tasks: BackgroundTasks):
     """Public endpoint for self-serve onboarding. Grants a 14-day Pro trial instantly."""
     existing_user = await db.users.find_one({"email": req.email})
     if existing_user:
@@ -254,7 +254,7 @@ async def request_restaurant_access(req: RestaurantRequest):
         "created_at": now_iso()
     })
     
-    send_welcome_email(req.email, req.name, creds, otp)
+    background_tasks.add_task(send_welcome_email, req.email, req.name, creds, otp)
         
     return {
         "ok": True,
