@@ -178,6 +178,15 @@ async def login(req: LoginReq):
             )
         else:
             raise HTTPException(status_code=400, detail="Could not determine restaurant for this account. Contact support.")
+    elif not restaurant_slug:
+        # We have restaurant_id but no slug (older accounts), fetch it from DB
+        rest = await db.restaurants.find_one({"id": restaurant_id})
+        if rest:
+            restaurant_slug = rest.get("slug", "")
+            await db.users.update_one(
+                {"_id": user["_id"]},
+                {"$set": {"restaurant_slug": restaurant_slug}},
+            )
 
     token = jwt_sign({
         "sub": user["id"], "email": user["email"], "role": user["role"],

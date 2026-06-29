@@ -242,6 +242,7 @@ async def request_restaurant_access(req: RestaurantRequest, background_tasks: Ba
             "name": f"{req.name} {r.capitalize()}",
             "role": r,
             "restaurant_id": rest_id,
+            "restaurant_slug": slug,
             "created_at": now_iso()
         })
         creds[r] = {"email": email, "password": pw}
