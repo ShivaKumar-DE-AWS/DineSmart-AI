@@ -41,7 +41,7 @@ export default function ReservePage() {
         body: JSON.stringify({ name: name.trim(), phone: phone.trim(), date, time, guests, notes: notes.trim() || undefined, restaurant_id: config.id }),
       });
       setConfirmation({ id: res.reservation_id });
-      toast.success("Reservation requested — we&apos;ll confirm shortly");
+      toast.success("Reservation requested — we'll confirm shortly");
     } catch (e) {
       const err = e as Error;
       toast.error(err.message || "Could not submit. Try again.");
@@ -53,24 +53,24 @@ export default function ReservePage() {
   if (confirmation) {
     return (
       <div className="max-w-2xl mx-auto px-5 md:px-10 py-20 text-center" data-testid="reserve-confirmed">
-        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring" }} className="inline-flex h-16 w-16 rounded-full bg-brand-secondary/20 ring-4 ring-brand-secondary/30 items-center justify-center mb-5">
+        <div className="inline-flex h-16 w-16 rounded-full items-center justify-center mb-5" style={{ backgroundColor: 'rgba(201, 163, 72, 0.2)', boxShadow: '0 0 0 4px rgba(201, 163, 72, 0.3)' }}>
           <CheckCircle2 className="h-8 w-8 text-brand-primary" />
-        </motion.div>
+        </div>
         <div className="mehfil-divider mb-3 max-w-xs mx-auto"><span className="font-royal tracking-[0.4em] text-[10px] uppercase">Reservation requested</span></div>
         <h1 className="font-royal text-4xl md:text-5xl text-brand-primary tracking-wide">
           A table for <span className="font-editorial italic mehfil-gold-gradient">{guests}</span>
         </h1>
         <p className="font-editorial italic text-[#1A1106]/70 mt-4 leading-relaxed">
-          {name}, we&apos;ve received your request for <span className="font-royal text-brand-primary">{date} · {time}</span>. Our team will call you within 30 minutes to confirm your reservation.
+          {name}, we've received your request for <span className="font-royal text-brand-primary">{date} · {time}</span>. Our team will call you within 30 minutes to confirm your reservation.
         </p>
-        <div className="mt-6 inline-block bg-[#FAF5EC] border border-brand-secondary/40 rounded-full px-5 py-2 font-royal tracking-wider uppercase text-[11px] text-[#1A1106]/70">
+        <div className="mt-6 inline-block bg-[#FAF5EC] rounded-full px-5 py-2 font-royal tracking-wider uppercase text-[11px] text-[#1A1106]/70" style={{ border: '1px solid rgba(201, 163, 72, 0.4)' }}>
           Reservation # {confirmation.id.slice(0, 8)}
         </div>
         <div className="flex justify-center gap-3 mt-8">
           <button onClick={() => router.push(`/r/${slug}/menu`)} className="mehfil-btn-royal rounded-full px-6 py-3 font-royal tracking-[0.2em] uppercase text-xs inline-flex items-center gap-2">
             <Sparkles className="h-3.5 w-3.5" /> Preview the menu
           </button>
-          <button onClick={() => setConfirmation(null)} className="rounded-full border border-brand-primary/30 text-brand-primary px-6 py-3 font-royal tracking-[0.2em] uppercase text-xs hover:bg-brand-primary/5">
+          <button onClick={() => setConfirmation(null)} className="rounded-full px-6 py-3 font-royal tracking-[0.2em] uppercase text-xs text-brand-primary hover:bg-brand-primary/5" style={{ border: '1px solid rgba(138, 26, 42, 0.3)' }}>
             Reserve again
           </button>
         </div>
