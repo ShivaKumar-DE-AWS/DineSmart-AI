@@ -188,7 +188,7 @@ export default function RestaurantAuthPage() {
                 <div className="space-y-1.5">
                   <div className="flex justify-between items-center pl-1">
                     <label className="text-sm font-medium text-stone">Password</label>
-                    <a href="#" className="text-xs text-electric-blue hover:text-electric-blue/80 transition">Forgot password?</a>
+                    <a href="/auth/forgot-password" className="text-xs text-electric-blue hover:text-electric-blue/80 transition">Forgot password?</a>
                   </div>
                   <div className="relative">
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone" />
