@@ -12,7 +12,7 @@ from fpdf import FPDF
 from deps import (
     db, now_iso, TAX_RATE, require_user, require_roles, current_user, jwt_verify,
     client, next_token, OrderCreateReq, OrderStatusUpdate,
-    PaymentReq, CheckoutSessionReq,
+    PaymentReq, CheckoutSessionReq, SplitBillReq,
 )
 
 router = APIRouter(tags=["orders"])
@@ -311,6 +311,43 @@ async def update_status(order_id: str, body: OrderStatusUpdate, user=Depends(req
         
     broadcast_order_update(order.get("restaurant_id"), broadcast_data)
     return {"ok": True, **update_data}
+
+
+# =========================================================
+# Split Bill
+# =========================================================
+@router.post("/api/orders/{order_id}/split")
+async def split_bill(order_id: str, body: SplitBillReq, user=Depends(require_roles("admin", "counter"))):
+    if len(body.splits) < 2:
+        raise HTTPException(status_code=400, detail="At least 2 splits required")
+    if len(body.splits) > 6:
+        raise HTTPException(status_code=400, detail="Maximum 6 splits allowed")
+
+    q: Dict[str, Any] = {"id": order_id}
+    if user.get("restaurant_id"):
+        q["restaurant_id"] = user["restaurant_id"]
+    order = await db.orders.find_one(q, {"_id": 0})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    total = float(order["total"])
+    splits_total = round(sum(s.amount for s in body.splits), 2)
+    if abs(splits_total - total) > 0.01:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Split total ({splits_total}) does not match order total ({total})",
+        )
+
+    split_data = {
+        "splits": [s.model_dump() for s in body.splits],
+        "is_split": True,
+    }
+    await db.orders.update_one(q, {"$set": {"split_bill": split_data, "updated_at": now_iso()}})
+    updated = await db.orders.find_one(q, {"_id": 0})
+
+    broadcast_data = {"type": "status_update", "order_id": order_id, "token": order["token"], "split": True}
+    broadcast_order_update(order.get("restaurant_id"), broadcast_data)
+    return updated
 
 
 # =========================================================

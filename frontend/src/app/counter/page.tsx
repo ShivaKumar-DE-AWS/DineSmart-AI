@@ -107,6 +107,53 @@ export default function CounterPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["counter-orders", user?.restaurant_id] }),
   });
 
+  // Split bill state
+  const [splitOrder, setSplitOrder] = useState<Order | null>(null);
+  const initialSplits = (total: number) => [
+    { name: "", amount: +(total / 2).toFixed(2), method: "cash" },
+    { name: "", amount: +(total / 2).toFixed(2), method: "cash" },
+  ];
+  const [splitPersons, setSplitPersons] = useState<{ name: string; amount: number; method: string }[]>([]);
+
+  const splitMut = useMutation({
+    mutationFn: ({ id, splits }: { id: string; splits: typeof splitPersons }) =>
+      api(`/api/orders/${id}/split`, { method: "POST", body: JSON.stringify({ splits }) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["counter-orders", user?.restaurant_id] });
+      setSplitOrder(null);
+      setSplitPersons([]);
+      toast.success("Bill split confirmed");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const openSplit = (o: Order) => {
+    setSplitPersons(initialSplits(o.total));
+    setSplitOrder(o);
+  };
+
+  const updateSplitPerson = (i: number, field: string, value: string | number) => {
+    setSplitPersons((prev) => {
+      const next = prev.map((p, idx) => (idx === i ? { ...p, [field]: value } : { ...p }));
+      return next;
+    });
+  };
+
+  const autoEqualize = () => {
+    if (!splitOrder) return;
+    const equal = +(splitOrder.total / splitPersons.length).toFixed(2);
+    setSplitPersons((prev) => prev.map((p) => ({ ...p, amount: equal })));
+  };
+
+  const addSplitPerson = () => {
+    if (!splitOrder || splitPersons.length >= 6) return;
+    const equal = +(splitOrder.total / (splitPersons.length + 1)).toFixed(2);
+    setSplitPersons((prev) => [...prev.map((p) => ({ ...p, amount: equal })), { name: "", amount: equal, method: "cash" }]);
+  };
+
+  const splitTotal = splitPersons.reduce((s, p) => s + (p.amount || 0), 0);
+  const splitValid = splitOrder && Math.abs(splitTotal - splitOrder.total) < 0.01;
+
   const allOrders = data?.orders || [];
   const preparing = allOrders.filter((o) => ["confirmed", "preparing"].includes(o.status));
   const ready = allOrders.filter((o) => o.status === "ready");
@@ -315,12 +362,20 @@ export default function CounterPage() {
                     </button>
                   )}
                   {o.payment_status !== "paid" && (
-                    <button
-                      onClick={() => markPaidMut.mutate({ id: o.id })}
-                      className="flex-1 bg-red-500/20 hover:bg-red-500/30 border border-red-400/50 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 text-sm"
-                    >
-                      <CreditCard className="h-4 w-4" /> MARK PAID
-                    </button>
+                    <>
+                      <button
+                        onClick={() => openSplit(o)}
+                        className="inline-flex items-center justify-center bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/50 text-amber-300 font-bold py-3 rounded-xl transition text-sm px-2"
+                      >
+                        SPLIT
+                      </button>
+                      <button
+                        onClick={() => markPaidMut.mutate({ id: o.id })}
+                        className="flex-1 bg-red-500/20 hover:bg-red-500/30 border border-red-400/50 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 text-sm"
+                      >
+                        <CreditCard className="h-4 w-4" /> MARK PAID
+                      </button>
+                    </>
                   )}
                   <button
                     disabled={o.payment_status !== "paid"}
@@ -344,6 +399,83 @@ export default function CounterPage() {
           </div>
         </section>
       </div>
+
+      {/* Split Bill Modal */}
+      {splitOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setSplitOrder(null)}>
+          <div className="bg-[#0a0a0f] border border-zinc-800 rounded-3xl w-full max-w-lg mx-4 p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-white">Split Bill</h2>
+              <button onClick={() => setSplitOrder(null)} className="text-zinc-500 hover:text-zinc-300 text-2xl leading-none">&times;</button>
+            </div>
+            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 mb-6 text-center">
+              <p className="text-xs text-emerald-400/70 uppercase tracking-widest font-medium">Order {splitOrder.token} · Total</p>
+              <p className="text-3xl font-bold text-emerald-400 mt-1">₹{splitOrder.total.toFixed(2)}</p>
+            </div>
+            <div className="space-y-4 mb-6">
+              {splitPersons.map((p, i) => (
+                <div key={i} className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4">
+                  <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium mb-3">Person {i + 1}</p>
+                  <div className="grid grid-cols-3 gap-3 items-end">
+                    <div className="col-span-1">
+                      <label className="text-[10px] text-zinc-500 uppercase tracking-wider block mb-1">Name</label>
+                      <input
+                        type="text"
+                        value={p.name}
+                        onChange={(e) => updateSplitPerson(i, "name", e.target.value)}
+                        placeholder="Name"
+                        className="w-full bg-zinc-800/80 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500/50"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-zinc-500 uppercase tracking-wider block mb-1">Amount</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={p.amount}
+                        onChange={(e) => updateSplitPerson(i, "amount", parseFloat(e.target.value) || 0)}
+                        className="w-full bg-zinc-800/80 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500/50"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-zinc-500 uppercase tracking-wider block mb-1">Method</label>
+                      <select
+                        value={p.method}
+                        onChange={(e) => updateSplitPerson(i, "method", e.target.value)}
+                        className="w-full bg-zinc-800/80 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500/50 appearance-none"
+                      >
+                        <option value="cash">Cash</option>
+                        <option value="upi">UPI</option>
+                        <option value="card">Card</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {splitPersons.length < 6 && (
+              <button
+                onClick={addSplitPerson}
+                className="w-full mb-4 border-2 border-dashed border-zinc-700 hover:border-emerald-500/40 text-zinc-400 hover:text-emerald-400 rounded-2xl py-3 text-sm font-medium transition-all"
+              >
+                + Add Person
+              </button>
+            )}
+            <div className="flex items-center justify-between mb-4 px-1">
+              <span className="text-xs text-zinc-500">Total: <span className={splitValid ? "text-emerald-400" : "text-red-400"}>₹{splitTotal.toFixed(2)}</span> / ₹{splitOrder.total.toFixed(2)}</span>
+              <button onClick={autoEqualize} className="text-xs text-zinc-400 hover:text-emerald-400 underline underline-offset-2">Equal split</button>
+            </div>
+            <button
+              disabled={!splitValid || splitMut.isPending}
+              onClick={() => splitMut.mutate({ id: splitOrder.id, splits: splitPersons })}
+              className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 disabled:opacity-40 text-white font-bold py-3.5 rounded-xl transition text-sm"
+            >
+              {splitMut.isPending ? "Splitting..." : "Confirm Split"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

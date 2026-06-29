@@ -17,6 +17,7 @@ const nav = [
   { href: "/admin/tables", label: "Tables & QR", icon: QrCode, testid: "admin-nav-tables" },
   { href: "/admin/revenue", label: "Analytics & Revenue", icon: LineChart, testid: "admin-nav-revenue" },
   { href: "/admin/billing", label: "Billing & Plan", icon: CreditCard, testid: "admin-nav-billing" },
+  { href: "/admin/campaigns", label: "Campaigns", icon: Megaphone, testid: "admin-nav-campaigns" },
   { href: "/admin/inventory", label: "Inventory", icon: Boxes, testid: "admin-nav-inventory" },
   { href: "/admin/menu", label: "Menu", icon: UtensilsCrossed, testid: "admin-nav-menu" },
   { href: "/admin/customers", label: "Customers", icon: Users, testid: "admin-nav-customers" },

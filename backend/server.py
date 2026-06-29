@@ -234,6 +234,8 @@ from routers.push import router as push_router
 from routers.onboarding import router as onboarding_router
 from routers.settings import router as settings_router
 from routers.cart import router as cart_router
+from routers.campaigns import router as campaigns_router
+from routers.pricing import router as pricing_router
 
 app.include_router(auth_router)
 app.include_router(menu_router)
@@ -252,6 +254,8 @@ app.include_router(push_router)
 app.include_router(onboarding_router)
 app.include_router(settings_router)
 app.include_router(cart_router)
+app.include_router(campaigns_router)
+app.include_router(pricing_router)
 
 
 # =========================================================

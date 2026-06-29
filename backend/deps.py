@@ -382,6 +382,14 @@ class TTSReq(BaseModel):
     text: str
     voice: str = "nova"
 
+class SplitPerson(BaseModel):
+    name: str
+    amount: float
+    method: str  # cash / upi / card
+
+class SplitBillReq(BaseModel):
+    splits: List[SplitPerson]
+
 # =========================================================
 # Token generation (daily per-restaurant sequential token)
 # =========================================================
