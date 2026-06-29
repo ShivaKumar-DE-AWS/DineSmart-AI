@@ -166,10 +166,12 @@ async def get_restaurant_config(slug: str):
     if not config:
         raise HTTPException(status_code=404, detail="Not Found")
         
-    # Check if restaurant is in sandbox mode
+    # Check if restaurant exists and get sandbox mode
     rest = await db.restaurants.find_one({"slug": slug})
-    if rest:
-        config["sandbox_mode"] = rest.get("sandbox_mode", False)
+    if not rest:
+        raise HTTPException(status_code=404, detail="Restaurant not found")
+        
+    config["sandbox_mode"] = rest.get("sandbox_mode", False)
     
     # ponytail: mask passwords — config is public, passwords should never leak
     resp = copy.deepcopy(config)

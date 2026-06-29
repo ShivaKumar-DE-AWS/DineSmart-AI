@@ -138,9 +138,28 @@ async def create_restaurant(req: CreateRestaurantReq, user=Depends(require_super
 
 @router.delete("/restaurants/{restaurant_id}")
 async def delete_restaurant(restaurant_id: str, user=Depends(require_superadmin)):
-    result = await db.restaurants.delete_one({"id": restaurant_id})
-    if result.deleted_count == 0:
+    restaurant = await db.restaurants.find_one({"id": restaurant_id})
+    if not restaurant:
         raise HTTPException(status_code=404, detail="Restaurant not found")
+        
+    slug = restaurant.get("slug")
+    
+    # Cascade delete all tenant data
+    await db.restaurants.delete_one({"id": restaurant_id})
+    if slug:
+        await db.restaurant_configs.delete_many({"slug": slug})
+        
+    await db.users.delete_many({"restaurant_id": restaurant_id})
+    await db.menu.delete_many({"restaurant_id": restaurant_id})
+    await db.inventory.delete_many({"restaurant_id": restaurant_id})
+    await db.tables.delete_many({"restaurant_id": restaurant_id})
+    await db.table_sessions.delete_many({"restaurant_id": restaurant_id})
+    await db.orders.delete_many({"restaurant_id": restaurant_id})
+    await db.customers.delete_many({"restaurant_id": restaurant_id})
+    await db.reservations.delete_many({"restaurant_id": restaurant_id})
+    await db.notifications.delete_many({"restaurant_id": restaurant_id})
+    await db.support_tickets.delete_many({"restaurant_id": restaurant_id})
+    await db.verifications.delete_many({"restaurant_id": restaurant_id})
         
     from routers.audit import log_audit_event
     await log_audit_event(
