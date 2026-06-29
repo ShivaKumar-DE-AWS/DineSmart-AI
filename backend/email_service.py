@@ -7,9 +7,9 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 # GoDaddy Professional Email SMTP settings
-SMTP_SERVER = os.environ.get("SMTP_SERVER", "smtp.secureserver.net")
+SMTP_SERVER = os.environ.get("SMTP_SERVER") or os.environ.get("SMTP_HOST") or os.environ.get("SMTP_HOSTSMTP_HOST") or "smtp.secureserver.net"
 SMTP_PORT = int(os.environ.get("SMTP_PORT", 587))
-SMTP_USER = os.environ.get("SMTP_USER", "admin@smartdineai.co.in")
+SMTP_USER = os.environ.get("SMTP_USER") or os.environ.get("SMTP_USERNAME") or "admin@smartdineai.co.in"
 SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
 
 def _send_email(to_email: str, subject: str, html_content: str) -> bool:
