@@ -38,11 +38,27 @@ function useRestaurantName(): string {
 
 function tableQrUrl(slug: string, qrToken: string): string {
   const finalSlug = slug === "mehfil-hyderabad" ? "mehfil" : slug;
+  if (typeof window !== "undefined" && window.location.hostname.includes("smartdineai.co.in")) {
+    return `https://${finalSlug}.smartdineai.co.in?t=${qrToken}`;
+  }
   return `${customerOrigin()}/r/${finalSlug}?t=${qrToken}`;
 }
 
+function takeawayMenuUrl(slug: string): string {
+  const finalSlug = slug === "mehfil-hyderabad" ? "mehfil" : slug;
+  if (typeof window !== "undefined" && window.location.hostname.includes("smartdineai.co.in")) {
+    return `https://${finalSlug}.smartdineai.co.in/menu`;
+  }
+  return `${customerOrigin()}/r/${finalSlug}/menu`;
+}
+
 function printTakeawayMenuQr(slug: string, restaurantName: string) {
-  const menuUrl = `${window.location.origin}/r/${slug}/menu`;
+  const finalSlug = slug === "mehfil-hyderabad" ? "mehfil" : slug;
+  let menuUrl = `${customerOrigin()}/r/${finalSlug}/menu`;
+  if (typeof window !== "undefined" && window.location.hostname.includes("smartdineai.co.in")) {
+    menuUrl = `https://${finalSlug}.smartdineai.co.in/menu`;
+  }
+  
   const w = window.open("", "_blank");
   if (!w) { toast.error("Popup blocked — allow popups to print"); return; }
   w.document.write(`<!doctype html><html><head><title>${restaurantName} — Takeaway QR</title>
@@ -163,7 +179,7 @@ export default function AdminTables() {
             </div>
           </div>
           <div className="bg-cream rounded-xl p-4 flex items-center justify-center mb-3">
-            <QRCodeSVG value={`${window.location.origin}/r/${slug}/menu`} size={180} bgColor="#FAF5EC" fgColor="#2D6A4F" level="M" includeMargin={false} />
+            <QRCodeSVG value={takeawayMenuUrl(slug)} size={180} bgColor="#FAF5EC" fgColor="#2D6A4F" level="M" includeMargin={false} />
           </div>
           <p className="text-[10px] text-stone text-center mb-3">Scan to browse menu &amp; place takeaway order</p>
           <div className="mt-auto flex gap-2">
@@ -171,7 +187,7 @@ export default function AdminTables() {
               <Printer className="h-3.5 w-3.5" /> Print
             </button>
             <button onClick={async () => {
-              try { await navigator.clipboard.writeText(`${window.location.origin}/r/${slug}/menu`); toast.success("Menu URL copied"); }
+              try { await navigator.clipboard.writeText(takeawayMenuUrl(slug)); toast.success("Menu URL copied"); }
               catch { toast.error("Could not copy"); }
             }} className="flex-1 inline-flex items-center justify-center gap-1.5 bg-white border border-bone rounded-full py-2 text-xs font-medium hover:bg-cream">
               <QrCode className="h-3.5 w-3.5" /> Copy URL
