@@ -61,6 +61,10 @@ def _send_email(to_email: str, subject: str, html_content: str) -> tuple[bool, s
 def send_password_reset_email(to_email: str, reset_token: str, frontend_url: str = "http://localhost:3000"):
     """Send a password reset email."""
     reset_link = f"{frontend_url}/auth/forgot-password?token={reset_token}"
+    
+    # EXPLICITLY print the link so it is impossible to miss in the Render logs
+    print(f"\n🔐 RESET LINK FOR {to_email}: {reset_link}\n", flush=True)
+    
     subject = "Reset your SmartDine Password"
     
     html = f"""
