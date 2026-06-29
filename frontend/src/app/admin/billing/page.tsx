@@ -53,7 +53,7 @@ export default function BillingPage() {
     <div className="max-w-4xl mx-auto space-y-8">
       <div>
         <h1 className="text-2xl font-heading font-bold text-ink flex items-center gap-2">
-          <CreditCard className="h-6 w-6 text-brand" />
+          <CreditCard className="h-6 w-6 text-clay" />
           Billing & Subscription
         </h1>
         <p className="text-stone mt-1">Manage your restaurant's subscription plan and billing methods.</p>
@@ -68,7 +68,7 @@ export default function BillingPage() {
               <h2 className="text-lg font-semibold text-ink">Current Plan</h2>
               <div className="mt-2 flex items-center gap-3">
                 <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                  isPro ? 'bg-emerald-100 text-emerald-800' : 'bg-brand/10 text-brand'
+                  isPro ? 'bg-emerald-100 text-emerald-800' : 'bg-clay/10 text-clay'
                 }`}>
                   {billing?.plan_tier === 'pro' ? 'Pro Plan' : 'Starter Plan'}
                 </span>
@@ -100,7 +100,7 @@ export default function BillingPage() {
               <button
                 onClick={() => checkoutMut.mutate()}
                 disabled={checkoutMut.isPending}
-                className="flex items-center gap-2 bg-brand text-white px-6 py-2.5 rounded-lg font-medium hover:bg-brand/90 transition"
+                className="flex items-center gap-2 bg-clay text-white px-6 py-2.5 rounded-lg font-medium hover:bg-clay/90 transition"
               >
                 <Zap className="h-4 w-4" />
                 {checkoutMut.isPending ? 'Loading...' : 'Upgrade to Pro'}
@@ -130,7 +130,7 @@ export default function BillingPage() {
         {/* Feature List Card */}
         <div className="col-span-1 bg-white rounded-2xl shadow-sm border border-bone p-6">
           <h2 className="text-lg font-semibold text-ink flex items-center gap-2 mb-4">
-            <ShieldCheck className="h-5 w-5 text-brand" />
+            <ShieldCheck className="h-5 w-5 text-clay" />
             Pro Features
           </h2>
           <ul className="space-y-3 text-sm text-stone">

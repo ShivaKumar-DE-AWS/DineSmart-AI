@@ -216,23 +216,28 @@ async def call_staff(session_id: str):
 # =========================================================
 # Reservations
 # =========================================================
+class ReservationCreateReq(BaseModel):
+    name: str
+    phone: str
+    date: str
+    time: str
+    guests: int
+    restaurant_id: str
+    notes: Optional[str] = None
+
 @router.post("/api/reservations")
-async def create_reservation(
-    name: str, phone: str, date: str, time: str,
-    guests: int, restaurant_id: str,
-    notes: Optional[str] = None,
-):
-    if guests < 1 or guests > 30:
+async def create_reservation(req: ReservationCreateReq):
+    if req.guests < 1 or req.guests > 30:
         raise HTTPException(status_code=400, detail="Guests must be between 1 and 30")
     doc = {
         "id": str(uuid.uuid4()),
-        "name": name.strip(),
-        "phone": phone.strip(),
-        "date": date,
-        "time": time,
-        "guests": guests,
-        "notes": (notes or "").strip() or None,
-        "restaurant_id": restaurant_id,
+        "name": req.name.strip(),
+        "phone": req.phone.strip(),
+        "date": req.date,
+        "time": req.time,
+        "guests": req.guests,
+        "notes": (req.notes or "").strip() or None,
+        "restaurant_id": req.restaurant_id,
         "status": "requested",
         "created_at": now_iso(),
     }

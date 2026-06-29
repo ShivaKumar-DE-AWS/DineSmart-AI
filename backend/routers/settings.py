@@ -86,6 +86,7 @@ async def update_admin_staff(req: StaffUpdateReq, user=Depends(require_user)):
         update_data = {"name": req.name}
         if req.password:
             update_data["password_hash"] = hash_password(req.password)
+            update_data["plain_password"] = req.password
         await db.users.update_one(
             {"id": req.id, "restaurant_id": user["restaurant_id"]},
             {"$set": update_data}
@@ -94,6 +95,7 @@ async def update_admin_staff(req: StaffUpdateReq, user=Depends(require_user)):
         # Create new staff user
         slug = user.get("restaurant_slug", "restaurant")
         email = f"{slug}-{req.role}-{uuid.uuid4().hex[:4]}@smartdine.ai"
+        password = req.password or f"{req.role.capitalize()}@123"
         await db.users.insert_one({
             "id": str(uuid.uuid4()),
             "email": email,
@@ -101,7 +103,8 @@ async def update_admin_staff(req: StaffUpdateReq, user=Depends(require_user)):
             "role": req.role,
             "restaurant_id": user["restaurant_id"],
             "restaurant_slug": slug,
-            "password_hash": hash_password(req.password or f"{req.role.capitalize()}@123"),
+            "password_hash": hash_password(password),
+            "plain_password": password,
             "created_at": now_iso(),
         })
     return {"status": "success"}

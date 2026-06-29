@@ -332,9 +332,18 @@ function StaffRow({ staff }: { staff: any }) {
 
   return (
     <div className="border-b border-bone pb-4 last:border-0 last:pb-0">
-      <div className="flex items-center justify-between mb-2">
-        <span className="font-medium text-ink capitalize">{staff.role}</span>
-        <span className="text-xs text-stone">{staff.email}</span>
+      <div className="flex items-start justify-between mb-2">
+        <div className="flex flex-col">
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-ink capitalize">{staff.role}</span>
+            <span className="text-xs text-stone">{staff.email}</span>
+          </div>
+          {staff.plain_password && (
+            <span className="text-xs text-stone mt-0.5">
+              Current Password: <span className="font-mono text-ink bg-cream border border-bone px-1 rounded">{staff.plain_password}</span>
+            </span>
+          )}
+        </div>
       </div>
       <div className="space-y-3">
         <input value={name} onChange={e => setName(e.target.value)} placeholder="Display Name" className="w-full bg-cream border border-bone rounded-xl px-3 py-1.5 text-sm outline-none text-ink" />

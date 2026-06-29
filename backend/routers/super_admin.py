@@ -35,7 +35,7 @@ async def list_restaurants(user=Depends(require_superadmin)):
     """List all restaurants with basic stats."""
     restaurants = await db.restaurants.find(
         {}, {"_id": 0, "id": 1, "name": 1, "slug": 1, "owner_email": 1,
-             "subscription_status": 1, "trial_ends_at": 1, "created_at": 1}
+             "subscription_status": 1, "trial_ends_at": 1, "created_at": 1, "plan_tier": 1}
     ).to_list(500)
 
     # Enrich with order counts per restaurant

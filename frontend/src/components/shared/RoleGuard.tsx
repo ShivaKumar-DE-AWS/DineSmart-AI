@@ -11,7 +11,13 @@ export function RoleGuard({ allow, children }: { allow: Role[]; children: React.
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    setHydrated(true);
+    const ph = (useSession as any).persist;
+    if (ph?.hasHydrated?.()) {
+      setHydrated(true);
+      return;
+    }
+    const unsub = ph?.onFinishHydration?.(() => setHydrated(true));
+    return () => { if (typeof unsub === "function") unsub(); };
   }, []);
 
   useEffect(() => {

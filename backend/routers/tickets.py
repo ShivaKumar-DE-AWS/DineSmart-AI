@@ -45,7 +45,7 @@ async def create_ticket(req: TicketCreateReq, user=Depends(require_user)):
     
     from routers.audit import log_audit_event
     await log_audit_event(
-        user_id=user["id"],
+        user_id=user.get("sub"),
         user_email=user["email"],
         action="ticket_created",
         target=doc["id"],
@@ -85,7 +85,7 @@ async def delete_ticket(ticket_id: str, user=Depends(require_user)):
     
     from routers.audit import log_audit_event
     await log_audit_event(
-        user_id=user["id"],
+        user_id=user.get("sub"),
         user_email=user["email"],
         action="ticket_deleted",
         target=ticket_id,
@@ -120,7 +120,7 @@ async def resolve_ticket(ticket_id: str, user=Depends(require_superadmin)):
     
     from routers.audit import log_audit_event
     await log_audit_event(
-        user_id=user["id"],
+        user_id=user.get("sub"),
         user_email=user["email"],
         action="ticket_resolved",
         target=ticket_id,

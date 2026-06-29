@@ -46,7 +46,14 @@ export async function api<T = any>(path: string, init: RequestInit = {}): Promis
       clearTimeout(timeout);
       if (!res.ok) {
         let msg = `HTTP ${res.status}`;
-        try { const j = await res.json(); msg = j.detail || j.message || msg; } catch { /* ignore parse errors */ }
+        try { 
+          const j = await res.json(); 
+          if (Array.isArray(j.detail)) {
+            msg = j.detail.map((e: any) => e.msg || JSON.stringify(e)).join(", ");
+          } else {
+            msg = j.detail || j.message || msg; 
+          }
+        } catch { /* ignore parse errors */ }
         throw new Error(msg);
       }
       const ct = res.headers.get("content-type") || "";
