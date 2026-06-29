@@ -221,8 +221,9 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
     } as React.CSSProperties : undefined}>
       <Suspense fallback={null}><TableSessionGuard /></Suspense>
       {restaurantConfig?.sandbox_mode && (
-        <div className="bg-alert text-white text-center py-2 px-4 text-xs font-medium tracking-wide sticky top-0 z-[60]">
-          ⚠️ SANDBOX MODE: Orders placed here will not be sent to the kitchen.
+        <div className="bg-alert text-white text-center py-2 px-4 text-xs font-medium tracking-wide sticky top-0 z-[60] flex items-center justify-center gap-2 flex-wrap">
+          <span>⚠️ SANDBOX MODE: Orders placed here will not be sent to the kitchen.</span>
+          <Link href="/admin/settings" className="underline hover:text-white/80 ml-2">Disable in Admin</Link>
         </div>
       )}
       <a href="#customer-content" className="sr-only focus:not-sr-only focus:fixed focus:z-[100] focus:top-2 focus:left-2 focus:bg-white focus:px-4 focus:py-2">Skip to content</a>

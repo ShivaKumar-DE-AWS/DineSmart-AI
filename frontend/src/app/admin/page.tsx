@@ -23,10 +23,26 @@ export default function AdminDashboard() {
     { label: "Orders today", value: dash ? dash.orders_today : "—", icon: ShoppingBag, testid: "kpi-orders" },
     { label: "AI Influence", value: dash ? (dash.orders_today > 0 ? Math.round((dash.ai_orders_today / dash.orders_today) * 100) + "%" : "0%") : "—", icon: Receipt, testid: "kpi-ai" },
     { label: "Low stock items", value: dash ? dash.low_stock_count : "—", icon: AlertTriangle, testid: "kpi-low-stock" },
-  ];
+  const { data: tablesData } = useQuery({ queryKey: ["admin-tables-dashboard", user?.restaurant_id], queryFn: () => api<any>("/api/tables") });
+  const tablesCount = tablesData?.tables?.length || 0;
 
   return (
     <div>
+      {tablesCount === 0 && (
+        <div className="mb-6 bg-cream border border-brand-secondary/30 rounded-xl p-5 shadow-sm relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-brand-secondary/10 rounded-full blur-3xl" />
+          <h2 className="font-heading text-lg text-brand-primary mb-2 flex items-center gap-2">
+            <Sparkles className="h-5 w-5" /> Welcome to SmartDine AI!
+          </h2>
+          <p className="text-sm text-stone mb-4">Complete these quick steps to start taking live orders.</p>
+          <ul className="list-decimal pl-5 text-sm space-y-2 text-stone font-medium">
+            <li><strong>Add Menu Items:</strong> Head to <a href="/admin/menu" className="text-brand-secondary hover:underline">Menu Settings</a> to set up your dishes.</li>
+            <li><strong>Create Tables:</strong> Go to <a href="/admin/tables" className="text-brand-secondary hover:underline">Tables</a> to add tables and get QR codes.</li>
+            <li><strong>Verify & Go Live:</strong> Enter the OTP from your welcome email in <a href="/admin/settings" className="text-brand-secondary hover:underline">Settings</a> to disable Sandbox mode.</li>
+          </ul>
+        </div>
+      )}
+
       <div className="flex items-end justify-between mb-6">
         <div>
           <p className="uppercase tracking-[0.3em] text-[10px] text-stone mb-1">Overview</p>

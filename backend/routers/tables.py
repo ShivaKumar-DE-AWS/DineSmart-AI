@@ -87,6 +87,7 @@ async def create_table(payload: TableModel, user=Depends(require_user)):
     if user.get("restaurant_id"):
         doc["restaurant_id"] = user["restaurant_id"]
     await db.tables.insert_one(doc)
+    doc.pop("_id", None)
     return doc
 
 

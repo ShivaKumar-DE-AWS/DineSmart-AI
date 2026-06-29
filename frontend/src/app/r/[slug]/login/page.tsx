@@ -20,10 +20,15 @@ function emailSlug(configSlug: string): string {
 }
 
 // Default credentials per restaurant — generated dynamically from slug
-const getDefaultCredentials = (slug: string) => ({
-  email: `admin-${emailSlug(slug)}@smartdine.ai`,
-  password: "Admin@123",
-});
+const getDefaultCredentials = (slug: string) => {
+  if (['mehfil', 'mehfil-hyderabad', 'spice-garden'].includes(slug)) {
+    return {
+      email: `admin-${emailSlug(slug)}@smartdine.ai`,
+      password: "Admin@123",
+    };
+  }
+  return { email: "", password: "" };
+};
 
 export default function LoginPage() {
   const params = useParams();
@@ -313,12 +318,14 @@ export default function LoginPage() {
                 {busy ? "Signing in…" : "Sign in"}
               </button>
               
-              <div className="mt-5 text-[10px] text-[#1A1106]/55 space-y-1 font-royal tracking-wider uppercase">
-                <div className="font-semibold text-[#8A6A1B]">Demo Credentials</div>
-                <div>admin-{emailSlug(slug)}@smartdine.ai / Admin@123 — Admin</div>
-                <div>kitchen-{emailSlug(slug)}@smartdine.ai / Chef@123 — Kitchen</div>
-                <div>counter-{emailSlug(slug)}@smartdine.ai / Counter@123 — Counter</div>
-              </div>
+              {['mehfil', 'mehfil-hyderabad', 'spice-garden'].includes(slug) && (
+                <div className="mt-5 text-[10px] text-[#1A1106]/55 space-y-1 font-royal tracking-wider uppercase">
+                  <div className="font-semibold text-[#8A6A1B]">Demo Credentials</div>
+                  <div>admin-{emailSlug(slug)}@smartdine.ai / Admin@123 — Admin</div>
+                  <div>kitchen-{emailSlug(slug)}@smartdine.ai / Chef@123 — Kitchen</div>
+                  <div>counter-{emailSlug(slug)}@smartdine.ai / Counter@123 — Counter</div>
+                </div>
+              )}
             </form>
           )}
         </div>

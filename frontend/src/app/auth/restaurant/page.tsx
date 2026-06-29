@@ -269,8 +269,18 @@ export default function RestaurantAuthPage() {
                   <div className="space-y-1.5">
                     <label className="text-xs font-medium text-stone pl-1">Cuisine / Menu Type</label>
                     <div className="relative">
-                      <Utensils className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone" />
-                      <input type="text" value={regCuisine} onChange={(e) => setRegCuisine(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-11 pr-4 text-white text-sm placeholder:text-stone focus:outline-none focus:ring-2 focus:ring-clay/50" placeholder="Italian, Indian, Cafe..." required />
+                      <Utensils className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone pointer-events-none" />
+                      <select value={regCuisine} onChange={(e) => setRegCuisine(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-11 pr-4 text-white text-sm focus:outline-none focus:ring-2 focus:ring-clay/50 appearance-none" required>
+                        <option value="" disabled className="text-stone">Select Cuisine</option>
+                        <option value="Generic" className="bg-ink text-white">Generic / Global</option>
+                        <option value="Indian" className="bg-ink text-white">Indian / Tiffins</option>
+                        <option value="Italian" className="bg-ink text-white">Italian / Pizzeria</option>
+                        <option value="Cafe" className="bg-ink text-white">Cafe / Bakery</option>
+                        <option value="Fast Food" className="bg-ink text-white">Fast Food</option>
+                        <option value="Fine Dining" className="bg-ink text-white">Fine Dining</option>
+                        <option value="Pub/Bar" className="bg-ink text-white">Pub / Bar</option>
+                        <option value="Other" className="bg-ink text-white">Other</option>
+                      </select>
                     </div>
                   </div>
                 </div>
