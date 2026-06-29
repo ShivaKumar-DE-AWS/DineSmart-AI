@@ -301,7 +301,12 @@ export default function RestaurantAuthPage() {
                   disabled={busy}
                   className="w-full bg-clay hover:bg-clay-dark text-white font-semibold rounded-xl py-3 transition flex items-center justify-center gap-2 mt-4 shadow-lg shadow-clay/20"
                 >
-                  {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : "Start My 14-Day Pro Trial"}
+                  {busy ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" /> 
+                      <span>Creating your restro...</span>
+                    </>
+                  ) : "Start My 14-Day Pro Trial"}
                 </button>
 
                 {result && (
