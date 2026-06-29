@@ -2,7 +2,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
-import { TrendingUp, ShoppingBag, Receipt, AlertTriangle } from "lucide-react";
+import { TrendingUp, ShoppingBag, Receipt, AlertTriangle, Sparkles } from "lucide-react";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { useSession } from "@/stores/session";
 
