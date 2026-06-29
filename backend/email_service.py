@@ -27,9 +27,14 @@ def _send_email(to_email: str, subject: str, html_content: str) -> bool:
     msg.attach(part)
 
     try:
-        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
-        server.starttls()
-        server.login(SMTP_USER, SMTP_PASSWORD)
+        if SMTP_PORT == 465:
+            server = smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT)
+            server.login(SMTP_USER, SMTP_PASSWORD)
+        else:
+            server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+            server.starttls()
+            server.login(SMTP_USER, SMTP_PASSWORD)
+            
         server.sendmail(SMTP_USER, to_email, msg.as_string())
         server.quit()
         print(f"✅ Successfully sent email to {to_email}")
