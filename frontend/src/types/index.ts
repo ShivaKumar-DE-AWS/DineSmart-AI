@@ -141,6 +141,9 @@ export interface RestaurantConfig {
 
   // Location / address for takeaway directions
   address?: string;
+
+  // Sandbox mode (trial/exhibition)
+  sandbox_mode?: boolean;
 }
 
 export interface RestaurantHistoryItem {
