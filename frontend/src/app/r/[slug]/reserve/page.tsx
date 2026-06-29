@@ -5,11 +5,12 @@ import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { Calendar, Clock, Users, Phone, User2, MessageSquare, Sparkles, CheckCircle2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { getRestaurantConfig } from "@/hooks/useRestaurantConfig";
+import { useRestaurantConfig } from "@/hooks/useRestaurantConfig";
 
 export default function ReservePage() {
   const params = useParams();
   const slug = params?.slug as string;
+  const { config, isLoading } = useRestaurantConfig();
 
   const router = useRouter();
   const [name, setName] = useState("");
@@ -29,11 +30,15 @@ export default function ReservePage() {
       toast.error("Please share your name and phone");
       return;
     }
+    if (!config.id) {
+      toast.error("Still loading restaurant data. Please wait a moment.");
+      return;
+    }
     setBusy(true);
     try {
       const res = await api<{ ok: boolean; reservation_id: string; status: string }>("/api/reservations", {
         method: "POST",
-        body: JSON.stringify({ name: name.trim(), phone: phone.trim(), date, time, guests, notes: notes.trim() || undefined, restaurant_id: getRestaurantConfig(slug).id }),
+        body: JSON.stringify({ name: name.trim(), phone: phone.trim(), date, time, guests, notes: notes.trim() || undefined, restaurant_id: config.id }),
       });
       setConfirmation({ id: res.reservation_id });
       toast.success("Reservation requested — we&apos;ll confirm shortly");

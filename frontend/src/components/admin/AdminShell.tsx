@@ -64,6 +64,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   const [notifiedSet] = useState(() => new Set<string>());
 
+  const [dismissedAnn, setDismissedAnn] = useState<string | null>(null);
+
   useEffect(() => {
     const unread = (notifsData?.notifications || []).filter((n: any) => !n.read && n.type === "staff_call");
     for (const n of unread) {
@@ -151,8 +153,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         )}
 
         <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 flex flex-col">
-          {annData?.announcement && (
-            <div className={`mb-6 p-4 rounded-xl shadow-sm border flex items-start gap-3 ${
+          {annData?.announcement && annData.announcement.id !== dismissedAnn && (
+            <div className={`relative mb-6 p-4 rounded-xl shadow-sm border flex items-start gap-3 pr-10 ${
               annData.announcement.type === 'warning' 
                 ? 'bg-amber-50 border-amber-200 text-amber-900'
                 : 'bg-blue-50 border-blue-200 text-blue-900'
@@ -162,6 +164,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 <h4 className="font-semibold">{annData.announcement.title}</h4>
                 <p className="text-sm mt-1 opacity-90">{annData.announcement.message}</p>
               </div>
+              <button onClick={() => setDismissedAnn(annData.announcement.id)} className="absolute top-4 right-4 text-stone hover:text-ink">
+                <X className="h-4 w-4" />
+              </button>
             </div>
           )}
 
