@@ -16,7 +16,7 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 @router.post("/signup")
 async def signup(req: SignupReq):
-    if await db.users.find_one({"email": req.email}):
+    if await db.users.find_one({"email": {"$regex": f"^{req.email}$", "$options": "i"}}):
         raise HTTPException(status_code=400, detail="Email already registered")
     if req.role not in {"customer", "admin", "kitchen", "counter"}:
         raise HTTPException(status_code=400, detail="Invalid role")
@@ -80,21 +80,23 @@ async def signup(req: SignupReq):
 
 @router.post("/forgot-password")
 async def forgot_password(req: ForgotPasswordReq, background_tasks: BackgroundTasks):
-    user = await db.users.find_one({"email": req.email})
+    # Case insensitive search
+    user = await db.users.find_one({"email": {"$regex": f"^{req.email}$", "$options": "i"}})
     if not user:
         # Prevent email enumeration by returning success even if not found
+        print(f"⚠️ Forgot Password requested for {req.email}, but no account found!")
         return {"message": "If an account with that email exists, a reset link has been sent."}
 
     reset_token = str(uuid.uuid4())
     expiry = datetime.now(timezone.utc) + timedelta(hours=1)
 
     await db.users.update_one(
-        {"email": req.email},
+        {"_id": user["_id"]},
         {"$set": {"reset_token": reset_token, "reset_token_expiry": expiry}}
     )
 
     frontend_url = os.environ.get("FRONTEND_URL", "https://smartdineai.co.in")
-    background_tasks.add_task(send_password_reset_email, req.email, reset_token, frontend_url)
+    background_tasks.add_task(send_password_reset_email, user.get("email"), reset_token, frontend_url)
     return {"message": "If an account with that email exists, a reset link has been sent."}
 
 
