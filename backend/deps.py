@@ -31,7 +31,7 @@ except ImportError:
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
 
-MONGO_URL = os.environ.get("MONGO_URL") or os.environ.get("MONGODB_URI")
+MONGO_URL = os.environ.get("MONGO_URL") or os.environ.get("MONGODB_URI") or "mongodb://localhost:27017/dinesmart_test"
 DB_NAME = os.environ.get("DB_NAME") or os.environ.get("MONGODB_DB_NAME") or "smartdine"
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 JWT_SECRET = os.environ.get("JWT_SECRET", "")
@@ -134,11 +134,18 @@ def require_roles(*roles: str):
         if status == "trial":
             trial_ends_at = restaurant.get("trial_ends_at")
             if trial_ends_at:
-                # Ensure trial_ends_at is timezone-aware for comparison
-                if trial_ends_at.tzinfo is None:
-                    trial_ends_at = trial_ends_at.replace(tzinfo=timezone.utc)
-                if datetime.now(timezone.utc) > trial_ends_at:
-                    raise HTTPException(status_code=403, detail="Trial period has expired. Please contact support.")
+                if isinstance(trial_ends_at, str):
+                    try:
+                        trial_ends_at = datetime.fromisoformat(trial_ends_at.replace("Z", "+00:00"))
+                    except ValueError:
+                        pass
+                
+                if isinstance(trial_ends_at, datetime):
+                    # Ensure trial_ends_at is timezone-aware for comparison
+                    if trial_ends_at.tzinfo is None:
+                        trial_ends_at = trial_ends_at.replace(tzinfo=timezone.utc)
+                    if datetime.now(timezone.utc) > trial_ends_at:
+                        raise HTTPException(status_code=403, detail="Trial period has expired. Please contact support.")
             else:
                 # If no trial_ends_at is set but status is trial, default to denying or allowing? 
                 # We'll let them pass until a migration sets it, or we could block. Allowing for safety.
