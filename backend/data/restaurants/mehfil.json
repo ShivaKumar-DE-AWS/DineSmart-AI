@@ -5,33 +5,337 @@
   "upi_id": "mehfil@upi",
   "plan": "trial",
   "users": [
-    {"email": "mehfil@smartdine.ai", "password": "Owner@123", "name": "Restaurant Owner", "role": "admin"},
-    {"email": "admin-mehfil@smartdine.ai", "password": "Admin@123", "name": "Mehfil Admin", "role": "admin"},
-    {"email": "kitchen-mehfil@smartdine.ai", "password": "Chef@123", "name": "Head Chef", "role": "kitchen"},
-    {"email": "counter-mehfil@smartdine.ai", "password": "Counter@123", "name": "Counter Staff", "role": "counter"},
-    {"email": "guest-mehfil@smartdine.ai", "password": "Guest@123", "name": "Demo Customer", "role": "customer"}
+    {
+      "email": "mehfil@smartdine.ai",
+      "password": "Owner@123",
+      "name": "Restaurant Owner",
+      "role": "admin"
+    },
+    {
+      "email": "admin-mehfil@smartdine.ai",
+      "password": "Admin@123",
+      "name": "Mehfil Admin",
+      "role": "admin"
+    },
+    {
+      "email": "kitchen-mehfil@smartdine.ai",
+      "password": "Chef@123",
+      "name": "Head Chef",
+      "role": "kitchen"
+    },
+    {
+      "email": "counter-mehfil@smartdine.ai",
+      "password": "Counter@123",
+      "name": "Counter Staff",
+      "role": "counter"
+    },
+    {
+      "email": "guest-mehfil@smartdine.ai",
+      "password": "Guest@123",
+      "name": "Demo Customer",
+      "role": "customer"
+    }
   ],
   "menu": [
-    {"name": "Mehfil Special Dum Biryani", "description": "Our heritage Hyderabadi biryani — tender goat, aged basmati, saffron, slow-sealed for 4 hours.", "price": 380, "category": "Biryani", "image_url": "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=600&q=80", "prep_time_min": 25, "tags": ["bestseller", "signature", "heritage", "non-veg"]},
-    {"name": "Chicken 65 Biryani", "description": "Spicy fried chicken layered with fragrant rice and chilies.", "price": 320, "category": "Biryani", "image_url": "https://images.unsplash.com/photo-1589302168068-964664d93dc0?w=600&q=80", "prep_time_min": 20, "tags": ["non-veg"]},
-    {"name": "Veg Dum Biryani", "description": "Garden vegetables, paneer, saffron basmati — slow-dum style.", "price": 260, "category": "Biryani", "image_url": "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=600&q=80", "prep_time_min": 18, "tags": ["veg"]},
-    {"name": "Mutton Seekh Kebab", "description": "Hand-minced mutton, charcoal-grilled with mint chutney.", "price": 280, "category": "Starters", "image_url": "https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?w=600&q=80", "prep_time_min": 12, "tags": ["non-veg"]},
-    {"name": "Chicken Malai Tikka", "description": "Cream-marinated chicken, tandoor-charred, butter-soft.", "price": 240, "category": "Starters", "image_url": "https://images.unsplash.com/photo-1628294895950-9805252327bc?w=600&q=80", "prep_time_min": 10, "tags": ["non-veg"]},
-    {"name": "Paneer Tikka", "description": "Chargrilled cottage cheese, bell peppers, tangy masala.", "price": 200, "category": "Starters", "image_url": "https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?w=600&q=80", "prep_time_min": 10, "tags": ["veg"]},
-    {"name": "Mutton Rogan Josh", "description": "Kashmiri-style slow-braised mutton in aromatic red gravy.", "price": 340, "category": "Main Course", "image_url": "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=600&q=80", "prep_time_min": 18, "tags": ["non-veg"]},
-    {"name": "Butter Chicken", "description": "Tandoori chicken in velvety tomato-cream sauce.", "price": 300, "category": "Main Course", "image_url": "https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=600&q=80", "prep_time_min": 15, "tags": ["non-veg"]},
-    {"name": "Dal Makhani", "description": "Black lentils slow-cooked overnight with butter, cream, and aromatic spices.", "price": 180, "category": "Main Course", "image_url": "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=600&q=80", "prep_time_min": 10, "tags": ["veg"]},
-    {"name": "Butter Naan", "description": "Soft tandoor-baked flatbread brushed with cultured butter.", "price": 45, "category": "Breads", "image_url": "https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=600&q=80", "prep_time_min": 4, "tags": ["veg"]},
-    {"name": "Garlic Naan", "description": "Naan crusted with roasted garlic & coriander.", "price": 55, "category": "Breads", "image_url": "https://images.unsplash.com/photo-1626776877729-3bd96bf38904?w=600&q=80", "prep_time_min": 4, "tags": ["veg"]},
-    {"name": "Tandoori Roti", "description": "Whole-wheat fired in clay tandoor.", "price": 25, "category": "Breads", "image_url": "https://images.unsplash.com/photo-1604882737321-e43453ff5c28?w=600&q=80", "prep_time_min": 3, "tags": ["veg"]},
-    {"name": "Mehfil Special Fried Rice", "description": "House mix-meat fried rice with crispy garlic & schezwan twist.", "price": 240, "category": "Rice & Noodles", "image_url": "https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=600&q=80", "prep_time_min": 10, "tags": ["chef-special", "non-veg"]},
-    {"name": "Chicken Schezwan Noodles", "description": "Wok-fired hakka noodles with chilli garlic schezwan.", "price": 180, "category": "Rice & Noodles", "image_url": "https://images.unsplash.com/photo-1585032226651-759b368d7246?w=600&q=80", "prep_time_min": 8, "tags": ["non-veg"]},
-    {"name": "Double Ka Meetha", "description": "Saffron-soaked bread pudding, condensed milk, slivered pistachio — Hyderabad classic.", "price": 120, "category": "Sweets", "image_url": "https://images.unsplash.com/photo-1551024506-0bccd828d307?w=600&q=80", "prep_time_min": 4, "tags": ["bestseller", "heritage", "veg"]},
-    {"name": "Qubani Ka Meetha", "description": "Apricot compote with malai cream — Nizami royal dessert.", "price": 140, "category": "Sweets", "image_url": "https://images.unsplash.com/photo-1587314168485-3236d6710814?w=600&q=80", "prep_time_min": 4, "tags": ["heritage", "veg"]},
-    {"name": "Kaddu Ki Kheer", "description": "Sweet pumpkin slow-cooked in cardamom milk with almonds.", "price": 110, "category": "Sweets", "image_url": "https://images.unsplash.com/photo-1488477181946-6428a0291777?w=600&q=80", "prep_time_min": 4, "tags": ["veg"]},
-    {"name": "Gulab Jamun", "description": "Khoya dumplings in warm rose-cardamom syrup.", "price": 90, "category": "Sweets", "image_url": "https://images.unsplash.com/photo-1666865968793-2ae70f3e0e1c?w=600&q=80", "prep_time_min": 3, "tags": ["veg"]},
-    {"name": "Sweet Lassi", "description": "Chilled yogurt blended with rose & cardamom.", "price": 90, "category": "Beverages", "image_url": "https://images.unsplash.com/photo-1626790291650-503dfc480593?w=600&q=80", "prep_time_min": 3, "tags": ["refreshing", "veg"]},
-    {"name": "Masala Chai", "description": "Black tea boiled with ginger, cardamom, cloves.", "price": 40, "category": "Beverages", "image_url": "https://images.unsplash.com/photo-1571934811356-5cc061b6821f?w=600&q=80", "prep_time_min": 3, "tags": ["veg"]},
-    {"name": "Fresh Lime Soda", "description": "Lime, salt, sugar, soda — sweet+salt mix.", "price": 60, "category": "Beverages", "image_url": "https://images.unsplash.com/photo-1523677011781-c91d1bbe2f9e?w=600&q=80", "prep_time_min": 2, "tags": ["refreshing", "veg"]}
+    {
+      "name": "Mehfil Special Dum Biryani",
+      "description": "Our heritage Hyderabadi biryani \u2014 tender goat, aged basmati, saffron, slow-sealed for 4 hours.",
+      "price": 380,
+      "category": "Biryani",
+      "image_url": "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=600&q=80",
+      "prep_time_min": 25,
+      "tags": [
+        "bestseller",
+        "signature",
+        "heritage",
+        "non-veg"
+      ]
+    },
+    {
+      "name": "Chicken 65 Biryani",
+      "description": "Spicy fried chicken layered with fragrant rice and chilies.",
+      "price": 320,
+      "category": "Biryani",
+      "image_url": "https://images.unsplash.com/photo-1589302168068-964664d93dc0?w=600&q=80",
+      "prep_time_min": 20,
+      "tags": [
+        "non-veg"
+      ]
+    },
+    {
+      "name": "Veg Dum Biryani",
+      "description": "Garden vegetables, paneer, saffron basmati \u2014 slow-dum style.",
+      "price": 260,
+      "category": "Biryani",
+      "image_url": "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=600&q=80",
+      "prep_time_min": 18,
+      "tags": [
+        "veg"
+      ]
+    },
+    {
+      "name": "Mutton Seekh Kebab",
+      "description": "Hand-minced mutton, charcoal-grilled with mint chutney.",
+      "price": 280,
+      "category": "Starters",
+      "image_url": "https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?w=600&q=80",
+      "prep_time_min": 12,
+      "tags": [
+        "non-veg"
+      ]
+    },
+    {
+      "name": "Chicken Malai Tikka",
+      "description": "Cream-marinated chicken, tandoor-charred, butter-soft.",
+      "price": 240,
+      "category": "Starters",
+      "image_url": "https://images.unsplash.com/photo-1628294895950-9805252327bc?w=600&q=80",
+      "prep_time_min": 10,
+      "tags": [
+        "non-veg"
+      ]
+    },
+    {
+      "name": "Paneer Tikka",
+      "description": "Chargrilled cottage cheese, bell peppers, tangy masala.",
+      "price": 200,
+      "category": "Starters",
+      "image_url": "https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?w=600&q=80",
+      "prep_time_min": 10,
+      "tags": [
+        "veg"
+      ]
+    },
+    {
+      "name": "Mutton Rogan Josh",
+      "description": "Kashmiri-style slow-braised mutton in aromatic red gravy.",
+      "price": 340,
+      "category": "Main Course",
+      "image_url": "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=600&q=80",
+      "prep_time_min": 18,
+      "tags": [
+        "non-veg"
+      ]
+    },
+    {
+      "name": "Butter Chicken",
+      "description": "Tandoori chicken in velvety tomato-cream sauce.",
+      "price": 300,
+      "category": "Main Course",
+      "image_url": "https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=600&q=80",
+      "prep_time_min": 15,
+      "tags": [
+        "non-veg"
+      ]
+    },
+    {
+      "name": "Dal Makhani",
+      "description": "Black lentils slow-cooked overnight with butter, cream, and aromatic spices.",
+      "price": 180,
+      "category": "Main Course",
+      "image_url": "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=600&q=80",
+      "prep_time_min": 10,
+      "tags": [
+        "veg"
+      ]
+    },
+    {
+      "name": "Butter Naan",
+      "description": "Soft tandoor-baked flatbread brushed with cultured butter.",
+      "price": 45,
+      "category": "Breads",
+      "image_url": "https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=600&q=80",
+      "prep_time_min": 4,
+      "tags": [
+        "veg"
+      ]
+    },
+    {
+      "name": "Garlic Naan",
+      "description": "Naan crusted with roasted garlic & coriander.",
+      "price": 55,
+      "category": "Breads",
+      "image_url": "https://images.unsplash.com/photo-1626776877729-3bd96bf38904?w=600&q=80",
+      "prep_time_min": 4,
+      "tags": [
+        "veg"
+      ]
+    },
+    {
+      "name": "Tandoori Roti",
+      "description": "Whole-wheat fired in clay tandoor.",
+      "price": 25,
+      "category": "Breads",
+      "image_url": "https://images.unsplash.com/photo-1604882737321-e43453ff5c28?w=600&q=80",
+      "prep_time_min": 3,
+      "tags": [
+        "veg"
+      ]
+    },
+    {
+      "name": "Mehfil Special Fried Rice",
+      "description": "House mix-meat fried rice with crispy garlic & schezwan twist.",
+      "price": 240,
+      "category": "Rice & Noodles",
+      "image_url": "https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=600&q=80",
+      "prep_time_min": 10,
+      "tags": [
+        "chef-special",
+        "non-veg"
+      ]
+    },
+    {
+      "name": "Chicken Schezwan Noodles",
+      "description": "Wok-fired hakka noodles with chilli garlic schezwan.",
+      "price": 180,
+      "category": "Rice & Noodles",
+      "image_url": "https://images.unsplash.com/photo-1585032226651-759b368d7246?w=600&q=80",
+      "prep_time_min": 8,
+      "tags": [
+        "non-veg"
+      ]
+    },
+    {
+      "name": "Double Ka Meetha",
+      "description": "Saffron-soaked bread pudding, condensed milk, slivered pistachio \u2014 Hyderabad classic.",
+      "price": 120,
+      "category": "Sweets",
+      "image_url": "https://images.unsplash.com/photo-1551024506-0bccd828d307?w=600&q=80",
+      "prep_time_min": 4,
+      "tags": [
+        "bestseller",
+        "heritage",
+        "veg"
+      ]
+    },
+    {
+      "name": "Qubani Ka Meetha",
+      "description": "Apricot compote with malai cream \u2014 Nizami royal dessert.",
+      "price": 140,
+      "category": "Sweets",
+      "image_url": "https://images.unsplash.com/photo-1587314168485-3236d6710814?w=600&q=80",
+      "prep_time_min": 4,
+      "tags": [
+        "heritage",
+        "veg"
+      ]
+    },
+    {
+      "name": "Kaddu Ki Kheer",
+      "description": "Sweet pumpkin slow-cooked in cardamom milk with almonds.",
+      "price": 110,
+      "category": "Sweets",
+      "image_url": "https://images.unsplash.com/photo-1488477181946-6428a0291777?w=600&q=80",
+      "prep_time_min": 4,
+      "tags": [
+        "veg"
+      ]
+    },
+    {
+      "name": "Gulab Jamun",
+      "description": "Khoya dumplings in warm rose-cardamom syrup.",
+      "price": 90,
+      "category": "Sweets",
+      "image_url": "https://images.unsplash.com/photo-1666865968793-2ae70f3e0e1c?w=600&q=80",
+      "prep_time_min": 3,
+      "tags": [
+        "veg"
+      ]
+    },
+    {
+      "name": "Sweet Lassi",
+      "description": "Chilled yogurt blended with rose & cardamom.",
+      "price": 90,
+      "category": "Beverages",
+      "image_url": "https://images.unsplash.com/photo-1626790291650-503dfc480593?w=600&q=80",
+      "prep_time_min": 3,
+      "tags": [
+        "refreshing",
+        "veg"
+      ]
+    },
+    {
+      "name": "Masala Chai",
+      "description": "Black tea boiled with ginger, cardamom, cloves.",
+      "price": 40,
+      "category": "Beverages",
+      "image_url": "https://images.unsplash.com/photo-1571934811356-5cc061b6821f?w=600&q=80",
+      "prep_time_min": 3,
+      "tags": [
+        "veg"
+      ]
+    },
+    {
+      "name": "Fresh Lime Soda",
+      "description": "Lime, salt, sugar, soda \u2014 sweet+salt mix.",
+      "price": 60,
+      "category": "Beverages",
+      "image_url": "https://images.unsplash.com/photo-1523677011781-c91d1bbe2f9e?w=600&q=80",
+      "prep_time_min": 2,
+      "tags": [
+        "refreshing",
+        "veg"
+      ]
+    }
+  ],
+  "tagline": "The Royal Taste of Hyderabad",
+  "description": "Established in the heart of the city, Mehfil is a culinary destination celebrating the rich heritage of Nizami cuisine. We bring the authentic flavors of royal kitchens to your table, where every grain of basmati and every spice blend tells a story of tradition, passion, and uncompromising quality.",
+  "history_intro": "From a humble beginning to becoming the city's most beloved destination for authentic Biryani.",
+  "history": [
+    {
+      "year": "2010",
+      "title": "The Beginning",
+      "description": "Started as a small eatery with a single mission: to serve the most authentic, slow-cooked Dum Biryani in the city using recipes passed down through generations.",
+      "image_url": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=900&q=80"
+    },
+    {
+      "year": "2015",
+      "title": "The Expansion",
+      "description": "Word of mouth spread, and we expanded into a 200-seater fine-dining establishment, introducing our now-famous Mutton Rogan Josh and royal desserts.",
+      "image_url": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=900&q=80"
+    },
+    {
+      "year": "2023",
+      "title": "A Modern Royal Experience",
+      "description": "Embracing the future without forgetting our roots, we introduced AI-powered dining experiences to ensure our service matches the royal quality of our food.",
+      "image_url": "https://images.unsplash.com/photo-1559339352-11d035aa65de?w=900&q=80"
+    }
+  ],
+  "why_us": [
+    {
+      "icon": "Crown",
+      "title": "Royal Heritage",
+      "description": "Recipes inherited directly from the royal kitchens of the Nizams."
+    },
+    {
+      "icon": "Flame",
+      "title": "Slow-Cooked Perfection",
+      "description": "Our Biryani is sealed and slow-cooked for 4 hours to lock in every flavor."
+    },
+    {
+      "icon": "Sparkles",
+      "title": "Finest Ingredients",
+      "description": "We source the longest aged basmati and the most premium saffron."
+    }
+  ],
+  "reviews": [
+    {
+      "name": "Aarav K.",
+      "role": "Food Critic",
+      "text": "The most authentic Dum Biryani I've ever had. The meat falls off the bone and the aroma is mesmerizing.",
+      "rating": 5
+    },
+    {
+      "name": "Priya S.",
+      "role": "Regular Guest",
+      "text": "Mehfil isn't just a restaurant, it's an emotion. The ambiance, the service, and the Qubani Ka Meetha are out of this world.",
+      "rating": 5
+    },
+    {
+      "name": "Rahul V.",
+      "role": "Local Guide",
+      "text": "Consistent quality for over a decade. The AI waiter feature is a brilliant addition to an already perfect experience.",
+      "rating": 5
+    }
   ]
 }

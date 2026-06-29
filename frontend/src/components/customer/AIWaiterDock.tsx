@@ -405,26 +405,19 @@ export function AIWaiterDock() {
 
   return (
     <>
-      {!open && dockPos.x >= 0 && (
-        <button
-          type="button"
-          aria-label={`Open ${restaurantConfig?.ai_waiter?.name || "AI"} Waiter`}
-          data-testid="ai-waiter-dock-btn"
-          className="fixed z-40 touch-none select-none cursor-grab active:cursor-grabbing"
-          style={{ left: dockPos.x, top: dockPos.y }}
-          onMouseDown={(e) => { e.preventDefault(); handleDragStart(e.clientX, e.clientY); }}
-          onTouchStart={(e) => { const t = e.touches[0]; handleDragStart(t.clientX, t.clientY); }}
-          onMouseMove={(e) => handleDragMove(e.clientX, e.clientY)}
-          onTouchMove={(e) => { const t = e.touches[0]; handleDragMove(t.clientX, t.clientY); }}
-          onMouseUp={handleDragEnd}
-          onMouseLeave={() => { if (dragRef.current.dragging) handleDragEnd(); }}
-          onTouchEnd={handleDragEnd}
-        >
-          <div className="mehfil-btn-royal rounded-full pl-4 pr-5 py-3.5 shadow-2xl flex items-center gap-2 group hover:-translate-y-0.5 transition-transform">
-            <Sparkles className="h-5 w-5 text-brand-secondary group-hover:rotate-12 transition" />
-            <span className="font-royal tracking-wider uppercase text-xs">{restaurantConfig?.ai_waiter?.name || "AI"} Waiter</span>
-          </div>
-        </button>
+      {!open && (
+        <div className="fixed bottom-6 right-4 md:right-8 z-50 flex flex-col items-end">
+          <button
+            type="button"
+            aria-label={`Open AI Waiter`}
+            data-testid="ai-waiter-dock-btn"
+            onClick={() => setOpen(true)}
+            className="flex items-center gap-2 bg-brand-primary text-white px-6 py-4 rounded-full shadow-2xl hover:shadow-[#5C0E1B]/50 hover:scale-105 transition-all group"
+          >
+            <Mic className="w-5 h-5 group-hover:text-brand-secondary transition-colors" />
+            <span className="font-royal text-[12px] tracking-widest uppercase font-bold pr-1">AI Waiter</span>
+          </button>
+        </div>
       )}
 
       {open && (

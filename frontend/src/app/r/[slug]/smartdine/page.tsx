@@ -135,10 +135,10 @@ export default function SmartDinePage() {
             variants={fadeUp}
             className="mt-10 flex flex-wrap gap-4 justify-center"
           >
-            <Link href={`/r/${slug}/menu`} className="mehfil-btn-royal rounded-full px-8 py-3.5 text-sm tracking-[0.2em] uppercase font-royal inline-flex items-center gap-2">
+            <a href="https://smartdine.co.in" target="_blank" rel="noopener noreferrer" className="mehfil-btn-royal rounded-full px-8 py-3.5 text-sm tracking-[0.2em] uppercase font-royal inline-flex items-center gap-2">
               Try It Now <ArrowRight className="h-4 w-4" />
-            </Link>
-            <a href="#features" className="rounded-full px-8 py-3.5 text-sm tracking-[0.2em] uppercase font-royal border border-brand-primary text-brand-primary hover:bg-brand-primary hover:text-[#FAF5EC] transition-colors">
+            </a>
+            <a href="https://smartdine.co.in" target="_blank" rel="noopener noreferrer" className="rounded-full px-8 py-3.5 text-sm tracking-[0.2em] uppercase font-royal border border-brand-primary text-brand-primary hover:bg-brand-primary hover:text-[#FAF5EC] transition-colors">
               Learn More
             </a>
           </motion.div>

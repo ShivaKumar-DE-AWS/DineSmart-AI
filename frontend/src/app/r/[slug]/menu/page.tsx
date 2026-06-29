@@ -554,57 +554,6 @@ export default function MenuPage() {
       )}
 
 
-      {/* ====== AI WAITER ====== */}
-      <div className="fixed bottom-5 right-4 z-40 flex flex-col items-end">
-        <AnimatePresence>
-          {showAIChat && (
-            <motion.div
-              initial={{ opacity: 0, y: 20, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 20, scale: 0.95 }}
-              className="mb-4 w-[320px] bg-white rounded-2xl shadow-2xl border border-brand-secondary/30 overflow-hidden flex flex-col h-[400px]"
-            >
-              <div className="bg-brand-primary text-white p-4 flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <BotMessageSquare className="w-5 h-5 text-brand-secondary" />
-                  <span className="font-royal tracking-widest uppercase text-xs">AI Sommelier</span>
-                </div>
-                <button onClick={() => setShowAIChat(false)}><X className="w-4 h-4 hover:text-brand-secondary" /></button>
-              </div>
-              <div className="flex-1 bg-[#FAF5EC] p-4 overflow-y-auto flex flex-col gap-3" ref={aiChatScrollRef}>
-                {aiChatMessages.map((msg, i) => (
-                  <div key={i} className={`${msg.role === "user" ? "ml-auto bg-brand-primary text-[#FAF5EC]" : "bg-white text-[#1A1106]"} p-3 rounded-xl rounded-tl-none shadow-sm text-sm border border-[#E7DFCB] font-editorial leading-relaxed max-w-[85%]`}>
-                    {msg.content}
-                  </div>
-                ))}
-              </div>
-              <div className="p-3 bg-white border-t border-[#E7DFCB] flex items-center gap-2">
-                <input
-                  type="text"
-                  value={aiChatInput}
-                  onChange={(e) => setAiChatInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && sendAiChat()}
-                  placeholder="Ask about the menu..."
-                  className="flex-1 bg-[#FAF5EC] border border-[#E7DFCB] rounded-full px-4 py-2 text-xs outline-none focus:border-brand-secondary"
-                />
-                <button onClick={sendAiChat} className="bg-brand-primary text-white p-2 rounded-full hover:bg-brand-secondary hover:text-brand-primary transition shadow-md">
-                  <Send className="w-4 h-4" />
-                </button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-        
-        <button 
-          onClick={() => setShowAIChat(!showAIChat)}
-          className={`flex items-center gap-2 bg-white border border-[#E7DFCB] text-brand-primary px-4 py-3 rounded-full shadow-lg hover:shadow-xl transition-all relative ${showAIChat ? 'bg-brand-secondary/10' : ''}`}
-        >
-          <BotMessageSquare className="w-5 h-5" />
-          <span className="font-royal text-[10px] tracking-widest uppercase font-bold">Ask the Chef</span>
-          <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white animate-pulse"></span>
-        </button>
-      </div>
-
       {/* ====== FIXED CHECKOUT BUTTON — bottom left ====== */}
       <AnimatePresence>
         {cart.count() > 0 && (
