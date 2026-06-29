@@ -13,9 +13,18 @@ SMTP_USER = os.environ.get("SMTP_USER") or os.environ.get("SMTP_USERNAME") or "a
 SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
 
 def _send_email(to_email: str, subject: str, html_content: str) -> tuple[bool, str]:
+    # Always log the email locally just in case SMTP is blocked by the cloud provider (e.g. Render Free Tier)
+    print("=" * 60)
+    print(f"📧 EMAIL GENERATED (To: {to_email})")
+    print(f"Subject: {subject}")
+    import re
+    text_content = re.sub(r'<[^>]+>', ' ', html_content)
+    text_content = re.sub(r'\s+', ' ', text_content).strip()
+    print(f"Content: {text_content[:200]}...")
+    print("=" * 60)
+
     if not SMTP_PASSWORD:
-        print("⚠️ SMTP_PASSWORD not set in environment. Falling back to mock email.")
-        print(f"\n📧 EMAIL MOCK (To: {to_email})\nSubject: {subject}\nBody:\n{html_content}\n")
+        print("⚠️ SMTP_PASSWORD not set. Mock email only.")
         return True, "Mock success"
 
     msg = MIMEMultipart("alternative")
