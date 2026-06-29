@@ -17,6 +17,7 @@ class PushSubscription(BaseModel):
     endpoint: str
     keys: Dict[str, str]
     order_id: Optional[str] = None
+    restaurant_id: Optional[str] = None  # ponytail: shared collection, optional field
 
 @router.get("/api/push/vapid-public-key")
 async def push_vapid_public_key():
@@ -26,11 +27,13 @@ async def push_vapid_public_key():
 async def push_subscribe(sub: PushSubscription):
     if not sub.endpoint or "auth" not in sub.keys or "p256dh" not in sub.keys:
         raise HTTPException(status_code=400, detail="Invalid subscription")
-    doc = {"id": str(uuid.uuid4()), "endpoint": sub.endpoint, "keys": sub.keys, "order_id": sub.order_id, "created_at": now_iso()}
-    await db.push_subscriptions.update_one(
-        {"endpoint": sub.endpoint, "order_id": sub.order_id},
-        {"$set": doc}, upsert=True
-    )
+    doc = {"id": str(uuid.uuid4()), "endpoint": sub.endpoint, "keys": sub.keys, "order_id": sub.order_id, "restaurant_id": sub.restaurant_id, "created_at": now_iso()}
+    match: Dict[str, Any] = {"endpoint": sub.endpoint}
+    if sub.order_id:
+        match["order_id"] = sub.order_id
+    elif sub.restaurant_id:
+        match["restaurant_id"] = sub.restaurant_id
+    await db.push_subscriptions.update_one(match, {"$set": doc}, upsert=True)
     return {"ok": True}
 
 @router.post("/api/push/test/{order_id}")

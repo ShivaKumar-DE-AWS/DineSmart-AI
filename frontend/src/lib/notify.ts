@@ -99,10 +99,41 @@ export function isPushSupported(): boolean {
     && "Notification" in window;
 }
 
-/**
- * Subscribe to Web Push for a given order. Idempotent — safe to call repeatedly.
- * Returns true on success.
- */
+/** Subscribe to restaurant-level push notifications. Idempotent. */
+export async function subscribeToRestaurantPush(restaurantId: string): Promise<boolean> {
+  if (!isPushSupported()) return false;
+  const perm = await ensureNotificationPermission();
+  if (perm !== "granted") return false;
+  try {
+    const reg = await navigator.serviceWorker.register("/sw.js");
+    await navigator.serviceWorker.ready;
+    const { key } = await api<{ key: string }>("/api/push/vapid-public-key");
+    if (!key) return false;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(key),
+      });
+    }
+    const json = sub.toJSON() as { endpoint?: string; keys?: { p256dh?: string; auth?: string } };
+    if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) return false;
+    const res = await fetch(apiUrl("/api/push/subscribe"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        endpoint: json.endpoint,
+        keys: { p256dh: json.keys.p256dh, auth: json.keys.auth },
+        restaurant_id: restaurantId,
+      }),
+    });
+    return res.ok;
+  } catch (err) {
+    console.warn("[push] restaurant subscribe failed:", err);
+    return false;
+  }
+}
+
 export async function subscribeToOrderPush(orderId: string): Promise<boolean> {
   if (!isPushSupported()) return false;
   // Permission

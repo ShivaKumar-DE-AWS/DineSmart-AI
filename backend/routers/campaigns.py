@@ -31,11 +31,14 @@ async def create_campaign(req: CreateCampaignReq, user=Depends(require_roles("ad
     rid = req.restaurant_id or user.get("restaurant_id")
     subs = []
     if rid:
-        # Find all orders for this restaurant, then get their push subscriptions
+        # Find orders for this restaurant, then their push subscriptions
         order_cursor = db.orders.find({"restaurant_id": rid}, {"id": 1}).limit(500)
         order_ids = [o["id"] async for o in order_cursor]
         subs = await db.push_subscriptions.find(
-            {"order_id": {"$in": order_ids}}, {"_id": 0}
+            {"$or": [
+                {"order_id": {"$in": order_ids}},
+                {"restaurant_id": rid},
+            ]}, {"_id": 0}
         ).to_list(500)
 
     payload = json.dumps({"title": req.title, "body": req.body, "data": {"campaign": True}})

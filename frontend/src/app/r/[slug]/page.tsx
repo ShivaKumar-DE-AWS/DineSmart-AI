@@ -16,6 +16,8 @@ import { toast } from "sonner";
 import { MehfilLogo } from "@/components/customer/MehfilLogo";
 import { useRestaurantConfig } from "@/hooks/useRestaurantConfig";
 import type { MenuItem, Order } from "@/types";
+import { subscribeToRestaurantPush } from "@/lib/notify";
+import { useState } from "react";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
@@ -61,6 +63,17 @@ export default function RestaurantHome() {
   const signature = items.slice(0, 8);
 
   const openAI = () => window.dispatchEvent(new CustomEvent("open-ai-waiter"));
+  const [pushSubscribed, setPushSubscribed] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
+  const handlePushSubscribe = async () => {
+    if (pushSubscribed) return;
+    if (!restaurantConfig?.id) { toast.error("Restaurant not loaded"); return; }
+    setPushLoading(true);
+    const ok = await subscribeToRestaurantPush(restaurantConfig.id);
+    setPushLoading(false);
+    if (ok) { setPushSubscribed(true); toast.success("Notifications enabled!"); }
+    else toast.error("Could not enable notifications");
+  };
 
   return (
     <div>
@@ -105,6 +118,10 @@ export default function RestaurantHome() {
             <span className="inline-flex items-center gap-2"><Star className="h-3.5 w-3.5 text-brand-secondary" /> 4.8 · 12K+ reviews</span>
             <span className="inline-flex items-center gap-2"><Crown className="h-3.5 w-3.5 text-brand-secondary" /> Award Winning</span>
             <span className="inline-flex items-center gap-2"><Timer className="h-3.5 w-3.5 text-brand-secondary" /> Avg. ready in 18 min</span>
+            <button onClick={handlePushSubscribe} disabled={pushLoading || pushSubscribed} className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border transition-colors ${pushSubscribed ? "border-green-500/50 text-green-500 bg-green-500/10" : "border-brand-secondary/40 text-brand-secondary hover:border-brand-primary hover:text-brand-primary"}`}>
+              <Bell className="h-3.5 w-3.5" />
+              {pushLoading ? "…" : pushSubscribed ? "Subscribed" : "Get Notified"}
+            </button>
           </div>
         </motion.div>
       </section>
