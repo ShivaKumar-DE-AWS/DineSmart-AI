@@ -7,6 +7,7 @@ from deps import (
     ForgotPasswordReq, ResetPasswordReq
 )
 import uuid
+import os
 from datetime import datetime, timezone, timedelta
 from email_service import send_password_reset_email
 
