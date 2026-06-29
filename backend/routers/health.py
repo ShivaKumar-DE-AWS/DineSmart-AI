@@ -31,6 +31,10 @@ async def get_system_health(user=Depends(require_superadmin)):
             "ai": {
                 "name": "Gemini API",
                 "status": "configured" if GEMINI_API_KEY else "missing_key",
+            },
+            "billing": {
+                "name": "Stripe Billing",
+                "status": "mock"  # ponytail: mock status, replace with real check when STRIPE_API_KEY is set
             }
         }
     }

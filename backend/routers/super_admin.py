@@ -188,3 +188,47 @@ async def extend_trial(restaurant_id: str, req: ExtendTrialReq, user=Depends(req
         details={"days_added": req.days, "new_ends_at": new_ends_at.isoformat()}
     )
     return {"message": f"Trial extended by {req.days} days", "trial_ends_at": new_ends_at}
+
+
+@router.post("/cleanup")
+async def cleanup_test_data(user=Depends(require_superadmin)):
+    """Remove test/QA artifacts from production DB."""
+    result = {}
+
+    # Remove the fake "access denied" ticket created during QA
+    td = await db.tickets.delete_many({
+        "title": {"$regex": "access denied", "$options": "i"}
+    })
+    result["tickets_deleted"] = td.deleted_count
+
+    # Remove INTRUSION_TEST menu items
+    mi = await db.menu_items.delete_many({
+        "name": {"$regex": "INTRUSION_TEST", "$options": "i"}
+    })
+    result["menu_items_deleted"] = mi.deleted_count
+
+    # Remove customer names over 500 chars (QA artifacts)
+    cu = await db.customers.delete_many({
+        "$expr": {"$gt": [{"$strLenCP": {"$ifNull": ["$name", ""]}}, 500]}
+    })
+    result["customers_deleted"] = cu.deleted_count
+
+    # Remove orders associated with INTRUSION_TEST or 2500-char names
+    od = await db.orders.delete_many({
+        "$or": [
+            {"customer_name": {"$regex": "INTRUSION_TEST", "$options": "i"}},
+            {"$expr": {"$gt": [{"$strLenCP": {"$ifNull": ["$customer_name", ""]}}, 500]}}
+        ]
+    })
+    result["orders_deleted"] = od.deleted_count
+
+    from routers.audit import log_audit_event
+    await log_audit_event(
+        user_id=user.get("sub"),
+        user_email=user["email"],
+        action="cleanup_test_data",
+        target="system",
+        details=result
+    )
+
+    return {"message": "Cleanup complete", "deleted": result}

@@ -1,7 +1,7 @@
 import requests, sys
 
 TOKEN = open(r"C:\Users\Shiva Kumar\OneDrive\Documents\Dine Smart\DineSmart-AI\token.txt").read().strip()
-BASE = "https://dinesmart-ai.onrender.com"
+BASE = "https://smartdineai.co.in"
 H = {"Authorization": f"Bearer {TOKEN}"}
 
 def t(method, url, desc="", body=None):
@@ -20,12 +20,10 @@ t("GET", f"{BASE}/api/tables?restaurant_id=rest_mehfil_001", "get tables")
 t("GET", f"{BASE}/api/tables/rest_mehfil_001", "get tables path")
 
 print("\nSETTINGS")
-t("GET", f"{BASE}/api/settings?restaurant_id=rest_mehfil_001", "settings query")
-t("GET", f"{BASE}/api/settings/rest_mehfil_001", "settings path")
+t("GET", f"{BASE}/api/admin/settings", "admin settings (needs impersonation or will 404)")
 
 print("\nANALYTICS")
 t("GET", f"{BASE}/api/analytics?restaurant_id=rest_mehfil_001&period=7d", "analytics query")
-t("GET", f"{BASE}/api/analytics/rest_mehfil_001?period=7d", "analytics path")
 
 print("\nORDERS (superadmin)")
 t("GET", f"{BASE}/api/orders?restaurant_id=rest_mehfil_001&limit=2", "orders query")
@@ -33,12 +31,8 @@ t("GET", f"{BASE}/api/orders?restaurant_id=rest_mehfil_001&limit=2", "orders que
 print("\nAUTH /me")
 t("GET", f"{BASE}/api/auth/me", "auth me")
 
-print("\nNOTIFICATIONS")
-t("GET", f"{BASE}/api/notifications/send-test", "test notification")
-
 print("\nBILLING")
-t("GET", f"{BASE}/api/billing?restaurant_id=rest_mehfil_001", "billing")
-t("GET", f"{BASE}/api/billing/rest_mehfil_001", "billing path")
+t("GET", f"{BASE}/api/billing/status", "billing status")
 
 print("\nSUPER-ADMIN (full)")
 t("POST", f"{BASE}/api/super-admin/restaurants/rest_mehfil_001/suspend", "suspend")

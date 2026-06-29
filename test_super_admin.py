@@ -9,8 +9,9 @@ except Exception as e:
     print("Error reading token:", e)
     sys.exit(1)
 
-BASE = "https://dinesmart-ai.onrender.com"
+BASE = "https://smartdineai.co.in"
 HEADERS = {"Authorization": f"Bearer {token}"}
+MOBILE_HEADERS = {"Authorization": f"Bearer {token}", "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1"}
 
 endpoints_to_test = [
     ("Dashboard Stats", "GET", "/api/super-admin/stats"),
@@ -27,32 +28,33 @@ print("="*60)
 
 report = {}
 
-for name, method, path in endpoints_to_test:
-    url = f"{BASE}{path}"
-    try:
-        response = requests.request(method, url, headers=HEADERS, timeout=15)
-        status = response.status_code
-        if status == 200:
-            result = "PASS"
-        else:
-            result = f"FAIL (Status: {status})"
-        
+for env_name, headers in [("Desktop", HEADERS), ("Mobile", MOBILE_HEADERS)]:
+    print(f"\n=== Testing {env_name} Environment ===")
+    for name, method, path in endpoints_to_test:
+        url = f"{BASE}{path}"
         try:
-            data = response.json()
-            # truncate output for display
-            output = json.dumps(data)[:150] + ("..." if len(json.dumps(data)) > 150 else "")
-        except:
-            output = response.text[:150]
+            response = requests.request(method, url, headers=headers, timeout=15)
+            status = response.status_code
+            if status == 200:
+                result = "PASS"
+            else:
+                result = f"FAIL (Status: {status})"
             
-        print(f"{name:20s} | {result:15s} | {path}")
-        print(f"  Response: {output}\n")
-        
-        report[name] = {"status": result, "response": data if status == 200 else response.text, "path": path}
+            try:
+                data = response.json()
+                output = json.dumps(data)[:150] + ("..." if len(json.dumps(data)) > 150 else "")
+            except:
+                output = response.text[:150]
+                
+            print(f"{name:20s} | {result:15s} | {path}")
+            print(f"  Response: {output}\n")
             
-    except Exception as e:
-        print(f"{name:20s} | ERROR           | {path}")
-        print(f"  Exception: {e}\n")
-        report[name] = {"status": "ERROR", "response": str(e), "path": path}
+            report[f"{env_name}_{name}"] = {"status": result, "response": data if status == 200 else response.text, "path": path}
+                
+        except Exception as e:
+            print(f"{name:20s} | ERROR           | {path}")
+            print(f"  Exception: {e}\n")
+            report[f"{env_name}_{name}"] = {"status": "ERROR", "response": str(e), "path": path}
 
 print("="*60)
 print("SUPER ADMIN ACTION TESTS")

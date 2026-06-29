@@ -1,30 +1,24 @@
 {
-  "Dashboard Stats": {
+  "Desktop_Dashboard Stats": {
     "status": "PASS",
     "response": {
-      "total_restaurants": 6,
+      "total_restaurants": 5,
       "total_orders": 180,
       "total_gmv": 97980.75
     },
     "path": "/api/super-admin/stats"
   },
-  "Restaurants List": {
+  "Desktop_Restaurants List": {
     "status": "PASS",
     "response": {
       "restaurants": [
-        {
-          "id": "rest_mehfil_001",
-          "name": "Mehfil",
-          "slug": "mehfil-hyderabad",
-          "created_at": "2026-06-19T05:40:41.403736+00:00",
-          "subscription_status": "suspended",
-          "order_count": 104
-        },
         {
           "id": "rest_spice_garden_001",
           "name": "Spice Garden",
           "slug": "spice-garden",
           "created_at": "2026-06-19T07:01:34.964104+00:00",
+          "subscription_status": "trial",
+          "trial_ends_at": "2026-07-12T16:59:05.632000",
           "order_count": 31
         },
         {
@@ -32,6 +26,8 @@
           "name": "The Golden Dragon",
           "slug": "the-golden-dragon",
           "created_at": "2026-06-19T14:29:31.938357+00:00",
+          "subscription_status": "trial",
+          "trial_ends_at": "2026-07-12T16:59:06.658000",
           "order_count": 18
         },
         {
@@ -39,6 +35,8 @@
           "name": "Pasta Palace",
           "slug": "pasta-palace",
           "created_at": "2026-06-19T14:32:24.583921+00:00",
+          "subscription_status": "trial",
+          "trial_ends_at": "2026-07-12T16:59:07.659000",
           "order_count": 12
         },
         {
@@ -46,6 +44,8 @@
           "name": "SmartDine FoodCourt",
           "slug": "smartdine-foodcourt",
           "created_at": "2026-06-19T14:43:58.176445+00:00",
+          "subscription_status": "trial",
+          "trial_ends_at": "2026-07-12T16:59:08.937000",
           "order_count": 15
         },
         {
@@ -53,16 +53,186 @@
           "name": "Mehfil",
           "slug": "mehfil",
           "created_at": "2026-06-26T05:08:26.310433+00:00",
+          "subscription_status": "active",
+          "trial_ends_at": "2026-07-12T16:59:10.364000",
           "order_count": 104
         }
       ]
     },
     "path": "/api/super-admin/restaurants"
   },
-  "Audit Logs": {
+  "Desktop_Audit Logs": {
     "status": "PASS",
     "response": {
       "logs": [
+        {
+          "id": "a49afb83-3ddd-4ff6-8a00-18f20febd517",
+          "timestamp": "2026-06-29T02:56:16.476239+00:00",
+          "user_id": "ace27ada-b470-44b0-8a70-b8764488661e",
+          "user_email": "admin@smartdine.ai",
+          "action": "impersonate_tenant",
+          "target": "rest_mehfil_001",
+          "details": {
+            "restaurant_name": "Mehfil"
+          }
+        },
+        {
+          "id": "941c8980-e74e-4313-b5d6-8b86e66c72f9",
+          "timestamp": "2026-06-29T02:56:15.579732+00:00",
+          "user_id": "ace27ada-b470-44b0-8a70-b8764488661e",
+          "user_email": "admin@smartdine.ai",
+          "action": "restaurant_active",
+          "target": "rest_mehfil_001",
+          "details": {
+            "restaurant_name": "Mehfil"
+          }
+        },
+        {
+          "id": "e0e72a8f-be9d-4799-8dae-f60a2092a851",
+          "timestamp": "2026-06-29T02:54:31.201662+00:00",
+          "user_id": "ace27ada-b470-44b0-8a70-b8764488661e",
+          "user_email": "admin@smartdine.ai",
+          "action": "restaurant_suspended",
+          "target": "rest_mehfil_001",
+          "details": {
+            "restaurant_name": "Mehfil"
+          }
+        },
+        {
+          "id": "70e0c3b2-935d-4f20-84d9-bbcca11d392d",
+          "timestamp": "2026-06-29T02:54:30.191884+00:00",
+          "user_id": "ace27ada-b470-44b0-8a70-b8764488661e",
+          "user_email": "admin@smartdine.ai",
+          "action": "restaurant_active",
+          "target": "rest_mehfil_001",
+          "details": {
+            "restaurant_name": "Mehfil"
+          }
+        },
+        {
+          "id": "8cbba1ad-5019-4694-9eb2-6dd62ce96083",
+          "timestamp": "2026-06-29T02:54:29.179452+00:00",
+          "user_id": "ace27ada-b470-44b0-8a70-b8764488661e",
+          "user_email": "admin@smartdine.ai",
+          "action": "impersonate_tenant",
+          "target": "rest_mehfil_001",
+          "details": {
+            "restaurant_name": "Mehfil"
+          }
+        },
+        {
+          "id": "5917540a-75e5-4c48-a3c5-0d9bcc45b99d",
+          "timestamp": "2026-06-29T02:54:22.721914+00:00",
+          "user_id": "ace27ada-b470-44b0-8a70-b8764488661e",
+          "user_email": "admin@smartdine.ai",
+          "action": "impersonate_tenant",
+          "target": "rest_mehfil_001",
+          "details": {
+            "restaurant_name": "Mehfil"
+          }
+        },
+        {
+          "id": "dd6a0390-f804-4290-81c7-367a8e5c9d98",
+          "timestamp": "2026-06-29T02:54:21.506127+00:00",
+          "user_id": "ace27ada-b470-44b0-8a70-b8764488661e",
+          "user_email": "admin@smartdine.ai",
+          "action": "restaurant_suspended",
+          "target": "rest_mehfil_001",
+          "details": {
+            "restaurant_name": "Mehfil"
+          }
+        },
+        {
+          "id": "009cf2a1-80ed-4032-8a06-cabde0f8c87f",
+          "timestamp": "2026-06-28T16:59:10.599341+00:00",
+          "user_id": "ace27ada-b470-44b0-8a70-b8764488661e",
+          "user_email": "admin@smartdine.ai",
+          "action": "trial_extended",
+          "target": "rest_mehfil_001",
+          "details": {
+            "days_added": 14,
+            "new_ends_at": "2026-07-12T16:59:10.364257+00:00"
+          }
+        },
+        {
+          "id": "61034c1a-27bf-4e98-99bc-34d5e51aa8fc",
+          "timestamp": "2026-06-28T16:59:09.172056+00:00",
+          "user_id": "ace27ada-b470-44b0-8a70-b8764488661e",
+          "user_email": "admin@smartdine.ai",
+          "action": "trial_extended",
+          "target": "rest_smartdine-foodcourt_001",
+          "details": {
+            "days_added": 14,
+            "new_ends_at": "2026-07-12T16:59:08.937453+00:00"
+          }
+        },
+        {
+          "id": "41f5a80b-d3d1-4305-b56f-1ed1d4f7ad93",
+          "timestamp": "2026-06-28T16:59:07.894597+00:00",
+          "user_id": "ace27ada-b470-44b0-8a70-b8764488661e",
+          "user_email": "admin@smartdine.ai",
+          "action": "trial_extended",
+          "target": "rest_pasta-palace_001",
+          "details": {
+            "days_added": 14,
+            "new_ends_at": "2026-07-12T16:59:07.659715+00:00"
+          }
+        },
+        {
+          "id": "ce3cf58c-c7b6-4ae8-aa17-ad2637c99627",
+          "timestamp": "2026-06-28T16:59:06.893309+00:00",
+          "user_id": "ace27ada-b470-44b0-8a70-b8764488661e",
+          "user_email": "admin@smartdine.ai",
+          "action": "trial_extended",
+          "target": "rest_the-golden-dragon_001",
+          "details": {
+            "days_added": 14,
+            "new_ends_at": "2026-07-12T16:59:06.658377+00:00"
+          }
+        },
+        {
+          "id": "1869dc5f-f211-4544-8d0a-0dc13ea9db97",
+          "timestamp": "2026-06-28T16:59:05.867417+00:00",
+          "user_id": "ace27ada-b470-44b0-8a70-b8764488661e",
+          "user_email": "admin@smartdine.ai",
+          "action": "trial_extended",
+          "target": "rest_spice_garden_001",
+          "details": {
+            "days_added": 14,
+            "new_ends_at": "2026-07-12T16:59:05.632705+00:00"
+          }
+        },
+        {
+          "id": "b4441ad2-15fd-4f61-93e7-e0b1928c75b4",
+          "timestamp": "2026-06-28T16:58:04.703437+00:00",
+          "user_id": "ace27ada-b470-44b0-8a70-b8764488661e",
+          "user_email": "admin@smartdine.ai",
+          "action": "login_success",
+          "target": "system",
+          "details": {
+            "role": "superadmin"
+          }
+        },
+        {
+          "id": "87812b3b-e960-4030-a783-a99e44e7b2f5",
+          "timestamp": "2026-06-28T16:57:44.551240+00:00",
+          "user_id": "ace27ada-b470-44b0-8a70-b8764488661e",
+          "user_email": "admin@smartdine.ai",
+          "action": "impersonate_tenant",
+          "target": "rest_spice_garden_001",
+          "details": {
+            "restaurant_name": "Spice Garden"
+          }
+        },
+        {
+          "id": "993fb33e-4fc8-4418-90d2-f388ad1a8da3",
+          "timestamp": "2026-06-28T16:56:33.077359+00:00",
+          "user_id": "ace27ada-b470-44b0-8a70-b8764488661e",
+          "user_email": "admin@smartdine.ai",
+          "action": "restaurant_deleted",
+          "target": "rest_mehfil_001",
+          "details": {}
+        },
         {
           "id": "b6f86502-7d91-423a-9388-0134190b185c",
           "timestamp": "2026-06-28T15:11:52.157956+00:00",
@@ -1038,179 +1208,12 @@
           "details": {
             "reason": "Invalid email or password"
           }
-        },
-        {
-          "id": "58d91500-b7ba-437f-b56f-3b7912abe296",
-          "timestamp": "2026-06-28T05:52:02.623110+00:00",
-          "user_id": null,
-          "user_email": "admin@smartdine.ai",
-          "action": "login_failed",
-          "target": "system",
-          "details": {
-            "reason": "Invalid email or password"
-          }
-        },
-        {
-          "id": "9e68e268-c1db-4670-890e-22c9ebb593ce",
-          "timestamp": "2026-06-28T05:51:55.287024+00:00",
-          "user_id": null,
-          "user_email": "admin@smartdine.ai",
-          "action": "login_failed",
-          "target": "system",
-          "details": {
-            "reason": "Invalid email or password"
-          }
-        },
-        {
-          "id": "d794ba5d-c729-4762-b658-65bd6b2c56b2",
-          "timestamp": "2026-06-28T05:51:52.323535+00:00",
-          "user_id": null,
-          "user_email": "admin@smartdine.ai",
-          "action": "login_failed",
-          "target": "system",
-          "details": {
-            "reason": "Invalid email or password"
-          }
-        },
-        {
-          "id": "01b5992d-3ecc-4a87-b63a-6976d1e59114",
-          "timestamp": "2026-06-28T05:51:44.389085+00:00",
-          "user_id": null,
-          "user_email": "admin@smartdine.ai",
-          "action": "login_failed",
-          "target": "system",
-          "details": {
-            "reason": "Invalid email or password"
-          }
-        },
-        {
-          "id": "1a4c9423-1cfe-48b0-ad91-b13b8440ec7f",
-          "timestamp": "2026-06-28T05:51:41.440107+00:00",
-          "user_id": null,
-          "user_email": "admin@smartdine.ai",
-          "action": "login_failed",
-          "target": "system",
-          "details": {
-            "reason": "Invalid email or password"
-          }
-        },
-        {
-          "id": "b220c671-6cb9-457c-a3bf-6ba9796bd623",
-          "timestamp": "2026-06-28T05:51:27.246689+00:00",
-          "user_id": null,
-          "user_email": "admin@smartdine.ai",
-          "action": "login_failed",
-          "target": "system",
-          "details": {
-            "reason": "Invalid email or password"
-          }
-        },
-        {
-          "id": "ab72f8c8-5bba-455d-b8c1-a45bdb7a0ded",
-          "timestamp": "2026-06-28T05:51:24.291219+00:00",
-          "user_id": null,
-          "user_email": "admin@smartdine.ai",
-          "action": "login_failed",
-          "target": "system",
-          "details": {
-            "reason": "Invalid email or password"
-          }
-        },
-        {
-          "id": "88a726b2-a619-4062-aafa-f8caac3bf1a6",
-          "timestamp": "2026-06-28T05:51:18.206616+00:00",
-          "user_id": "11cede79-807c-472f-8cb7-dd624d00d990",
-          "user_email": "superadmin@smartdine.ai",
-          "action": "login_failed",
-          "target": "system",
-          "details": {
-            "reason": "Invalid email or password"
-          }
-        },
-        {
-          "id": "c049a575-bd89-4ba2-9fb1-0676ed2910bb",
-          "timestamp": "2026-06-28T05:51:15.241839+00:00",
-          "user_id": "11cede79-807c-472f-8cb7-dd624d00d990",
-          "user_email": "superadmin@smartdine.ai",
-          "action": "login_failed",
-          "target": "system",
-          "details": {
-            "reason": "Invalid email or password"
-          }
-        },
-        {
-          "id": "af2f08ee-286e-4a88-8434-9c0dc5be5e57",
-          "timestamp": "2026-06-28T05:51:10.111010+00:00",
-          "user_id": null,
-          "user_email": "super-admin@smartdine.ai",
-          "action": "login_failed",
-          "target": "system",
-          "details": {
-            "reason": "Invalid email or password"
-          }
-        },
-        {
-          "id": "0a4fd5fb-6b1a-4f08-aa84-8468bd0e1d19",
-          "timestamp": "2026-06-28T05:51:07.152986+00:00",
-          "user_id": null,
-          "user_email": "super-admin@smartdine.ai",
-          "action": "login_failed",
-          "target": "system",
-          "details": {
-            "reason": "Invalid email or password"
-          }
-        },
-        {
-          "id": "5d348e2a-2ded-4168-9fca-0ec8973a628d",
-          "timestamp": "2026-06-28T05:50:47.566628+00:00",
-          "user_id": null,
-          "user_email": "admin@smartdine.ai",
-          "action": "login_failed",
-          "target": "system",
-          "details": {
-            "reason": "Invalid email or password"
-          }
-        },
-        {
-          "id": "bfaafc02-fef6-4455-a151-537a43440885",
-          "timestamp": "2026-06-28T05:50:44.623008+00:00",
-          "user_id": null,
-          "user_email": "admin@smartdine.ai",
-          "action": "login_failed",
-          "target": "system",
-          "details": {
-            "reason": "Invalid email or password"
-          }
-        },
-        {
-          "id": "fdaaf804-22f6-4cff-b9b7-7daae0eb942e",
-          "timestamp": "2026-06-27T20:08:12.723192+00:00",
-          "user_id": "808d7e9f-2f5c-4e25-b7b9-1acbf062808d",
-          "user_email": "counter-mehfil@smartdine.ai",
-          "action": "login_success",
-          "target": "system",
-          "details": {
-            "role": "counter",
-            "restaurant_id": "rest_mehfil_001"
-          }
-        },
-        {
-          "id": "e84f7cab-3b8e-4906-ad06-80c9bae78ed5",
-          "timestamp": "2026-06-27T19:42:50.630617+00:00",
-          "user_id": "49e38e78-1ceb-4730-a527-95c9d828c37a",
-          "user_email": "kitchen-mehfil@smartdine.ai",
-          "action": "login_success",
-          "target": "system",
-          "details": {
-            "role": "kitchen",
-            "restaurant_id": "rest_mehfil_001"
-          }
         }
       ]
     },
     "path": "/api/super-admin/audit"
   },
-  "System Health": {
+  "Desktop_System Health": {
     "status": "PASS",
     "response": {
       "services": {
@@ -1226,29 +1229,1302 @@
     },
     "path": "/api/super-admin/health"
   },
-  "AI Usage": {
+  "Desktop_AI Usage": {
     "status": "PASS",
     "response": {
       "usage": [
-        {
-          "restaurant_id": "rest_the-golden-dragon_001",
-          "restaurant_name": "The Golden Dragon",
-          "restaurant_slug": "the-golden-dragon",
-          "total_requests": 2,
-          "last_used": "2026-06-27T10:09:15.501197+00:00"
-        },
         {
           "restaurant_id": "rest_smartdine-foodcourt_001",
           "restaurant_name": "SmartDine FoodCourt",
           "restaurant_slug": "smartdine-foodcourt",
           "total_requests": 2,
           "last_used": "2026-06-26T09:19:57.234962+00:00"
+        },
+        {
+          "restaurant_id": "rest_the-golden-dragon_001",
+          "restaurant_name": "The Golden Dragon",
+          "restaurant_slug": "the-golden-dragon",
+          "total_requests": 2,
+          "last_used": "2026-06-27T10:09:15.501197+00:00"
         }
       ]
     },
     "path": "/api/super-admin/ai-usage"
   },
-  "Support Tickets": {
+  "Desktop_Support Tickets": {
+    "status": "PASS",
+    "response": {
+      "tickets": [
+        {
+          "id": "59ef1c12-e1e3-403c-9667-4f851fb60a00",
+          "restaurant_id": "rest_mehfil_001",
+          "restaurant_slug": "mehfil-hyderabad",
+          "created_by_email": "admin-mehfil@smartdine.ai",
+          "title": "access denied",
+          "description": "in",
+          "priority": "normal",
+          "status": "resolved",
+          "created_at": "2026-06-26T11:36:49.714131+00:00",
+          "resolved_at": "2026-06-28T15:02:33.131624+00:00",
+          "resolved_by": "admin@smartdine.ai"
+        }
+      ]
+    },
+    "path": "/api/super-admin/tickets"
+  },
+  "Mobile_Dashboard Stats": {
+    "status": "PASS",
+    "response": {
+      "total_restaurants": 5,
+      "total_orders": 180,
+      "total_gmv": 97980.75
+    },
+    "path": "/api/super-admin/stats"
+  },
+  "Mobile_Restaurants List": {
+    "status": "PASS",
+    "response": {
+      "restaurants": [
+        {
+          "id": "rest_spice_garden_001",
+          "name": "Spice Garden",
+          "slug": "spice-garden",
+          "created_at": "2026-06-19T07:01:34.964104+00:00",
+          "subscription_status": "trial",
+          "trial_ends_at": "2026-07-12T16:59:05.632000",
+          "order_count": 31
+        },
+        {
+          "id": "rest_the-golden-dragon_001",
+          "name": "The Golden Dragon",
+          "slug": "the-golden-dragon",
+          "created_at": "2026-06-19T14:29:31.938357+00:00",
+          "subscription_status": "trial",
+          "trial_ends_at": "2026-07-12T16:59:06.658000",
+          "order_count": 18
+        },
+        {
+          "id": "rest_pasta-palace_001",
+          "name": "Pasta Palace",
+          "slug": "pasta-palace",
+          "created_at": "2026-06-19T14:32:24.583921+00:00",
+          "subscription_status": "trial",
+          "trial_ends_at": "2026-07-12T16:59:07.659000",
+          "order_count": 12
+        },
+        {
+          "id": "rest_smartdine-foodcourt_001",
+          "name": "SmartDine FoodCourt",
+          "slug": "smartdine-foodcourt",
+          "created_at": "2026-06-19T14:43:58.176445+00:00",
+          "subscription_status": "trial",
+          "trial_ends_at": "2026-07-12T16:59:08.937000",
+          "order_count": 15
+        },
+        {
+          "id": "rest_mehfil_001",
+          "name": "Mehfil",
+          "slug": "mehfil",
+          "created_at": "2026-06-26T05:08:26.310433+00:00",
+          "subscription_status": "active",
+          "trial_ends_at": "2026-07-12T16:59:10.364000",
+          "order_count": 104
+        }
+      ]
+    },
+    "path": "/api/super-admin/restaurants"
+  },
+  "Mobile_Audit Logs": {
+    "status": "PASS",
+    "response": {
+      "logs": [
+        {
+          "id": "a49afb83-3ddd-4ff6-8a00-18f20febd517",
+          "timestamp": "2026-06-29T02:56:16.476239+00:00",
+          "user_id": "ace27ada-b470-44b0-8a70-b8764488661e",
+          "user_email": "admin@smartdine.ai",
+          "action": "impersonate_tenant",
+          "target": "rest_mehfil_001",
+          "details": {
+            "restaurant_name": "Mehfil"
+          }
+        },
+        {
+          "id": "941c8980-e74e-4313-b5d6-8b86e66c72f9",
+          "timestamp": "2026-06-29T02:56:15.579732+00:00",
+          "user_id": "ace27ada-b470-44b0-8a70-b8764488661e",
+          "user_email": "admin@smartdine.ai",
+          "action": "restaurant_active",
+          "target": "rest_mehfil_001",
+          "details": {
+            "restaurant_name": "Mehfil"
+          }
+        },
+        {
+          "id": "e0e72a8f-be9d-4799-8dae-f60a2092a851",
+          "timestamp": "2026-06-29T02:54:31.201662+00:00",
+          "user_id": "ace27ada-b470-44b0-8a70-b8764488661e",
+          "user_email": "admin@smartdine.ai",
+          "action": "restaurant_suspended",
+          "target": "rest_mehfil_001",
+          "details": {
+            "restaurant_name": "Mehfil"
+          }
+        },
+        {
+          "id": "70e0c3b2-935d-4f20-84d9-bbcca11d392d",
+          "timestamp": "2026-06-29T02:54:30.191884+00:00",
+          "user_id": "ace27ada-b470-44b0-8a70-b8764488661e",
+          "user_email": "admin@smartdine.ai",
+          "action": "restaurant_active",
+          "target": "rest_mehfil_001",
+          "details": {
+            "restaurant_name": "Mehfil"
+          }
+        },
+        {
+          "id": "8cbba1ad-5019-4694-9eb2-6dd62ce96083",
+          "timestamp": "2026-06-29T02:54:29.179452+00:00",
+          "user_id": "ace27ada-b470-44b0-8a70-b8764488661e",
+          "user_email": "admin@smartdine.ai",
+          "action": "impersonate_tenant",
+          "target": "rest_mehfil_001",
+          "details": {
+            "restaurant_name": "Mehfil"
+          }
+        },
+        {
+          "id": "5917540a-75e5-4c48-a3c5-0d9bcc45b99d",
+          "timestamp": "2026-06-29T02:54:22.721914+00:00",
+          "user_id": "ace27ada-b470-44b0-8a70-b8764488661e",
+          "user_email": "admin@smartdine.ai",
+          "action": "impersonate_tenant",
+          "target": "rest_mehfil_001",
+          "details": {
+            "restaurant_name": "Mehfil"
+          }
+        },
+        {
+          "id": "dd6a0390-f804-4290-81c7-367a8e5c9d98",
+          "timestamp": "2026-06-29T02:54:21.506127+00:00",
+          "user_id": "ace27ada-b470-44b0-8a70-b8764488661e",
+          "user_email": "admin@smartdine.ai",
+          "action": "restaurant_suspended",
+          "target": "rest_mehfil_001",
+          "details": {
+            "restaurant_name": "Mehfil"
+          }
+        },
+        {
+          "id": "009cf2a1-80ed-4032-8a06-cabde0f8c87f",
+          "timestamp": "2026-06-28T16:59:10.599341+00:00",
+          "user_id": "ace27ada-b470-44b0-8a70-b8764488661e",
+          "user_email": "admin@smartdine.ai",
+          "action": "trial_extended",
+          "target": "rest_mehfil_001",
+          "details": {
+            "days_added": 14,
+            "new_ends_at": "2026-07-12T16:59:10.364257+00:00"
+          }
+        },
+        {
+          "id": "61034c1a-27bf-4e98-99bc-34d5e51aa8fc",
+          "timestamp": "2026-06-28T16:59:09.172056+00:00",
+          "user_id": "ace27ada-b470-44b0-8a70-b8764488661e",
+          "user_email": "admin@smartdine.ai",
+          "action": "trial_extended",
+          "target": "rest_smartdine-foodcourt_001",
+          "details": {
+            "days_added": 14,
+            "new_ends_at": "2026-07-12T16:59:08.937453+00:00"
+          }
+        },
+        {
+          "id": "41f5a80b-d3d1-4305-b56f-1ed1d4f7ad93",
+          "timestamp": "2026-06-28T16:59:07.894597+00:00",
+          "user_id": "ace27ada-b470-44b0-8a70-b8764488661e",
+          "user_email": "admin@smartdine.ai",
+          "action": "trial_extended",
+          "target": "rest_pasta-palace_001",
+          "details": {
+            "days_added": 14,
+            "new_ends_at": "2026-07-12T16:59:07.659715+00:00"
+          }
+        },
+        {
+          "id": "ce3cf58c-c7b6-4ae8-aa17-ad2637c99627",
+          "timestamp": "2026-06-28T16:59:06.893309+00:00",
+          "user_id": "ace27ada-b470-44b0-8a70-b8764488661e",
+          "user_email": "admin@smartdine.ai",
+          "action": "trial_extended",
+          "target": "rest_the-golden-dragon_001",
+          "details": {
+            "days_added": 14,
+            "new_ends_at": "2026-07-12T16:59:06.658377+00:00"
+          }
+        },
+        {
+          "id": "1869dc5f-f211-4544-8d0a-0dc13ea9db97",
+          "timestamp": "2026-06-28T16:59:05.867417+00:00",
+          "user_id": "ace27ada-b470-44b0-8a70-b8764488661e",
+          "user_email": "admin@smartdine.ai",
+          "action": "trial_extended",
+          "target": "rest_spice_garden_001",
+          "details": {
+            "days_added": 14,
+            "new_ends_at": "2026-07-12T16:59:05.632705+00:00"
+          }
+        },
+        {
+          "id": "b4441ad2-15fd-4f61-93e7-e0b1928c75b4",
+          "timestamp": "2026-06-28T16:58:04.703437+00:00",
+          "user_id": "ace27ada-b470-44b0-8a70-b8764488661e",
+          "user_email": "admin@smartdine.ai",
+          "action": "login_success",
+          "target": "system",
+          "details": {
+            "role": "superadmin"
+          }
+        },
+        {
+          "id": "87812b3b-e960-4030-a783-a99e44e7b2f5",
+          "timestamp": "2026-06-28T16:57:44.551240+00:00",
+          "user_id": "ace27ada-b470-44b0-8a70-b8764488661e",
+          "user_email": "admin@smartdine.ai",
+          "action": "impersonate_tenant",
+          "target": "rest_spice_garden_001",
+          "details": {
+            "restaurant_name": "Spice Garden"
+          }
+        },
+        {
+          "id": "993fb33e-4fc8-4418-90d2-f388ad1a8da3",
+          "timestamp": "2026-06-28T16:56:33.077359+00:00",
+          "user_id": "ace27ada-b470-44b0-8a70-b8764488661e",
+          "user_email": "admin@smartdine.ai",
+          "action": "restaurant_deleted",
+          "target": "rest_mehfil_001",
+          "details": {}
+        },
+        {
+          "id": "b6f86502-7d91-423a-9388-0134190b185c",
+          "timestamp": "2026-06-28T15:11:52.157956+00:00",
+          "user_id": "ace27ada-b470-44b0-8a70-b8764488661e",
+          "user_email": "admin@smartdine.ai",
+          "action": "login_success",
+          "target": "system",
+          "details": {
+            "role": "superadmin"
+          }
+        },
+        {
+          "id": "0f8d2bad-1f3b-4756-a10c-379e0fc9eb31",
+          "timestamp": "2026-06-28T15:02:00.653631+00:00",
+          "user_id": "ace27ada-b470-44b0-8a70-b8764488661e",
+          "user_email": "admin@smartdine.ai",
+          "action": "login_success",
+          "target": "system",
+          "details": {
+            "role": "superadmin"
+          }
+        },
+        {
+          "id": "232aee6b-c626-4bed-bd1c-40b2d7bc16d8",
+          "timestamp": "2026-06-28T14:58:23.208435+00:00",
+          "user_id": "ace27ada-b470-44b0-8a70-b8764488661e",
+          "user_email": "admin@smartdine.ai",
+          "action": "login_success",
+          "target": "system",
+          "details": {
+            "role": "superadmin"
+          }
+        },
+        {
+          "id": "0ec6e5ec-cb78-410a-b97c-116a3cf8d6f8",
+          "timestamp": "2026-06-28T14:57:17.395772+00:00",
+          "user_id": null,
+          "user_email": "admin@smartdine.ai",
+          "action": "login_failed",
+          "target": "system",
+          "details": {
+            "reason": "Invalid email or password"
+          }
+        },
+        {
+          "id": "f4c32666-5e3f-4311-a5f6-d0ce7e81fea3",
+          "timestamp": "2026-06-28T14:54:34.787014+00:00",
+          "user_id": null,
+          "user_email": "admin@smartdine.ai",
+          "action": "login_failed",
+          "target": "system",
+          "details": {
+            "reason": "Invalid email or password"
+          }
+        },
+        {
+          "id": "6574ae11-71c4-45db-92f9-def4b9caef00",
+          "timestamp": "2026-06-28T14:54:17.141439+00:00",
+          "user_id": "11cede79-807c-472f-8cb7-dd624d00d990",
+          "user_email": "superadmin@smartdine.ai",
+          "action": "login_failed",
+          "target": "system",
+          "details": {
+            "reason": "Invalid email or password"
+          }
+        },
+        {
+          "id": "142d53b9-a6bf-438e-ae72-5a0fdef4c877",
+          "timestamp": "2026-06-28T14:52:25.945476+00:00",
+          "user_id": null,
+          "user_email": "admin@smartdine.ai",
+          "action": "login_failed",
+          "target": "system",
+          "details": {
+            "reason": "Invalid email or password"
+          }
+        },
+        {
+          "id": "9e94d623-e436-4eac-afa2-3cfa44a74a6c",
+          "timestamp": "2026-06-28T14:52:22.917875+00:00",
+          "user_id": null,
+          "user_email": "admin@smartdine.ai",
+          "action": "login_failed",
+          "target": "system",
+          "details": {
+            "reason": "Invalid email or password"
+          }
+        },
+        {
+          "id": "750197cd-9c75-4291-9b45-5a81aa3f2e42",
+          "timestamp": "2026-06-28T09:20:49.107021+00:00",
+          "user_id": "4c696f7a-0aa3-49b6-8458-995c42f6a98d",
+          "user_email": "mehfil@smartdine.ai",
+          "action": "login_success",
+          "target": "system",
+          "details": {
+            "role": "admin",
+            "restaurant_id": "rest_mehfil_001"
+          }
+        },
+        {
+          "id": "617d161d-89d8-4bfe-b01a-e6bf97b74e4c",
+          "timestamp": "2026-06-28T09:20:38.503181+00:00",
+          "user_id": "4c696f7a-0aa3-49b6-8458-995c42f6a98d",
+          "user_email": "mehfil@smartdine.ai",
+          "action": "login_success",
+          "target": "system",
+          "details": {
+            "role": "admin",
+            "restaurant_id": "rest_mehfil_001"
+          }
+        },
+        {
+          "id": "09fb2f99-94f6-4e9f-a428-fd9e345f1546",
+          "timestamp": "2026-06-28T09:13:17.609570+00:00",
+          "user_id": "4c696f7a-0aa3-49b6-8458-995c42f6a98d",
+          "user_email": "mehfil@smartdine.ai",
+          "action": "login_success",
+          "target": "system",
+          "details": {
+            "role": "admin",
+            "restaurant_id": "rest_mehfil_001"
+          }
+        },
+        {
+          "id": "3ed34c92-51e0-4f9f-840d-562c334627ff",
+          "timestamp": "2026-06-28T09:10:11.122970+00:00",
+          "user_id": "4c696f7a-0aa3-49b6-8458-995c42f6a98d",
+          "user_email": "mehfil@smartdine.ai",
+          "action": "login_success",
+          "target": "system",
+          "details": {
+            "role": "admin",
+            "restaurant_id": "rest_mehfil_001"
+          }
+        },
+        {
+          "id": "c7f97683-d674-4cff-bf00-a49cbfdc07b8",
+          "timestamp": "2026-06-28T09:07:15.179453+00:00",
+          "user_id": "4c696f7a-0aa3-49b6-8458-995c42f6a98d",
+          "user_email": "mehfil@smartdine.ai",
+          "action": "login_success",
+          "target": "system",
+          "details": {
+            "role": "admin",
+            "restaurant_id": "rest_mehfil_001"
+          }
+        },
+        {
+          "id": "d7f83741-0a65-4176-ba58-44309674a235",
+          "timestamp": "2026-06-28T09:03:16.492813+00:00",
+          "user_id": "4c696f7a-0aa3-49b6-8458-995c42f6a98d",
+          "user_email": "mehfil@smartdine.ai",
+          "action": "login_success",
+          "target": "system",
+          "details": {
+            "role": "admin",
+            "restaurant_id": "rest_mehfil_001"
+          }
+        },
+        {
+          "id": "dd19efba-0ca6-4b10-991d-ce5dc26aab53",
+          "timestamp": "2026-06-28T08:53:10.682735+00:00",
+          "user_id": "4c696f7a-0aa3-49b6-8458-995c42f6a98d",
+          "user_email": "mehfil@smartdine.ai",
+          "action": "login_success",
+          "target": "system",
+          "details": {
+            "role": "admin",
+            "restaurant_id": "rest_mehfil_001"
+          }
+        },
+        {
+          "id": "31c10812-e930-42d1-9237-446ffe46ece3",
+          "timestamp": "2026-06-28T08:52:56.451088+00:00",
+          "user_id": "4c696f7a-0aa3-49b6-8458-995c42f6a98d",
+          "user_email": "mehfil@smartdine.ai",
+          "action": "login_success",
+          "target": "system",
+          "details": {
+            "role": "admin",
+            "restaurant_id": "rest_mehfil_001"
+          }
+        },
+        {
+          "id": "e38f4bb4-8a20-441c-872f-d062a7525d57",
+          "timestamp": "2026-06-28T08:51:49.125853+00:00",
+          "user_id": "4c696f7a-0aa3-49b6-8458-995c42f6a98d",
+          "user_email": "mehfil@smartdine.ai",
+          "action": "login_success",
+          "target": "system",
+          "details": {
+            "role": "admin",
+            "restaurant_id": "rest_mehfil_001"
+          }
+        },
+        {
+          "id": "796095a0-9e21-467e-8258-8999264d963d",
+          "timestamp": "2026-06-28T08:25:48.164046+00:00",
+          "user_id": "4c696f7a-0aa3-49b6-8458-995c42f6a98d",
+          "user_email": "mehfil@smartdine.ai",
+          "action": "login_success",
+          "target": "system",
+          "details": {
+            "role": "admin",
+            "restaurant_id": "rest_mehfil_001"
+          }
+        },
+        {
+          "id": "2a00da34-55fa-4157-b32c-b60f851c1a2a",
+          "timestamp": "2026-06-28T08:22:30.088914+00:00",
+          "user_id": "4c696f7a-0aa3-49b6-8458-995c42f6a98d",
+          "user_email": "mehfil@smartdine.ai",
+          "action": "login_success",
+          "target": "system",
+          "details": {
+            "role": "admin",
+            "restaurant_id": "rest_mehfil_001"
+          }
+        },
+        {
+          "id": "d2c1c30c-14b2-4c43-a7de-16195658bb08",
+          "timestamp": "2026-06-28T08:21:48.981790+00:00",
+          "user_id": "4c696f7a-0aa3-49b6-8458-995c42f6a98d",
+          "user_email": "mehfil@smartdine.ai",
+          "action": "login_success",
+          "target": "system",
+          "details": {
+            "role": "admin",
+            "restaurant_id": "rest_mehfil_001"
+          }
+        },
+        {
+          "id": "d9d89b4d-2f80-44bd-88c8-5037410d76f8",
+          "timestamp": "2026-06-28T08:05:04.830460+00:00",
+          "user_id": "4c696f7a-0aa3-49b6-8458-995c42f6a98d",
+          "user_email": "mehfil@smartdine.ai",
+          "action": "login_success",
+          "target": "system",
+          "details": {
+            "role": "admin",
+            "restaurant_id": "rest_mehfil_001"
+          }
+        },
+        {
+          "id": "cb8f2406-ef8d-4d06-a185-7df961f61a2d",
+          "timestamp": "2026-06-28T08:04:12.346081+00:00",
+          "user_id": null,
+          "user_email": "admin@smartdine.ai",
+          "action": "login_failed",
+          "target": "system",
+          "details": {
+            "reason": "Invalid email or password"
+          }
+        },
+        {
+          "id": "33975c58-6044-474b-a379-fcfb6ed95d25",
+          "timestamp": "2026-06-28T08:04:09.366323+00:00",
+          "user_id": null,
+          "user_email": "admin@smartdine.ai",
+          "action": "login_failed",
+          "target": "system",
+          "details": {
+            "reason": "Invalid email or password"
+          }
+        },
+        {
+          "id": "f15c2782-4747-4830-b682-0bf8dd097781",
+          "timestamp": "2026-06-28T08:02:42.795457+00:00",
+          "user_id": null,
+          "user_email": "admin@smartdine.ai",
+          "action": "login_failed",
+          "target": "system",
+          "details": {
+            "reason": "Invalid email or password"
+          }
+        },
+        {
+          "id": "028f451d-5b91-4951-986f-236bf8188c7f",
+          "timestamp": "2026-06-28T08:02:39.852412+00:00",
+          "user_id": null,
+          "user_email": "admin@smartdine.ai",
+          "action": "login_failed",
+          "target": "system",
+          "details": {
+            "reason": "Invalid email or password"
+          }
+        },
+        {
+          "id": "9cb7759c-c9e9-4610-bfaa-e40886490e24",
+          "timestamp": "2026-06-28T08:02:19.736874+00:00",
+          "user_id": null,
+          "user_email": "admin@smartdine.ai",
+          "action": "login_failed",
+          "target": "system",
+          "details": {
+            "reason": "Invalid email or password"
+          }
+        },
+        {
+          "id": "93102018-f690-47ec-a180-6793f7666e67",
+          "timestamp": "2026-06-28T08:02:16.752922+00:00",
+          "user_id": null,
+          "user_email": "admin@smartdine.ai",
+          "action": "login_failed",
+          "target": "system",
+          "details": {
+            "reason": "Invalid email or password"
+          }
+        },
+        {
+          "id": "fd82a2cb-379a-429d-a6d9-de6a2422995c",
+          "timestamp": "2026-06-28T07:59:12.563952+00:00",
+          "user_id": "4c696f7a-0aa3-49b6-8458-995c42f6a98d",
+          "user_email": "mehfil@smartdine.ai",
+          "action": "login_success",
+          "target": "system",
+          "details": {
+            "role": "admin",
+            "restaurant_id": "rest_mehfil_001"
+          }
+        },
+        {
+          "id": "e82b1531-4b6a-4e1a-a4e8-cf3d49a64d35",
+          "timestamp": "2026-06-28T07:59:00.625829+00:00",
+          "user_id": "4c696f7a-0aa3-49b6-8458-995c42f6a98d",
+          "user_email": "mehfil@smartdine.ai",
+          "action": "login_success",
+          "target": "system",
+          "details": {
+            "role": "admin",
+            "restaurant_id": "rest_mehfil_001"
+          }
+        },
+        {
+          "id": "e04811e6-80bf-4d78-8956-785ced58c118",
+          "timestamp": "2026-06-28T07:58:46.901837+00:00",
+          "user_id": "4c696f7a-0aa3-49b6-8458-995c42f6a98d",
+          "user_email": "mehfil@smartdine.ai",
+          "action": "login_success",
+          "target": "system",
+          "details": {
+            "role": "admin",
+            "restaurant_id": "rest_mehfil_001"
+          }
+        },
+        {
+          "id": "8850390c-003a-4498-a4f9-35ea2fde834c",
+          "timestamp": "2026-06-28T07:53:58.791730+00:00",
+          "user_id": "4c696f7a-0aa3-49b6-8458-995c42f6a98d",
+          "user_email": "mehfil@smartdine.ai",
+          "action": "login_success",
+          "target": "system",
+          "details": {
+            "role": "admin",
+            "restaurant_id": "rest_mehfil_001"
+          }
+        },
+        {
+          "id": "0df9c943-2e8b-4bd8-b640-853d346a56bd",
+          "timestamp": "2026-06-28T07:45:49.105369+00:00",
+          "user_id": "4c696f7a-0aa3-49b6-8458-995c42f6a98d",
+          "user_email": "mehfil@smartdine.ai",
+          "action": "login_success",
+          "target": "system",
+          "details": {
+            "role": "admin",
+            "restaurant_id": "rest_mehfil_001"
+          }
+        },
+        {
+          "id": "4c72c6f3-eeb1-41d1-a10e-af3d7566f077",
+          "timestamp": "2026-06-28T07:45:18.420342+00:00",
+          "user_id": "4c696f7a-0aa3-49b6-8458-995c42f6a98d",
+          "user_email": "mehfil@smartdine.ai",
+          "action": "login_success",
+          "target": "system",
+          "details": {
+            "role": "admin",
+            "restaurant_id": "rest_mehfil_001"
+          }
+        },
+        {
+          "id": "5c3a4ce3-50b0-49af-86dd-5cedcd7e2bb8",
+          "timestamp": "2026-06-28T07:45:06.593932+00:00",
+          "user_id": "4c696f7a-0aa3-49b6-8458-995c42f6a98d",
+          "user_email": "mehfil@smartdine.ai",
+          "action": "login_success",
+          "target": "system",
+          "details": {
+            "role": "admin",
+            "restaurant_id": "rest_mehfil_001"
+          }
+        },
+        {
+          "id": "7e9217fd-8e81-42c1-8a8f-2a69221b15c0",
+          "timestamp": "2026-06-28T07:44:49.143965+00:00",
+          "user_id": "4c696f7a-0aa3-49b6-8458-995c42f6a98d",
+          "user_email": "mehfil@smartdine.ai",
+          "action": "login_success",
+          "target": "system",
+          "details": {
+            "role": "admin",
+            "restaurant_id": "rest_mehfil_001"
+          }
+        },
+        {
+          "id": "e5894553-1060-4e4a-8eb6-e21dbce681bf",
+          "timestamp": "2026-06-28T07:44:38.213663+00:00",
+          "user_id": "4c696f7a-0aa3-49b6-8458-995c42f6a98d",
+          "user_email": "mehfil@smartdine.ai",
+          "action": "login_success",
+          "target": "system",
+          "details": {
+            "role": "admin",
+            "restaurant_id": "rest_mehfil_001"
+          }
+        },
+        {
+          "id": "128e95a2-dc6f-42c7-a955-9acdb655b881",
+          "timestamp": "2026-06-28T07:44:24.031724+00:00",
+          "user_id": "4c696f7a-0aa3-49b6-8458-995c42f6a98d",
+          "user_email": "mehfil@smartdine.ai",
+          "action": "login_success",
+          "target": "system",
+          "details": {
+            "role": "admin",
+            "restaurant_id": "rest_mehfil_001"
+          }
+        },
+        {
+          "id": "d4fab640-9117-45a7-a9e7-09601a2b283a",
+          "timestamp": "2026-06-28T07:43:29.611348+00:00",
+          "user_id": "4c696f7a-0aa3-49b6-8458-995c42f6a98d",
+          "user_email": "mehfil@smartdine.ai",
+          "action": "login_success",
+          "target": "system",
+          "details": {
+            "role": "admin",
+            "restaurant_id": "rest_mehfil_001"
+          }
+        },
+        {
+          "id": "23f787ec-6d7b-409e-a861-f2e3e488ee28",
+          "timestamp": "2026-06-28T07:41:47.764060+00:00",
+          "user_id": "4c696f7a-0aa3-49b6-8458-995c42f6a98d",
+          "user_email": "mehfil@smartdine.ai",
+          "action": "login_success",
+          "target": "system",
+          "details": {
+            "role": "admin",
+            "restaurant_id": "rest_mehfil_001"
+          }
+        },
+        {
+          "id": "8618b515-5844-4355-8384-0e9736618e83",
+          "timestamp": "2026-06-28T07:41:33.830025+00:00",
+          "user_id": "c722dd2b-d267-4a44-b005-55f77083c87c",
+          "user_email": "admin-mehfil@smartdine.ai",
+          "action": "login_failed",
+          "target": "system",
+          "details": {
+            "reason": "Invalid email or password"
+          }
+        },
+        {
+          "id": "c0c2d9ce-987b-4004-b40e-283e32e75527",
+          "timestamp": "2026-06-28T07:41:22.316859+00:00",
+          "user_id": "4c696f7a-0aa3-49b6-8458-995c42f6a98d",
+          "user_email": "mehfil@smartdine.ai",
+          "action": "login_success",
+          "target": "system",
+          "details": {
+            "role": "admin",
+            "restaurant_id": "rest_mehfil_001"
+          }
+        },
+        {
+          "id": "d913d943-c1ca-4cb9-88ba-a2f56258c9a3",
+          "timestamp": "2026-06-28T07:41:11.716636+00:00",
+          "user_id": "4c696f7a-0aa3-49b6-8458-995c42f6a98d",
+          "user_email": "mehfil@smartdine.ai",
+          "action": "login_success",
+          "target": "system",
+          "details": {
+            "role": "admin",
+            "restaurant_id": "rest_mehfil_001"
+          }
+        },
+        {
+          "id": "5acff049-2f4c-4100-9889-e4c5cbcd1a9d",
+          "timestamp": "2026-06-28T07:37:41.463336+00:00",
+          "user_id": null,
+          "user_email": "admin@smartdine.ai",
+          "action": "login_failed",
+          "target": "system",
+          "details": {
+            "reason": "Invalid email or password"
+          }
+        },
+        {
+          "id": "b74b08c1-b3d1-4ccd-9ae4-164766a44960",
+          "timestamp": "2026-06-28T07:37:38.498790+00:00",
+          "user_id": null,
+          "user_email": "admin@smartdine.ai",
+          "action": "login_failed",
+          "target": "system",
+          "details": {
+            "reason": "Invalid email or password"
+          }
+        },
+        {
+          "id": "5a689941-0f59-4e23-8f52-85e29daf321f",
+          "timestamp": "2026-06-28T07:31:08.834165+00:00",
+          "user_id": null,
+          "user_email": "admin@smartdine.ai",
+          "action": "login_failed",
+          "target": "system",
+          "details": {
+            "reason": "Invalid email or password"
+          }
+        },
+        {
+          "id": "efd38898-38de-47aa-ab29-87e2d33ab410",
+          "timestamp": "2026-06-28T07:31:05.884222+00:00",
+          "user_id": null,
+          "user_email": "admin@smartdine.ai",
+          "action": "login_failed",
+          "target": "system",
+          "details": {
+            "reason": "Invalid email or password"
+          }
+        },
+        {
+          "id": "f6214e88-e757-49d1-a28b-f525c949c9d5",
+          "timestamp": "2026-06-28T07:27:53.687064+00:00",
+          "user_id": null,
+          "user_email": "admin@smartdine.ai",
+          "action": "login_failed",
+          "target": "system",
+          "details": {
+            "reason": "Invalid email or password"
+          }
+        },
+        {
+          "id": "a910b03a-4092-4f19-ad8b-1e622a9b241f",
+          "timestamp": "2026-06-28T07:27:50.730507+00:00",
+          "user_id": null,
+          "user_email": "admin@smartdine.ai",
+          "action": "login_failed",
+          "target": "system",
+          "details": {
+            "reason": "Invalid email or password"
+          }
+        },
+        {
+          "id": "d3730cee-d29f-415a-a823-7b6b70daaf5f",
+          "timestamp": "2026-06-28T07:27:21.674078+00:00",
+          "user_id": null,
+          "user_email": "admin@smartdine.ai",
+          "action": "login_failed",
+          "target": "system",
+          "details": {
+            "reason": "Invalid email or password"
+          }
+        },
+        {
+          "id": "2f217204-e709-46d5-9bf6-6ca339f1c673",
+          "timestamp": "2026-06-28T07:27:18.707156+00:00",
+          "user_id": null,
+          "user_email": "admin@smartdine.ai",
+          "action": "login_failed",
+          "target": "system",
+          "details": {
+            "reason": "Invalid email or password"
+          }
+        },
+        {
+          "id": "899c1b0b-7b9c-40aa-81bf-5b181260a062",
+          "timestamp": "2026-06-28T07:25:16.099278+00:00",
+          "user_id": null,
+          "user_email": "admin@smartdine.ai",
+          "action": "login_failed",
+          "target": "system",
+          "details": {
+            "reason": "Invalid email or password"
+          }
+        },
+        {
+          "id": "4177e376-e4d3-4993-b374-5807c9e1843f",
+          "timestamp": "2026-06-28T07:25:13.152821+00:00",
+          "user_id": null,
+          "user_email": "admin@smartdine.ai",
+          "action": "login_failed",
+          "target": "system",
+          "details": {
+            "reason": "Invalid email or password"
+          }
+        },
+        {
+          "id": "4a9f6bfe-0279-411a-8375-23ec2eafb72b",
+          "timestamp": "2026-06-28T07:24:30.304068+00:00",
+          "user_id": null,
+          "user_email": "admin@smartdine.ai",
+          "action": "login_failed",
+          "target": "system",
+          "details": {
+            "reason": "Invalid email or password"
+          }
+        },
+        {
+          "id": "09b14733-d2b3-4832-9a12-bac5f96e4c1f",
+          "timestamp": "2026-06-28T07:24:27.341721+00:00",
+          "user_id": null,
+          "user_email": "admin@smartdine.ai",
+          "action": "login_failed",
+          "target": "system",
+          "details": {
+            "reason": "Invalid email or password"
+          }
+        },
+        {
+          "id": "7f647416-b3b3-43e6-a04a-133d04b4f1c0",
+          "timestamp": "2026-06-28T07:23:14.841361+00:00",
+          "user_id": null,
+          "user_email": "admin@smartdine.ai",
+          "action": "login_failed",
+          "target": "system",
+          "details": {
+            "reason": "Invalid email or password"
+          }
+        },
+        {
+          "id": "7820a180-50dc-4ab8-b153-28b5f08bbc8f",
+          "timestamp": "2026-06-28T07:23:11.880336+00:00",
+          "user_id": null,
+          "user_email": "admin@smartdine.ai",
+          "action": "login_failed",
+          "target": "system",
+          "details": {
+            "reason": "Invalid email or password"
+          }
+        },
+        {
+          "id": "2263ccdd-8ed9-4f49-abdc-6654910364e8",
+          "timestamp": "2026-06-28T07:22:54.805064+00:00",
+          "user_id": null,
+          "user_email": "admin@smartdine.ai",
+          "action": "login_failed",
+          "target": "system",
+          "details": {
+            "reason": "Invalid email or password"
+          }
+        },
+        {
+          "id": "40387b90-78cc-4fd8-9ed7-aaabb56ecb25",
+          "timestamp": "2026-06-28T07:22:51.831891+00:00",
+          "user_id": null,
+          "user_email": "admin@smartdine.ai",
+          "action": "login_failed",
+          "target": "system",
+          "details": {
+            "reason": "Invalid email or password"
+          }
+        },
+        {
+          "id": "db097d3c-92c3-4610-98d3-69f593330128",
+          "timestamp": "2026-06-28T07:20:28.525590+00:00",
+          "user_id": "150f45cc-7dfd-40cc-b014-da9aa0880ac2",
+          "user_email": "pasta-palace@smartdine.ai",
+          "action": "login_success",
+          "target": "system",
+          "details": {
+            "role": "admin",
+            "restaurant_id": "rest_pasta-palace_001"
+          }
+        },
+        {
+          "id": "f4eaa13f-fe07-4bf6-8242-d6b43e1959e5",
+          "timestamp": "2026-06-28T07:17:09.220818+00:00",
+          "user_id": "4c696f7a-0aa3-49b6-8458-995c42f6a98d",
+          "user_email": "mehfil@smartdine.ai",
+          "action": "login_success",
+          "target": "system",
+          "details": {
+            "role": "admin",
+            "restaurant_id": "rest_mehfil_001"
+          }
+        },
+        {
+          "id": "6170e064-f534-4d9a-b86e-1d886ecbc0c8",
+          "timestamp": "2026-06-28T07:02:27.774048+00:00",
+          "user_id": "c722dd2b-d267-4a44-b005-55f77083c87c",
+          "user_email": "admin-mehfil@smartdine.ai",
+          "action": "login_success",
+          "target": "system",
+          "details": {
+            "role": "admin",
+            "restaurant_id": "rest_mehfil_001"
+          }
+        },
+        {
+          "id": "a22bbeca-1050-4272-8593-8c890fcb7d24",
+          "timestamp": "2026-06-28T07:01:40.309262+00:00",
+          "user_id": null,
+          "user_email": "admin@smartdine.ai",
+          "action": "login_failed",
+          "target": "system",
+          "details": {
+            "reason": "Invalid email or password"
+          }
+        },
+        {
+          "id": "a7dfb482-a273-4abd-a4c8-424ec0c30cc1",
+          "timestamp": "2026-06-28T07:01:37.151187+00:00",
+          "user_id": null,
+          "user_email": "admin@smartdine.ai",
+          "action": "login_failed",
+          "target": "system",
+          "details": {
+            "reason": "Invalid email or password"
+          }
+        },
+        {
+          "id": "e7ed623c-fe6e-4945-af13-77174f2ed457",
+          "timestamp": "2026-06-28T06:59:03.686972+00:00",
+          "user_id": null,
+          "user_email": "admin@smartdine.ai",
+          "action": "login_failed",
+          "target": "system",
+          "details": {
+            "reason": "Invalid email or password"
+          }
+        },
+        {
+          "id": "4566090a-4a0d-4d1b-ba3d-a565058964b4",
+          "timestamp": "2026-06-28T06:59:00.698261+00:00",
+          "user_id": null,
+          "user_email": "admin@smartdine.ai",
+          "action": "login_failed",
+          "target": "system",
+          "details": {
+            "reason": "Invalid email or password"
+          }
+        },
+        {
+          "id": "ed28182b-144e-4ddb-b0f1-2ae72ab4a0d6",
+          "timestamp": "2026-06-28T06:55:55.196375+00:00",
+          "user_id": "808d7e9f-2f5c-4e25-b7b9-1acbf062808d",
+          "user_email": "counter-mehfil@smartdine.ai",
+          "action": "login_success",
+          "target": "system",
+          "details": {
+            "role": "counter",
+            "restaurant_id": "rest_mehfil_001"
+          }
+        },
+        {
+          "id": "961a6df6-a5b5-4e52-89b2-711899f82266",
+          "timestamp": "2026-06-28T06:55:09.056100+00:00",
+          "user_id": "49e38e78-1ceb-4730-a527-95c9d828c37a",
+          "user_email": "kitchen-mehfil@smartdine.ai",
+          "action": "login_success",
+          "target": "system",
+          "details": {
+            "role": "kitchen",
+            "restaurant_id": "rest_mehfil_001"
+          }
+        },
+        {
+          "id": "0fda3e3e-2ce7-4713-8a6f-339fa1335d21",
+          "timestamp": "2026-06-28T06:52:21.388214+00:00",
+          "user_id": null,
+          "user_email": "admin@smartdine.ai",
+          "action": "login_failed",
+          "target": "system",
+          "details": {
+            "reason": "Invalid email or password"
+          }
+        },
+        {
+          "id": "c470d4b8-9055-4ea9-805f-3a00ee1e448a",
+          "timestamp": "2026-06-28T06:52:18.431233+00:00",
+          "user_id": null,
+          "user_email": "admin@smartdine.ai",
+          "action": "login_failed",
+          "target": "system",
+          "details": {
+            "reason": "Invalid email or password"
+          }
+        },
+        {
+          "id": "3d61ec34-86bc-4b1c-8ae5-b9444e22f3a4",
+          "timestamp": "2026-06-28T06:51:01.570908+00:00",
+          "user_id": "c722dd2b-d267-4a44-b005-55f77083c87c",
+          "user_email": "admin-mehfil@smartdine.ai",
+          "action": "login_success",
+          "target": "system",
+          "details": {
+            "role": "admin",
+            "restaurant_id": "rest_mehfil_001"
+          }
+        },
+        {
+          "id": "f8ac1cf4-ec8a-420b-964d-e4fd6854b69d",
+          "timestamp": "2026-06-28T06:49:54.660320+00:00",
+          "user_id": null,
+          "user_email": "admin@smartdine.ai",
+          "action": "login_failed",
+          "target": "system",
+          "details": {
+            "reason": "Invalid email or password"
+          }
+        },
+        {
+          "id": "0d965967-1297-4a21-8eb5-a366e9bd30b8",
+          "timestamp": "2026-06-28T06:49:51.651341+00:00",
+          "user_id": null,
+          "user_email": "admin@smartdine.ai",
+          "action": "login_failed",
+          "target": "system",
+          "details": {
+            "reason": "Invalid email or password"
+          }
+        },
+        {
+          "id": "dff9fb5e-4507-4c3a-9de0-407f3be23d91",
+          "timestamp": "2026-06-28T06:49:33.877949+00:00",
+          "user_id": null,
+          "user_email": "admin@smartdine.ai",
+          "action": "login_failed",
+          "target": "system",
+          "details": {
+            "reason": "Invalid email or password"
+          }
+        },
+        {
+          "id": "aecdbbfe-3b88-4723-91d5-58a5698b9214",
+          "timestamp": "2026-06-28T06:49:30.557789+00:00",
+          "user_id": null,
+          "user_email": "admin@smartdine.ai",
+          "action": "login_failed",
+          "target": "system",
+          "details": {
+            "reason": "Invalid email or password"
+          }
+        },
+        {
+          "id": "6d90ee13-7223-4101-8fad-e4984abcc9ce",
+          "timestamp": "2026-06-28T06:12:26.130542+00:00",
+          "user_id": "4c696f7a-0aa3-49b6-8458-995c42f6a98d",
+          "user_email": "mehfil@smartdine.ai",
+          "action": "login_success",
+          "target": "system",
+          "details": {
+            "role": "admin",
+            "restaurant_id": "rest_mehfil_001"
+          }
+        },
+        {
+          "id": "c83e99a6-31eb-49f7-9b94-a8b33ab4a655",
+          "timestamp": "2026-06-28T06:04:24.834065+00:00",
+          "user_id": "4c696f7a-0aa3-49b6-8458-995c42f6a98d",
+          "user_email": "mehfil@smartdine.ai",
+          "action": "login_success",
+          "target": "system",
+          "details": {
+            "role": "admin",
+            "restaurant_id": "rest_mehfil_001"
+          }
+        },
+        {
+          "id": "82a7c781-b120-47bc-8a40-f858cec08fad",
+          "timestamp": "2026-06-28T06:04:12.997656+00:00",
+          "user_id": "4c696f7a-0aa3-49b6-8458-995c42f6a98d",
+          "user_email": "mehfil@smartdine.ai",
+          "action": "login_success",
+          "target": "system",
+          "details": {
+            "role": "admin",
+            "restaurant_id": "rest_mehfil_001"
+          }
+        },
+        {
+          "id": "c74921e3-ecda-4952-97c5-cdb868511455",
+          "timestamp": "2026-06-28T06:03:06.390755+00:00",
+          "user_id": "808d7e9f-2f5c-4e25-b7b9-1acbf062808d",
+          "user_email": "counter-mehfil@smartdine.ai",
+          "action": "login_success",
+          "target": "system",
+          "details": {
+            "role": "counter",
+            "restaurant_id": "rest_mehfil_001"
+          }
+        },
+        {
+          "id": "049472ca-a599-46ef-8e4e-10092c9336ad",
+          "timestamp": "2026-06-28T06:03:05.213788+00:00",
+          "user_id": "49e38e78-1ceb-4730-a527-95c9d828c37a",
+          "user_email": "kitchen-mehfil@smartdine.ai",
+          "action": "login_success",
+          "target": "system",
+          "details": {
+            "role": "kitchen",
+            "restaurant_id": "rest_mehfil_001"
+          }
+        },
+        {
+          "id": "e02abf95-6943-4aaa-807f-bd7b064fe829",
+          "timestamp": "2026-06-28T06:03:04.442063+00:00",
+          "user_id": "c722dd2b-d267-4a44-b005-55f77083c87c",
+          "user_email": "admin-mehfil@smartdine.ai",
+          "action": "login_success",
+          "target": "system",
+          "details": {
+            "role": "admin",
+            "restaurant_id": "rest_mehfil_001"
+          }
+        },
+        {
+          "id": "a771f4fd-7914-4056-8f0f-d502532cc51b",
+          "timestamp": "2026-06-28T06:02:45.457725+00:00",
+          "user_id": "4c696f7a-0aa3-49b6-8458-995c42f6a98d",
+          "user_email": "mehfil@smartdine.ai",
+          "action": "login_success",
+          "target": "system",
+          "details": {
+            "role": "admin",
+            "restaurant_id": "rest_mehfil_001"
+          }
+        },
+        {
+          "id": "2749c79a-85c9-47ea-9b32-1f511630e2bc",
+          "timestamp": "2026-06-28T06:00:56.341609+00:00",
+          "user_id": null,
+          "user_email": "admin@smartdine.ai",
+          "action": "login_failed",
+          "target": "system",
+          "details": {
+            "reason": "Invalid email or password"
+          }
+        },
+        {
+          "id": "56a53486-cffd-4e02-bbd8-7f14975593e5",
+          "timestamp": "2026-06-28T06:00:53.376980+00:00",
+          "user_id": null,
+          "user_email": "admin@smartdine.ai",
+          "action": "login_failed",
+          "target": "system",
+          "details": {
+            "reason": "Invalid email or password"
+          }
+        },
+        {
+          "id": "29a0af8c-6479-4d9b-b2c9-054df68f7077",
+          "timestamp": "2026-06-28T05:53:49.410207+00:00",
+          "user_id": "c722dd2b-d267-4a44-b005-55f77083c87c",
+          "user_email": "admin-mehfil@smartdine.ai",
+          "action": "login_success",
+          "target": "system",
+          "details": {
+            "role": "admin",
+            "restaurant_id": "rest_mehfil_001"
+          }
+        },
+        {
+          "id": "22b018b5-d24a-4f60-8360-84d0db70a0c6",
+          "timestamp": "2026-06-28T05:52:05.580362+00:00",
+          "user_id": null,
+          "user_email": "admin@smartdine.ai",
+          "action": "login_failed",
+          "target": "system",
+          "details": {
+            "reason": "Invalid email or password"
+          }
+        }
+      ]
+    },
+    "path": "/api/super-admin/audit"
+  },
+  "Mobile_System Health": {
+    "status": "PASS",
+    "response": {
+      "services": {
+        "database": {
+          "name": "MongoDB",
+          "status": "online"
+        },
+        "ai": {
+          "name": "Gemini API",
+          "status": "configured"
+        }
+      }
+    },
+    "path": "/api/super-admin/health"
+  },
+  "Mobile_AI Usage": {
+    "status": "PASS",
+    "response": {
+      "usage": [
+        {
+          "restaurant_id": "rest_smartdine-foodcourt_001",
+          "restaurant_name": "SmartDine FoodCourt",
+          "restaurant_slug": "smartdine-foodcourt",
+          "total_requests": 2,
+          "last_used": "2026-06-26T09:19:57.234962+00:00"
+        },
+        {
+          "restaurant_id": "rest_the-golden-dragon_001",
+          "restaurant_name": "The Golden Dragon",
+          "restaurant_slug": "the-golden-dragon",
+          "total_requests": 2,
+          "last_used": "2026-06-27T10:09:15.501197+00:00"
+        }
+      ]
+    },
+    "path": "/api/super-admin/ai-usage"
+  },
+  "Mobile_Support Tickets": {
     "status": "PASS",
     "response": {
       "tickets": [
@@ -1270,13 +2546,13 @@
     "path": "/api/super-admin/tickets"
   },
   "Impersonate Rest.": {
-    "status": "FAIL (Status: 500)",
-    "response": "Internal Server Error",
+    "status": "PASS",
+    "response": "Token received: eyJhbGciOiJIUzI1NiIs...",
     "path": "/api/super-admin/restaurants/rest_mehfil_001/impersonate"
   },
   "Suspend Toggle 1": {
-    "status": "FAIL (Status: 500)",
-    "response": "Internal Server Error",
+    "status": "PASS",
+    "response": "{\"message\": \"Restaurant status changed to suspended\", \"new_status\": \"suspended\"} | Reverted: {\"message\": \"Restaurant status changed to active\", \"new_status\": \"active\"}",
     "path": "/api/super-admin/restaurants/rest_mehfil_001/suspend"
   }
 }
