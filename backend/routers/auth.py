@@ -92,7 +92,8 @@ async def forgot_password(req: ForgotPasswordReq):
         {"$set": {"reset_token": reset_token, "reset_token_expiry": expiry}}
     )
 
-    send_password_reset_email(req.email, reset_token)
+    frontend_url = os.environ.get("FRONTEND_URL", "https://smartdineai.co.in")
+    send_password_reset_email(req.email, reset_token, frontend_url)
     return {"message": "If an account with that email exists, a reset link has been sent."}
 
 
