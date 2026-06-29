@@ -113,7 +113,7 @@ export default function AdminSettings() {
         <p className="text-stone mt-1">Manage your restaurant identity and staff access.</p>
       </div>
 
-      {settings && settings.is_verified === false && (
+      {(settings?.is_verified === false || settings?.sandbox_mode === true) && (
         <VerificationSection />
       )}
 
