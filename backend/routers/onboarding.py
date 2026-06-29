@@ -170,6 +170,10 @@ class RestaurantRequest(BaseModel):
 @router.post("/api/restaurants/request")
 async def request_restaurant_access(req: RestaurantRequest):
     """Public endpoint for self-serve onboarding. Grants a 14-day Pro trial instantly."""
+    existing_user = await db.users.find_one({"email": req.email})
+    if existing_user:
+        raise HTTPException(status_code=400, detail="This email is already registered. Please login or use a different email.")
+
     slug = req.name.lower().replace(" ", "-").replace("'", "")
     
     # check slug unique
