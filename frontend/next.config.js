@@ -15,7 +15,7 @@ const nextConfig = {
   typescript: { ignoreBuildErrors: false },
   async rewrites() {
     // Attempt to use NEXT_PUBLIC_BACKEND_URL, fallback to REACT_APP_BACKEND_URL
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:8000";
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.REACT_APP_BACKEND_URL || "https://api.smartdineai.co.in";
     return [
       {
         source: "/api/:path*",

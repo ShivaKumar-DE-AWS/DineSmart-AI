@@ -8,7 +8,10 @@
 // staff tabs are open on different restaurants. zustand state is per-tab until hydrate;
 // the old approach overwrote a shared key on every login, causing the wrong JWT to be
 // sent on background tabs.
-const BASE = process.env.NEXT_PUBLIC_BACKEND_URL || "";
+// IMPORTANT: Always use empty BASE so API calls go through the Next.js rewrite proxy
+// on the same origin. NEVER set this to a backend URL — that would make browser-side
+// direct calls that hit CORS or expose the backend URL to clients.
+const BASE = "";
 
 import { useSession } from "@/stores/session";
 

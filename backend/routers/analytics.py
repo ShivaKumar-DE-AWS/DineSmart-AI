@@ -20,11 +20,15 @@ async def get_analytics(user=Depends(require_user)):
     res = await db.orders.aggregate(pipeline).to_list(1)
     stats = res[0] if res else {"total_revenue": 0, "total_orders": 0, "ai_orders": 0}
     recent_orders = await db.orders.find(q).sort("created_at", -1).limit(10).to_list(10)
+    total_rev = stats.get("total_revenue") or 0
+    total_ords = stats.get("total_orders") or 0
+    ai_ords = stats.get("ai_orders") or 0
+    
     return {
-        "total_revenue": stats.get("total_revenue", 0),
-        "total_orders": stats.get("total_orders", 0),
-        "ai_orders": stats.get("ai_orders", 0),
-        "manual_orders": stats.get("total_orders", 0) - stats.get("ai_orders", 0),
+        "total_revenue": total_rev,
+        "total_orders": total_ords,
+        "ai_orders": ai_ords,
+        "manual_orders": total_ords - ai_ords,
         "recent_orders": recent_orders
     }
 

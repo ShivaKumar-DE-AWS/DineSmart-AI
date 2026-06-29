@@ -154,6 +154,7 @@ async def list_restaurant_configs():
 
 @app.get("/api/config/{slug}")
 async def get_restaurant_config(slug: str):
+    import copy
     config = _CONFIG_CACHE.get(slug)
     
     if not config:
@@ -169,8 +170,14 @@ async def get_restaurant_config(slug: str):
     rest = await db.restaurants.find_one({"slug": slug})
     if rest:
         config["sandbox_mode"] = rest.get("sandbox_mode", False)
-        
-    return config
+    
+    # ponytail: mask passwords — config is public, passwords should never leak
+    resp = copy.deepcopy(config)
+    for u in resp.get("users", []):
+        if "password" in u:
+            u["password"] = "***"
+    
+    return resp
 
 # ponytail: demo credentials endpoints — direct file reads, no auth, for onboarding UX only
 @app.get("/api/admin/demo-creds")
@@ -193,7 +200,7 @@ async def super_admin_demo_creds():
 app.add_middleware(RateLimitMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestSizeLimitMiddleware)
-ALLOWED_ORIGINS = os.environ.get("ALLOWED_ORIGINS", "https://dine-smart-ai.vercel.app,http://localhost:3000,http://localhost:3001").split(",")
+ALLOWED_ORIGINS = os.environ.get("ALLOWED_ORIGINS", "https://dine-smart-ai.vercel.app,https://smartdineai.co.in,https://api.smartdineai.co.in,http://localhost:3000,http://localhost:3001").split(",")
 
 app.add_middleware(
     CORSMiddleware,

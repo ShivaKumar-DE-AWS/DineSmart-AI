@@ -228,6 +228,7 @@ async def create_order(req: OrderCreateReq):
 async def list_orders(
     status_filter: Optional[str] = None,
     table_session_id: Optional[str] = None,
+    restaurant_id: Optional[str] = None,
     limit: int = 100,
     user=Depends(require_user),
 ):
@@ -236,9 +237,13 @@ async def list_orders(
         q["status"] = status_filter
     if table_session_id:
         q["table_session_id"] = table_session_id
+    
     rid = user.get("restaurant_id")
     if not rid:
-        raise HTTPException(status_code=403, detail="No restaurant assigned")
+        if user.get("role") == "superadmin" and restaurant_id:
+            rid = restaurant_id
+        else:
+            raise HTTPException(status_code=403, detail="No restaurant assigned")
     q["restaurant_id"] = rid
     
     if user.get("role") == "customer":
