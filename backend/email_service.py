@@ -14,9 +14,9 @@ SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
 
 def _send_email(to_email: str, subject: str, html_content: str) -> tuple[bool, str]:
     # Always log the email locally just in case SMTP is blocked by the cloud provider (e.g. Render Free Tier)
-    print("=" * 60)
-    print(f"📧 EMAIL GENERATED (To: {to_email})")
-    print(f"Subject: {subject}")
+    print("=" * 60, flush=True)
+    print(f"📧 EMAIL GENERATED (To: {to_email})", flush=True)
+    print(f"Subject: {subject}", flush=True)
     import re
     text_content = re.sub(r'<[^>]+>', ' ', html_content)
     text_content = re.sub(r'\s+', ' ', text_content).strip()
@@ -24,10 +24,10 @@ def _send_email(to_email: str, subject: str, html_content: str) -> tuple[bool, s
     # Try to extract a 6 digit code for easy visibility
     otp_match = re.search(r'\b(\d{6})\b', text_content)
     if otp_match:
-        print(f"🔑 FOUND VERIFICATION OTP: {otp_match.group(1)} 🔑")
+        print(f"🔑 FOUND VERIFICATION OTP: {otp_match.group(1)} 🔑", flush=True)
         
-    print(f"Content: {text_content[:800]}...")
-    print("=" * 60)
+    print(f"Content: {text_content[:800]}...", flush=True)
+    print("=" * 60, flush=True)
 
     if not SMTP_PASSWORD:
         print("⚠️ SMTP_PASSWORD not set. Mock email only.")

@@ -84,7 +84,7 @@ async def forgot_password(req: ForgotPasswordReq, background_tasks: BackgroundTa
     user = await db.users.find_one({"email": {"$regex": f"^{req.email}$", "$options": "i"}})
     if not user:
         # Prevent email enumeration by returning success even if not found
-        print(f"⚠️ Forgot Password requested for {req.email}, but no account found!")
+        print(f"⚠️ Forgot Password requested for {req.email}, but no account found!", flush=True)
         return {"message": "If an account with that email exists, a reset link has been sent."}
 
     reset_token = str(uuid.uuid4())
