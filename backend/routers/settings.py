@@ -62,7 +62,10 @@ async def resend_otp(background_tasks: BackgroundTasks, user=Depends(require_use
         "counter": {"email": f"counter@{rest.get('slug', '')}.com", "password": "[Hidden - Check Staff Settings]"}
     }
     
-    background_tasks.add_task(send_welcome_email, rest.get("owner_email"), rest.get("name"), creds, otp)
+    success, err_msg = send_welcome_email(rest.get("owner_email"), rest.get("name"), creds, otp)
+    if not success:
+        raise HTTPException(status_code=500, detail=f"Email failed: {err_msg}")
+        
     return {"status": "success", "message": "OTP resent successfully"}
 
 @router.post("/api/admin/verify", dependencies=[Depends(require_roles("admin"))])

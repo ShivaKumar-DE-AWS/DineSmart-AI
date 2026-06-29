@@ -12,11 +12,11 @@ SMTP_PORT = int(os.environ.get("SMTP_PORT", 587))
 SMTP_USER = os.environ.get("SMTP_USER") or os.environ.get("SMTP_USERNAME") or "admin@smartdineai.co.in"
 SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
 
-def _send_email(to_email: str, subject: str, html_content: str) -> bool:
+def _send_email(to_email: str, subject: str, html_content: str) -> tuple[bool, str]:
     if not SMTP_PASSWORD:
         print("⚠️ SMTP_PASSWORD not set in environment. Falling back to mock email.")
         print(f"\n📧 EMAIL MOCK (To: {to_email})\nSubject: {subject}\nBody:\n{html_content}\n")
-        return True
+        return True, "Mock success"
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
@@ -28,20 +28,20 @@ def _send_email(to_email: str, subject: str, html_content: str) -> bool:
 
     try:
         if SMTP_PORT == 465:
-            server = smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT, timeout=5)
+            server = smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT, timeout=10)
             server.login(SMTP_USER, SMTP_PASSWORD)
         else:
-            server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=5)
+            server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=10)
             server.starttls()
             server.login(SMTP_USER, SMTP_PASSWORD)
             
         server.sendmail(SMTP_USER, to_email, msg.as_string())
         server.quit()
         print(f"✅ Successfully sent email to {to_email}")
-        return True
+        return True, "Success"
     except Exception as e:
         print(f"❌ Failed to send email to {to_email}: {str(e)}")
-        return False
+        return False, str(e)
 
 def send_password_reset_email(to_email: str, reset_token: str, frontend_url: str = "http://localhost:3000"):
     """Send a password reset email."""
