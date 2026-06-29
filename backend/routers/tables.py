@@ -3,6 +3,7 @@ import uuid
 from datetime import datetime, timezone, timedelta
 from typing import Optional, Dict, Any, List
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from deps import (
     db, now_iso, require_user, require_roles, current_user,
     TableModel, TableScanReq, CustomerLookupReq, ReservationStatusUpdate,
