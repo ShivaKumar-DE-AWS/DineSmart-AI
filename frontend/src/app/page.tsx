@@ -11,7 +11,6 @@ import { HowItWorks } from "@/components/landing/HowItWorks";
 import { CustomerSuccess } from "@/components/landing/CustomerSuccess";
 import { DashboardShowcase } from "@/components/landing/DashboardShowcase";
 import { ComparisonSection } from "@/components/landing/ComparisonSection";
-import { PricingSection } from "@/components/landing/PricingSection";
 import { FreeTrialSection } from "@/components/landing/FreeTrialSection";
 import { FAQSection } from "@/components/landing/FAQSection";
 import { Footer } from "@/components/landing/Footer";
@@ -32,7 +31,6 @@ export default function Home() {
       <CustomerSuccess />
       <DashboardShowcase />
       <ComparisonSection />
-      <PricingSection />
       <FreeTrialSection />
       <FAQSection />
       <Footer />
