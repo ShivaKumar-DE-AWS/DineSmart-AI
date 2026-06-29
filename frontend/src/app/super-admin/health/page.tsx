@@ -17,14 +17,14 @@ export default function SuperAdminHealthPage() {
   });
 
   const getStatusIcon = (status: string) => {
-    if (status === "online" || status === "configured") {
+    if (status === "online" || status === "configured" || status === "mock") {
       return <CheckCircle2 className="h-5 w-5 text-emerald-500" />;
     }
     return <AlertCircle className="h-5 w-5 text-rose-500" />;
   };
 
   const getStatusBadge = (status: string) => {
-    if (status === "online" || status === "configured") {
+    if (status === "online" || status === "configured" || status === "mock") {
       return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">Healthy</span>;
     }
     return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-rose-100 text-rose-800">Action Required</span>;
