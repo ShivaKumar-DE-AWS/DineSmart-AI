@@ -44,7 +44,7 @@ async def create_announcement(req: AnnouncementReq, user=Depends(require_superad
         "type": req.type,
         "is_active": req.is_active,
         "created_at": now_iso(),
-        "created_by": user["email"]
+        "created_by": user.get("email")
     }
     
     await db.announcements.insert_one(doc)
@@ -52,7 +52,7 @@ async def create_announcement(req: AnnouncementReq, user=Depends(require_superad
     from routers.audit import log_audit_event
     await log_audit_event(
         user_id=user.get("sub"),
-        user_email=user["email"],
+        user_email=user.get("email"),
         action="post_announcement",
         target="global",
         details={"title": req.title, "type": req.type}

@@ -35,7 +35,7 @@ export default function SuperAdminSettingsPage() {
     <div className="space-y-6 max-w-2xl">
       <div>
         <h1 className="text-2xl font-heading font-bold flex items-center gap-2">
-          <Settings className="h-6 w-6 text-brand" />
+          <Settings className="h-6 w-6 text-clay" />
           Platform Settings
         </h1>
         <p className="text-stone text-sm">Global configurations for SmartDine.</p>
@@ -43,7 +43,7 @@ export default function SuperAdminSettingsPage() {
 
       <div className="bg-white p-6 rounded-xl shadow-sm border border-bone space-y-6">
         <div className="flex items-center gap-2 border-b border-bone pb-4">
-          <Megaphone className="h-5 w-5 text-brand" />
+          <Megaphone className="h-5 w-5 text-clay" />
           <h2 className="font-heading font-semibold text-lg">Global Announcement</h2>
         </div>
 
@@ -64,7 +64,7 @@ export default function SuperAdminSettingsPage() {
               required
               value={title}
               onChange={e => setTitle(e.target.value)}
-              className="w-full border border-bone rounded-lg p-2 text-sm focus:ring-2 focus:ring-brand/30 outline-none" 
+              className="w-full border border-bone rounded-lg p-2 text-sm focus:ring-2 focus:ring-clay/30 outline-none" 
               placeholder="e.g. Scheduled Maintenance"
             />
           </div>
@@ -74,7 +74,7 @@ export default function SuperAdminSettingsPage() {
               required
               value={message}
               onChange={e => setMessage(e.target.value)}
-              className="w-full border border-bone rounded-lg p-2 text-sm focus:ring-2 focus:ring-brand/30 outline-none h-24" 
+              className="w-full border border-bone rounded-lg p-2 text-sm focus:ring-2 focus:ring-clay/30 outline-none h-24" 
               placeholder="Details of the announcement..."
             />
           </div>
@@ -84,7 +84,7 @@ export default function SuperAdminSettingsPage() {
               <select 
                 value={type}
                 onChange={e => setType(e.target.value)}
-                className="w-full border border-bone rounded-lg p-2 text-sm focus:ring-2 focus:ring-brand/30 outline-none bg-white"
+                className="w-full border border-bone rounded-lg p-2 text-sm focus:ring-2 focus:ring-clay/30 outline-none bg-white"
               >
                 <option value="info">Info (Blue)</option>
                 <option value="warning">Warning (Yellow)</option>
@@ -96,7 +96,7 @@ export default function SuperAdminSettingsPage() {
                   type="checkbox" 
                   checked={isActive}
                   onChange={e => setIsActive(e.target.checked)}
-                  className="rounded border-bone text-brand focus:ring-brand/30"
+                  className="rounded border-bone text-clay focus:ring-clay/30"
                 />
                 <span className="text-sm text-ink">Set as Active</span>
               </label>
@@ -105,7 +105,7 @@ export default function SuperAdminSettingsPage() {
           <button 
             type="submit"
             disabled={postMut.isPending}
-            className="w-full bg-brand hover:bg-brand-dark text-white font-medium py-2 rounded-lg transition flex items-center justify-center gap-2"
+            className="w-full bg-clay hover:bg-clay-dark text-white font-medium py-2 rounded-lg transition flex items-center justify-center gap-2"
           >
             <Check className="w-4 h-4" /> Post Announcement
           </button>
