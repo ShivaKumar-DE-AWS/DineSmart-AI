@@ -393,6 +393,12 @@ function VerificationSection() {
     onError: (e: Error) => toast.error(e.message || "Verification failed")
   });
 
+  const resendMut = useMutation({
+    mutationFn: () => api("/api/admin/resend-otp", { method: "POST" }),
+    onSuccess: (res: any) => toast.success(res.message || "OTP resent to your email"),
+    onError: (e: Error) => toast.error(e.message || "Failed to resend OTP")
+  });
+
   return (
     <div className="bg-alert/10 border border-alert/20 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row gap-6 items-start">
       <div className="bg-alert/20 p-3 rounded-xl text-alert shrink-0">
@@ -429,13 +435,23 @@ function VerificationSection() {
           </label>
         </div>
 
-        <button 
-          onClick={() => verifyMut.mutate({ otp, google_maps_url: mapsUrl || undefined })}
-          disabled={!otp || verifyMut.isPending}
-          className="bg-alert text-white font-medium rounded-xl px-4 py-2 hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
-        >
-          {verifyMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Verify Now"}
-        </button>
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => verifyMut.mutate({ otp, google_maps_url: mapsUrl || undefined })}
+            disabled={!otp || verifyMut.isPending}
+            className="bg-alert text-white font-medium rounded-xl px-4 py-2 hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {verifyMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Verify Now"}
+          </button>
+          
+          <button 
+            onClick={() => resendMut.mutate()}
+            disabled={resendMut.isPending}
+            className="text-stone font-medium text-sm hover:text-ink underline disabled:opacity-50 flex items-center gap-2"
+          >
+            {resendMut.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : "Resend OTP Email"}
+          </button>
+        </div>
       </div>
     </div>
   );

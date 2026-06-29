@@ -1,8 +1,9 @@
 """Admin settings, branding, and staff management routes."""
 from typing import Optional, Dict, Any
 from pydantic import BaseModel
-from fastapi import APIRouter, Depends, HTTPException, Body, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Body, UploadFile, File, BackgroundTasks
 from deps import db, now_iso, hash_password, require_user, require_roles, SettingsUpdateReq, StaffUpdateReq
+from email_service import send_welcome_email, send_verification_success_email
 
 router = APIRouter(tags=["settings"])
 
@@ -38,8 +39,34 @@ class VerifyReq(BaseModel):
     otp: str
     google_maps_url: Optional[str] = None
 
+@router.post("/api/admin/resend-otp", dependencies=[Depends(require_roles("admin"))])
+async def resend_otp(background_tasks: BackgroundTasks, user=Depends(require_user)):
+    rid = user["restaurant_id"]
+    rest = await db.restaurants.find_one({"id": rid})
+    if not rest:
+        raise HTTPException(status_code=404, detail="Restaurant not found")
+    if rest.get("is_verified"):
+        return {"status": "success", "message": "Already verified"}
+        
+    import random
+    otp = str(random.randint(100000, 999999))
+    await db.verifications.insert_one({
+        "restaurant_id": rid,
+        "otp": otp,
+        "created_at": now_iso()
+    })
+    
+    creds = {
+        "admin": {"email": rest.get("owner_email", ""), "password": "[Hidden - Set during registration]"},
+        "kitchen": {"email": f"kitchen@{rest.get('slug', '')}.com", "password": "[Hidden - Check Staff Settings]"},
+        "counter": {"email": f"counter@{rest.get('slug', '')}.com", "password": "[Hidden - Check Staff Settings]"}
+    }
+    
+    background_tasks.add_task(send_welcome_email, rest.get("owner_email"), rest.get("name"), creds, otp)
+    return {"status": "success", "message": "OTP resent successfully"}
+
 @router.post("/api/admin/verify", dependencies=[Depends(require_roles("admin"))])
-async def verify_restaurant(req: VerifyReq, user=Depends(require_user)):
+async def verify_restaurant(req: VerifyReq, background_tasks: BackgroundTasks, user=Depends(require_user)):
     rid = user["restaurant_id"]
     
     # Find OTP
@@ -64,6 +91,15 @@ async def verify_restaurant(req: VerifyReq, user=Depends(require_user)):
         {"id": rid}, 
         {"$set": update_fields}
     )
+    
+    rest = await db.restaurants.find_one({"id": rid})
+    if rest:
+        creds = {
+            "admin": {"email": rest.get("owner_email", ""), "password": "[Hidden - Set during registration]"},
+            "kitchen": {"email": f"kitchen@{rest.get('slug', '')}.com", "password": "[Hidden - Check Staff Settings]"},
+            "counter": {"email": f"counter@{rest.get('slug', '')}.com", "password": "[Hidden - Check Staff Settings]"}
+        }
+        background_tasks.add_task(send_verification_success_email, rest.get("owner_email"), rest.get("name"), creds)
     
     return {"status": "success", "message": "Restaurant successfully verified. Sandbox mode lifted."}
 

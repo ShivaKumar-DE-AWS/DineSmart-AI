@@ -28,10 +28,10 @@ def _send_email(to_email: str, subject: str, html_content: str) -> bool:
 
     try:
         if SMTP_PORT == 465:
-            server = smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT)
+            server = smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT, timeout=5)
             server.login(SMTP_USER, SMTP_PASSWORD)
         else:
-            server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+            server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=5)
             server.starttls()
             server.login(SMTP_USER, SMTP_PASSWORD)
             
@@ -101,3 +101,48 @@ def send_welcome_email(to_email: str, restaurant_name: str, creds: dict, otp: st
     </html>
     """
     return _send_email(to_email, subject, html)
+
+def send_verification_success_email(to_email: str, restaurant_name: str, creds: dict):
+    """Send successful verification email with credentials."""
+    subject = f"{restaurant_name} is now Verified on SmartDine AI!"
+    
+    html = f"""
+    <html>
+      <body style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eaeaea; border-radius: 10px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #8A1A2A; margin: 0;">SmartDine AI</h1>
+        </div>
+        
+        <h2>Congratulations, {restaurant_name}! 🎉</h2>
+        <p>Your restaurant has been successfully verified.</p>
+        
+        <div style="background-color: #f2fcf5; border-left: 4px solid #4CAF50; padding: 16px; margin: 24px 0;">
+            <h3 style="margin-top: 0; color: #2E7D32;">Sandbox Mode Lifted</h3>
+            <p>Your menus and tables are now live. You can start taking real customer orders immediately.</p>
+        </div>
+
+        <h3 style="margin-top: 30px;">Your Restaurant Credentials</h3>
+        <p>Keep these credentials safe. You can use them to access different parts of the system:</p>
+        <div style="background: #f5f5f5; padding: 16px; border-radius: 8px;">
+            <h4 style="margin-top: 0; color: #8A1A2A;">Admin Dashboard</h4>
+            <p style="margin: 4px 0;"><strong>Email:</strong> {creds.get('admin', {{}}).get('email', '')}</p>
+            <p style="margin: 4px 0;"><strong>Password:</strong> {creds.get('admin', {{}}).get('password', '')}</p>
+            
+            <h4 style="margin-top: 16px; color: #8A1A2A;">Kitchen Display System (KDS)</h4>
+            <p style="margin: 4px 0;"><strong>Email:</strong> {creds.get('kitchen', {{}}).get('email', '')}</p>
+            <p style="margin: 4px 0;"><strong>Password:</strong> {creds.get('kitchen', {{}}).get('password', '')}</p>
+            
+            <h4 style="margin-top: 16px; color: #8A1A2A;">Counter / Billing</h4>
+            <p style="margin: 4px 0;"><strong>Email:</strong> {creds.get('counter', {{}}).get('email', '')}</p>
+            <p style="margin: 4px 0;"><strong>Password:</strong> {creds.get('counter', {{}}).get('password', '')}</p>
+        </div>
+
+        <p style="margin-top: 30px;">If you need any help, reply to this email or contact us at <a href="mailto:admin@smartdineai.co.in">admin@smartdineai.co.in</a>.</p>
+        
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 30px 0;" />
+        <p style="font-size: 12px; color: #999; text-align: center;">© 2026 SmartDine AI Platform. All rights reserved.</p>
+      </body>
+    </html>
+    """
+    return _send_email(to_email, subject, html)
+
