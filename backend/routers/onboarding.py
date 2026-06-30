@@ -153,8 +153,14 @@ async def onboard_menu(file: UploadFile = File(...), user=Depends(require_user))
             item["image_url"] = img_url
             return item
 
-        items = await asyncio.gather(*(process_item(item) for item in items))
-        return {"items": items}
+        processed_items = []
+        for item in items:
+            processed = await process_item(item)
+            processed_items.append(processed)
+            # Add a tiny delay between requests to help with free-tier rate limits
+            await asyncio.sleep(2)
+            
+        return {"items": processed_items}
     except Exception as e:
         print(f"Exception details: {e}")
         raise HTTPException(status_code=500, detail=f"Menu extraction failed: {e}")
