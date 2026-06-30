@@ -147,11 +147,14 @@ export function TableSessionGuard({ slug }: { slug?: string }) {
     return () => clearInterval(id);
   }, [session, clear]);
 
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   return (
     <>
       <AnimatePresence>
         {/* Active table banner — shows after joining */}
-        {session && remaining && (
+        {mounted && session && remaining && (
           <motion.div
             key="table-banner"
             initial={{ y: -40, opacity: 0 }}
@@ -187,7 +190,7 @@ export function TableSessionGuard({ slug }: { slug?: string }) {
         )}
 
         {/* QR Scan Alias Experience — full page overlay */}
-        {qrToken && (
+        {mounted && qrToken && (
           <motion.div
             key="alias-overlay"
             initial={{ opacity: 0 }}

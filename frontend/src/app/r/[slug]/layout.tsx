@@ -339,7 +339,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
           </div>
         </Link>
       )}
-      {(path === `/r/${slug}` || path === `/r/${slug}/menu`) && <AIWaiterDock />}
+      {(path === `/r/${slug}` || path === `/r/${slug}/menu` || path === `/` || path === `/menu`) && <AIWaiterDock />}
 
       {/* Footer */}
       <footer className="mt-20 mehfil-royal-bg text-[#FAF5EC]" data-testid="mehfil-footer">
