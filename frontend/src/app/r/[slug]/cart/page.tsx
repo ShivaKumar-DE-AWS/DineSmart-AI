@@ -42,28 +42,34 @@ export default function CartPage() {
 
       <div className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-3" data-testid="cart-items">
-          {cart.items.map((i, idx) => (
+          {cart.items.map((i, idx) => {
+            const uid = i.cart_item_id || i.item_id;
+            return (
             <motion.div
-              key={i.item_id}
+              key={uid}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.04 }}
               className="mehfil-card flex items-center gap-4 rounded-xl p-4"
-              data-testid={`cart-row-${i.item_id}`}
+              data-testid={`cart-row-${uid}`}
             >
               <div className="flex-1">
                 <div className="font-royal text-[15px] text-brand-primary leading-tight">{i.name}</div>
+                {i.notes && <div className="text-xs text-[#1A1106]/70 mt-1 italic">{i.notes}</div>}
+                {i.modifiers && i.modifiers.length > 0 && (
+                   <div className="text-xs text-[#1A1106]/70 mt-1">{i.modifiers.join(", ")}</div>
+                )}
                 <div className="font-editorial italic text-xs text-[#1A1106]/60 mt-0.5">{formatCurrency(i.price)} each</div>
               </div>
               <div className="flex items-center gap-1 bg-[#5C0E1B] text-[#FAF5EC] rounded-full p-1 shadow">
-                <button onClick={() => cart.setQty(i.item_id, i.qty - 1)} data-testid={`cart-dec-${i.item_id}`} className="h-8 w-8 rounded-full hover:bg-brand-primary flex items-center justify-center"><Minus className="h-3.5 w-3.5" /></button>
-                <span className="px-2 w-7 text-center font-royal text-sm font-semibold" data-testid={`cart-qty-${i.item_id}`}>{i.qty}</span>
-                <button onClick={() => cart.setQty(i.item_id, i.qty + 1)} data-testid={`cart-inc-${i.item_id}`} className="h-8 w-8 rounded-full hover:bg-brand-primary flex items-center justify-center"><Plus className="h-3.5 w-3.5" /></button>
+                <button onClick={() => cart.setQty(uid, i.qty - 1)} data-testid={`cart-dec-${uid}`} className="h-8 w-8 rounded-full hover:bg-brand-primary flex items-center justify-center"><Minus className="h-3.5 w-3.5" /></button>
+                <span className="px-2 w-7 text-center font-royal text-sm font-semibold" data-testid={`cart-qty-${uid}`}>{i.qty}</span>
+                <button onClick={() => cart.setQty(uid, i.qty + 1)} data-testid={`cart-inc-${uid}`} className="h-8 w-8 rounded-full hover:bg-brand-primary flex items-center justify-center"><Plus className="h-3.5 w-3.5" /></button>
               </div>
               <div className="font-royal text-base text-brand-primary w-24 text-right">{formatCurrency(i.price * i.qty)}</div>
-              <button onClick={() => cart.remove(i.item_id)} data-testid={`cart-remove-${i.item_id}`} className="text-[#1A1106]/40 hover:text-brand-primary p-2 transition" title="Remove"><Trash2 className="h-4 w-4" /></button>
+              <button onClick={() => cart.remove(uid)} data-testid={`cart-remove-${uid}`} className="text-[#1A1106]/40 hover:text-brand-primary p-2 transition" title="Remove"><Trash2 className="h-4 w-4" /></button>
             </motion.div>
-          ))}
+          )})}
         </div>
 
         <aside className="mehfil-card rounded-2xl p-6 h-fit lg:sticky lg:top-24" data-testid="cart-summary">

@@ -67,21 +67,21 @@ RATE_LIMITS: Dict[str, str] = {
 # Custom rate limit middleware using slowapi's limiter
 class RateLimitMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        path = request.url.path
-        limit_str = RATE_LIMITS.get(path)
-        if limit_str:
-                # Apply rate limit dynamically
-                try:
-                    await limiter._check_request_limit(request, limit_str, None)
-                except RateLimitExceeded:
-                    return Response(
-                        content=json.dumps({"detail": "Rate limit exceeded. Try again shortly."}),
-                        status_code=429,
-                        media_type="application/json",
-                    )
-                except Exception:
-                    # ponytail: rate limiter unavailable (no Redis) — allow through
-                    pass
+        path = request.url.path.rstrip('/') or '/'
+        limit_str = RATE_LIMITS.get(path, "100/minute") # Global fallback
+        
+        # Apply rate limit dynamically
+        try:
+            await limiter._check_request_limit(request, limit_str, None)
+        except RateLimitExceeded:
+            return Response(
+                content=json.dumps({"detail": "Rate limit exceeded. Try again shortly."}),
+                status_code=429,
+                media_type="application/json",
+            )
+        except Exception:
+            # ponytail: rate limiter unavailable (no Redis) — allow through
+            pass
         return await call_next(request)
 
 

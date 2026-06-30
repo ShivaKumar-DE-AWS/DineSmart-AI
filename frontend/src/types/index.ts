@@ -23,6 +23,7 @@ export interface MenuItem {
 }
 
 export interface CartItem {
+  cart_item_id?: string;
   item_id: string;
   name: string;
   price: number;

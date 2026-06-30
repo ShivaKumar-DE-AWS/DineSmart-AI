@@ -18,8 +18,8 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 async def signup(req: SignupReq):
     if await db.users.find_one({"email": {"$regex": f"^{req.email}$", "$options": "i"}}):
         raise HTTPException(status_code=400, detail="Email already registered")
-    if req.role not in {"customer", "admin", "kitchen", "counter"}:
-        raise HTTPException(status_code=400, detail="Invalid role")
+    if req.role not in {"customer", "admin"}:
+        raise HTTPException(status_code=400, detail="Invalid role. Use settings portal to add staff.")
 
     import uuid, re
     user_id = str(uuid.uuid4())

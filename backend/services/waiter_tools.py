@@ -84,16 +84,13 @@ class WaiterTools:
         cart = await db.table_carts.find_one({"session_id": self.session_id})
         items = cart.get("items", []) if cart else []
         
-        # Check if item already exists
-        existing = next((i for i in items if i.get("item_id") == menu_item_id), None)
+        # Check if item already exists with exact same modifiers and notes
+        existing = next((i for i in items if i.get("item_id") == menu_item_id and set(i.get("modifiers", [])) == set(modifiers or []) and i.get("notes", "") == notes), None)
         if existing:
             existing["qty"] += quantity
-            if modifiers:
-                existing["modifiers"] = list(set(existing.get("modifiers", []) + modifiers))
-            if notes:
-                existing["notes"] = (existing.get("notes") or "") + " " + notes
         else:
             items.append({
+                "cart_item_id": str(uuid.uuid4()),
                 "item_id": menu_item_id,
                 "name": menu_item.get("name"),
                 "price": float(menu_item.get("price", 0)),
@@ -115,7 +112,7 @@ class WaiterTools:
         broadcast_cart(self.session_id, items)
         return f"Successfully added {quantity}x {menu_item.get('name')} to the cart."
             
-    async def update_order_item(self, item_id: str, quantity: int, modifiers: List[str] = None) -> str:
+    async def update_order_item(self, cart_item_id: str, quantity: int, modifiers: List[str] = None) -> str:
         """Change quantity or modifiers of an item already in the cart. quantity=0 removes it."""
         cart = await db.table_carts.find_one({"session_id": self.session_id})
         if not cart or not cart.get("items"):
@@ -124,12 +121,13 @@ class WaiterTools:
         items = cart.get("items", [])
         found_idx = -1
         for idx, item in enumerate(items):
-            if item.get("item_id") == item_id:
+            # fallback to item_id if cart_item_id is somehow missing
+            if item.get("cart_item_id", item.get("item_id")) == cart_item_id:
                 found_idx = idx
                 break
                 
         if found_idx == -1:
-            return f"Menu item {item_id} not found in the current cart."
+            return f"Item {cart_item_id} not found in the current cart."
             
         item_name = items[found_idx].get("name")
         

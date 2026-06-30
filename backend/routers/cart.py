@@ -34,6 +34,7 @@ async def update_cart(session_id: str, request: Request):
             continue
         # Only allow expected fields
         validated_items.append({
+            "cart_item_id": str(item.get("cart_item_id", "")),
             "item_id": str(item.get("item_id", "")),
             "name": str(item.get("name", ""))[:100],
             "price": float(item.get("price", 0)),
