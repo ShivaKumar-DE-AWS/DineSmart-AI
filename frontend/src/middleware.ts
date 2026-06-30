@@ -12,6 +12,24 @@ export function middleware(request: NextRequest) {
       ? hostname.replace(`.smartdineai.co.in`, "")
       : hostname.replace(`.localhost:3000`, "");
 
+  // Handle staff routes (admin, kitchen, counter)
+  const isStaffRoute = url.pathname.startsWith('/admin') || url.pathname.startsWith('/kitchen') || url.pathname.startsWith('/counter');
+  
+  if (isStaffRoute) {
+    // If on the main domain, block access to tenant-specific staff routes
+    if (
+      currentHost === "smartdineai.co.in" ||
+      currentHost === "www" ||
+      currentHost === "localhost:3000" ||
+      currentHost === hostname // Fallback if replace didn't do anything
+    ) {
+      url.pathname = "/404";
+      return NextResponse.rewrite(url);
+    }
+    // For subdomains, DO NOT rewrite staff routes so they hit app/admin natively!
+    return NextResponse.next();
+  }
+
   // If the host is the main domain or a system subdomain, proceed normally
   if (
     currentHost === "smartdineai.co.in" ||
