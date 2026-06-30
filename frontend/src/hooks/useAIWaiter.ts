@@ -32,9 +32,6 @@ export function useAIWaiter({ restaurantId, onOrderUpdate }: { restaurantId: str
         if (!session?.id || !restaurantId) return;
 
         // Build WebSocket URL
-        // If apiUrl() is https://api.smartdineai.co.in, we want wss://api.smartdineai.co.in
-        // If apiUrl() is http://localhost:8000, we want ws://localhost:8000
-        // Wait, if BASE is "", window.location.origin is used.
         const origin = typeof window !== 'undefined' ? window.location.origin : '';
         const base = apiUrl(""); // Might be just /api if rewrites are used, or https://api... if Next backend_url is set.
         let wsUrlStr = "";
@@ -108,11 +105,14 @@ export function useAIWaiter({ restaurantId, onOrderUpdate }: { restaurantId: str
                     }
                 } else if (data.type === "error") {
                     console.error("[useAIWaiter] Server error:", data.message);
-                    setMessages(prev => [...prev, {
-                        id: Date.now().toString(),
-                        role: "system",
-                        content: data.message
-                    }]);
+                    // Hide the initial handshake requirement from the user
+                    if (data.message !== "Session not initialized. Send session_start first.") {
+                        setMessages(prev => [...prev, {
+                            id: Date.now().toString(),
+                            role: "system",
+                            content: data.message
+                        }]);
+                    }
                     setIsLoading(false);
                 }
             } catch (e) {

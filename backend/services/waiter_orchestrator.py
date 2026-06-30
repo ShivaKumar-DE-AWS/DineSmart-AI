@@ -1,5 +1,6 @@
 import json
 import logging
+import uuid
 from typing import List, Dict, Any, Optional
 from google import genai
 from google.genai import types as genai_types

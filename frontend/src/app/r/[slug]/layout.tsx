@@ -48,6 +48,9 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
   const cartCount = useCart((s) => s.count());
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   const { session } = useTable();
   const { data: restaurant } = useQuery({
@@ -251,7 +254,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
               ))}
             </div>
 
-            {session && (
+            {mounted && session && (
               <button 
                 onClick={callStaff} 
                 disabled={callingStaff}
@@ -263,10 +266,10 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
                 <span className="hidden md:inline ml-2">Call Staff</span>
               </button>
             )}
-            <Link href={`/r/${slug}/cart`} data-testid="cart-link" aria-label={`Cart, ${cartCount} item${cartCount === 1 ? "" : "s"}`} className="relative inline-flex items-center gap-2 mehfil-btn-royal px-4 md:px-5 py-2.5 rounded-full text-xs md:text-sm font-medium tracking-wider uppercase">
+            <Link href={`/r/${slug}/cart`} data-testid="cart-link" aria-label={`Cart, ${mounted ? cartCount : 0} item${(mounted ? cartCount : 0) === 1 ? "" : "s"}`} className="relative inline-flex items-center gap-2 mehfil-btn-royal px-4 md:px-5 py-2.5 rounded-full text-xs md:text-sm font-medium tracking-wider uppercase">
               <ShoppingBag className="h-4 w-4" />
               <span className="hidden sm:inline">Cart</span>
-              {cartCount > 0 && (
+              {mounted && cartCount > 0 && (
                 <span data-testid="cart-count" className="absolute -top-1 -right-1 h-5 min-w-5 px-1 rounded-full bg-brand-secondary text-[#1A1106] text-[10px] font-bold flex items-center justify-center">
                   {cartCount}
                 </span>
@@ -295,7 +298,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
                   </Link>
                 ))}
               </div>
-              {session && (
+              {mounted && session && (
                 <button 
                   onClick={callStaff} 
                   disabled={callingStaff}
