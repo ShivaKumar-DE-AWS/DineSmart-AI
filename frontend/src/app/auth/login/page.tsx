@@ -149,8 +149,8 @@ function DemoCredentialsSection() {
   const [creds, setCreds] = useState<{ users: Array<{ email: string; password: string; name: string; role: string }> } | null>(null);
 
   useEffect(() => {
-    fetch("/api/super-admin/demo-creds")
-      .then(r => r.json()).then(d => setCreds(d))
+    api("/api/super-admin/demo-creds")
+      .then(d => setCreds(d))
       .catch(() => setCreds({ users: [] }));
   }, []);
 

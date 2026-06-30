@@ -369,8 +369,8 @@ function DemoCredentialsSection() {
 
   useEffect(() => {
     if (!selected) { setCreds(null); return; }
-    fetch(`/api/admin/demo-creds?slug=${encodeURIComponent(selected)}`)
-      .then(r => r.json()).then(d => setCreds(d))
+    api(`/api/admin/demo-creds?slug=${encodeURIComponent(selected)}`)
+      .then(d => setCreds(d))
       .catch(() => setCreds({ users: [] }));
   }, [selected]);
 

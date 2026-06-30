@@ -32,10 +32,10 @@ export async function api<T = any>(path: string, init: RequestInit = {}): Promis
   };
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  // ponytail: single retry for network errors (Render cold start)
-  for (let attempt = 0; attempt < 2; attempt++) {
+  // ponytail: extended retries for Vercel->Render cold start (Render takes ~50s to wake up)
+  for (let attempt = 0; attempt < 6; attempt++) {
     const controller = new AbortController();
-    const timeoutMs = Number((init as RequestInit & { timeoutMs?: number }).timeoutMs || 60_000);
+    const timeoutMs = Number((init as RequestInit & { timeoutMs?: number }).timeoutMs || 30_000);
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
     if (init.signal) {
       if (init.signal.aborted) controller.abort();
@@ -54,19 +54,23 @@ export async function api<T = any>(path: string, init: RequestInit = {}): Promis
             msg = j.detail || j.message || msg; 
           }
         } catch { /* ignore parse errors */ }
-        throw new Error(msg);
+        const err: any = new Error(msg);
+        err.status = res.status;
+        throw err;
       }
       const ct = res.headers.get("content-type") || "";
       if (ct.includes("application/json")) return res.json();
       return (await res.text()) as unknown as T;
-    } catch (error) {
+    } catch (error: any) {
       clearTimeout(timeout);
-      if (attempt === 1) {
-        if (controller.signal.aborted) throw new Error("Request timed out. Please try again.");
+      const isRetryable = !error.status || [502, 503, 504].includes(error.status);
+      
+      if (attempt === 5 || !isRetryable) {
+        if (error.name === "AbortError") throw new Error("Request timed out. Server might be waking up.");
         throw error;
       }
-      // ponytail: network error — wait 2s for Render cold start, retry once
-      await new Promise(r => setTimeout(r, 2000));
+      // ponytail: network error or cold start proxy timeout — wait 3s, retry
+      await new Promise(r => setTimeout(r, 3000));
     }
   }
   throw new Error("Unreachable");
