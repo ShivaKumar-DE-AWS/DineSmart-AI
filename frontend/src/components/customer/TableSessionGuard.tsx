@@ -108,7 +108,7 @@ export function TableSessionGuard({ slug }: { slug?: string }) {
       if (currentRestaurantId && res.table.restaurant_id && res.table.restaurant_id !== currentRestaurantId) {
         toast.error("This table belongs to a different restaurant. Please scan the correct QR code.");
         setQrToken(null);
-        router.replace(path || `/r/${slugFromPath}`, { scroll: false });
+        router.replace(`/r/${slugFromPath}`, { scroll: false });
         return;
       }
 
@@ -120,7 +120,7 @@ export function TableSessionGuard({ slug }: { slug?: string }) {
       const err = e as Error;
       toast.error(err.message || "Invalid table QR");
       setQrToken(null);
-      router.replace(path || `/r/${slugFromPath}`, { scroll: false });
+      router.replace(`/r/${slugFromPath}`, { scroll: false });
     } finally {
       setScanning(false);
     }
