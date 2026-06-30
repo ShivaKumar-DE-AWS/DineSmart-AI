@@ -397,10 +397,10 @@ export default function MenuPage() {
                 width={320} 
                 height={520} 
                 size="stretch" 
-                minWidth={300} 
-                maxWidth={400} 
+                minWidth={250} 
+                maxWidth={450} 
                 minHeight={400} 
-                maxHeight={600} 
+                maxHeight={650} 
                 maxShadowOpacity={0.5} 
                 showCover={true} 
                 mobileScrollSupport={true} 
