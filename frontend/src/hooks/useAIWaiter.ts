@@ -1,0 +1,129 @@
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { api, apiUrl } from "@/lib/api";
+import { useTable } from "@/stores/table";
+
+export type Message = {
+    id: string;
+    role: 'user' | 'assistant' | 'system';
+    content: string;
+};
+
+export function useAIWaiter({ restaurantId, onOrderUpdate }: { restaurantId: string; onOrderUpdate?: (orderData: any) => void }) {
+    const { session } = useTable();
+    const [messages, setMessages] = useState<Message[]>([]);
+    const [input, setInput] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
+    const wsRef = useRef<WebSocket | null>(null);
+
+    // Initial greeting
+    useEffect(() => {
+        if (messages.length === 0) {
+            setMessages([{
+                id: "greeting",
+                role: "assistant",
+                content: `Namaste! I'm your AI Waiter. I can help you explore the menu, recommend dishes based on your cravings, or add items to your cart. Feel free to type or tap the microphone to speak with me!`
+            }]);
+        }
+    }, [messages.length]);
+
+    // Connect to WebSocket
+    useEffect(() => {
+        if (!session?.id || !restaurantId) return;
+
+        // Build WebSocket URL
+        // If apiUrl() is https://api.smartdineai.co.in, we want wss://api.smartdineai.co.in
+        // If apiUrl() is http://localhost:8000, we want ws://localhost:8000
+        // Wait, if BASE is "", window.location.origin is used.
+        const origin = typeof window !== 'undefined' ? window.location.origin : '';
+        const base = apiUrl(""); // Might be just /api if rewrites are used, or https://api... if Next backend_url is set.
+        let wsUrlStr = "";
+        
+        if (base.startsWith("http")) {
+            wsUrlStr = base.replace("http://", "ws://").replace("https://", "wss://");
+        } else {
+            // Relative path, use window.location
+            const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+            wsUrlStr = `${proto}//${window.location.host}${base}`;
+        }
+        
+        const wsUrl = `${wsUrlStr}/api/ws/ai-waiter/${session.id}`;
+        
+        const ws = new WebSocket(wsUrl);
+        wsRef.current = ws;
+
+        ws.onopen = () => {
+            console.log("[useAIWaiter] WebSocket connected");
+            ws.send(JSON.stringify({
+                type: "session_start",
+                restaurant_id: restaurantId,
+                table_id: session.table_id || "",
+                qr_token: session.qr_token || "",
+                mode: "text"
+            }));
+        };
+
+        ws.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                if (data.type === "assistant_text") {
+                    setMessages(prev => [...prev, {
+                        id: Date.now().toString(),
+                        role: "assistant",
+                        content: data.text
+                    }]);
+                    setIsLoading(false);
+                } else if (data.type === "order_update") {
+                    if (onOrderUpdate) {
+                        onOrderUpdate(data);
+                    }
+                } else if (data.type === "error") {
+                    console.error("[useAIWaiter] Server error:", data.message);
+                    setMessages(prev => [...prev, {
+                        id: Date.now().toString(),
+                        role: "system",
+                        content: data.message
+                    }]);
+                    setIsLoading(false);
+                }
+            } catch (e) {
+                console.error("[useAIWaiter] Failed to parse message:", e);
+            }
+        };
+
+        ws.onerror = (error) => {
+            console.error("[useAIWaiter] WebSocket error:", error);
+            setIsLoading(false);
+        };
+
+        ws.onclose = () => {
+            console.log("[useAIWaiter] WebSocket disconnected");
+            setIsLoading(false);
+        };
+
+        return () => {
+            ws.close();
+        };
+    }, [session?.id, restaurantId, onOrderUpdate]);
+
+    const append = useCallback((msg: { role: 'user', content: string }) => {
+        setMessages(prev => [...prev, { id: Date.now().toString(), ...msg }]);
+        setIsLoading(true);
+        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+            wsRef.current.send(JSON.stringify({
+                type: "user_text",
+                text: msg.content
+            }));
+        } else {
+            console.error("[useAIWaiter] WebSocket is not open");
+            setIsLoading(false);
+        }
+    }, []);
+
+    return {
+        messages,
+        input,
+        setInput,
+        append,
+        isLoading
+    };
+}

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Sparkles, Send, X, Loader2, Mic, MessageSquare, BookOpen, Plus, Minus, Square, Volume2, VolumeX, ArrowRight } from "lucide-react";
 import { useRouter , useParams} from "next/navigation";
 import Link from "next/link";
-import { useChat } from "@ai-sdk/react";
+import { useAIWaiter } from "@/hooks/useAIWaiter";
 import { useRestaurantConfig } from "@/hooks/useRestaurantConfig";
 import { api, apiUrl } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
@@ -124,45 +124,16 @@ export function AIWaiterDock() {
     return pool.slice(0, 3);
   }, [menu]);
 
-  const { messages, input, setInput, append, isLoading: streaming } = useChat({
-    api: "/api/chat",
-    body: {
-      menu: menu.map((m) => ({ id: m.id, name: m.name, price: m.price, description: m.description, tags: m.tags })),
-      language,
-      tone,
-      restaurantName,
-      cart: cart.items,
-    },
-    initialMessages: [
-      {
-        id: "greeting",
-        role: "assistant",
-        content: `Namaste! I'm your AI Waiter here at ${restaurantName}. I can help you explore the menu, recommend dishes based on your cravings, or add items to your cart. Feel free to type or tap the microphone to speak with me!`,
-      }
-    ],
-    onToolCall: async ({ toolCall }) => {
-      if (toolCall.toolName === "addToTray") {
-        const args = toolCall.args as any;
-        if (!args.itemId) return "No item ID provided";
-        const hit = menu.find((m) => m.id === args.itemId);
-        if (hit) {
-          cart.add(hit, args.quantity || 1);
-          toast.success(`Added ${args.quantity || 1}x ${hit.name}`);
-          return "Added successfully";
-        }
-        return "Item not found on menu";
-      } else if (toolCall.toolName === "removeFromTray") {
-        const args = toolCall.args as any;
-        if (!args.itemId) return "No item ID provided";
-        cart.remove(args.itemId);
-        toast.success(`Removed item`);
-        return "Removed successfully";
-      } else if (toolCall.toolName === "proceedToCheckout") {
-        router.push(`/r/${slug}/checkout`);
-        setOpen(false);
-        return "Navigated to checkout";
-      }
-    }
+  const handleOrderUpdate = useCallback((orderData: any) => {
+    // When the backend AI updates the order, we want to resync our local cart state.
+    // We can just rely on the API polling, or directly mutate the cart.
+    // For simplicity, we'll let the user see the visual toast and the cart poll will pick it up.
+    toast.success("Order updated by AI Waiter!");
+  }, []);
+
+  const { messages, input, setInput, append, isLoading: streaming } = useAIWaiter({
+    restaurantId: restaurantConfig?.id || "",
+    onOrderUpdate: handleOrderUpdate
   });
 
   useEffect(() => {
