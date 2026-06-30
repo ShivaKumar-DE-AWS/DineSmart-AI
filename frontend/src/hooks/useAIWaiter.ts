@@ -8,7 +8,7 @@ export type Message = {
     content: string;
 };
 
-export function useAIWaiter({ restaurantId, onOrderUpdate }: { restaurantId: string; onOrderUpdate?: (orderData: any) => void }) {
+export function useAIWaiter({ restaurantId, mode, onOrderUpdate }: { restaurantId: string; mode: 'chat' | 'voice'; onOrderUpdate?: (orderData: any) => void }) {
     const { session } = useTable();
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState("");
@@ -16,20 +16,16 @@ export function useAIWaiter({ restaurantId, onOrderUpdate }: { restaurantId: str
     const wsRef = useRef<WebSocket | null>(null);
     const audioCtxRef = useRef<AudioContext | null>(null);
 
-    // Initial greeting
-    useEffect(() => {
-        if (messages.length === 0) {
-            setMessages([{
-                id: "greeting",
-                role: "assistant",
-                content: `Namaste! I'm your AI Waiter. I can help you explore the menu, recommend dishes based on your cravings, or add items to your cart. Feel free to type or tap the microphone to speak with me!`
-            }]);
-        }
-    }, [messages.length]);
-
     // Connect to WebSocket
     useEffect(() => {
         if (!session?.id || !restaurantId) return;
+        
+        // Reset messages when mode changes
+        setMessages([{
+            id: "greeting",
+            role: "assistant",
+            content: `Namaste! I'm your AI Waiter. I can help you explore the menu, recommend dishes based on your cravings, or add items to your cart. Feel free to type or tap the microphone to speak with me!`
+        }]);
 
         // Build WebSocket URL
         let backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
@@ -55,7 +51,7 @@ export function useAIWaiter({ restaurantId, onOrderUpdate }: { restaurantId: str
                 restaurant_id: restaurantId,
                 table_id: session.table_id || "",
                 qr_token: "",
-                mode: "text"
+                mode: mode
             }));
         };
 
@@ -131,9 +127,12 @@ export function useAIWaiter({ restaurantId, onOrderUpdate }: { restaurantId: str
         };
 
         return () => {
-            ws.close();
+            if (wsRef.current) {
+                wsRef.current.close();
+                wsRef.current = null;
+            }
         };
-    }, [session?.id, restaurantId, onOrderUpdate]);
+    }, [session?.id, restaurantId, mode, onOrderUpdate]);
 
     const append = useCallback((msg: { role: 'user', content: string }) => {
         setMessages(prev => [...prev, { id: Date.now().toString(), ...msg }]);

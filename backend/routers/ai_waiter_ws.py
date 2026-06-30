@@ -117,7 +117,7 @@ async def ai_waiter_websocket(websocket: WebSocket, session_id: str):
                     {"$set": session_doc},
                     upsert=True
                 )
-                orchestrator = WaiterOrchestrator(session_id, restaurant_id, table_id)
+                orchestrator = WaiterOrchestrator(session_id, restaurant_id, table_id, mode)
                 await websocket.send_json({"type": "session_started", "session_id": session_id})
                 
             elif msg_type == "voice_start":

@@ -38,7 +38,7 @@ export function TableSessionGuard({ slug }: { slug?: string }) {
     if (typeof window === "undefined") return "";
     const k = localStorage.getItem("sd-did");
     if (k) return k;
-    const id = crypto.randomUUID();
+    const id = typeof crypto.randomUUID === "function" ? crypto.randomUUID() : Math.random().toString(36).substring(2) + Date.now().toString(36);
     localStorage.setItem("sd-did", id);
     return id;
   });
@@ -115,7 +115,7 @@ export function TableSessionGuard({ slug }: { slug?: string }) {
       setSession(res.session);
       toast.success(`Welcome to Table ${res.table.number}, ${displayName}!`);
       setQrToken(null);
-      router.replace(`/r/${slugFromPath}/menu`, { scroll: false });
+      router.replace(`/r/${slugFromPath}`, { scroll: false });
     } catch (e) {
       const err = e as Error;
       toast.error(err.message || "Invalid table QR");

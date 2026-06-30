@@ -135,6 +135,7 @@ export function AIWaiterDock() {
 
   const { messages, input, setInput, append, sendAudio, startVoice, stopVoice, isLoading: streaming } = useAIWaiter({
     restaurantId: restaurantConfig?.id || "",
+    mode: mode,
     onOrderUpdate: handleOrderUpdate
   });
 
@@ -235,7 +236,16 @@ export function AIWaiterDock() {
       return;
     }
 
-    const recognition = new SpeechRecognition();
+    let recognition: any;
+    try {
+      recognition = new SpeechRecognition();
+    } catch (err) {
+      console.error("[ai-waiter] SpeechRecognition init failed", err);
+      toast.error("Voice chat is blocked or unsupported here. Switching to chat mode.");
+      setMode("chat");
+      return;
+    }
+    
     (window as any).activeSpeechRec = recognition;
     recognition.continuous = true;
     recognition.interimResults = false;

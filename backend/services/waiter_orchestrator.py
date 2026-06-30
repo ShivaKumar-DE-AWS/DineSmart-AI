@@ -105,8 +105,8 @@ WAITER_TOOL = genai_types.Tool(function_declarations=WAITER_FUNCTIONS)
 
 
 class WaiterOrchestrator:
-    def __init__(self, session_id: str, restaurant_id: str, table_id: str):
-        self.session_id = session_id
+    def __init__(self, session_id: str, restaurant_id: str, table_id: str, mode: str = "chat"):
+        self.session_id = f"{session_id}_{mode}"
         self.restaurant_id = restaurant_id
         self.table_id = table_id
         self.tools = WaiterTools(session_id, restaurant_id, table_id)
@@ -239,9 +239,12 @@ Live Menu:
                     if part.text:
                         text_response += part.text
             
+            if text_response:
+                final_text += text_response.strip() + " "
+            
             if not function_calls:
                 # No more tools to call. This is the final text.
-                final_text = text_response
+                final_text = final_text.strip()
                 # Save assistant turn
                 await db.ai_waiter_turns.insert_one({
                     "turn_id": str(uuid.uuid4()),
