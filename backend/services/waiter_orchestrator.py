@@ -40,15 +40,15 @@ WAITER_FUNCTIONS = [
     ),
     genai_types.FunctionDeclaration(
         name="update_order_item",
-        description="Change quantity or modifiers of an item already in the order.",
+        description="Change quantity or modifiers of an item already in the cart.",
         parameters=genai_types.Schema(
             type=genai_types.Type.OBJECT,
             properties={
-                "order_item_id": genai_types.Schema(type=genai_types.Type.STRING),
+                "item_id": genai_types.Schema(type=genai_types.Type.STRING, description="The ID of the menu item in the cart"),
                 "quantity": genai_types.Schema(type=genai_types.Type.INTEGER, description="0 removes the item"),
                 "modifiers": genai_types.Schema(type=genai_types.Type.ARRAY, items=genai_types.Schema(type=genai_types.Type.STRING))
             },
-            required=["order_item_id", "quantity"]
+            required=["item_id", "quantity"]
         )
     ),
     genai_types.FunctionDeclaration(
@@ -116,8 +116,15 @@ class WaiterOrchestrator:
             for m in menu_docs
         )
         
+        cart_doc = await db.table_carts.find_one({"session_id": self.session_id})
+        cart_str = "The user currently has NO items in their cart."
+        if cart_doc and cart_doc.get("items"):
+            item_strs = [f"{i.get('qty', 1)}x {i.get('name')}" for i in cart_doc.get("items", [])]
+            cart_str = f"The user currently has these items in their cart: {', '.join(item_strs)}."
+        
         prompt = f"""You are the AI waiter for {restaurant_name}.
 You are speaking with a diner at table {self.table_id}.
+{cart_str}
 
 Rules:
 - NEVER state a price or item not present in the menu. Use search_menu to find dishes.

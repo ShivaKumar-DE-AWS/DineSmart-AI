@@ -44,32 +44,31 @@ class WaiterTools:
         return "\n".join(result)
 
     async def get_order_summary(self) -> str:
-        """Get the current order's items, quantities, and total."""
-        session = await db.ai_waiter_sessions.find_one({"session_id": self.session_id})
-        if not session or not session.get("order_id"):
-            return "The current order is empty."
+        """Get the current cart's items, quantities, and total."""
+        cart = await db.table_carts.find_one({"session_id": self.session_id})
+        if not cart or not cart.get("items"):
+            return "The current cart is empty."
             
-        order = await db.orders.find_one({"id": session["order_id"]})
-        if not order:
-            return "The current order is empty."
+        items = cart.get("items", [])
             
-        items = order.get("items", [])
-        if not items:
-            return "The current order is empty."
-            
-        result = [f"Order Summary (Status: {order.get('status')}):"]
+        result = ["Cart Summary:"]
+        subtotal = 0
         for idx, item in enumerate(items):
             mod_str = f" (Modifiers: {', '.join(item.get('modifiers', []))})" if item.get("modifiers") else ""
             note_str = f" [Notes: {item.get('notes')}]" if item.get("notes") else ""
-            result.append(f"{idx + 1}. {item['name']} x{item['qty']} = ₹{item['price'] * item['qty']}{mod_str}{note_str} (Item ID: {item.get('id')})")
+            item_total = float(item.get('price', 0)) * int(item.get('qty', 1))
+            subtotal += item_total
+            result.append(f"{idx + 1}. {item['name']} x{item['qty']} = ₹{item_total}{mod_str}{note_str} (Item ID: {item.get('item_id')})")
             
-        result.append(f"Subtotal: ₹{order.get('subtotal')}")
-        result.append(f"Tax: ₹{order.get('tax')}")
-        result.append(f"Total: ₹{order.get('total')}")
+        tax = round(subtotal * 0.05, 2)
+        total = subtotal + tax
+        result.append(f"Subtotal: ₹{subtotal}")
+        result.append(f"Tax: ₹{tax}")
+        result.append(f"Total: ₹{total}")
         return "\n".join(result)
 
     async def add_to_order(self, menu_item_id: str, quantity: int, modifiers: List[str] = None, notes: str = "") -> str:
-        """Add an item to the diner's current order."""
+        """Add an item to the diner's current cart."""
         if quantity <= 0:
             return "Quantity must be greater than 0."
             
@@ -80,153 +79,137 @@ class WaiterTools:
         if not menu_item.get("available", True):
             return f"Sorry, {menu_item.get('name')} is currently unavailable."
             
-        session = await db.ai_waiter_sessions.find_one({"session_id": self.session_id})
-        order_id = session.get("order_id") if session else None
+        from routers.cart import broadcast_cart
         
-        new_item = {
-            "id": str(uuid.uuid4()),
-            "item_id": menu_item_id,
-            "name": menu_item.get("name"),
-            "price": menu_item.get("price", 0),
-            "qty": quantity,
-            "modifiers": modifiers or [],
-            "notes": notes
-        }
+        cart = await db.table_carts.find_one({"session_id": self.session_id})
+        items = cart.get("items", []) if cart else []
         
-        if not order_id:
-            order_id = str(uuid.uuid4())
-            subtotal = new_item["price"] * quantity
-            tax = round(subtotal * 0.05, 2)
-            
-            order = {
-                "id": order_id,
-                "token": order_id[:6].upper(),
-                "customer_name": "AI Guest",
-                "customer_phone": "",
-                "restaurant_id": self.restaurant_id,
-                "table_number": "", 
-                "table_session_id": "", # To be filled if available
-                "items": [new_item],
-                "subtotal": subtotal,
-                "tax": tax,
-                "total": subtotal + tax,
-                "status": "draft",
-                "created_at": now_iso(),
-                "updated_at": now_iso(),
-                "order_type": "dine_in",
-                "payment_status": "pending",
-                "is_ai": True,
-            }
-            await db.orders.insert_one(order)
-            await db.ai_waiter_sessions.update_one({"session_id": self.session_id}, {"$set": {"order_id": order_id}})
+        # Check if item already exists
+        existing = next((i for i in items if i.get("item_id") == menu_item_id), None)
+        if existing:
+            existing["qty"] += quantity
+            if modifiers:
+                existing["modifiers"] = list(set(existing.get("modifiers", []) + modifiers))
+            if notes:
+                existing["notes"] = (existing.get("notes") or "") + " " + notes
         else:
-            order = await db.orders.find_one({"id": order_id})
-            if order.get("status") != "draft":
-                return "The current order has already been checked out. Please start a new session."
-                
-            items = order.get("items", [])
-            items.append(new_item)
+            items.append({
+                "item_id": menu_item_id,
+                "name": menu_item.get("name"),
+                "price": float(menu_item.get("price", 0)),
+                "qty": quantity,
+                "category": menu_item.get("category", ""),
+                "notes": notes if notes else None,
+                "modifiers": modifiers or []
+            })
             
-            subtotal = sum(i["price"] * i["qty"] for i in items)
-            tax = round(subtotal * 0.05, 2)
+        await db.table_carts.update_one(
+            {"session_id": self.session_id},
+            {"$set": {
+                "items": items,
+                "updated_at": now_iso()
+            }},
+            upsert=True
+        )
+        
+        broadcast_cart(self.session_id, items)
+        return f"Successfully added {quantity}x {menu_item.get('name')} to the cart."
             
-            await db.orders.update_one(
-                {"id": order_id},
-                {"$set": {
-                    "items": items,
-                    "subtotal": subtotal,
-                    "tax": tax,
-                    "total": subtotal + tax,
-                    "updated_at": now_iso()
-                }}
-            )
+    async def update_order_item(self, item_id: str, quantity: int, modifiers: List[str] = None) -> str:
+        """Change quantity or modifiers of an item already in the cart. quantity=0 removes it."""
+        cart = await db.table_carts.find_one({"session_id": self.session_id})
+        if not cart or not cart.get("items"):
+            return "No active cart found."
             
-        return f"Successfully added {quantity}x {menu_item.get('name')} to the order."
-
-    async def update_order_item(self, order_item_id: str, quantity: int, modifiers: List[str] = None) -> str:
-        """Change quantity or modifiers of an item already in the order. quantity=0 removes it."""
-        session = await db.ai_waiter_sessions.find_one({"session_id": self.session_id})
-        if not session or not session.get("order_id"):
-            return "No active order found."
-            
-        order_id = session["order_id"]
-        order = await db.orders.find_one({"id": order_id})
-        if not order:
-            return "Order not found."
-            
-        if order.get("status") != "draft":
-            return "Cannot modify an order that has already been checked out."
-            
-        items = order.get("items", [])
+        items = cart.get("items", [])
         found_idx = -1
         for idx, item in enumerate(items):
-            if item.get("id") == order_item_id:
+            if item.get("item_id") == item_id:
                 found_idx = idx
                 break
                 
         if found_idx == -1:
-            return f"Order item {order_item_id} not found in the current order."
+            return f"Menu item {item_id} not found in the current cart."
             
         item_name = items[found_idx].get("name")
         
         if quantity == 0:
             items.pop(found_idx)
-            msg = f"Removed {item_name} from the order."
+            msg = f"Removed {item_name} from the cart."
         else:
             items[found_idx]["qty"] = quantity
             if modifiers is not None:
                 items[found_idx]["modifiers"] = modifiers
             msg = f"Updated {item_name} quantity to {quantity}."
             
-        subtotal = sum(i["price"] * i["qty"] for i in items)
-        tax = round(subtotal * 0.05, 2)
-        
-        await db.orders.update_one(
-            {"id": order_id},
+        await db.table_carts.update_one(
+            {"session_id": self.session_id},
             {"$set": {
                 "items": items,
-                "subtotal": subtotal,
-                "tax": tax,
-                "total": subtotal + tax,
                 "updated_at": now_iso()
             }}
         )
+        
+        from routers.cart import broadcast_cart
+        broadcast_cart(self.session_id, items)
+        
         return msg
 
     async def checkout(self, confirmed_by_diner: bool) -> str:
-        """Finalize the order and send it to the kitchen."""
+        """Finalize the cart and send it to the kitchen as an order."""
         if not confirmed_by_diner:
             return "You must confirm the order with the diner before calling checkout."
             
-        session = await db.ai_waiter_sessions.find_one({"session_id": self.session_id})
-        if not session or not session.get("order_id"):
-            return "No active order to checkout."
+        cart = await db.table_carts.find_one({"session_id": self.session_id})
+        if not cart or not cart.get("items"):
+            return "Cannot checkout an empty cart."
             
-        order_id = session["order_id"]
-        order = await db.orders.find_one({"id": order_id})
+        items = cart.get("items", [])
         
-        if not order or order.get("status") != "draft":
-            return "Order is already checked out or invalid."
-            
-        if not order.get("items"):
-            return "Cannot checkout an empty order."
-            
         from routers.orders import broadcast_order_update
         from deps import next_token
         
         token = await next_token(self.restaurant_id, "dine_in")
         
-        await db.orders.update_one(
-            {"id": order_id},
-            {"$set": {
-                "status": "confirmed",
-                "token": token,
-                "updated_at": now_iso()
-            }}
-        )
+        subtotal = sum(float(i.get("price", 0)) * int(i.get("qty", 1)) for i in items)
+        tax = round(subtotal * 0.05, 2)
+        total = subtotal + tax
         
-        order["status"] = "confirmed"
-        order["token"] = token
+        # We need to map item_id to id for the orders collection
+        order_items = []
+        for i in items:
+            order_items.append({
+                "id": str(uuid.uuid4()),
+                "item_id": i.get("item_id"),
+                "name": i.get("name"),
+                "price": float(i.get("price", 0)),
+                "qty": int(i.get("qty", 1)),
+                "modifiers": i.get("modifiers", []),
+                "notes": i.get("notes", "")
+            })
+            
+        order_id = str(uuid.uuid4())
+        order = {
+            "id": order_id,
+            "token": token,
+            "customer_name": "AI Guest",
+            "customer_phone": "",
+            "restaurant_id": self.restaurant_id,
+            "table_number": str(self.table_id), 
+            "table_session_id": self.session_id,
+            "items": order_items,
+            "subtotal": subtotal,
+            "tax": tax,
+            "total": total,
+            "status": "confirmed",
+            "created_at": now_iso(),
+            "updated_at": now_iso(),
+            "order_type": "dine_in",
+            "payment_status": "pending",
+            "is_ai": True,
+        }
+        await db.orders.insert_one(order)
+        
         broadcast_order_update(self.restaurant_id, {"type": "new_order", "order": {k: v for k, v in order.items() if k != "_id"}})
         
         await db.ai_waiter_sessions.update_one(
@@ -234,16 +217,20 @@ class WaiterTools:
             {"$set": {"status": "checked_out", "last_activity_at": now_iso()}}
         )
         
+        # Clear the cart now that it's ordered
+        await db.table_carts.delete_one({"session_id": self.session_id})
+        from routers.cart import broadcast_cart
+        broadcast_cart(self.session_id, [])
+        
         return f"Checkout successful! Order sent to kitchen with token {token}."
 
     async def get_recommendations(self, based_on_order: bool = True) -> str:
         """Get upsell/pairing suggestions."""
-        session = await db.ai_waiter_sessions.find_one({"session_id": self.session_id})
         order_items = []
-        if session and session.get("order_id") and based_on_order:
-            order = await db.orders.find_one({"id": session["order_id"]})
-            if order:
-                order_items = order.get("items", [])
+        if based_on_order:
+            cart = await db.table_carts.find_one({"session_id": self.session_id})
+            if cart:
+                order_items = cart.get("items", [])
                 
         drinks = await db.menu.find({"restaurant_id": self.restaurant_id, "available": True, "category": {"$regex": "drink|beverage", "$options": "i"}}).to_list(5)
         desserts = await db.menu.find({"restaurant_id": self.restaurant_id, "available": True, "category": {"$regex": "dessert|sweet", "$options": "i"}}).to_list(5)
