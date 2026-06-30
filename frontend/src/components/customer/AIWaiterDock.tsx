@@ -305,7 +305,10 @@ export function AIWaiterDock() {
     setRecording(false);
   }, []);
 
-  const addToTray = (it: MenuItem) => { cart.add(it); toast.success(`${it.name} added to your tray`); };
+  const addToTray = (it: MenuItem) => { 
+    cart.add(it); 
+    sendText(`I have added ${it.name} to my cart.`);
+  };
 
   // Get the most recent recommendations across messages — used to show chips above input
   const latestRecs = useMemo(() => {

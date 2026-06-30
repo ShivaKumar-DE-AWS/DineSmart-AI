@@ -87,6 +87,17 @@ WAITER_FUNCTIONS = [
             },
             required=["reason"]
         )
+    ),
+    genai_types.FunctionDeclaration(
+        name="show_recommendations",
+        description="Show specific dish chips in the UI when you recommend them. Pass the IDs of the dishes you are suggesting.",
+        parameters=genai_types.Schema(
+            type=genai_types.Type.OBJECT,
+            properties={
+                "menu_item_ids": genai_types.Schema(type=genai_types.Type.ARRAY, items=genai_types.Schema(type=genai_types.Type.STRING))
+            },
+            required=["menu_item_ids"]
+        )
     )
 ]
 
@@ -132,13 +143,12 @@ You are speaking with a diner at table {self.table_id}.
 {cart_str}
 
 Rules:
-- Act EXACTLY like a real, conversational waiter. Be warm, polite, and contextual.
+- Act EXACTLY like a real, conversational human waiter. Be warm, polite, and natural.
 - Think about the natural flow of a meal: Starter -> Main Course -> Dessert / Drink.
-- When recommending items, analyze what they already have in their cart. If they have only starters, suggest a main course. If they have mains, suggest desserts or a refreshing drink.
+- When the user tells you they have added an item to their cart, ACKNOWLEDGE IT warmly ("Excellent choice! I've noted that.") and immediately suggest the logical next course or a pairing.
+- If you are recommending specific dishes, YOU MUST CALL the `show_recommendations` tool with the menu_item_ids of the dishes you are suggesting, so the UI can display them as quick-add buttons.
 - NEVER state a price or item not present in the menu. Use search_menu to find dishes.
-- If asked about allergens/dietary needs and the menu lacks tags, say you're not certain and offer to flag staff (escalate_to_staff).
-- ALWAYS confirm quantity and modifiers back to the diner BEFORE adding to the order.
-- Before calling checkout, read back the full order and total, and only proceed if the diner confirms.
+- NEVER use any markdown formatting (like **bold**, *italics*, or bullet points) in your response. Output plain, conversational text only, so the voice sounds perfectly natural.
 - Keep responses short, concise, and conversational. Do not output large walls of text.
 - If the diner asks for a human, or seems frustrated, call escalate_to_staff immediately.
 
@@ -152,8 +162,8 @@ Live Menu:
 """
         return prompt
         
-    async def process_message(self, user_text: str, cart_state: list = None) -> str:
-        """Processes a single user message and handles the tool loop."""
+    async def process_message(self, user_text: str, cart_state: list = None) -> tuple[str, list]:
+        """Processes a single user message and handles the tool loop. Returns (response_text, recommended_items)."""
         # 1. Fetch History
         history_docs = await db.ai_waiter_turns.find({"session_id": self.session_id}).sort("created_at", 1).to_list(20)
         contents = []
@@ -205,6 +215,7 @@ Live Menu:
         )
         
         final_text = ""
+        recommended_items = []
         loop_count = 0
         
         while loop_count < 5: # Max 5 tool turns per message
@@ -276,7 +287,7 @@ Live Menu:
                     elif fc.name == "add_to_order":
                         result_str = await self.tools.add_to_order(args.get("menu_item_id"), args.get("quantity", 1), args.get("modifiers", []), args.get("notes", ""))
                     elif fc.name == "update_order_item":
-                        result_str = await self.tools.update_order_item(args.get("order_item_id"), args.get("quantity", 1), args.get("modifiers", []))
+                        result_str = await self.tools.update_order_item(args.get("cart_item_id"), args.get("quantity", 1), args.get("modifiers", []))
                     elif fc.name == "get_order_summary":
                         result_str = await self.tools.get_order_summary()
                     elif fc.name == "checkout":
@@ -285,11 +296,21 @@ Live Menu:
                         result_str = await self.tools.get_recommendations(args.get("based_on_order", True))
                     elif fc.name == "escalate_to_staff":
                         result_str = await self.tools.escalate_to_staff(args.get("reason", ""))
+                    elif fc.name == "show_recommendations":
+                        # Fetch the actual menu items to send to the frontend UI
+                        item_ids = args.get("menu_item_ids", [])
+                        if item_ids:
+                            items_docs = await db.menu.find({"id": {"$in": item_ids}, "available": True}).to_list(10)
+                            # Remove _id
+                            for d in items_docs:
+                                d.pop("_id", None)
+                            recommended_items.extend(items_docs)
+                        result_str = json.dumps({"status": "UI chips shown to user"})
                     else:
                         result_str = f"Unknown function: {fc.name}"
                 except Exception as e:
-                    logger.error(f"Error in tool {fc.name}: {e}")
-                    result_str = f"Error executing tool: {str(e)}"
+                    logger.error(f"Error executing tool {fc.name}: {e}")
+                    result_str = f"Error: {e}"
                     
                 tool_responses_record.append({"name": fc.name, "result": result_str})
                 tool_parts_for_history.append(genai_types.Part.from_function_response(
@@ -314,4 +335,4 @@ Live Menu:
         if not final_text:
             final_text = "I encountered an error. Please try again."
             
-        return final_text
+        return final_text, recommended_items

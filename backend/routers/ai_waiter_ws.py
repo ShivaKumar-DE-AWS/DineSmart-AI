@@ -41,13 +41,17 @@ async def ai_waiter_websocket(websocket: WebSocket, session_id: str):
         
         # Process via Gemini
         try:
-            response_text = await orchestrator.process_message(text, cart_state=cart_state)
+            # 1. Send text to orchestrator
+            response_text, recommended_items = await orchestrator.process_message(text, cart_state=cart_state)
+            
+            # 2. Send text and recs back to client
             await websocket.send_json({
                 "type": "assistant_text",
-                "text": response_text
+                "text": response_text,
+                "recs": recommended_items
             })
             
-            # Trigger TTS
+            # 3. Stream Audio response
             audio_bytes = await generate_tts(response_text)
             if audio_bytes:
                 await websocket.send_bytes(audio_bytes)

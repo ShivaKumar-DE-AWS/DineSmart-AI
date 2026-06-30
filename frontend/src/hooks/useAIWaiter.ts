@@ -85,7 +85,8 @@ export function useAIWaiter({ restaurantId, onOrderUpdate }: { restaurantId: str
                     setMessages(prev => [...prev, {
                         id: Date.now().toString(),
                         role: "assistant",
-                        content: data.text
+                        content: data.text,
+                        recs: data.recs
                     }]);
                     setIsLoading(false);
                 } else if (data.type === "partial_transcript") {
