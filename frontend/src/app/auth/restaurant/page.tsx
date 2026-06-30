@@ -318,7 +318,9 @@ export default function RestaurantAuthPage() {
                     <div className="text-emerald-400 font-semibold text-sm">Trial Activated Successfully!</div>
                     <div>
                       <span className="text-stone">Your URL:</span>{" "}
-                      <a href={result.url} className="text-electric-blue hover:underline">{result.url}</a>
+                      <a href={typeof window !== "undefined" ? `${window.location.protocol}//${result.url.replace("/r/", "")}.${window.location.hostname.replace("www.", "")}${window.location.port ? ":" + window.location.port : ""}` : result.url} className="text-electric-blue hover:underline">
+                        {typeof window !== "undefined" ? `${window.location.protocol}//${result.url.replace("/r/", "")}.${window.location.hostname.replace("www.", "")}${window.location.port ? ":" + window.location.port : ""}` : result.url}
+                      </a>
                     </div>
                     <div className="space-y-1.5">
                       <div className="text-stone font-medium mb-1">Login Credentials:</div>
@@ -330,7 +332,7 @@ export default function RestaurantAuthPage() {
                       ))}
                     </div>
                     <Link
-                      href={result.url}
+                      href={typeof window !== "undefined" ? `${window.location.protocol}//${result.url.replace("/r/", "")}.${window.location.hostname.replace("www.", "")}${window.location.port ? ":" + window.location.port : ""}` : result.url}
                       className="block text-center bg-white hover:bg-cream text-ink font-semibold rounded-lg py-2 text-xs transition mt-2"
                     >
                       Visit Your Restaurant
