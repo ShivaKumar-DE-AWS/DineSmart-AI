@@ -215,133 +215,93 @@ export function AIWaiterDock() {
     vadPausedRef.current = !open || mode !== "voice" || streaming || voiceProcessing || ttsPlaying;
   }, [open, mode, streaming, voiceProcessing, ttsPlaying]);
 
-  // Continuous VAD Auto-Listen
+  // Continuous Browser Speech Recognition
   useEffect(() => {
     if (!open || mode !== "voice") {
-      if (workletNodeRef.current) {
-         workletNodeRef.current.disconnect();
-         workletNodeRef.current = null;
+      const rec = (window as any).activeSpeechRec;
+      if (rec) {
+        rec.onend = null;
+        rec.stop();
+        (window as any).activeSpeechRec = null;
       }
-      if (vadCtxRef.current) {
-        vadCtxRef.current.close().catch(() => {});
-        vadCtxRef.current = null;
-      }
-      if (vadStreamRef.current) {
-        vadStreamRef.current.getTracks().forEach(t => t.stop());
-        vadStreamRef.current = null;
-      }
-      stopVoice();
       setRecording(false);
       return;
     }
 
-    let isCleanup = false;
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      toast.error("Voice chat is not supported in this browser. Switching to chat mode.");
+      setMode("chat");
+      return;
+    }
 
-    if (!vadStreamRef.current) {
-      navigator.mediaDevices.getUserMedia({ audio: true }).then(async stream => {
-        if (isCleanup) { stream.getTracks().forEach(t => t.stop()); return; }
-        vadStreamRef.current = stream;
-        
-        startVoice(); // Tell backend we are in voice mode
+    const recognition = new SpeechRecognition();
+    (window as any).activeSpeechRec = recognition;
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    
+    // Map language
+    let langCode = "en-IN";
+    if (language === "hi") langCode = "hi-IN";
+    if (language === "te") langCode = "te-IN";
+    if (language === "ur") langCode = "ur-IN";
+    if (language === "ta") langCode = "ta-IN";
+    if (language === "mr") langCode = "mr-IN";
+    recognition.lang = langCode;
 
-        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-        // Sarvam requires 16kHz
-        const ctx = new AudioCtx({ sampleRate: 16000 });
-        vadCtxRef.current = ctx;
+    recognition.onresult = (event: any) => {
+      if (vadPausedRef.current) return;
+      let finalTranscript = "";
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript;
+        }
+      }
+      if (finalTranscript.trim()) {
+        sendText(finalTranscript);
+      }
+    };
 
-        const source = ctx.createMediaStreamSource(stream);
-        const analyser = ctx.createAnalyser();
-        analyser.minDecibels = -60; 
-        analyser.smoothingTimeConstant = 0.2;
-        source.connect(analyser);
+    recognition.onstart = () => {
+      if (!vadPausedRef.current) setRecording(true);
+    };
 
-        // Create inline worklet for PCM16 conversion
-        const workletCode = `
-          class PCMProcessor extends AudioWorkletProcessor {
-            process(inputs, outputs, parameters) {
-              const input = inputs[0];
-              if (input.length > 0) {
-                const channelData = input[0];
-                const pcm16 = new Int16Array(channelData.length);
-                for (let i = 0; i < channelData.length; i++) {
-                  let s = Math.max(-1, Math.min(1, channelData[i]));
-                  pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-                }
-                this.port.postMessage(pcm16.buffer, [pcm16.buffer]);
-              }
-              return true;
-            }
-          }
-          registerProcessor('pcm-processor', PCMProcessor);
-        `;
-        const blob = new Blob([workletCode], { type: 'application/javascript' });
-        const url = URL.createObjectURL(blob);
-        
-        await ctx.audioWorklet.addModule(url);
-        const workletNode = new AudioWorkletNode(ctx, 'pcm-processor');
-        workletNodeRef.current = workletNode;
-        
-        workletNode.port.onmessage = (e) => {
-           if (speaking && !vadPausedRef.current) {
-               sendAudio(e.data); // e.data is ArrayBuffer
-           }
-        };
-
-        analyser.connect(workletNode);
-        // Worklet needs to connect to destination to process data
-        workletNode.connect(ctx.destination);
-        
-        let speaking = false;
-        let silenceStart = 0;
-
-        const data = new Uint8Array(analyser.frequencyBinCount);
-        const check = () => {
-          if (isCleanup) return;
-          requestAnimationFrame(check);
-
-          if (vadPausedRef.current) {
-            if (speaking) {
-              speaking = false;
-              setRecording(false);
-            }
-            return;
-          }
-
-          analyser.getByteFrequencyData(data);
-          const active = data.some(v => v > 20); // volume threshold
-
-          if (active) {
-            if (!speaking) {
-              speaking = true;
-              setRecording(true);
-            }
-            silenceStart = 0;
-          } else {
-            if (speaking) {
-              if (silenceStart === 0) silenceStart = performance.now();
-              else if (performance.now() - silenceStart > 1200) { // 1.2s silence
-                speaking = false;
-                setRecording(false);
-              }
-            }
-          }
-        };
-        check();
-      }).catch(err => {
-        console.warn("[ai-waiter] Mic access denied", err);
-      });
+    recognition.onend = () => {
+      setRecording(false);
+      if (open && mode === "voice" && !vadPausedRef.current) {
+        try { recognition.start(); } catch (e) {} // Auto-restart if still in voice mode
+      }
+    };
+    
+    // Start initial recognition
+    if (!vadPausedRef.current) {
+      try { recognition.start(); } catch (e) {}
     }
 
     return () => {
-      isCleanup = true;
+      recognition.onend = null;
+      recognition.stop();
+      (window as any).activeSpeechRec = null;
+      setRecording(false);
     };
-  }, [open, mode]); // Only re-run when mode or open changes!
+  }, [open, mode, language, sendText]);
+
+  // Pause recognition when TTS or streaming is active
+  useEffect(() => {
+    const rec = (window as any).activeSpeechRec;
+    if (!rec) return;
+    if (vadPausedRef.current) {
+      rec.stop();
+      setRecording(false);
+    } else {
+      try { rec.start(); } catch(e) {}
+    }
+  }, [ttsPlaying, streaming, voiceProcessing]);
 
   const startRecording = useCallback(() => {}, []);
   const stopRecording = useCallback(() => {
-    // Allows user to manually force-stop VAD early by tapping the visualizer
-    const rec = mediaRecorderRef.current;
-    if (rec && rec.state !== "inactive") rec.stop();
+    const rec = (window as any).activeSpeechRec;
+    if (rec) rec.stop();
     setRecording(false);
   }, []);
 
@@ -362,14 +322,44 @@ export function AIWaiterDock() {
     if (items.length === 0) {
       return [
         "What's your signature dish?",
-        "Suggest a pairing",
+        "Suggest a starter",
         "Build me a meal for 2",
         "Something not too spicy",
       ];
     }
-    const firstItem = items[0].name;
+    
+    const hasStarter = items.some(i => {
+        const cat = i.category?.toLowerCase() || "";
+        return cat.includes('starter') || cat.includes('soup') || cat.includes('appetizer');
+    });
+    const hasMain = items.some(i => {
+        const cat = i.category?.toLowerCase() || "";
+        return cat.includes('main') || cat.includes('biryani') || cat.includes('curry') || cat.includes('bread');
+    });
+    const hasDessert = items.some(i => {
+        const cat = i.category?.toLowerCase() || "";
+        return cat.includes('dessert') || cat.includes('sweet') || cat.includes('ice');
+    });
+
+    if (hasMain && !hasDessert) {
+       return [
+         "Suggest a dessert",
+         "Add a refreshing drink",
+         "What's popular for sweets?",
+         "That's all, bill please"
+       ];
+    }
+    if (hasStarter && !hasMain) {
+       return [
+         "Suggest a main course",
+         `What goes well with ${items[0].name}?`,
+         "Add a refreshing drink",
+         "That's all, bill please"
+       ];
+    }
+    
     return [
-      `What goes well with ${firstItem}?`,
+      `What goes well with ${items[items.length - 1].name}?`,
       "Suggest a dessert",
       "Add a refreshing drink",
       "That's all, bill please",

@@ -35,13 +35,13 @@ async def ai_waiter_websocket(websocket: WebSocket, session_id: str):
             if orchestrator:
                 await handle_user_text(transcript)
 
-    async def handle_user_text(text: str):
+    async def handle_user_text(text: str, cart_state: list = None):
         # Update last activity
         await db.ai_waiter_sessions.update_one({"session_id": session_id}, {"$set": {"last_activity_at": now_iso()}})
         
         # Process via Gemini
         try:
-            response_text = await orchestrator.process_message(text)
+            response_text = await orchestrator.process_message(text, cart_state=cart_state)
             await websocket.send_json({
                 "type": "assistant_text",
                 "text": response_text
@@ -137,8 +137,9 @@ async def ai_waiter_websocket(websocket: WebSocket, session_id: str):
                 if not orchestrator:
                     await websocket.send_json({"type": "error", "message": "Session not started."})
                     continue
-                    
-                await handle_user_text(text)
+                
+                cart_state = msg.get("cart_state")    
+                await handle_user_text(text, cart_state)
             
     except WebSocketDisconnect:
         logger.info(f"WebSocket disconnected for session {session_id}")

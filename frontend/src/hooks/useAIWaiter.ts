@@ -138,9 +138,12 @@ export function useAIWaiter({ restaurantId, onOrderUpdate }: { restaurantId: str
         setMessages(prev => [...prev, { id: Date.now().toString(), ...msg }]);
         setIsLoading(true);
         if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+            // Using useCart.getState().items to get the latest cart state without reactivity issues in useCallback
+            const { useCart } = require("@/stores/cart");
             wsRef.current.send(JSON.stringify({
                 type: "user_text",
-                text: msg.content
+                text: msg.content,
+                cart_state: useCart.getState().items
             }));
         } else {
             console.error("[useAIWaiter] WebSocket is not open");

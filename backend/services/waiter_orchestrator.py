@@ -101,7 +101,7 @@ class WaiterOrchestrator:
         self.tools = WaiterTools(session_id, restaurant_id, table_id)
         self.client = genai.Client(api_key=GEMINI_API_KEY)
         
-    async def build_system_prompt(self) -> str:
+    async def build_system_prompt(self, cart_state: list = None) -> str:
         rest = await db.restaurants.find_one({"id": self.restaurant_id})
         restaurant_name = rest.get("name", "SmartDine") if rest else "SmartDine"
         
@@ -116,22 +116,30 @@ class WaiterOrchestrator:
             for m in menu_docs
         )
         
-        cart_doc = await db.table_carts.find_one({"session_id": self.session_id})
         cart_str = "The user currently has NO items in their cart."
-        if cart_doc and cart_doc.get("items"):
-            item_strs = [f"[ID: {i.get('cart_item_id', i.get('item_id'))}] {i.get('qty', 1)}x {i.get('name')}" for i in cart_doc.get("items", [])]
-            cart_str = f"The user currently has these items in their cart:\n" + "\n".join(item_strs)
+        if cart_state is not None:
+            if cart_state:
+                item_strs = [f"[ID: {i.get('cart_item_id', i.get('item_id'))}] {i.get('qty', 1)}x {i.get('name')}" for i in cart_state]
+                cart_str = f"The user currently has these items in their cart:\n" + "\n".join(item_strs)
+        else:
+            cart_doc = await db.table_carts.find_one({"session_id": self.session_id})
+            if cart_doc and cart_doc.get("items"):
+                item_strs = [f"[ID: {i.get('cart_item_id', i.get('item_id'))}] {i.get('qty', 1)}x {i.get('name')}" for i in cart_doc.get("items", [])]
+                cart_str = f"The user currently has these items in their cart:\n" + "\n".join(item_strs)
         
-        prompt = f"""You are the AI waiter for {restaurant_name}.
+        prompt = f"""You are a highly professional, humanized, and charming waiter for {restaurant_name}.
 You are speaking with a diner at table {self.table_id}.
 {cart_str}
 
 Rules:
+- Act EXACTLY like a real, conversational waiter. Be warm, polite, and contextual.
+- Think about the natural flow of a meal: Starter -> Main Course -> Dessert / Drink.
+- When recommending items, analyze what they already have in their cart. If they have only starters, suggest a main course. If they have mains, suggest desserts or a refreshing drink.
 - NEVER state a price or item not present in the menu. Use search_menu to find dishes.
 - If asked about allergens/dietary needs and the menu lacks tags, say you're not certain and offer to flag staff (escalate_to_staff).
 - ALWAYS confirm quantity and modifiers back to the diner BEFORE adding to the order.
 - Before calling checkout, read back the full order and total, and only proceed if the diner confirms.
-- Keep responses short and conversational.
+- Keep responses short, concise, and conversational. Do not output large walls of text.
 - If the diner asks for a human, or seems frustrated, call escalate_to_staff immediately.
 
 [SECURITY & ANTI-PROMPT INJECTION GUARDRAILS]
@@ -144,7 +152,7 @@ Live Menu:
 """
         return prompt
         
-    async def process_message(self, user_text: str) -> str:
+    async def process_message(self, user_text: str, cart_state: list = None) -> str:
         """Processes a single user message and handles the tool loop."""
         # 1. Fetch History
         history_docs = await db.ai_waiter_turns.find({"session_id": self.session_id}).sort("created_at", 1).to_list(20)
@@ -189,7 +197,7 @@ Live Menu:
             "created_at": now_iso()
         })
         
-        system_instruction = await self.build_system_prompt()
+        system_instruction = await self.build_system_prompt(cart_state=cart_state)
         config = genai_types.GenerateContentConfig(
             system_instruction=system_instruction,
             tools=[WAITER_TOOL],
