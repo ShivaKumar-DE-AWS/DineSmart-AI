@@ -1,0 +1,15 @@
+Copyright (c) 2026 Shiva Kumar / SmartDine AI
+All rights reserved.
+
+This repository and all associated source code, prompts, designs, text, assets,
+configuration, documentation, and implementation details are proprietary unless a
+separate written license expressly states otherwise.
+
+No permission is granted to copy, reproduce, modify, distribute, sublicense,
+publish, sell, deploy, or create derivative works from this project, in whole or
+in part, without prior written permission from the copyright owner.
+
+Unauthorized use, redistribution, or commercial exploitation is prohibited.
+
+Contact:
+admin@smartdineai.co.in

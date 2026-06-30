@@ -1,5 +1,3 @@
-# Here are your Instructions
-
 ## Ownership Notice
 
 **Copyright (c) 2026 Shiva Kumar / SmartDine AI. All rights reserved.**
