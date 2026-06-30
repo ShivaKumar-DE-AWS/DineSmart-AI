@@ -98,6 +98,7 @@ export function AIWaiterDock() {
     staleTime: 30_000,
   });
   const menu = useMemo(() => (menuData?.items ?? []).filter((i) => i.available !== false), [menuData]);
+  const workletNodeRef = useRef<any>(null);
 
   const menuByName = useMemo(() => {
     const m = new Map<string, MenuItem>();
@@ -131,10 +132,6 @@ export function AIWaiterDock() {
     toast.success("Order updated by AI Waiter!");
   }, []);
 
-  const { messages, input, setInput, append, isLoading: streaming } = useAIWaiter({
-    restaurantId: restaurantConfig?.id || "",
-    onOrderUpdate: handleOrderUpdate
-  });
 
   useEffect(() => {
     const onOpen = (e: Event) => {
@@ -208,10 +205,18 @@ export function AIWaiterDock() {
     vadPausedRef.current = !open || mode !== "voice" || streaming || voiceProcessing || ttsPlaying;
   }, [open, mode, streaming, voiceProcessing, ttsPlaying]);
 
+  const { messages, input, setInput, append, sendAudio, startVoice, stopVoice, isLoading: streaming } = useAIWaiter({
+    restaurantId: restaurantConfig?.id || "",
+    onOrderUpdate: handleOrderUpdate
+  });
+
   // Continuous VAD Auto-Listen
   useEffect(() => {
     if (!open || mode !== "voice") {
-      // Complete teardown only if we leave Voice mode or close dock
+      if (workletNodeRef.current) {
+         workletNodeRef.current.disconnect();
+         workletNodeRef.current = null;
+      }
       if (vadCtxRef.current) {
         vadCtxRef.current.close().catch(() => {});
         vadCtxRef.current = null;
@@ -220,10 +225,7 @@ export function AIWaiterDock() {
         vadStreamRef.current.getTracks().forEach(t => t.stop());
         vadStreamRef.current = null;
       }
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-        mediaRecorderRef.current.stop();
-        audioChunksRef.current = []; 
-      }
+      stopVoice();
       setRecording(false);
       return;
     }
@@ -231,60 +233,61 @@ export function AIWaiterDock() {
     let isCleanup = false;
 
     if (!vadStreamRef.current) {
-      navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+      navigator.mediaDevices.getUserMedia({ audio: true }).then(async stream => {
         if (isCleanup) { stream.getTracks().forEach(t => t.stop()); return; }
         vadStreamRef.current = stream;
+        
+        startVoice(); // Tell backend we are in voice mode
 
         const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-        const ctx = new AudioCtx();
+        // Sarvam requires 16kHz
+        const ctx = new AudioCtx({ sampleRate: 16000 });
         vadCtxRef.current = ctx;
 
         const source = ctx.createMediaStreamSource(stream);
         const analyser = ctx.createAnalyser();
-        analyser.minDecibels = -60; // Slightly less sensitive to avoid background hum
+        analyser.minDecibels = -60; 
         analyser.smoothingTimeConstant = 0.2;
         source.connect(analyser);
 
-        const mime = MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "";
-        const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
-        mediaRecorderRef.current = rec;
+        // Create inline worklet for PCM16 conversion
+        const workletCode = `
+          class PCMProcessor extends AudioWorkletProcessor {
+            process(inputs, outputs, parameters) {
+              const input = inputs[0];
+              if (input.length > 0) {
+                const channelData = input[0];
+                const pcm16 = new Int16Array(channelData.length);
+                for (let i = 0; i < channelData.length; i++) {
+                  let s = Math.max(-1, Math.min(1, channelData[i]));
+                  pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+                }
+                this.port.postMessage(pcm16.buffer, [pcm16.buffer]);
+              }
+              return true;
+            }
+          }
+          registerProcessor('pcm-processor', PCMProcessor);
+        `;
+        const blob = new Blob([workletCode], { type: 'application/javascript' });
+        const url = URL.createObjectURL(blob);
+        
+        await ctx.audioWorklet.addModule(url);
+        const workletNode = new AudioWorkletNode(ctx, 'pcm-processor');
+        workletNodeRef.current = workletNode;
+        
+        workletNode.port.onmessage = (e) => {
+           if (speaking && !vadPausedRef.current) {
+               sendAudio(e.data); // e.data is ArrayBuffer
+           }
+        };
+
+        analyser.connect(workletNode);
+        // Worklet needs to connect to destination to process data
+        workletNode.connect(ctx.destination);
         
         let speaking = false;
         let silenceStart = 0;
-
-        rec.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
-        
-        rec.onstop = async () => {
-          if (isCleanup) return;
-          const blob = new Blob(audioChunksRef.current, { type: mime || "audio/webm" });
-          audioChunksRef.current = [];
-          if (blob.size < 800) return; // Too short
-          
-          setVoiceProcessing(true);
-          try {
-            const fd = new FormData();
-            fd.append("file", blob, "voice.webm");
-            fd.append("language", language === "auto" ? "" : language);
-            const r = await fetch(apiUrl("/api/ai-waiter/transcribe"), { method: "POST", body: fd });
-            if (!r.ok) throw new Error(`STT ${r.status}`);
-            const j = await r.json() as { text: string };
-            let text = (j.text || "").trim();
-
-            // Filter common whisper hallucinations on silence
-            const lower = text.toLowerCase();
-            if (lower === "thank you." || lower === "thank you" || lower === "thanks for watching" || lower.includes("subscribe")) {
-              text = "";
-            }
-
-            if (text.length > 2) {
-               void sendText(text);
-            }
-          } catch (e) {
-            toast.error("Voice failed: " + (e as Error).message);
-          } finally {
-            setVoiceProcessing(false);
-          }
-        };
 
         const data = new Uint8Array(analyser.frequencyBinCount);
         const check = () => {
@@ -295,31 +298,25 @@ export function AIWaiterDock() {
             if (speaking) {
               speaking = false;
               setRecording(false);
-              if (rec.state !== "inactive") rec.stop();
             }
             return;
           }
 
           analyser.getByteFrequencyData(data);
-          let sum = 0;
-          for (let i = 0; i < data.length; i++) sum += data[i];
-          const avg = sum / data.length;
+          const active = data.some(v => v > 20); // volume threshold
 
-          if (avg > 10) { // speaking threshold (increased slightly to ignore fan noise)
+          if (active) {
             if (!speaking) {
               speaking = true;
               setRecording(true);
-              audioChunksRef.current = [];
-              if (rec.state === "inactive") rec.start();
             }
             silenceStart = 0;
-          } else { // silent
+          } else {
             if (speaking) {
-              if (!silenceStart) silenceStart = Date.now();
-              else if (Date.now() - silenceStart > 1500) { // 1.5s silence = stop recording
+              if (silenceStart === 0) silenceStart = performance.now();
+              else if (performance.now() - silenceStart > 1200) { // 1.2s silence
                 speaking = false;
                 setRecording(false);
-                if (rec.state !== "inactive") rec.stop(); 
               }
             }
           }

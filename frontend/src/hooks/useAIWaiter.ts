@@ -14,6 +14,7 @@ export function useAIWaiter({ restaurantId, onOrderUpdate }: { restaurantId: str
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const wsRef = useRef<WebSocket | null>(null);
+    const audioCtxRef = useRef<AudioContext | null>(null);
 
     // Initial greeting
     useEffect(() => {
@@ -62,7 +63,26 @@ export function useAIWaiter({ restaurantId, onOrderUpdate }: { restaurantId: str
             }));
         };
 
-        ws.onmessage = (event) => {
+        ws.onmessage = async (event) => {
+            if (event.data instanceof Blob) {
+                // Handle binary audio payload
+                if (!audioCtxRef.current) {
+                    audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+                }
+                const arrayBuffer = await event.data.arrayBuffer();
+                try {
+                    // Sarvam TTS gives a WAV or MP3 usually, but our code assumes decodeAudioData can handle it
+                    const audioBuffer = await audioCtxRef.current.decodeAudioData(arrayBuffer);
+                    const source = audioCtxRef.current.createBufferSource();
+                    source.buffer = audioBuffer;
+                    source.connect(audioCtxRef.current.destination);
+                    source.start(0);
+                } catch (e) {
+                    console.error("[useAIWaiter] Error decoding audio:", e);
+                }
+                return;
+            }
+
             try {
                 const data = JSON.parse(event.data);
                 if (data.type === "assistant_text") {
@@ -72,6 +92,16 @@ export function useAIWaiter({ restaurantId, onOrderUpdate }: { restaurantId: str
                         content: data.text
                     }]);
                     setIsLoading(false);
+                } else if (data.type === "partial_transcript") {
+                    // We could expose partials, but for now we just log them
+                    // console.log("Partial:", data.text);
+                } else if (data.type === "final_transcript") {
+                    setMessages(prev => [...prev, {
+                        id: Date.now().toString(),
+                        role: "user",
+                        content: data.text
+                    }]);
+                    setIsLoading(true);
                 } else if (data.type === "order_update") {
                     if (onOrderUpdate) {
                         onOrderUpdate(data);
@@ -119,11 +149,32 @@ export function useAIWaiter({ restaurantId, onOrderUpdate }: { restaurantId: str
         }
     }, []);
 
+    const sendAudio = useCallback((pcmBytes: ArrayBuffer) => {
+        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+            wsRef.current.send(pcmBytes);
+        }
+    }, []);
+
+    const startVoice = useCallback(() => {
+        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+            wsRef.current.send(JSON.stringify({ type: "voice_start" }));
+        }
+    }, []);
+
+    const stopVoice = useCallback(() => {
+        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+            wsRef.current.send(JSON.stringify({ type: "voice_stop" }));
+        }
+    }, []);
+
     return {
         messages,
         input,
         setInput,
         append,
+        sendAudio,
+        startVoice,
+        stopVoice,
         isLoading
     };
 }
