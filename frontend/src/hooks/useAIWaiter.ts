@@ -57,7 +57,7 @@ export function useAIWaiter({ restaurantId, onOrderUpdate }: { restaurantId: str
                 type: "session_start",
                 restaurant_id: restaurantId,
                 table_id: session.table_id || "",
-                qr_token: session.qr_token || "",
+                qr_token: "",
                 mode: "text"
             }));
         };
