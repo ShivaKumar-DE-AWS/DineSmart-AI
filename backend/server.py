@@ -36,17 +36,17 @@ from deps import (
 # =========================================================
 # Rate Limiter (Redis-backed, distributed)
 # =========================================================
-redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
-# ponytail: graceful fallback if Redis is unavailable — rate limiting degrades to no-op
+redis_url = os.environ.get("REDIS_URL", "")
 redis_client = None
-try:
-    redis_client = redis.from_url(redis_url, encoding="utf-8", decode_responses=True)
-except Exception:
-    pass
+if redis_url:
+    try:
+        redis_client = redis.from_url(redis_url, encoding="utf-8", decode_responses=True)
+    except Exception:
+        pass
 
 limiter = Limiter(
     key_func=get_remote_address,
-    storage_uri=redis_url if redis_client else None,
+    storage_uri=redis_url if redis_url else "memory://",
     default_limits=["1000/hour"],
 )
 

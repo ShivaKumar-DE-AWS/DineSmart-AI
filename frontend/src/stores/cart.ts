@@ -52,8 +52,8 @@ export const useCart = create<CartState>()(
       setIsAi: (val) => set({ isAi: val }),
       setRestaurantSlug: (slug) => set({ restaurantSlug: slug }),
       clear: () => set({ items: [], isAi: false, lastUpdatedBy: "local" }),
-      subtotal: () => get().items.reduce((sum, i) => sum + i.price * i.qty, 0),
-      count: () => get().items.reduce((n, i) => n + i.qty, 0),
+      subtotal: () => (get().items || []).reduce((sum, i) => sum + (i.price || 0) * (i.qty || 0), 0),
+      count: () => (get().items || []).reduce((n, i) => n + (i.qty || 0), 0),
     }),
     { name: "sd-cart" }
   )

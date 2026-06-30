@@ -7,25 +7,16 @@ async def run():
     client = AsyncIOMotorClient('mongodb+srv://dinesmart:dinesmart123@cluster0.mongodb.net/dinesmart?retryWrites=true&w=majority', tls=True, tlsCAFile=certifi.where())
     db = client['dinesmart']
     
-    # Check if a user with smartdine.ai3@gmail.com exists to get their rest_id
-    user = await db.users.find_one({'email': 'smartdine.ai3@gmail.com'})
-    if not user:
-        print('User not found. Try another.')
-        return
-        
-    rest_id = user['restaurant_id']
+    # Let's insert a table directly using motor to see if it throws
     doc = {
         'number': 999,
         'capacity': 4,
         'is_active': True,
-        'restaurant_id': rest_id
+        'restaurant_id': 'test_restro_id'
     }
     await db.tables.insert_one(doc)
     doc.pop('_id', None)
+    print(doc)
     
-    # Try to delete it immediately so we don't pollute the db
-    await db.tables.delete_one({'number': 999, 'restaurant_id': rest_id})
-    print('SUCCESS')
-
 asyncio.run(run())
 

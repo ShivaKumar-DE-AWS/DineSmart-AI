@@ -247,8 +247,9 @@ async def auth_guest(req: GuestReq, restaurant_id: Optional[str] = None, slug: O
     payload = {
         "sub": guest_id, "email": f"{guest_id}@guest.smartdine",
         "name": name, "role": "customer", "phone": phone,
-        "restaurant_id": restaurant_id,
+        "restaurant_id": rid,
+        "restaurant_slug": slug or restaurant.get("slug", ""),
     }
     token = jwt_sign(payload, ttl_hours=24 * 30)
-    await db.guests.insert_one({"id": guest_id, "name": name, "phone": phone, "restaurant_id": restaurant_id, "created_at": now_iso()})
-    return {"token": token, "user": {"id": guest_id, "email": payload["email"], "name": name, "role": "customer", "phone": phone, "restaurant_id": restaurant_id}}
+    await db.guests.insert_one({"id": guest_id, "name": name, "phone": phone, "restaurant_id": rid, "created_at": now_iso()})
+    return {"token": token, "user": {"id": guest_id, "email": payload["email"], "name": name, "role": "customer", "phone": phone, "restaurant_id": rid}}

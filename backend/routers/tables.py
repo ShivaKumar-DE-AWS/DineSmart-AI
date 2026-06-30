@@ -175,6 +175,7 @@ async def scan_table(req: TableScanReq):
         "customer_phone": (req.customer_phone or "").strip() or None,
     }
     await db.table_sessions.insert_one(session)
+    session.pop("_id", None)
     return {"table": table, "session": session}
 
 

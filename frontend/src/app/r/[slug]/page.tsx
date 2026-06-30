@@ -28,6 +28,10 @@ export default function NativeAppHomeMenu() {
   const [activeCategory, setActiveCategory] = useState("All");
   const [showAIChat, setShowAIChat] = useState(false);
   const [aiChatInput, setAiChatInput] = useState("");
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => setMounted(true), []);
+
   const [aiChatMessages, setAiChatMessages] = useState<{ role: string; content: string }[]>([
     { role: "assistant", content: `Welcome to ${restaurantConfig?.name || "our restaurant"}! I'm your AI Sommelier today. What are you craving?` }
   ]);
@@ -157,7 +161,7 @@ export default function NativeAppHomeMenu() {
                 <h2 className="font-royal text-2xl md:text-3xl text-brand-primary mb-6 pb-2 border-b border-brand-secondary/30 inline-block pr-12">{cat}</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                   {catItems.map(item => {
-                    const inCart = cart.items.find(i => i.item_id === item.id);
+                    const inCart = mounted ? cart.items.find((i) => i.item_id === item.id) : undefined;
                     return (
                       <div key={item.id} className="bg-white/80 backdrop-blur-md rounded-2xl p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white flex gap-4 items-center hover:-translate-y-1 hover:shadow-[0_12px_40px_rgb(92,14,27,0.08)] transition-all duration-300">
                         <div className="flex-1">
@@ -211,7 +215,7 @@ export default function NativeAppHomeMenu() {
 
       {/* 5. Fixed Cart */}
       <AnimatePresence>
-        {cart.count() > 0 && (
+        {mounted && cart.count() > 0 && (
           <motion.a
             href={`/r/${slug}/cart`}
             initial={{ y: 100, opacity: 0 }}
