@@ -53,11 +53,6 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
   useEffect(() => setMounted(true), []);
 
   const { session } = useTable();
-  const { data: restaurant } = useQuery({
-    queryKey: ["restaurant", slug],
-    queryFn: () => api<any>(`/api/config/${slug}`),
-    enabled: !!slug,
-  });
 
   const { data: sessionOrdersData } = useQuery({
     queryKey: ["session-orders", session?.id],

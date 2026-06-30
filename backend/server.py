@@ -152,9 +152,19 @@ async def list_restaurant_configs():
             items.append({"slug": s, "name": "", "email": ""})
     return {"configs": items}
 
+_CONFIG_RESPONSE_CACHE = {}
+_CONFIG_RESPONSE_CACHE_TTL = 60 # seconds
+
 @app.get("/api/config/{slug}")
 async def get_restaurant_config(slug: str):
+    import time
     import copy
+    
+    # Check short-lived cache first
+    cached = _CONFIG_RESPONSE_CACHE.get(slug)
+    if cached and time.time() - cached["time"] < _CONFIG_RESPONSE_CACHE_TTL:
+        return cached["resp"]
+
     config = _CONFIG_CACHE.get(slug)
     
     if not config:
@@ -178,10 +188,12 @@ async def get_restaurant_config(slug: str):
     for u in resp.get("users", []):
         if "password" in u:
             u["password"] = "***"
+            
+    # Cache the response
+    _CONFIG_RESPONSE_CACHE[slug] = {"time": time.time(), "resp": resp}
     
     return resp
 
-# ponytail: demo credentials endpoints — direct file reads, no auth, for onboarding UX only
 @app.get("/api/admin/demo-creds")
 async def admin_demo_creds(slug: str | None = None):
     config = _CONFIG_CACHE.get(slug) if slug else None
