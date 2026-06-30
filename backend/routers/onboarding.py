@@ -110,7 +110,7 @@ async def onboard_menu(file: UploadFile = File(...), user=Depends(require_user))
         """
         response = await asyncio.to_thread(
             client_ai.models.generate_content,
-            model="gemini-2.5-flash",
+            model="gemini-1.5-flash",
             contents=[prompt, genai_types.Part.from_bytes(data=raw, mime_type=mime)],
         )
         text = response.text.strip()
