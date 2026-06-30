@@ -35,7 +35,7 @@ export async function api<T = any>(path: string, init: RequestInit = {}): Promis
   // ponytail: single retry for network errors (Render cold start)
   for (let attempt = 0; attempt < 2; attempt++) {
     const controller = new AbortController();
-    const timeoutMs = Number((init as RequestInit & { timeoutMs?: number }).timeoutMs || 15_000);
+    const timeoutMs = Number((init as RequestInit & { timeoutMs?: number }).timeoutMs || 60_000);
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
     if (init.signal) {
       if (init.signal.aborted) controller.abort();
