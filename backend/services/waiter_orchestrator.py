@@ -179,7 +179,7 @@ Live Menu:
                     for tc in doc["tool_calls"]:
                         parts.append(genai_types.Part.from_function_call(
                             name=tc["name"],
-                            args=tc["args"]
+                            args=tc.get("args") or {}
                         ))
                     contents.append(genai_types.Content(role="model", parts=parts))
                 else:
@@ -265,7 +265,7 @@ Live Menu:
             if text_response:
                 model_parts.append(genai_types.Part(text=text_response))
             for fc in function_calls:
-                model_parts.append(genai_types.Part.from_function_call(name=fc.name, args=fc.args))
+                model_parts.append(genai_types.Part.from_function_call(name=fc.name, args=fc.args or {}))
                 tool_calls_record.append({"name": fc.name, "args": fc.args})
                 
             contents.append(genai_types.Content(role="model", parts=model_parts))
@@ -284,7 +284,7 @@ Live Menu:
             for fc in function_calls:
                 result_str = ""
                 try:
-                    args = fc.args
+                    args = fc.args or {}
                     if fc.name == "search_menu":
                         result_str = await self.tools.search_menu(args.get("query", ""), args.get("dietary_filter", "any"), args.get("category", ""))
                     elif fc.name == "add_to_order":
