@@ -38,7 +38,7 @@ export function TableSessionGuard({ slug }: { slug?: string }) {
     if (typeof window === "undefined") return "";
     const k = localStorage.getItem("sd-did");
     if (k) return k;
-    const id = typeof crypto.randomUUID === "function" ? crypto.randomUUID() : Math.random().toString(36).substring(2) + Date.now().toString(36);
+    const id = (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") ? ((typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") ? crypto.randomUUID() : Math.random().toString(36).substring(2) + Date.now().toString(36)) : Math.random().toString(36).substring(2) + Date.now().toString(36);
     localStorage.setItem("sd-did", id);
     return id;
   });
