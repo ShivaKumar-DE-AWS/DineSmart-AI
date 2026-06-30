@@ -32,18 +32,17 @@ export function useAIWaiter({ restaurantId, onOrderUpdate }: { restaurantId: str
         if (!session?.id || !restaurantId) return;
 
         // Build WebSocket URL
-        const origin = typeof window !== 'undefined' ? window.location.origin : '';
-        const base = apiUrl(""); // Might be just /api if rewrites are used, or https://api... if Next backend_url is set.
-        let wsUrlStr = "";
+        let backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
         
-        if (base.startsWith("http")) {
-            wsUrlStr = base.replace("http://", "ws://").replace("https://", "wss://");
-        } else {
-            // Relative path, use window.location
-            const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
-            wsUrlStr = `${proto}//${window.location.host}${base}`;
+        // If not explicitly provided, we must fallback smartly.
+        // Vercel Serverless (production) DOES NOT proxy WebSockets via rewrites. We must connect directly to the backend.
+        // Local Next.js dev server DOES proxy WebSockets.
+        if (!backendUrl) {
+            const isLocal = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+            backendUrl = isLocal ? 'http://localhost:3000' : 'https://api.smartdineai.co.in';
         }
         
+        const wsUrlStr = backendUrl.replace("http://", "ws://").replace("https://", "wss://");
         const wsUrl = `${wsUrlStr}/api/ws/ai-waiter/${session.id}`;
         
         const ws = new WebSocket(wsUrl);
