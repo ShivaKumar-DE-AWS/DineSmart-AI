@@ -79,7 +79,7 @@ export function RestaurantProvider({ slug, children }: RestaurantProviderProps) 
     queryKey: ["restaurant-config", slug],
     queryFn: async () => {
       try {
-        const data = await api<RestaurantConfig>(`/api/restaurants/${slug}`);
+        const data = await api<RestaurantConfig>(`/api/config/${slug}`);
         return { ...DEFAULT_CONFIG, ...data };
       } catch {
         return DEFAULT_CONFIG;

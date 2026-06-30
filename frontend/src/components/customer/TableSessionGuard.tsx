@@ -18,7 +18,7 @@ import { MehfilLogo } from "@/components/customer/MehfilLogo";
  *  - Strips the param from the URL
  *  - Shows a live "Table N · MM:SS remaining" banner that counts down
  */
-export function TableSessionGuard() {
+export function TableSessionGuard({ slug }: { slug?: string }) {
   const search = useSearchParams();
   const router = useRouter();
   const path = usePathname();
@@ -30,8 +30,8 @@ export function TableSessionGuard() {
   const [qrToken, setQrToken] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
 
-  // Extract slug from current path (needed before alias key)
-  const slugFromPath = path?.match(/^\/r\/([^/]+)/)?.[1] || "";
+  // Use provided slug or extract from pathname as fallback
+  const slugFromPath = slug || path?.match(/^\/r\/([^/]+)/)?.[1] || "";
 
   // Device identity — unique per browser, survives clear/restart, no PII
   const [deviceId] = useState(() => {

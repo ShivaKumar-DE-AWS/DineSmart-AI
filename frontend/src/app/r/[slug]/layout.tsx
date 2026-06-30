@@ -55,7 +55,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
   const { session } = useTable();
   const { data: restaurant } = useQuery({
     queryKey: ["restaurant", slug],
-    queryFn: () => api<any>(`/api/restaurants/${slug}`),
+    queryFn: () => api<any>(`/api/config/${slug}`),
     enabled: !!slug,
   });
 
@@ -222,7 +222,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
       '--brand-primary': restaurantConfig.primary_color || '#8A1A2A',
       '--brand-secondary': restaurantConfig.secondary_color || '#C9A348'
     } as React.CSSProperties : undefined}>
-      <Suspense fallback={null}><TableSessionGuard /></Suspense>
+      <Suspense fallback={null}><TableSessionGuard slug={slug} /></Suspense>
       {restaurantConfig?.sandbox_mode && (
         <div className="bg-alert text-white text-center py-2 px-4 text-xs font-medium tracking-wide sticky top-0 z-[60] flex items-center justify-center gap-2 flex-wrap">
           <span>⚠️ SANDBOX MODE: Orders placed here will not be sent to the kitchen.</span>
