@@ -346,7 +346,7 @@ export default function RestaurantAuthPage() {
                       {phoneOtpSent && !phoneVerified && (
                         <div className="flex gap-2 mt-2">
                           <input type="text" value={phoneOtp} onChange={e => setPhoneOtp(e.target.value)} placeholder="Enter OTP" className="flex-1 bg-white/5 border border-white/10 rounded-xl py-2.5 px-4 text-white text-sm" />
-                          <button type="button" onClick={() => verifyOtp("phone", regPhone, phoneOtp)} disabled={verifyingPhone} className="px-4 bg-emerald-600 rounded-xl text-white text-sm font-semibold whitespace-nowrap">
+                          <button type="button" onClick={() => verifyOtp("phone", regPhone, phoneOtp)} disabled={!!verifyingPhone} className="px-4 bg-emerald-600 rounded-xl text-white text-sm font-semibold whitespace-nowrap">
                             Verify
                           </button>
                         </div>
