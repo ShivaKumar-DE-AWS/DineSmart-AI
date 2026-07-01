@@ -176,8 +176,11 @@ async def delete_restaurant(restaurant_id: str, user=Depends(require_superadmin)
         # 2. Remove from in-memory cache
         # Try both 'server' and '__main__' in case of different runner environments
         for mod_name in ['server', '__main__']:
-            if mod_name in sys.modules and hasattr(sys.modules[mod_name], "_CONFIG_CACHE"):
-                sys.modules[mod_name]._CONFIG_CACHE.pop(slug, None)
+            if mod_name in sys.modules:
+                if hasattr(sys.modules[mod_name], "_CONFIG_CACHE"):
+                    sys.modules[mod_name]._CONFIG_CACHE.pop(slug, None)
+                if hasattr(sys.modules[mod_name], "_CONFIG_RESPONSE_CACHE"):
+                    sys.modules[mod_name]._CONFIG_RESPONSE_CACHE.pop(slug, None)
                 
     from routers.audit import log_audit_event
     await log_audit_event(
