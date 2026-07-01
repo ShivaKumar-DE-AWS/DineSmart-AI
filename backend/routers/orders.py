@@ -47,6 +47,13 @@ async def stream_orders(restaurant_id: Optional[str] = None, token: Optional[str
     user_rid = user.get("restaurant_id")
     if not user_rid:
         return JSONResponse({"detail": "No restaurant assigned"}, status_code=403)
+        
+    # Strictly validate restaurant exists in database
+    from deps import db
+    restaurant = await db.restaurants.find_one({"id": user_rid})
+    if not restaurant:
+        return JSONResponse({"detail": "Restaurant not found or deleted"}, status_code=403)
+        
     rid = user_rid  # Always use the user's restaurant_id, ignore client-supplied value
 
     async def event_gen():

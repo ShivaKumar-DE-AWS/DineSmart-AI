@@ -107,25 +107,15 @@ async def current_user(creds: Optional[HTTPAuthorizationCredentials] = Depends(b
 async def require_user(user=Depends(current_user)) -> Dict[str, Any]:
     if not user:
         raise HTTPException(status_code=401, detail="Authentication required")
-    return user
-
-def require_roles(*roles: str):
-    async def dep(user=Depends(require_user)):
-        role = user.get("role")
-        # Superadmin bypasses all role/restaurant checks
-        if role == "superadmin":
-            return user
-        if role not in roles:
-            raise HTTPException(status_code=403, detail="Forbidden")
         
-        rid = user.get("restaurant_id")
-        if not rid:
-            raise HTTPException(status_code=403, detail="No restaurant assigned to this account")
-            
+    role = user.get("role")
+    rid = user.get("restaurant_id")
+    
+    if role != "superadmin" and rid:
         from deps import db
         restaurant = await db.restaurants.find_one({"id": rid}, {"subscription_status": 1, "trial_ends_at": 1})
         if not restaurant:
-            raise HTTPException(status_code=403, detail="Restaurant not found")
+            raise HTTPException(status_code=403, detail="Restaurant not found or deleted")
             
         status = restaurant.get("subscription_status")
         if status == "suspended":
@@ -141,16 +131,28 @@ def require_roles(*roles: str):
                         pass
                 
                 if isinstance(trial_ends_at, datetime):
-                    # Ensure trial_ends_at is timezone-aware for comparison
                     if trial_ends_at.tzinfo is None:
                         trial_ends_at = trial_ends_at.replace(tzinfo=timezone.utc)
                     if datetime.now(timezone.utc) > trial_ends_at:
-                        raise HTTPException(status_code=403, detail="Trial period has expired. Please contact support.")
-            else:
-                # If no trial_ends_at is set but status is trial, default to denying or allowing? 
-                # We'll let them pass until a migration sets it, or we could block. Allowing for safety.
-                pass
-                
+                        raise HTTPException(status_code=403, detail="Trial period has expired. Please upgrade your plan.")
+                        
+    return user
+
+def require_roles(*roles: str):
+    async def dep(user=Depends(require_user)):
+        role = user.get("role")
+        # Superadmin bypasses all role/restaurant checks
+        if role == "superadmin":
+            return user
+        if role not in roles:
+            raise HTTPException(status_code=403, detail="Forbidden")
+        
+        rid = user.get("restaurant_id")
+        if not rid:
+            raise HTTPException(status_code=403, detail="No restaurant assigned to this account")
+            
+        # Restaurant validation is now handled in require_user
+        
         return user
     return dep
 
