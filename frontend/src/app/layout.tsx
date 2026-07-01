@@ -47,8 +47,8 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${heading.variable} ${body.variable} ${display.variable} ${mono.variable} ${royal.variable} ${editorial.variable}`}>
-      <body data-testid="app-root">
+    <html lang="en" className={`overflow-x-hidden ${heading.variable} ${body.variable} ${display.variable} ${mono.variable} ${royal.variable} ${editorial.variable}`}>
+      <body data-testid="app-root" className="overflow-x-hidden max-w-full">
         <Providers>{children}</Providers>
       </body>
     </html>
