@@ -1,19 +1,26 @@
 """Email service for sending notifications and password reset links.
+Now fully async using aiosmtplib and AsyncClient.
 """
 from typing import Optional
 import os
-import smtplib
+import aiosmtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import httpx
 
 # GoDaddy Professional Email SMTP settings
-SMTP_SERVER = os.environ.get("SMTP_SERVER") or os.environ.get("SMTP_HOST") or os.environ.get("SMTP_HOSTSMTP_HOST") or "smtp.secureserver.net"
+SMTP_SERVER = os.environ.get("SMTP_SERVER") or os.environ.get("SMTP_HOST") or "smtp.secureserver.net"
 SMTP_PORT = int(os.environ.get("SMTP_PORT", 587))
 SMTP_USER = os.environ.get("SMTP_USER") or os.environ.get("SMTP_USERNAME") or "admin@smartdineai.co.in"
 SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
+TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID", "")
+TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN", "")
+TWILIO_PHONE_NUMBER = os.environ.get("TWILIO_PHONE_NUMBER", "")
 
-def _send_email(to_email: str, subject: str, html_content: str) -> tuple[bool, str]:
-    # Always log the email locally just in case SMTP is blocked by the cloud provider (e.g. Render Free Tier)
+async def _send_email(to_email: str, subject: str, html_content: str) -> tuple[bool, str]:
+    """Send email asynchronously using aiosmtplib."""
+    # Always log the email locally just in case SMTP is blocked by the cloud provider
     print("=" * 60, flush=True)
     print(f"📧 EMAIL GENERATED (To: {to_email})", flush=True)
     print(f"Subject: {subject}", flush=True)
@@ -42,23 +49,23 @@ def _send_email(to_email: str, subject: str, html_content: str) -> tuple[bool, s
     msg.attach(part)
 
     try:
-        if SMTP_PORT == 465:
-            server = smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT, timeout=10)
-            server.login(SMTP_USER, SMTP_PASSWORD)
-        else:
-            server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=10)
-            server.starttls()
-            server.login(SMTP_USER, SMTP_PASSWORD)
+        # Use aiosmtplib for async SMTP
+        async with aiosmtplib.SMTP(hostname=SMTP_SERVER, port=SMTP_PORT, timeout=10) as smtp:
+            if SMTP_PORT == 465:
+                await smtp.login(SMTP_USER, SMTP_PASSWORD)
+            else:
+                await smtp.starttls()
+                await smtp.login(SMTP_USER, SMTP_PASSWORD)
             
-        server.sendmail(SMTP_USER, to_email, msg.as_string())
-        server.quit()
+            await smtp.send_message(msg)
+        
         print(f"✅ Successfully sent email to {to_email}")
         return True, "Success"
     except Exception as e:
         print(f"❌ Failed to send email to {to_email}: {str(e)}")
         return False, str(e)
 
-def send_password_reset_email(to_email: str, reset_token: str, frontend_url: str = "http://localhost:3000"):
+async def send_password_reset_email(to_email: str, reset_token: str, frontend_url: str = "http://localhost:3000"):
     """Send a password reset email."""
     reset_link = f"{frontend_url}/auth/forgot-password?token={reset_token}"
     
@@ -80,9 +87,9 @@ def send_password_reset_email(to_email: str, reset_token: str, frontend_url: str
       </body>
     </html>
     """
-    return _send_email(to_email, subject, html)
+    return await _send_email(to_email, subject, html)
 
-def send_welcome_email(to_email: str, restaurant_name: str, creds: dict, otp: str):
+async def send_welcome_email(to_email: str, restaurant_name: str, creds: dict, otp: str):
     """Send welcome email with credentials and OTP."""
     subject = f"Welcome to SmartDine AI, {restaurant_name}!"
     
@@ -119,9 +126,9 @@ def send_welcome_email(to_email: str, restaurant_name: str, creds: dict, otp: st
       </body>
     </html>
     """
-    return _send_email(to_email, subject, html)
+    return await _send_email(to_email, subject, html)
 
-def send_verification_success_email(to_email: str, restaurant_name: str, creds: dict):
+async def send_verification_success_email(to_email: str, restaurant_name: str, creds: dict):
     """Send successful verification email with credentials."""
     subject = f"{restaurant_name} is now Verified on SmartDine AI!"
     
@@ -163,17 +170,10 @@ def send_verification_success_email(to_email: str, restaurant_name: str, creds: 
       </body>
     </html>
     """
-    return _send_email(to_email, subject, html)
+    return await _send_email(to_email, subject, html)
 
-
-import httpx
-
-RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
-TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID", "")
-TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN", "")
-TWILIO_PHONE_NUMBER = os.environ.get("TWILIO_PHONE_NUMBER", "")
-
-def send_verification_otp(to_email: str, otp: str):
+async def send_verification_otp(to_email: str, otp: str):
+    """Send verification OTP using Resend or fallback to SMTP."""
     subject = "Your SmartDine Verification Code"
     html = f'''
     <html>
@@ -186,50 +186,54 @@ def send_verification_otp(to_email: str, otp: str):
       </body>
     </html>
     '''
+    
     if RESEND_API_KEY:
         try:
-            httpx.post(
-                "https://api.resend.com/emails",
-                headers={"Authorization": f"Bearer {RESEND_API_KEY}", "Content-Type": "application/json"},
-                json={
-                    "from": "SmartDine AI <onboarding@resend.dev>",
-                    "to": [to_email],
-                    "subject": subject,
-                    "html": html
-                },
-                timeout=10
-            )
+            async with httpx.AsyncClient() as client:
+                await client.post(
+                    "https://api.resend.com/emails",
+                    headers={"Authorization": f"Bearer {RESEND_API_KEY}", "Content-Type": "application/json"},
+                    json={
+                        "from": "SmartDine AI <onboarding@resend.dev>",
+                        "to": [to_email],
+                        "subject": subject,
+                        "html": html
+                    },
+                    timeout=10
+                )
             print(f"✅ Successfully sent Resend email to {to_email}")
         except Exception as e:
             print(f"❌ Failed to send Resend email to {to_email}: {str(e)}")
+            # Fallback to SMTP
+            await _send_email(to_email, subject, html)
     else:
-        _send_email(to_email, subject, html)
+        await _send_email(to_email, subject, html)
 
-def send_sms_otp(phone: str, otp: str):
+async def send_sms_otp(phone: str, otp: str):
+    """Send SMS OTP asynchronously using Twilio."""
     message = f"Your SmartDine Verification Code is: {otp}"
     print("=" * 60, flush=True)
-
-
     print(f"📱 SMS GENERATED (To: {phone})", flush=True)
     print(f"Content: {message}")
     print("=" * 60, flush=True)
     
     if TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN:
         try:
-            auth = (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
-            res = httpx.post(
-                f"https://api.twilio.com/2010-04-01/Accounts/{TWILIO_ACCOUNT_SID}/Messages.json",
-                auth=auth,
-                data={
-                    "To": phone,
-                    "From": TWILIO_PHONE_NUMBER,
-                    "Body": message
-                },
-                timeout=10
-            )
-            if res.is_success:
-                print(f"✅ Successfully sent SMS to {phone}")
-            else:
-                print(f"❌ Twilio API Error ({res.status_code}): {res.text}")
+            async with httpx.AsyncClient() as client:
+                auth = (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+                res = await client.post(
+                    f"https://api.twilio.com/2010-04-01/Accounts/{TWILIO_ACCOUNT_SID}/Messages.json",
+                    auth=auth,
+                    data={
+                        "To": phone,
+                        "From": TWILIO_PHONE_NUMBER,
+                        "Body": message
+                    },
+                    timeout=10
+                )
+                if res.is_success:
+                    print(f"✅ Successfully sent SMS to {phone}")
+                else:
+                    print(f"❌ Twilio API Error ({res.status_code}): {res.text}")
         except Exception as e:
             print(f"❌ Failed to connect to Twilio: {str(e)}")
