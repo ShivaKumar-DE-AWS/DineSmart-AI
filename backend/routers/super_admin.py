@@ -34,7 +34,7 @@ async def get_platform_stats(user=Depends(require_superadmin)):
 async def list_restaurants(user=Depends(require_superadmin)):
     """List all restaurants with basic stats."""
     restaurants = await db.restaurants.find(
-        {}, {"_id": 0, "id": 1, "name": 1, "slug": 1, "owner_email": 1,
+        {"subscription_status": {"$ne": "deleted"}}, {"_id": 0, "id": 1, "name": 1, "slug": 1, "owner_email": 1,
              "subscription_status": 1, "trial_ends_at": 1, "created_at": 1, "plan_tier": 1}
     ).to_list(500)
 
@@ -145,7 +145,8 @@ async def delete_restaurant(restaurant_id: str, user=Depends(require_superadmin)
     slug = restaurant.get("slug")
     
     # Cascade delete all tenant data
-    await db.restaurants.delete_one({"id": restaurant_id})
+    # ponytail: Soft delete the restaurant to prevent demo re-seeding from JSON files on Vercel
+    await db.restaurants.update_one({"id": restaurant_id}, {"$set": {"subscription_status": "deleted", "status": "deleted"}})
     if slug:
         await db.restaurant_configs.delete_many({"slug": slug})
         

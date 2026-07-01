@@ -168,7 +168,20 @@ for _cf in sorted(_glob.glob(os.path.join(_CONFIG_DIR, "*.json"))):
 @app.get("/api/config/list")
 async def list_restaurant_configs():
     items = []
+    
+    # Only return configs for restaurants that exist and are not deleted
+    try:
+        if DB_AVAILABLE:
+            valid_rests = await db.restaurants.find({"subscription_status": {"$ne": "deleted"}}).to_list(1000)
+            valid_slugs = {r.get("slug") for r in valid_rests if r.get("slug")}
+        else:
+            valid_slugs = set(_CONFIG_CACHE.keys())
+    except Exception:
+        valid_slugs = set(_CONFIG_CACHE.keys())
+        
     for s, c in _CONFIG_CACHE.items():
+        if s not in valid_slugs:
+            continue
         try:
             admin_email = ""
             for u in c.get("users", []):
@@ -178,6 +191,17 @@ async def list_restaurant_configs():
             items.append({"slug": s, "name": c.get("name", ""), "email": admin_email})
         except Exception:
             items.append({"slug": s, "name": "", "email": ""})
+            
+    # Include dynamic configs from DB
+    if DB_AVAILABLE:
+        try:
+            db_configs = await db.restaurant_configs.find({}).to_list(1000)
+            for dc in db_configs:
+                if dc.get("slug") not in _CONFIG_CACHE and dc.get("slug") in valid_slugs:
+                    items.append({"slug": dc.get("slug"), "name": dc.get("config", {}).get("name", ""), "email": ""})
+        except Exception:
+            pass
+            
     return {"configs": items}
 
 _CONFIG_RESPONSE_CACHE = {}
