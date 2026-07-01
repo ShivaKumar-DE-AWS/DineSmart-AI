@@ -45,11 +45,14 @@ export const viewport: Viewport = {
   themeColor: "#5C0E1B",
 };
 
+import { Analytics } from "@vercel/analytics/next";
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`overflow-x-hidden ${heading.variable} ${body.variable} ${display.variable} ${mono.variable} ${royal.variable} ${editorial.variable}`}>
       <body data-testid="app-root" className="overflow-x-hidden max-w-full">
         <Providers>{children}</Providers>
+        <Analytics />
       </body>
     </html>
   );
