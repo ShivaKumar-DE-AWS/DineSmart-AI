@@ -51,6 +51,14 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);
+  
+  // ponytail: if the restaurant was deleted or doesn't exist, block rendering
+  if (!restaurantLoading && restaurantError) {
+    if (typeof window !== "undefined") {
+      window.location.href = "/404";
+    }
+    return null;
+  }
 
   const { session } = useTable();
 

@@ -6,7 +6,7 @@ import { api } from "@/lib/api";
 import { useSession } from "@/stores/session";
 import { useTable } from "@/stores/table";
 import { toast } from "sonner";
-import { Sparkles, ArrowRight, Lock, ChevronLeft, RefreshCw, Utensils, User, Eye, EyeOff } from "lucide-react";
+import { Sparkles, ArrowRight, Lock, ChevronLeft, RefreshCw, Utensils, User, Eye, EyeOff, Shield } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MehfilLogo } from "@/components/customer/MehfilLogo";
 import { generateFunAlias } from "@/types";
@@ -318,14 +318,7 @@ export default function LoginPage() {
                 {busy ? "Signing in…" : "Sign in"}
               </button>
               
-              {['mehfil', 'mehfil-hyderabad', 'spice-garden'].includes(slug) && (
-                <div className="mt-5 text-[10px] text-[#1A1106]/55 space-y-1 font-royal tracking-wider uppercase">
-                  <div className="font-semibold text-[#8A6A1B]">Demo Credentials</div>
-                  <div>admin-{emailSlug(slug)}@smartdine.ai / Admin@123 — Admin</div>
-                  <div>kitchen-{emailSlug(slug)}@smartdine.ai / Chef@123 — Kitchen</div>
-                  <div>counter-{emailSlug(slug)}@smartdine.ai / Counter@123 — Counter</div>
-                </div>
-              )}
+              <DemoCredentials slug={slug} />
             </form>
           )}
         </div>
@@ -337,6 +330,34 @@ export default function LoginPage() {
           </p>
         </div>
       </motion.div>
+    </div>
+  );
+}
+
+function DemoCredentials({ slug }: { slug: string }) {
+  const [creds, setCreds] = useState<{ users: Array<{ email: string; password: string; name: string; role: string }> } | null>(null);
+
+  useEffect(() => {
+    if (!slug) return;
+    api(`/api/admin/demo-creds?slug=${encodeURIComponent(slug)}`)
+      .then(d => setCreds(d))
+      .catch(() => setCreds({ users: [] }));
+  }, [slug]);
+
+  if (!creds || creds.users.length === 0) return null;
+
+  return (
+    <div className="mt-5 text-[10px] text-[#1A1106]/55 space-y-2 font-royal tracking-wider uppercase">
+      <div className="font-semibold text-[#8A6A1B] flex items-center gap-1">
+        <Shield className="w-3 h-3" /> Demo Credentials
+      </div>
+      {creds.users.map((u, i) => (
+        <div key={i} className="flex flex-col mb-1 border-l-2 border-[#8A6A1B]/20 pl-2">
+          <span className="font-semibold text-[#1A1106]">{u.role} - {u.name}</span>
+          <span className="lowercase font-editorial text-xs">{u.email}</span>
+          <span className="font-mono text-xs">{u.password}</span>
+        </div>
+      ))}
     </div>
   );
 }

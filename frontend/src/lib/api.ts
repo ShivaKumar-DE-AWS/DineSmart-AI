@@ -56,6 +56,13 @@ export async function api<T = any>(path: string, init: RequestInit = {}): Promis
         } catch { /* ignore parse errors */ }
         const err: any = new Error(msg);
         err.status = res.status;
+        
+        // ponytail: Auto-logout if session is invalid or restaurant was deleted/revoked
+        if (res.status === 401 || (res.status === 403 && (msg.includes("revoked") || msg.includes("deleted")))) {
+          useSession.getState().clear();
+          if (typeof window !== "undefined") window.location.href = "/auth/login";
+        }
+        
         throw err;
       }
       const ct = res.headers.get("content-type") || "";
