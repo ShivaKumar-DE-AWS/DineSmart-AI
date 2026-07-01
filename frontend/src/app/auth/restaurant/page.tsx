@@ -291,7 +291,7 @@ export default function RestaurantAuthPage() {
                 onSubmit={handleRequestAccess}
                 className="space-y-4"
               >
-                {!emailVerified || !phoneVerified ? (
+                
                   <div className="space-y-4">
                     {/* EMAIL VERIFICATION */}
                     <div className="space-y-1.5">
@@ -299,7 +299,7 @@ export default function RestaurantAuthPage() {
                       <div className="flex gap-2">
                         <div className="relative flex-1">
                           <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone" />
-                          <input type="email" value={regEmail} onChange={e => setRegEmail(e.target.value)} disabled={emailVerified || emailOtpSent} className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-11 pr-4 text-white text-sm placeholder:text-stone disabled:opacity-50" placeholder="owner@email.com" />
+                          <input type="email" value={regEmail} onChange={e => { setRegEmail(e.target.value); setEmailVerified(false); setEmailOtpSent(false); setEmailOtp(""); }} disabled={emailVerified} className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-11 pr-4 text-white text-sm placeholder:text-stone disabled:opacity-50" placeholder="owner@email.com" />
                         </div>
                         {!emailVerified && !emailOtpSent && (
                           <button type="button" onClick={() => sendOtp("email", regEmail)} disabled={verifyingEmail} className="px-4 bg-clay rounded-xl text-white text-sm font-semibold whitespace-nowrap">
@@ -325,7 +325,7 @@ export default function RestaurantAuthPage() {
                       <div className="flex gap-2">
                         <div className="relative flex-1">
                           <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone" />
-                          <input type="tel" value={regPhone} onChange={e => setRegPhone(e.target.value)} disabled={phoneVerified || phoneOtpSent} className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-11 pr-4 text-white text-sm placeholder:text-stone disabled:opacity-50" placeholder="+1234567890" />
+                          <input type="tel" value={regPhone} onChange={e => { setRegPhone(e.target.value); setPhoneVerified(false); setPhoneOtpSent(false); setPhoneOtp(""); }} disabled={phoneVerified} className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-11 pr-4 text-white text-sm placeholder:text-stone disabled:opacity-50" placeholder="+1234567890" />
                         </div>
                         {!phoneVerified && !phoneOtpSent && (
                           <button type="button" onClick={() => sendOtp("phone", regPhone)} disabled={verifyingPhone} className="px-4 bg-clay rounded-xl text-white text-sm font-semibold whitespace-nowrap">
@@ -345,12 +345,14 @@ export default function RestaurantAuthPage() {
                       )}
                     </div>
                   </div>
-                ) : (
-                  // FULL FORM AFTER VERIFICATION
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-                    <div className="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-3 text-xs text-emerald-400 flex items-center gap-2">
+                
+                  <div className="space-y-4 pt-4 border-t border-white/10">
+                    <h3 className="text-sm font-semibold text-white mb-2">Restaurant Details</h3>
+                    {emailVerified && phoneVerified && (
+                      <div className="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-3 text-xs text-emerald-400 flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4" /> Email and Phone verified successfully.
-                    </div>
+                      </div>
+                    )}
                     
                     <div className="space-y-1.5">
                       <label className="text-xs font-medium text-stone pl-1">Full Name</label>
@@ -404,15 +406,15 @@ export default function RestaurantAuthPage() {
 
                     <button
                       type="submit"
-                      disabled={busy}
-                      className="w-full bg-clay hover:bg-clay-dark text-white font-semibold rounded-xl py-3 transition flex items-center justify-center gap-2 mt-4 shadow-lg shadow-clay/20"
+                      disabled={busy || !emailVerified || !phoneVerified}
+                      className="w-full bg-clay disabled:opacity-50 disabled:cursor-not-allowed hover:bg-clay-dark text-white font-semibold rounded-xl py-3 transition flex items-center justify-center gap-2 mt-4 shadow-lg shadow-clay/20"
                     >
                       {busy ? (
                         <><Loader2 className="w-5 h-5 animate-spin" /> <span>Creating...</span></>
                       ) : "Create Restaurant"}
                     </button>
-                  </motion.div>
-                )}
+                  </div>
+
 
                 {result && (
                   <motion.div
@@ -442,8 +444,8 @@ export default function RestaurantAuthPage() {
                     >
                       Login to Admin Dashboard
                     </Link>
-                  </motion.div>
-                )}
+                  </div>
+
               </motion.form>
             )}
           </AnimatePresence>
