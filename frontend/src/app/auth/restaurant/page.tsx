@@ -53,7 +53,7 @@ export default function RestaurantAuthPage() {
   const [verifyingEmail, setVerifyingEmail] = useState(false);
   const [verifyingPhone, setVerifyingPhone] = useState(false);
 
-  const sendOtp = async (type: "email" | "phone", value: string) => {
+  const sendOtp = async (type: "email" | "phone", value: string, phoneMethod: "sms" | "whatsapp" | "call" = "sms") => {
     if (!value) return toast.error(`Please enter a valid ${type}`);
     if (type === "email") setVerifyingEmail(true);
     else setVerifyingPhone(true);
@@ -62,7 +62,7 @@ export default function RestaurantAuthPage() {
       const res = await fetch("/api/otp/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(type === "email" ? { email: value } : { phone: value })
+        body: JSON.stringify(type === "email" ? { email: value } : { phone: value, method: phoneMethod })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "Failed to send OTP");
@@ -327,10 +327,18 @@ export default function RestaurantAuthPage() {
                           <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone" />
                           <input type="tel" value={regPhone} onChange={e => { setRegPhone(e.target.value); setPhoneVerified(false); setPhoneOtpSent(false); setPhoneOtp(""); }} disabled={phoneVerified} className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-11 pr-4 text-white text-sm placeholder:text-stone disabled:opacity-50" placeholder="+1234567890" />
                         </div>
-                        {!phoneVerified && !phoneOtpSent && (
-                          <button type="button" onClick={() => sendOtp("phone", regPhone)} disabled={verifyingPhone} className="px-4 bg-clay rounded-xl text-white text-sm font-semibold whitespace-nowrap">
-                            {verifyingPhone ? <Loader2 className="w-4 h-4 animate-spin" /> : "Send OTP"}
-                          </button>
+                        {!phoneVerified && (
+                          <div className="flex gap-2">
+                            <button type="button" onClick={() => sendOtp("phone", regPhone, "sms")} disabled={verifyingPhone} className="px-3 bg-clay rounded-xl text-white text-xs font-semibold whitespace-nowrap h-full">
+                              {verifyingPhone ? <Loader2 className="w-4 h-4 animate-spin" /> : "SMS"}
+                            </button>
+                            <button type="button" onClick={() => sendOtp("phone", regPhone, "whatsapp")} disabled={verifyingPhone} className="px-3 bg-emerald-600 rounded-xl text-white text-xs font-semibold whitespace-nowrap h-full">
+                              WhatsApp
+                            </button>
+                            <button type="button" onClick={() => sendOtp("phone", regPhone, "call")} disabled={verifyingPhone} className="px-3 bg-electric-blue rounded-xl text-white text-xs font-semibold whitespace-nowrap h-full">
+                              Call
+                            </button>
+                          </div>
                         )}
                         {phoneVerified && <CheckCircle2 className="w-6 h-6 text-emerald-400 my-auto" />}
                       </div>
