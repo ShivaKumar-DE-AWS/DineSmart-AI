@@ -160,7 +160,25 @@ async def delete_restaurant(restaurant_id: str, user=Depends(require_superadmin)
     await db.notifications.delete_many({"restaurant_id": restaurant_id})
     await db.support_tickets.delete_many({"restaurant_id": restaurant_id})
     await db.verifications.delete_many({"restaurant_id": restaurant_id})
+    
+    if slug:
+        import os
+        import sys
         
+        # 1. Remove the JSON file
+        config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "restaurants", f"{slug}.json")
+        if os.path.exists(config_path):
+            try:
+                os.remove(config_path)
+            except Exception:
+                pass
+                
+        # 2. Remove from in-memory cache
+        # Try both 'server' and '__main__' in case of different runner environments
+        for mod_name in ['server', '__main__']:
+            if mod_name in sys.modules and hasattr(sys.modules[mod_name], "_CONFIG_CACHE"):
+                sys.modules[mod_name]._CONFIG_CACHE.pop(slug, None)
+                
     from routers.audit import log_audit_event
     await log_audit_event(
         user_id=user.get("sub"),
