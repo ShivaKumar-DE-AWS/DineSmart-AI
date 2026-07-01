@@ -42,7 +42,7 @@ if "redis://" in redis_url or "rediss://" in redis_url:
     import re
     match = re.search(r'(redis[s]?://[^\s"']+)', redis_url)
     if match:
-        redis_url = match.group(1)
+        redis_url = match.group(1).strip(' "')
 redis_client = None
 if redis_url:
     try:
