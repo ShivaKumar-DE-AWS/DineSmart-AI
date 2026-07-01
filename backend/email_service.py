@@ -211,7 +211,7 @@ async def send_verification_otp(to_email: str, otp: str):
 
 async def send_sms_otp(phone: str, otp: str):
     """Send SMS OTP asynchronously using Twilio."""
-    message = f"Your SmartDine Verification Code is: {otp}"
+    message = f"🔐 [SmartDine] {otp} is your verification code. Do not share this with anyone. Valid for 10 minutes."
     print("=" * 60, flush=True)
     print(f"📱 SMS GENERATED (To: {phone})", flush=True)
     print(f"Content: {message}")
@@ -233,6 +233,65 @@ async def send_sms_otp(phone: str, otp: str):
                 )
                 if res.is_success:
                     print(f"✅ Successfully sent SMS to {phone}")
+                else:
+                    print(f"❌ Twilio API Error ({res.status_code}): {res.text}")
+        except Exception as e:
+            print(f"❌ Failed to connect to Twilio: {str(e)}")
+
+async def send_whatsapp_otp(phone: str, otp: str):
+    """Send WhatsApp OTP asynchronously using Twilio."""
+    message = f"🔐 *[SmartDine]*\n\nYour verification code is: *{otp}*\n\n_Do not share this code with anyone. It is valid for 10 minutes._"
+    print("=" * 60, flush=True)
+    print(f"💬 WHATSAPP GENERATED (To: {phone})", flush=True)
+    print(f"Content: {message}")
+    print("=" * 60, flush=True)
+    
+    if TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN:
+        try:
+            async with httpx.AsyncClient() as client:
+                auth = (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+                res = await client.post(
+                    f"https://api.twilio.com/2010-04-01/Accounts/{TWILIO_ACCOUNT_SID}/Messages.json",
+                    auth=auth,
+                    data={
+                        "To": f"whatsapp:{phone}",
+                        "From": f"whatsapp:{TWILIO_PHONE_NUMBER}",
+                        "Body": message
+                    },
+                    timeout=10
+                )
+                if res.is_success:
+                    print(f"✅ Successfully sent WhatsApp to {phone}")
+                else:
+                    print(f"❌ Twilio API Error ({res.status_code}): {res.text}")
+        except Exception as e:
+            print(f"❌ Failed to connect to Twilio: {str(e)}")
+
+async def send_voice_otp(phone: str, otp: str):
+    """Send Voice OTP asynchronously using Twilio."""
+    spaced_otp = " ".join(list(otp))
+    twiml = f"<Response><Say voice='alice'>Hello from Smart Dine. Your secure verification code is {spaced_otp}. I repeat, {spaced_otp}. Please do not share this code. Goodbye.</Say></Response>"
+    print("=" * 60, flush=True)
+    print(f"📞 VOICE CALL GENERATED (To: {phone})", flush=True)
+    print(f"Content: {otp}")
+    print("=" * 60, flush=True)
+    
+    if TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN:
+        try:
+            async with httpx.AsyncClient() as client:
+                auth = (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+                res = await client.post(
+                    f"https://api.twilio.com/2010-04-01/Accounts/{TWILIO_ACCOUNT_SID}/Calls.json",
+                    auth=auth,
+                    data={
+                        "To": phone,
+                        "From": TWILIO_PHONE_NUMBER,
+                        "Twiml": twiml
+                    },
+                    timeout=10
+                )
+                if res.is_success:
+                    print(f"✅ Successfully initiated Voice Call to {phone}")
                 else:
                     print(f"❌ Twilio API Error ({res.status_code}): {res.text}")
         except Exception as e:
