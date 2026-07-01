@@ -1,3 +1,4 @@
+"""AI Waiter orchestrator with cached menu to avoid N+1 queries."""
 import json
 import logging
 import uuid
@@ -6,6 +7,7 @@ from google import genai
 from google.genai import types as genai_types
 from deps import db, now_iso, GEMINI_API_KEY
 from services.waiter_tools import WaiterTools
+from cache_service import menu_cache
 
 logger = logging.getLogger(__name__)
 
@@ -105,21 +107,47 @@ WAITER_TOOL = genai_types.Tool(function_declarations=WAITER_FUNCTIONS)
 
 
 class WaiterOrchestrator:
+    """AI waiter orchestrator with menu caching to avoid N+1 queries per turn."""
+    
     def __init__(self, session_id: str, restaurant_id: str, table_id: str, mode: str = "chat"):
         self.session_id = f"{session_id}_{mode}"
         self.restaurant_id = restaurant_id
         self.table_id = table_id
         self.tools = WaiterTools(session_id, restaurant_id, table_id)
         self.client = genai.Client(api_key=GEMINI_API_KEY)
+        self.cached_menu: List[Dict[str, Any]] = []  # Cache menu for this session
+        self.menu_cache_key = f"menu:{restaurant_id}"
+        
+    async def fetch_and_cache_menu(self) -> List[Dict[str, Any]]:
+        """Fetch menu from DB (or cache) once per session."""
+        # Check cache first
+        cached = await menu_cache.get(self.menu_cache_key)
+        if cached:
+            logger.debug(f"Using cached menu for {self.restaurant_id}")
+            self.cached_menu = cached
+            return cached
+        
+        # Fetch from DB
+        menu_docs = await db.menu.find(
+            {"available": True, "restaurant_id": self.restaurant_id},
+            {"_id": 0, "name": 1, "description": 1, "price": 1, "category": 1, "tags": 1, "id": 1},
+        ).to_list(100)  # Increased from 60 to 100 for better coverage
+        
+        # Cache for 5 minutes
+        await menu_cache.set(self.menu_cache_key, menu_docs, ttl=300)
+        self.cached_menu = menu_docs
+        logger.debug(f"Fetched and cached menu for {self.restaurant_id} ({len(menu_docs)} items)")
+        return menu_docs
         
     async def build_system_prompt(self, cart_state: list = None) -> str:
+        """Build system prompt using cached menu (no N+1 query)."""
         rest = await db.restaurants.find_one({"id": self.restaurant_id})
         restaurant_name = rest.get("name", "SmartDine") if rest else "SmartDine"
         
-        menu_docs = await db.menu.find(
-            {"available": True, "restaurant_id": self.restaurant_id},
-            {"_id": 0, "name": 1, "description": 1, "price": 1, "category": 1, "tags": 1},
-        ).to_list(60)
+        # Use cached menu instead of fetching every turn
+        if not self.cached_menu:
+            await self.fetch_and_cache_menu()
+        menu_docs = self.cached_menu
         
         menu_block = "\n".join(
             f"- {m['name']} ({m['category']}) — ₹{int(m['price'])}: {m['description']}"

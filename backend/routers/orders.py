@@ -1,4 +1,6 @@
-"""Orders, payments, webhook routes, and SSE order stream."""
+"""Orders, payments, webhook routes, and SSE order stream.
+Now uses Redis pub/sub for distributed order streaming.
+"""
 import os
 import uuid
 import asyncio
@@ -14,35 +16,31 @@ from deps import (
     client, next_token, OrderCreateReq, OrderStatusUpdate,
     PaymentReq, CheckoutSessionReq, SplitBillReq,
 )
+from redis_order_stream import order_stream
+from cache_service import menu_cache
 
 router = APIRouter(tags=["orders"])
 
-
 # =========================================================
-# SSE Order Broadcast (replaces 3s polling for kitchen/counter)
+# SSE Order Broadcast (now Redis-backed, distributed)
 # =========================================================
-_order_listeners: Dict[str, List[asyncio.Queue]] = {}
 
-def broadcast_order_update(restaurant_id: str, order_data: Dict[str, Any]):
-    """Push an order update to all SSE subscribers of this restaurant."""
-    key = restaurant_id or "_all"
-    if key in _order_listeners:
-        for q in _order_listeners[key]:
-            try:
-                q.put_nowait(order_data)
-            except asyncio.QueueFull:
-                pass
+async def broadcast_order_update(restaurant_id: str, order_data: Dict[str, Any]):
+    """Push an order update to all SSE subscribers of this restaurant via Redis."""
+    await order_stream.broadcast_order_update(restaurant_id, order_data)
 
 @router.get("/api/orders/stream")
 async def stream_orders(restaurant_id: Optional[str] = None, token: Optional[str] = None, user=Depends(current_user)):
     """SSE endpoint: streams order updates in real-time for kitchen/counter dashboards.
-
-    Accepts auth via Bearer header ONLY. Query param token removed for security.
+    
+    Now uses Redis pub/sub for distributed streaming across multiple workers.
+    Accepts auth via Bearer header ONLY.
     """
     if not user and token:
         user = jwt_verify(token)
     if not user:
         return JSONResponse({"detail": "Authentication required"}, status_code=401)
+    
     # Enforce: user can only subscribe to their own restaurant's stream
     user_rid = user.get("restaurant_id")
     if not user_rid:
@@ -50,23 +48,26 @@ async def stream_orders(restaurant_id: Optional[str] = None, token: Optional[str
     rid = user_rid  # Always use the user's restaurant_id, ignore client-supplied value
 
     async def event_gen():
-        q: asyncio.Queue = asyncio.Queue()
-        _order_listeners.setdefault(rid, []).append(q)
+        pubsub = await order_stream.subscribe(rid)
+        if not pubsub:
+            yield f"data: {{\"error\": \"Streaming unavailable\"}}\n\n"
+            return
+        
         try:
             while True:
                 try:
-                    data = await asyncio.wait_for(q.get(), timeout=30)
-                    yield f"data: {json.dumps(data)}\n\n"
+                    # 30-second timeout; send keepalive if no events
+                    message = await asyncio.wait_for(pubsub.get_message(ignore_subscribe_messages=True), timeout=30)
+                    if message:
+                        data = json.loads(message["data"])
+                        yield f"data: {json.dumps(data)}\n\n"
                 except asyncio.TimeoutError:
                     yield f": keepalive\n\n"
         except asyncio.CancelledError:
             pass
         finally:
-            if rid in _order_listeners:
-                try:
-                    _order_listeners[rid].remove(q)
-                except ValueError:
-                    pass
+            await pubsub.unsubscribe()
+            await pubsub.close()
 
     return StreamingResponse(
         event_gen(),
@@ -84,6 +85,7 @@ async def create_order(req: OrderCreateReq):
         raise HTTPException(status_code=400, detail="Cart is empty")
     if not req.restaurant_id:
         raise HTTPException(status_code=400, detail="restaurant_id is required")
+    
     # Validate restaurant exists
     rest = await db.restaurants.find_one({"id": req.restaurant_id})
     if not rest:
@@ -93,7 +95,7 @@ async def create_order(req: OrderCreateReq):
     if req.order_type == "dine_in" and not (req.table_number or req.table_session_id):
         raise HTTPException(status_code=400, detail="A table is required for dine-in orders")
     
-    # ponytail: validate table_number against actual restaurant tables
+    # Validate table_number against actual restaurant tables
     if req.order_type == "dine_in" and req.table_number:
         table = await db.tables.find_one({
             "restaurant_id": req.restaurant_id,
@@ -103,14 +105,13 @@ async def create_order(req: OrderCreateReq):
         if not table:
             raise HTTPException(status_code=400, detail=f"Table {req.table_number} not found or inactive")
     
-    # ponytail: sanitize customer inputs (XSS prevention)
-    import re
+    # Sanitize customer inputs (XSS prevention)
     customer_name = re.sub(r"[<>\"'&]", "", req.customer_name or "").strip()[:100]
     customer_phone = re.sub(r"[^+\d\s\-\(\)]", "", req.customer_phone or "").strip()[:20]
     if not customer_name:
         raise HTTPException(status_code=400, detail="Customer name required")
     
-    # ponytail: server-generated idempotency key (client value only for debugging)
+    # Server-generated idempotency key (client value only for debugging)
     idempotency_key = req.idempotency_key or f"idem_{uuid.uuid4().hex[:16]}"
     existing = await db.orders.find_one(
         {"restaurant_id": req.restaurant_id, "idempotency_key": idempotency_key},
@@ -119,7 +120,7 @@ async def create_order(req: OrderCreateReq):
     if existing:
         return {"ok": True, "order_id": existing["id"], "token": existing["token"], "total": existing["total"], "duplicate": True}
     
-    # ponytail: snapshot menu prices + validate availability in single query
+    # Snapshot menu prices + validate availability in single query
     item_ids = [i.item_id for i in req.items]
     menu_docs = await db.menu.find(
         {"id": {"$in": item_ids}, "restaurant_id": req.restaurant_id},
@@ -180,7 +181,7 @@ async def create_order(req: OrderCreateReq):
         "is_ai": req.is_ai,
     }
     
-    # ponytail: atomic order creation + inventory deduction using MongoDB transaction
+    # Atomic order creation + inventory deduction using MongoDB transaction
     async with await client.start_session() as session:
         async with session.start_transaction():
             await db.orders.insert_one(order, session=session)
@@ -219,8 +220,10 @@ async def create_order(req: OrderCreateReq):
     if customer and customer.get("id"):
         await _on_order_paid({**order, "customer_id": customer["id"]})
     
-    # Broadcast to SSE subscribers (kitchen/counter real-time)
-    broadcast_order_update(restaurant_id, {"type": "new_order", "order": {k: v for k, v in order.items() if k != "_id"}})
+    # Broadcast to SSE subscribers (kitchen/counter real-time) via Redis
+    broadcast_data = {"type": "new_order", "order": {k: v for k, v in order.items() if k != "_id"}}
+    await broadcast_order_update(restaurant_id, broadcast_data)
+    
     return {"ok": True, "order_id": order["id"], "token": token, "total": total}
 
 
@@ -292,7 +295,7 @@ async def update_status(order_id: str, body: OrderStatusUpdate, user=Depends(req
         
     order = await db.orders.find_one(q, {"_id": 0})
     
-    # Broadcast status change to SSE subscribers
+    # Broadcast status change to SSE subscribers via Redis
     broadcast_data = {"type": "status_update", "order_id": order_id, "token": order["token"]}
     if body.status:
         broadcast_data["status"] = body.status
@@ -309,7 +312,7 @@ async def update_status(order_id: str, body: OrderStatusUpdate, user=Depends(req
     if body.payment_status:
         broadcast_data["payment_status"] = body.payment_status
         
-    broadcast_order_update(order.get("restaurant_id"), broadcast_data)
+    await broadcast_order_update(order.get("restaurant_id"), broadcast_data)
     return {"ok": True, **update_data}
 
 
@@ -346,12 +349,12 @@ async def split_bill(order_id: str, body: SplitBillReq, user=Depends(require_rol
     updated = await db.orders.find_one(q, {"_id": 0})
 
     broadcast_data = {"type": "status_update", "order_id": order_id, "token": order["token"], "split": True}
-    broadcast_order_update(order.get("restaurant_id"), broadcast_data)
+    await broadcast_order_update(order.get("restaurant_id"), broadcast_data)
     return updated
 
 
 # =========================================================
-# Bill PDF download
+# Bill PDF download (background task recommended)
 # =========================================================
 @router.get("/api/orders/{order_id}/bill")
 async def download_bill(order_id: str, user=Depends(current_user)):
@@ -442,7 +445,7 @@ async def download_bill(order_id: str, user=Depends(current_user)):
 
 
 # =========================================================
-# Payment helpers (shared with orders) — simplified for UPI/QR only
+# Payment helpers (shared with orders)
 # =========================================================
 async def _find_or_create_customer(name: str, phone: Optional[str], restaurant_id: Optional[str] = None) -> Dict[str, Any]:
     import secrets as _secrets, html
@@ -505,7 +508,6 @@ async def _deduct_inventory(order: Dict[str, Any]) -> None:
 @router.post("/api/payment/intent")
 async def payment_intent(req: PaymentReq):
     """Mock payment intent for UPI/QR - immediately succeeds."""
-    import asyncio
     await asyncio.sleep(0.1)  # Simulate quick processing
     return {
         "intent_id": f"upi_{uuid.uuid4().hex[:16]}",
