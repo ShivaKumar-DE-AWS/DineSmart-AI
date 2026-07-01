@@ -494,7 +494,7 @@ async def create_indexes():
             (db.orders, [("restaurant_id", ASCENDING), ("created_at", ASCENDING)], {"background": True, "name": "idx_orders_rest_time"}),
             (db.orders, [("restaurant_id", ASCENDING), ("idempotency_key", ASCENDING)], {"unique": True, "partialFilterExpression": {"idempotency_key": {"$exists": True, "$type": "string"}}, "name": "idx_orders_rest_idempotency"}),
             (db.restaurants, [("slug", ASCENDING)], {"unique": True, "name": "idx_restaurants_slug"}),
-            (db.restaurant_configs, [("slug", ASCENDING)], {"unique": True, "name": "idx_configs_slug"}),
+            (db.restaurant_configs, [("slug", ASCENDING)], {"name": "idx_configs_slug"}),
             (db.menu, [("restaurant_id", ASCENDING), ("category", ASCENDING)], {"background": True, "name": "idx_menu_rest_category"}),
             (db.menu, [("restaurant_id", ASCENDING), ("name", ASCENDING)], {"background": True, "name": "idx_menu_rest_name"}),
             (db.users, [("email", ASCENDING)], {"unique": True, "name": "idx_users_email"}),
