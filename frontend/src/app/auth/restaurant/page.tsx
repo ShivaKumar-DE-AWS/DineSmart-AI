@@ -349,11 +349,10 @@ export default function RestaurantAuthPage() {
                   <div className="space-y-4 pt-4 border-t border-white/10">
                     <h3 className="text-sm font-semibold text-white mb-2">Restaurant Details</h3>
                     {emailVerified && phoneVerified && (
-                      <div className="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-3 text-xs text-emerald-400 flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4" /> Email and Phone verified successfully.
+                      <div className="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-3 text-xs text-emerald-400 flex items-center gap-2 mb-4">
+                        <CheckCircle2 className="w-4 h-4" /> Email and Phone verified successfully.
                       </div>
                     )}
-                    
                     <div className="space-y-1.5">
                       <label className="text-xs font-medium text-stone pl-1">Full Name</label>
                       <input type="text" value={regName} onChange={(e) => setRegName(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 px-4 text-white text-sm" placeholder="John Doe" required />
@@ -444,7 +443,8 @@ export default function RestaurantAuthPage() {
                     >
                       Login to Admin Dashboard
                     </Link>
-                  </div>
+                  </motion.div>
+                )}
 
               </motion.form>
             )}
