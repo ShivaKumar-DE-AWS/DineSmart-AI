@@ -10,12 +10,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-REDIS_URL = os.environ.get("REDIS_URL", "").strip()
-if "redis://" in REDIS_URL or "rediss://" in REDIS_URL:
-    import re
-    match = re.search(r'(redis[s]?://[^\s"']+)', REDIS_URL)
-    if match:
-        REDIS_URL = match.group(1).strip(' "')
+REDIS_URL = os.environ.get("REDIS_URL", "")
 
 class CacheService:
     """Distributed cache with local TTL fallback."""

@@ -37,12 +37,7 @@ from deps import (
 # =========================================================
 # Rate Limiter (Redis-backed, distributed)
 # =========================================================
-redis_url = os.environ.get("REDIS_URL", "").strip()
-if "redis://" in redis_url or "rediss://" in redis_url:
-    import re
-    match = re.search(r'(redis[s]?://[^\s"']+)', redis_url)
-    if match:
-        redis_url = match.group(1).strip(' "')
+redis_url = os.environ.get("REDIS_URL", "")
 redis_client = None
 if redis_url:
     try:
