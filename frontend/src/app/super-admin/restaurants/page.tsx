@@ -88,7 +88,7 @@ export default function SuperAdminRestaurantsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-heading font-bold flex items-center gap-2">
             <Store className="h-6 w-6 text-brand" />
@@ -115,7 +115,7 @@ export default function SuperAdminRestaurantsPage() {
         />
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-bone overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-bone overflow-x-auto w-full">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-bone bg-sand">
@@ -217,7 +217,7 @@ export default function SuperAdminRestaurantsPage() {
         <div className="fixed inset-0 bg-ink/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                 <h2 className="text-xl font-heading font-bold text-ink">Add Restaurant</h2>
                 <button 
                   onClick={() => setShowAddModal(false)}

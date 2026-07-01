@@ -27,7 +27,7 @@ export default function SuperAdminAuditPage() {
         </h1>
         <p className="text-stone text-sm">Platform-wide security and access logs.</p>
       </div>
-      <div className="bg-white rounded-xl shadow-sm border border-bone overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-bone overflow-x-auto w-full">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-bone bg-sand">
