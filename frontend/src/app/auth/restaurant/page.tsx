@@ -332,9 +332,6 @@ export default function RestaurantAuthPage() {
                             <button type="button" onClick={() => sendOtp("phone", regPhone, "sms")} disabled={verifyingPhone} className="px-3 bg-clay rounded-xl text-white text-xs font-semibold whitespace-nowrap h-full">
                               {verifyingPhone ? <Loader2 className="w-4 h-4 animate-spin" /> : "SMS"}
                             </button>
-                            <button type="button" onClick={() => sendOtp("phone", regPhone, "whatsapp")} disabled={verifyingPhone} className="px-3 bg-emerald-600 rounded-xl text-white text-xs font-semibold whitespace-nowrap h-full">
-                              WhatsApp
-                            </button>
                             <button type="button" onClick={() => sendOtp("phone", regPhone, "call")} disabled={verifyingPhone} className="px-3 bg-electric-blue rounded-xl text-white text-xs font-semibold whitespace-nowrap h-full">
                               Call
                             </button>
