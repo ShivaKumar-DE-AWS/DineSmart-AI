@@ -51,12 +51,14 @@ export default function RestaurantAuthPage() {
   const [phoneOtp, setPhoneOtp] = useState("");
   
   const [verifyingEmail, setVerifyingEmail] = useState(false);
-  const [verifyingPhone, setVerifyingPhone] = useState(false);
+  const [verifyingPhone, setVerifyingPhone] = useState<"sms" | "call" | null>(null);
+
 
   const sendOtp = async (type: "email" | "phone", value: string, phoneMethod: "sms" | "whatsapp" | "call" = "sms") => {
     if (!value) return toast.error(`Please enter a valid ${type}`);
     if (type === "email") setVerifyingEmail(true);
-    else setVerifyingPhone(true);
+    else setVerifyingPhone(phoneMethod as "sms" | "call");
+    
     
     try {
       const res = await fetch("/api/otp/send", {
@@ -73,14 +75,15 @@ export default function RestaurantAuthPage() {
       toast.error((e as Error).message);
     } finally {
       if (type === "email") setVerifyingEmail(false);
-      else setVerifyingPhone(false);
+      else setVerifyingPhone(null);
     }
   };
 
   const verifyOtp = async (type: "email" | "phone", target: string, otp: string) => {
     if (!otp) return toast.error("Please enter OTP");
     if (type === "email") setVerifyingEmail(true);
-    else setVerifyingPhone(true);
+    else setVerifyingPhone("sms"); // Default loading state for verify
+    
     
     try {
       const res = await fetch("/api/otp/verify", {
@@ -329,11 +332,11 @@ export default function RestaurantAuthPage() {
                         </div>
                         {!phoneVerified && (
                           <div className="flex gap-2">
-                            <button type="button" onClick={() => sendOtp("phone", regPhone, "sms")} disabled={verifyingPhone} className="px-3 bg-clay rounded-xl text-white text-xs font-semibold whitespace-nowrap h-full">
-                              {verifyingPhone ? <Loader2 className="w-4 h-4 animate-spin" /> : "SMS"}
+                            <button type="button" onClick={() => sendOtp("phone", regPhone, "sms")} disabled={!!verifyingPhone} className="px-3 bg-clay rounded-xl text-white text-xs font-semibold whitespace-nowrap h-full">
+                              {verifyingPhone === "sms" ? <Loader2 className="w-4 h-4 animate-spin" /> : "SMS"}
                             </button>
-                            <button type="button" onClick={() => sendOtp("phone", regPhone, "call")} disabled={verifyingPhone} className="px-3 bg-electric-blue rounded-xl text-white text-xs font-semibold whitespace-nowrap h-full">
-                              Call
+                            <button type="button" onClick={() => sendOtp("phone", regPhone, "call")} disabled={!!verifyingPhone} className="px-3 bg-electric-blue rounded-xl text-white text-xs font-semibold whitespace-nowrap h-full">
+                              {verifyingPhone === "call" ? <Loader2 className="w-4 h-4 animate-spin" /> : "Call"}
                             </button>
                           </div>
                         )}
