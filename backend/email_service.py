@@ -208,6 +208,8 @@ def send_verification_otp(to_email: str, otp: str):
 def send_sms_otp(phone: str, otp: str):
     message = f"Your SmartDine Verification Code is: {otp}"
     print("=" * 60, flush=True)
+
+
     print(f"📱 SMS GENERATED (To: {phone})", flush=True)
     print(f"Content: {message}")
     print("=" * 60, flush=True)
@@ -215,7 +217,7 @@ def send_sms_otp(phone: str, otp: str):
     if TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN:
         try:
             auth = (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
-            httpx.post(
+            res = httpx.post(
                 f"https://api.twilio.com/2010-04-01/Accounts/{TWILIO_ACCOUNT_SID}/Messages.json",
                 auth=auth,
                 data={
@@ -225,6 +227,9 @@ def send_sms_otp(phone: str, otp: str):
                 },
                 timeout=10
             )
-            print(f"✅ Successfully sent SMS to {phone}")
+            if res.is_success:
+                print(f"✅ Successfully sent SMS to {phone}")
+            else:
+                print(f"❌ Twilio API Error ({res.status_code}): {res.text}")
         except Exception as e:
-            print(f"❌ Failed to send SMS to {phone}: {str(e)}")
+            print(f"❌ Failed to connect to Twilio: {str(e)}")
