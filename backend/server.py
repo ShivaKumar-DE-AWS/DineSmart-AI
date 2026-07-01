@@ -125,6 +125,31 @@ class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
 # =========================================================
 app = FastAPI(title="SmartDine AI API", version="2.0.0")
 
+
+# =========================================================
+# DB Availability Check
+# =========================================================
+DB_AVAILABLE = True
+
+@app.on_event("startup")
+async def check_db_connection():
+    global DB_AVAILABLE
+    try:
+        # Fast 5-second timeout ping to check if DB is reachable
+        # If this fails, we skip all heavy startup tasks to prevent Render timeout
+        from motor.motor_asyncio import AsyncIOMotorClient
+        import os
+        url = os.environ.get("MONGO_URL") or os.environ.get("MONGODB_URI") or "mongodb://localhost:27017/dinesmart_test"
+        
+        # Test client with 5s timeout
+        test_client = AsyncIOMotorClient(url, serverSelectionTimeoutMS=5000)
+        await test_client.admin.command('ping')
+        print("[startup] MongoDB connection successful.")
+    except Exception as e:
+        DB_AVAILABLE = False
+        print(f"[startup] CRITICAL ERROR: MongoDB connection failed: {e}")
+        print("[startup] Skipping all DB seed/index tasks to allow app to start.")
+
 @app.get("/api/health")
 async def public_health():
     return {"status": "ok", "service": "smartdine-ai", "time": now_iso()}
@@ -284,6 +309,9 @@ app.include_router(otp_router)
 # =========================================================
 @app.on_event("startup")
 async def seed_db():
+    if not DB_AVAILABLE:
+        return
+
     try:
         config_dir = os.path.join(os.path.dirname(__file__), "data", "restaurants")
         config_files = globmod.glob(os.path.join(config_dir, "*.json"))
@@ -454,6 +482,9 @@ async def backfill_restaurant_ids():
 
 @app.on_event("startup")
 async def backfill_restaurant_configs():
+    if not DB_AVAILABLE:
+        return
+
     """Migration: backfill missing restaurant_configs for newly signed up restaurants."""
     try:
         async for rest in db.restaurants.find():
@@ -490,6 +521,9 @@ async def backfill_restaurant_configs():
 
 @app.on_event("startup")
 async def create_indexes():
+    if not DB_AVAILABLE:
+        return
+
     """Create all necessary MongoDB indexes on startup."""
     try:
         from pymongo import ASCENDING
@@ -529,6 +563,9 @@ async def create_indexes():
 
 @app.on_event("startup")
 async def seed_superadmin():
+    if not DB_AVAILABLE:
+        return
+
     """Idempotent superadmin seed hook for Render deploys."""
     from deps import hash_password
     try:
