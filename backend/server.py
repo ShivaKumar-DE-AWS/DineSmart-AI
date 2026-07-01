@@ -485,78 +485,41 @@ async def backfill_restaurant_configs():
 
 @app.on_event("startup")
 async def create_indexes():
-    """Create compound indexes for multi-tenant query performance."""
+    """Create all necessary MongoDB indexes on startup."""
     try:
         from pymongo import ASCENDING
-        await db.orders.create_index(
-            [("restaurant_id", ASCENDING), ("status", ASCENDING), ("created_at", ASCENDING)],
-            background=True, name="idx_orders_rest_status_time"
-        )
-        await db.orders.create_index(
-            [("restaurant_id", ASCENDING), ("created_at", ASCENDING)],
-            background=True, name="idx_orders_rest_time"
-        )
-        await db.orders.create_index(
-            [("restaurant_id", ASCENDING), ("idempotency_key", ASCENDING)],
-            unique=True, sparse=True, name="idx_orders_rest_idempotency"
-        )
-        await db.menu.create_index(
-            [("restaurant_id", ASCENDING), ("category", ASCENDING)],
-            background=True, name="idx_menu_rest_category"
-        )
-        await db.menu.create_index(
-            [("restaurant_id", ASCENDING), ("name", ASCENDING)],
-            background=True, name="idx_menu_rest_name"
-        )
-        await db.users.create_index(
-            [("email", ASCENDING)], unique=True, name="idx_users_email"
-        )
-        await db.users.create_index(
-            [("restaurant_id", ASCENDING), ("role", ASCENDING)],
-            background=True, name="idx_users_rest_role"
-        )
-        await db.users.create_index(
-            [("restaurant_slug", ASCENDING)],
-            background=True, sparse=True, name="idx_users_slug"
-        )
-        await db.inventory.create_index(
-            [("restaurant_id", ASCENDING)],
-            background=True, name="idx_inventory_rest"
-        )
-        await db.tables.create_index(
-            [("restaurant_id", ASCENDING), ("number", ASCENDING)],
-            background=True, name="idx_tables_rest_number"
-        )
-        await db.tables.create_index(
-            [("qr_token", ASCENDING)],
-            background=True, sparse=True, name="idx_tables_qr"
-        )
-        await db.table_sessions.create_index(
-            [("table_id", ASCENDING), ("status", ASCENDING)],
-            background=True, name="idx_sessions_table_status"
-        )
-        await db.reservations.create_index(
-            [("restaurant_id", ASCENDING), ("date", ASCENDING), ("status", ASCENDING)],
-            background=True, name="idx_reservations_rest_date_status"
-        )
-        await db.notifications.create_index(
-            [("restaurant_id", ASCENDING), ("read", ASCENDING)],
-            background=True, name="idx_notifs_rest_read"
-        )
-        await db.notifications.create_index(
-            [("event_key", ASCENDING)], unique=True, sparse=True, name="idx_notifs_event_key"
-        )
-        await db.customers.create_index(
-            [("restaurant_id", ASCENDING), ("last_order_at", ASCENDING)],
-            background=True, name="idx_customers_rest_time"
-        )
-        await db.counters.create_index(
-            [("_id", ASCENDING)],
-            name="idx_counters_pk"
-        )
-        print("[startup] MongoDB indexes created successfully")
+        
+        indexes = [
+            (db.orders, [("restaurant_id", ASCENDING), ("status", ASCENDING), ("created_at", ASCENDING)], {"background": True, "name": "idx_orders_rest_status_time"}),
+            (db.orders, [("restaurant_id", ASCENDING), ("created_at", ASCENDING)], {"background": True, "name": "idx_orders_rest_time"}),
+            (db.orders, [("restaurant_id", ASCENDING), ("idempotency_key", ASCENDING)], {"unique": True, "partialFilterExpression": {"idempotency_key": {"$exists": True, "$type": "string"}}, "name": "idx_orders_rest_idempotency"}),
+            (db.restaurants, [("slug", ASCENDING)], {"unique": True, "name": "idx_restaurants_slug"}),
+            (db.restaurant_configs, [("slug", ASCENDING)], {"unique": True, "name": "idx_configs_slug"}),
+            (db.menu, [("restaurant_id", ASCENDING), ("category", ASCENDING)], {"background": True, "name": "idx_menu_rest_category"}),
+            (db.menu, [("restaurant_id", ASCENDING), ("name", ASCENDING)], {"background": True, "name": "idx_menu_rest_name"}),
+            (db.users, [("email", ASCENDING)], {"unique": True, "name": "idx_users_email"}),
+            (db.users, [("restaurant_id", ASCENDING), ("role", ASCENDING)], {"background": True, "name": "idx_users_rest_role"}),
+            (db.users, [("restaurant_slug", ASCENDING)], {"background": True, "sparse": True, "name": "idx_users_slug"}),
+            (db.inventory, [("restaurant_id", ASCENDING)], {"background": True, "name": "idx_inventory_rest"}),
+            (db.tables, [("restaurant_id", ASCENDING), ("number", ASCENDING)], {"background": True, "name": "idx_tables_rest_number"}),
+            (db.tables, [("qr_token", ASCENDING)], {"background": True, "sparse": True, "name": "idx_tables_qr"}),
+            (db.table_sessions, [("table_id", ASCENDING), ("status", ASCENDING)], {"background": True, "name": "idx_sessions_table_status"}),
+            (db.reservations, [("restaurant_id", ASCENDING), ("date", ASCENDING), ("status", ASCENDING)], {"background": True, "name": "idx_reservations_rest_date_status"}),
+            (db.notifications, [("restaurant_id", ASCENDING), ("read", ASCENDING)], {"background": True, "name": "idx_notifs_rest_read"}),
+            (db.notifications, [("event_key", ASCENDING)], {"unique": True, "sparse": True, "name": "idx_notifs_event_key"}),
+            (db.customers, [("restaurant_id", ASCENDING), ("last_order_at", ASCENDING)], {"background": True, "name": "idx_customers_rest_time"}),
+            (db.counters, [("_id", ASCENDING)], {"name": "idx_counters_pk"}),
+        ]
+        
+        for collection, keys, options in indexes:
+            try:
+                await collection.create_index(keys, **options)
+            except Exception as e:
+                print(f"[startup] WARNING: Failed to create index {options.get('name')} on {collection.name}: {e}")
+                
+        print("[startup] MongoDB indexes creation finished")
     except Exception as e:
-        print(f"[startup] WARNING: Index creation failed: {e}")
+        print(f"[startup] WARNING: Index setup failed: {e}")
 
 
 @app.on_event("startup")
