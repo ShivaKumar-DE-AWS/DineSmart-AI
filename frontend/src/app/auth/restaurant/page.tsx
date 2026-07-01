@@ -100,7 +100,7 @@ export default function RestaurantAuthPage() {
       toast.error((e as Error).message);
     } finally {
       if (type === "email") setVerifyingEmail(false);
-      else setVerifyingPhone(false);
+      else setVerifyingPhone(null);
     }
   };
 
