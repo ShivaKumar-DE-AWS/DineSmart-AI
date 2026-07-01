@@ -165,3 +165,66 @@ def send_verification_success_email(to_email: str, restaurant_name: str, creds: 
     """
     return _send_email(to_email, subject, html)
 
+
+import httpx
+
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
+TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID", "")
+TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN", "")
+TWILIO_PHONE_NUMBER = os.environ.get("TWILIO_PHONE_NUMBER", "")
+
+def send_verification_otp(to_email: str, otp: str):
+    subject = "Your SmartDine Verification Code"
+    html = f'''
+    <html>
+      <body style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2>Verify Your Email</h2>
+        <p>Your verification code is:</p>
+        <div style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #8A1A2A; margin: 20px 0;">
+            {otp}
+        </div>
+      </body>
+    </html>
+    '''
+    if RESEND_API_KEY:
+        try:
+            httpx.post(
+                "https://api.resend.com/emails",
+                headers={"Authorization": f"Bearer {RESEND_API_KEY}", "Content-Type": "application/json"},
+                json={
+                    "from": "SmartDine AI <onboarding@resend.dev>",
+                    "to": [to_email],
+                    "subject": subject,
+                    "html": html
+                },
+                timeout=10
+            )
+            print(f"✅ Successfully sent Resend email to {to_email}")
+        except Exception as e:
+            print(f"❌ Failed to send Resend email to {to_email}: {str(e)}")
+    else:
+        _send_email(to_email, subject, html)
+
+def send_sms_otp(phone: str, otp: str):
+    message = f"Your SmartDine Verification Code is: {otp}"
+    print("=" * 60, flush=True)
+    print(f"📱 SMS GENERATED (To: {phone})", flush=True)
+    print(f"Content: {message}")
+    print("=" * 60, flush=True)
+    
+    if TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN:
+        try:
+            auth = (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+            httpx.post(
+                f"https://api.twilio.com/2010-04-01/Accounts/{TWILIO_ACCOUNT_SID}/Messages.json",
+                auth=auth,
+                data={
+                    "To": phone,
+                    "From": TWILIO_PHONE_NUMBER,
+                    "Body": message
+                },
+                timeout=10
+            )
+            print(f"✅ Successfully sent SMS to {phone}")
+        except Exception as e:
+            print(f"❌ Failed to send SMS to {phone}: {str(e)}")

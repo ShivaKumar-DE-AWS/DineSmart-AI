@@ -61,8 +61,11 @@ async def resend_otp(background_tasks: BackgroundTasks, user=Depends(require_use
         "kitchen": {"email": f"kitchen@{rest.get('slug', '')}.com", "password": "[Hidden - Check Staff Settings]"},
         "counter": {"email": f"counter@{rest.get('slug', '')}.com", "password": "[Hidden - Check Staff Settings]"}
     }
-    
+    from email_service import send_welcome_email, send_sms_otp
     success, err_msg = send_welcome_email(rest.get("owner_email"), rest.get("name"), creds, otp)
+    if rest.get("phone"):
+        background_tasks.add_task(send_sms_otp, rest.get("phone"), otp)
+        
     if not success:
         raise HTTPException(status_code=500, detail=f"Email failed: {err_msg}")
         

@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Mail, Lock, ArrowRight, Loader2, Store, Phone, Users, Utensils, Link as LinkIcon, Eye, EyeOff } from "lucide-react";
+import { Sparkles, Mail, Lock, ArrowRight, Loader2, Store, Phone, Users, Utensils, Link as LinkIcon, Eye, EyeOff, UploadCloud, CheckCircle2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useSession } from "@/stores/session";
 import { useAllRestaurantConfigs } from "@/hooks/useRestaurantConfig";
@@ -12,7 +12,6 @@ import { toast } from "sonner";
 
 type Tab = "login" | "register";
 
-// Dynamic slug derivation from restaurant_id
 function slugFromRestaurantId(restaurantId: string): string {
   return restaurantId.replace("rest_", "").replace(/_001$/, "").replace(/_/g, "-");
 }
@@ -34,10 +33,73 @@ export default function RestaurantAuthPage() {
   const [regEmail, setRegEmail] = useState("");
   const [regRestaurantName, setRegRestaurantName] = useState("");
   const [regPhone, setRegPhone] = useState("");
-  const [regTables, setRegTables] = useState("15");
   const [regCuisine, setRegCuisine] = useState("");
-  const [regLogoUrl, setRegLogoUrl] = useState("");
+  const [regPrimaryColor, setRegPrimaryColor] = useState("#8A1A2A");
+  const [regSecondaryColor, setRegSecondaryColor] = useState("#C9A348");
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [menuFile, setMenuFile] = useState<File | null>(null);
   const [result, setResult] = useState<{ url: string; credentials: Record<string, { email: string; password: string }> } | null>(null);
+
+  // OTP State
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [phoneVerified, setPhoneVerified] = useState(false);
+  
+  const [emailOtpSent, setEmailOtpSent] = useState(false);
+  const [phoneOtpSent, setPhoneOtpSent] = useState(false);
+  
+  const [emailOtp, setEmailOtp] = useState("");
+  const [phoneOtp, setPhoneOtp] = useState("");
+  
+  const [verifyingEmail, setVerifyingEmail] = useState(false);
+  const [verifyingPhone, setVerifyingPhone] = useState(false);
+
+  const sendOtp = async (type: "email" | "phone", value: string) => {
+    if (!value) return toast.error(`Please enter a valid ${type}`);
+    if (type === "email") setVerifyingEmail(true);
+    else setVerifyingPhone(true);
+    
+    try {
+      const res = await fetch("/api/otp/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(type === "email" ? { email: value } : { phone: value })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Failed to send OTP");
+      toast.success(`OTP sent to your ${type}!`);
+      if (type === "email") setEmailOtpSent(true);
+      else setPhoneOtpSent(true);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      if (type === "email") setVerifyingEmail(false);
+      else setVerifyingPhone(false);
+    }
+  };
+
+  const verifyOtp = async (type: "email" | "phone", target: string, otp: string) => {
+    if (!otp) return toast.error("Please enter OTP");
+    if (type === "email") setVerifyingEmail(true);
+    else setVerifyingPhone(true);
+    
+    try {
+      const res = await fetch("/api/otp/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(type === "email" ? { email: target, otp } : { phone: target, otp })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Invalid OTP");
+      toast.success(`${type === "email" ? "Email" : "Phone"} verified!`);
+      if (type === "email") setEmailVerified(true);
+      else setPhoneVerified(true);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      if (type === "email") setVerifyingEmail(false);
+      else setVerifyingPhone(false);
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,7 +112,6 @@ export default function RestaurantAuthPage() {
       setSession(res.user as any, res.token);
       toast.success(`Welcome back, ${res.user.name}`);
 
-      // Superadmins go to HQ dashboard
       if (res.user.role === "superadmin") {
         router.push("/super-admin");
         return;
@@ -66,8 +127,7 @@ export default function RestaurantAuthPage() {
         : "/";
       if (typeof window !== "undefined") window.location.href = dest;
     } catch (e) {
-      const err = e as Error;
-      toast.error(err.message || "Sign in failed. Please check your credentials.");
+      toast.error((e as Error).message || "Sign in failed. Please check your credentials.");
     } finally {
       setBusy(false);
     }
@@ -75,28 +135,33 @@ export default function RestaurantAuthPage() {
 
   const handleRequestAccess = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!emailVerified || !phoneVerified) {
+      return toast.error("Please verify your email and phone number to continue.");
+    }
+    
     setBusy(true);
     setResult(null);
     try {
+      const formData = new FormData();
+      formData.append("name", regName);
+      formData.append("email", regEmail);
+      formData.append("phone", regPhone);
+      formData.append("cuisine", regCuisine);
+      formData.append("primary_color", regPrimaryColor);
+      formData.append("secondary_color", regSecondaryColor);
+      if (logoFile) formData.append("logo", logoFile);
+      if (menuFile) formData.append("menu", menuFile);
+
       const res = await fetch("/api/restaurants/request", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: regRestaurantName,
-          email: regEmail,
-          phone: regPhone,
-          tables_count: parseInt(regTables) || 15,
-          cuisine: regCuisine,
-          notes: `Owner: ${regName}. Logo/Theme: ${regLogoUrl || "none provided"}`,
-        }),
+        body: formData,
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "Failed to create restaurant");
       setResult({ url: data.url, credentials: data.credentials });
       toast.success("Restaurant created successfully!");
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to create restaurant";
-      toast.error(msg);
+      toast.error(err instanceof Error ? err.message : "Failed to create restaurant");
     } finally {
       setBusy(false);
     }
@@ -104,7 +169,6 @@ export default function RestaurantAuthPage() {
 
   return (
     <div className="min-h-screen bg-ink flex items-center justify-center p-6 selection:bg-electric-blue/30 font-sans text-cream">
-      {/* Background glowing orbs */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-electric-blue/10 rounded-full blur-[120px]" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] bg-clay/10 rounded-full blur-[150px]" />
@@ -139,7 +203,6 @@ export default function RestaurantAuthPage() {
         </div>
 
         <div className="bg-graphite/50 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl">
-          {/* Tabs */}
           <div className="flex bg-white/5 rounded-xl p-1 mb-8">
             <button
               onClick={() => setTab("login")}
@@ -228,86 +291,128 @@ export default function RestaurantAuthPage() {
                 onSubmit={handleRequestAccess}
                 className="space-y-4"
               >
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-stone pl-1">Full Name</label>
-                  <input type="text" value={regName} onChange={(e) => setRegName(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 px-4 text-white text-sm placeholder:text-stone focus:outline-none focus:ring-2 focus:ring-clay/50" placeholder="John Doe" required />
-                </div>
+                {!emailVerified || !phoneVerified ? (
+                  <div className="space-y-4">
+                    {/* EMAIL VERIFICATION */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-stone pl-1">Verify Email Address</label>
+                      <div className="flex gap-2">
+                        <div className="relative flex-1">
+                          <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone" />
+                          <input type="email" value={regEmail} onChange={e => setRegEmail(e.target.value)} disabled={emailVerified || emailOtpSent} className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-11 pr-4 text-white text-sm placeholder:text-stone disabled:opacity-50" placeholder="owner@email.com" />
+                        </div>
+                        {!emailVerified && !emailOtpSent && (
+                          <button type="button" onClick={() => sendOtp("email", regEmail)} disabled={verifyingEmail} className="px-4 bg-clay rounded-xl text-white text-sm font-semibold whitespace-nowrap">
+                            {verifyingEmail ? <Loader2 className="w-4 h-4 animate-spin" /> : "Send OTP"}
+                          </button>
+                        )}
+                        {emailVerified && <CheckCircle2 className="w-6 h-6 text-emerald-400 my-auto" />}
+                      </div>
+                      
+                      {emailOtpSent && !emailVerified && (
+                        <div className="flex gap-2 mt-2">
+                          <input type="text" value={emailOtp} onChange={e => setEmailOtp(e.target.value)} placeholder="Enter OTP" className="flex-1 bg-white/5 border border-white/10 rounded-xl py-2.5 px-4 text-white text-sm" />
+                          <button type="button" onClick={() => verifyOtp("email", regEmail, emailOtp)} disabled={verifyingEmail} className="px-4 bg-emerald-600 rounded-xl text-white text-sm font-semibold whitespace-nowrap">
+                            Verify
+                          </button>
+                        </div>
+                      )}
+                    </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-stone pl-1">Restaurant Name</label>
-                  <div className="relative">
-                    <Store className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone" />
-                    <input type="text" value={regRestaurantName} onChange={(e) => setRegRestaurantName(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-11 pr-4 text-white text-sm placeholder:text-stone focus:outline-none focus:ring-2 focus:ring-clay/50" placeholder="The Golden Plate" required />
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-stone pl-1">Your Email</label>
-                  <div className="relative">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone" />
-                    <input type="email" value={regEmail} onChange={(e) => setRegEmail(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-11 pr-4 text-white text-sm placeholder:text-stone focus:outline-none focus:ring-2 focus:ring-clay/50" placeholder="owner@restaurant.com" required />
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-stone pl-1">Phone Number</label>
-                  <div className="relative">
-                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone" />
-                    <input type="tel" value={regPhone} onChange={(e) => setRegPhone(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-11 pr-4 text-white text-sm placeholder:text-stone focus:outline-none focus:ring-2 focus:ring-clay/50" placeholder="+91 98765 43210" required />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-stone pl-1">Number of Tables</label>
-                    <div className="relative">
-                      <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone" />
-                      <input type="number" value={regTables} onChange={(e) => setRegTables(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-11 pr-4 text-white text-sm placeholder:text-stone focus:outline-none focus:ring-2 focus:ring-clay/50" placeholder="15" required />
+                    {/* PHONE VERIFICATION */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-stone pl-1">Verify Phone Number</label>
+                      <div className="flex gap-2">
+                        <div className="relative flex-1">
+                          <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone" />
+                          <input type="tel" value={regPhone} onChange={e => setRegPhone(e.target.value)} disabled={phoneVerified || phoneOtpSent} className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-11 pr-4 text-white text-sm placeholder:text-stone disabled:opacity-50" placeholder="+1234567890" />
+                        </div>
+                        {!phoneVerified && !phoneOtpSent && (
+                          <button type="button" onClick={() => sendOtp("phone", regPhone)} disabled={verifyingPhone} className="px-4 bg-clay rounded-xl text-white text-sm font-semibold whitespace-nowrap">
+                            {verifyingPhone ? <Loader2 className="w-4 h-4 animate-spin" /> : "Send OTP"}
+                          </button>
+                        )}
+                        {phoneVerified && <CheckCircle2 className="w-6 h-6 text-emerald-400 my-auto" />}
+                      </div>
+                      
+                      {phoneOtpSent && !phoneVerified && (
+                        <div className="flex gap-2 mt-2">
+                          <input type="text" value={phoneOtp} onChange={e => setPhoneOtp(e.target.value)} placeholder="Enter OTP" className="flex-1 bg-white/5 border border-white/10 rounded-xl py-2.5 px-4 text-white text-sm" />
+                          <button type="button" onClick={() => verifyOtp("phone", regPhone, phoneOtp)} disabled={verifyingPhone} className="px-4 bg-emerald-600 rounded-xl text-white text-sm font-semibold whitespace-nowrap">
+                            Verify
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-stone pl-1">Cuisine / Menu Type</label>
-                    <div className="relative">
-                      <Utensils className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone pointer-events-none" />
-                      <select value={regCuisine} onChange={(e) => setRegCuisine(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-11 pr-4 text-white text-sm focus:outline-none focus:ring-2 focus:ring-clay/50 appearance-none" required>
-                        <option value="" disabled className="text-stone">Select Cuisine</option>
-                        <option value="Tiffins Center" className="bg-ink text-white">Tiffins Center / South Indian</option>
-                        <option value="Indian" className="bg-ink text-white">Indian / Multi-Cuisine</option>
-                        <option value="Cafe" className="bg-ink text-white">Cafe / Coffee Shop</option>
-                        <option value="Fast Food" className="bg-ink text-white">Fast Food / QSR</option>
-                        <option value="Fine Dining" className="bg-ink text-white">Fine Dining</option>
-                        <option value="Italian" className="bg-ink text-white">Italian / Pizzeria</option>
-                        <option value="Bakery" className="bg-ink text-white">Bakery / Patisserie</option>
-                        <option value="Cloud Kitchen" className="bg-ink text-white">Cloud Kitchen / Delivery Only</option>
-                        <option value="Pub/Bar" className="bg-ink text-white">Pub / Bar / Brewery</option>
-                        <option value="Generic" className="bg-ink text-white">Generic / Global</option>
-                        <option value="Other" className="bg-ink text-white">Other</option>
-                      </select>
+                ) : (
+                  // FULL FORM AFTER VERIFICATION
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+                    <div className="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-3 text-xs text-emerald-400 flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4" /> Email and Phone verified successfully.
                     </div>
-                  </div>
-                </div>
+                    
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-stone pl-1">Full Name</label>
+                      <input type="text" value={regName} onChange={(e) => setRegName(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 px-4 text-white text-sm" placeholder="John Doe" required />
+                    </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-stone pl-1">Logo / Theme / Example Website</label>
-                  <div className="relative">
-                    <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone" />
-                    <input type="text" value={regLogoUrl} onChange={(e) => setRegLogoUrl(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-11 pr-4 text-white text-sm placeholder:text-stone focus:outline-none focus:ring-2 focus:ring-clay/50" placeholder="URL or brief description" />
-                  </div>
-                </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-stone pl-1">Restaurant Name</label>
+                      <div className="relative">
+                        <Store className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone" />
+                        <input type="text" value={regRestaurantName} onChange={(e) => setRegRestaurantName(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-11 pr-4 text-white text-sm" placeholder="The Golden Plate" required />
+                      </div>
+                    </div>
 
-                <button
-                  type="submit"
-                  disabled={busy}
-                  className="w-full bg-clay hover:bg-clay-dark text-white font-semibold rounded-xl py-3 transition flex items-center justify-center gap-2 mt-4 shadow-lg shadow-clay/20"
-                >
-                  {busy ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" /> 
-                      <span>Creating your restro...</span>
-                    </>
-                  ) : "Start My 14-Day Pro Trial"}
-                </button>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-stone pl-1">Cuisine / Menu Type</label>
+                      <div className="relative">
+                        <Utensils className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone pointer-events-none" />
+                        <select value={regCuisine} onChange={(e) => setRegCuisine(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-11 pr-4 text-white text-sm appearance-none" required>
+                          <option value="" disabled>Select Cuisine</option>
+                          <option value="Tiffins Center" className="bg-ink text-white">Tiffins Center / South Indian</option>
+                          <option value="Indian" className="bg-ink text-white">Indian / Multi-Cuisine</option>
+                          <option value="Cafe" className="bg-ink text-white">Cafe / Coffee Shop</option>
+                          <option value="Fast Food" className="bg-ink text-white">Fast Food / QSR</option>
+                          <option value="Fine Dining" className="bg-ink text-white">Fine Dining</option>
+                          <option value="Generic" className="bg-ink text-white">Generic / Global</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-stone pl-1">Primary Color (Hex)</label>
+                        <input type="text" value={regPrimaryColor} onChange={e => setRegPrimaryColor(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-white text-sm" placeholder="#8A1A2A" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-stone pl-1">Secondary Color (Hex)</label>
+                        <input type="text" value={regSecondaryColor} onChange={e => setRegSecondaryColor(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-white text-sm" placeholder="#C9A348" />
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-stone pl-1">Upload Logo (Optional)</label>
+                      <input type="file" accept="image/*" onChange={e => setLogoFile(e.target.files?.[0] || null)} className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-stone text-xs file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:bg-white/10 file:text-white hover:file:bg-white/20" />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-stone pl-1">Upload Menu (Image/PDF for AI extraction)</label>
+                      <input type="file" accept="image/*,application/pdf" onChange={e => setMenuFile(e.target.files?.[0] || null)} className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-stone text-xs file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:bg-white/10 file:text-white hover:file:bg-white/20" />
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={busy}
+                      className="w-full bg-clay hover:bg-clay-dark text-white font-semibold rounded-xl py-3 transition flex items-center justify-center gap-2 mt-4 shadow-lg shadow-clay/20"
+                    >
+                      {busy ? (
+                        <><Loader2 className="w-5 h-5 animate-spin" /> <span>Creating...</span></>
+                      ) : "Create Restaurant"}
+                    </button>
+                  </motion.div>
+                )}
 
                 {result && (
                   <motion.div
@@ -318,12 +423,12 @@ export default function RestaurantAuthPage() {
                     <div className="text-emerald-400 font-semibold text-sm">Trial Activated Successfully!</div>
                     <div>
                       <span className="text-stone">Your URL:</span>{" "}
-                      <a href={typeof window !== "undefined" ? `${window.location.protocol}//${result.url.replace("/r/", "")}.${window.location.hostname.replace("www.", "")}${window.location.port ? ":" + window.location.port : ""}` : result.url} className="text-electric-blue hover:underline">
-                        {typeof window !== "undefined" ? `${window.location.protocol}//${result.url.replace("/r/", "")}.${window.location.hostname.replace("www.", "")}${window.location.port ? ":" + window.location.port : ""}` : result.url}
+                      <a href={typeof window !== "undefined" ? `${window.location.protocol}//${result.url.replace("/r/", "")}.${window.location.hostname.replace("www.", "")}${window.location.port ? ":" + window.location.port : ""}/admin` : result.url} className="text-electric-blue hover:underline font-bold">
+                        {typeof window !== "undefined" ? `${window.location.protocol}//${result.url.replace("/r/", "")}.${window.location.hostname.replace("www.", "")}${window.location.port ? ":" + window.location.port : ""}/admin` : result.url}
                       </a>
                     </div>
                     <div className="space-y-1.5">
-                      <div className="text-stone font-medium mb-1">Login Credentials:</div>
+                      <div className="text-stone font-medium mb-1">Admin Login Credentials:</div>
                       {Object.entries(result.credentials).map(([role, cred]) => (
                         <div key={role} className="flex justify-between bg-white/5 rounded-lg px-3 py-1.5">
                           <span className="text-white capitalize">{role}:</span>
@@ -332,10 +437,10 @@ export default function RestaurantAuthPage() {
                       ))}
                     </div>
                     <Link
-                      href={typeof window !== "undefined" ? `${window.location.protocol}//${result.url.replace("/r/", "")}.${window.location.hostname.replace("www.", "")}${window.location.port ? ":" + window.location.port : ""}` : result.url}
+                      href={typeof window !== "undefined" ? `${window.location.protocol}//${result.url.replace("/r/", "")}.${window.location.hostname.replace("www.", "")}${window.location.port ? ":" + window.location.port : ""}/admin` : result.url}
                       className="block text-center bg-white hover:bg-cream text-ink font-semibold rounded-lg py-2 text-xs transition mt-2"
                     >
-                      Visit Your Restaurant
+                      Login to Admin Dashboard
                     </Link>
                   </motion.div>
                 )}
@@ -344,9 +449,7 @@ export default function RestaurantAuthPage() {
           </AnimatePresence>
         </div>
 
-        {tab === "login" && (
-          <DemoCredentialsSection />
-        )}
+        {tab === "login" && <DemoCredentialsSection />}
 
         <div className="mt-6 text-center">
           <Link href="/auth/login" className="text-xs text-stone hover:text-white transition">
@@ -358,7 +461,6 @@ export default function RestaurantAuthPage() {
   );
 }
 
-// ponytail: inline demo-cred component, no Suspense boundary — window.location is fine for onboarding
 function DemoCredentialsSection() {
   const allRestaurants = useAllRestaurantConfigs();
   const [creds, setCreds] = useState<{ users: Array<{ email: string; password: string; name: string; role: string }> } | null>(null);

@@ -1,4 +1,6 @@
 "use client";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
@@ -14,6 +16,7 @@ const CHART_MARGIN = { top: 10, right: 20, left: -10, bottom: 0 };
 const formatDayShort = (d: string) => d.slice(5);
 
 export default function AdminDashboard() {
+  const router = useRouter();
   const { user } = useSession();
   const { data: dash } = useQuery({ queryKey: ["admin-dashboard", user?.restaurant_id], queryFn: () => api<any>("/api/analytics/dashboard"), refetchInterval: 15000 });
   const { data: rev } = useQuery({ queryKey: ["admin-revenue", user?.restaurant_id], queryFn: () => api<any>("/api/analytics/revenue?days=7"), refetchInterval: 15000 });
@@ -28,6 +31,12 @@ export default function AdminDashboard() {
   const { data: tablesData } = useQuery({ queryKey: ["admin-tables-dashboard", user?.restaurant_id], queryFn: () => api<any>("/api/tables") });
   const tablesCount = tablesData?.tables?.length || 0;
 
+  useEffect(() => {
+    if (dash && dash.sandbox_mode) {
+      router.push("/admin/setup");
+    }
+  }, [dash, router]);
+
   return (
     <div>
       {tablesCount === 0 && (
@@ -36,12 +45,7 @@ export default function AdminDashboard() {
           <h2 className="font-heading text-lg text-brand-primary mb-2 flex items-center gap-2">
             <Sparkles className="h-5 w-5" /> Welcome to SmartDine AI!
           </h2>
-          <p className="text-sm text-stone mb-4">Complete these quick steps to start taking live orders.</p>
-          <ul className="list-decimal pl-5 text-sm space-y-2 text-stone font-medium">
-            <li><strong>Add Menu Items:</strong> Head to <a href="/admin/menu" className="text-brand-secondary hover:underline">Menu Settings</a> to set up your dishes.</li>
-            <li><strong>Create Tables:</strong> Go to <a href="/admin/tables" className="text-brand-secondary hover:underline">Tables</a> to add tables and get QR codes.</li>
-            <li><strong>Verify & Go Live:</strong> Enter the OTP from your welcome email in <a href="/admin/settings" className="text-brand-secondary hover:underline">Settings</a> to disable Sandbox mode.</li>
-          </ul>
+          <p className="text-sm text-stone mb-4">You have no tables configured yet. Head to tables settings to create them.</p>
         </div>
       )}
 

@@ -251,6 +251,7 @@ from routers.settings import router as settings_router
 from routers.cart import router as cart_router
 from routers.campaigns import router as campaigns_router
 from routers.pricing import router as pricing_router
+from routers.otp import router as otp_router
 
 app.include_router(auth_router)
 app.include_router(menu_router)
@@ -272,6 +273,7 @@ app.include_router(settings_router)
 app.include_router(cart_router)
 app.include_router(campaigns_router)
 app.include_router(pricing_router)
+app.include_router(otp_router)
 
 
 # =========================================================
