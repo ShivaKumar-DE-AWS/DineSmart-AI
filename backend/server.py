@@ -3,6 +3,7 @@ All routes prefixed with /api (per platform Kubernetes ingress).
 """
 from __future__ import annotations
 import os
+import sys
 import json
 import uuid
 import re
@@ -41,7 +42,9 @@ redis_client = None
 if redis_url:
     try:
         redis_client = redis.from_url(redis_url, encoding="utf-8", decode_responses=True)
-    except Exception:
+        print(f"[init] ✅ Redis client initialized: {redis_url[:50]}...")
+    except Exception as e:
+        print(f"[init] ⚠️  Redis initialization failed: {e}")
         pass
 
 limiter = Limiter(
@@ -96,7 +99,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' wss: https:;"
+        response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:; frame-ancestors 'none';"
         return response
 
 
@@ -494,7 +497,7 @@ async def create_indexes():
         indexes = [
             (db.orders, [("restaurant_id", ASCENDING), ("status", ASCENDING), ("created_at", ASCENDING)], {"background": True, "name": "idx_orders_rest_status_time"}),
             (db.orders, [("restaurant_id", ASCENDING), ("created_at", ASCENDING)], {"background": True, "name": "idx_orders_rest_time"}),
-            (db.orders, [("restaurant_id", ASCENDING), ("idempotency_key", ASCENDING)], {"unique": True, "partialFilterExpression": {"idempotency_key": {"$exists": True, "$type": "string"}}, "name": "idx_orders_rest_idempotency"}),
+            (db.orders, [("restaurant_id", ASCENDING), ("idempotency_key", ASCENDING)], {"unique": True, "partialFilterExpression": {"idempotency_key": {"$exists": True, "$type": "string"}}, "name": "idx_orders_idem"}),
             (db.restaurants, [("slug", ASCENDING)], {"unique": True, "name": "idx_restaurants_slug"}),
             (db.restaurant_configs, [("slug", ASCENDING)], {"name": "idx_configs_slug"}),
             (db.menu, [("restaurant_id", ASCENDING), ("category", ASCENDING)], {"background": True, "name": "idx_menu_rest_category"}),
@@ -544,4 +547,25 @@ async def seed_superadmin():
         print(f"[startup] WARNING: Superadmin seed failed: {e}")
 
 
-
+# =========================================================
+# Main Entry Point for Local Development
+# =========================================================
+if __name__ == "__main__":
+    import uvicorn
+    
+    # Get configuration from environment
+    port = int(os.environ.get("PORT", 8000))
+    host = os.environ.get("HOST", "0.0.0.0")
+    
+    print(f"\n🚀 Starting SmartDine AI Server")
+    print(f"   Host: {host}")
+    print(f"   Port: {port}")
+    print(f"   Environment: {os.environ.get('ENV', 'development')}")
+    
+    uvicorn.run(
+        "server:app",
+        host=host,
+        port=port,
+        reload=False,  # Don't reload in production
+        log_level="info"
+    )
