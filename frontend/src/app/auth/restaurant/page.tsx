@@ -139,8 +139,8 @@ export default function RestaurantAuthPage() {
 
   const handleRequestAccess = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!emailVerified || !phoneVerified) {
-      return toast.error("Please verify your email and phone number to continue.");
+    if (!emailVerified) {
+      return toast.error("Please verify your email address to continue.");
     }
     
     setBusy(true);
@@ -149,7 +149,7 @@ export default function RestaurantAuthPage() {
       const formData = new FormData();
       formData.append("name", regName);
       formData.append("email", regEmail);
-      formData.append("phone", regPhone);
+      formData.append("phone", regPhone || "Not Provided");
       formData.append("cuisine", regCuisine);
       formData.append("service_type", regServiceType);
       formData.append("primary_color", regPrimaryColor);
@@ -343,9 +343,17 @@ export default function RestaurantAuthPage() {
                         </div>
                       )}
                       <div className="space-y-1.5">
-                      <label className="text-xs font-medium text-stone pl-1">Full Name</label>
-                      <input type="text" value={regName} onChange={(e) => setRegName(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 px-4 text-white text-sm" placeholder="John Doe" required />
-                    </div>
+                        <label className="text-xs font-medium text-stone pl-1">Full Name</label>
+                        <input type="text" value={regName} onChange={(e) => setRegName(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 px-4 text-white text-sm" placeholder="John Doe" required />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-stone pl-1">Phone Number (Optional)</label>
+                        <div className="relative">
+                          <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone" />
+                          <input type="tel" value={regPhone} onChange={(e) => setRegPhone(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-11 pr-4 text-white text-sm" placeholder="+91 98765 43210" />
+                        </div>
+                      </div>
 
                     <div className="space-y-1.5">
                       <label className="text-xs font-medium text-stone pl-1">Restaurant Name</label>

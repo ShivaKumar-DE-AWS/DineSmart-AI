@@ -170,7 +170,7 @@ async def request_restaurant_access(
     background_tasks: BackgroundTasks,
     name: str = Form(...),
     email: str = Form(...),
-    phone: str = Form(...),
+    phone: str = Form("Not Provided"),
     cuisine: str = Form(""),
     notes: str = Form(""),
     primary_color: str = Form(None),
@@ -185,9 +185,8 @@ async def request_restaurant_access(
     
     # 0. Check OTP verification
     email_otp = await db.otps.find_one({"target": email, "type": "email", "verified": True})
-    phone_otp = await db.otps.find_one({"target": phone, "type": "phone", "verified": True})
-    if not email_otp or not phone_otp:
-        raise HTTPException(status_code=400, detail="Email and Phone must be verified first")
+    if not email_otp:
+        raise HTTPException(status_code=400, detail="Email address must be verified first")
         
     existing_user = await db.users.find_one({"email": email})
     if existing_user:
