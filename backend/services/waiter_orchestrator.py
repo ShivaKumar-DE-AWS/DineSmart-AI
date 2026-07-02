@@ -174,7 +174,91 @@ Throughout the dining session, you MUST remember and strictly respect the guest'
 Live Menu:
 {menu_block}
 """
-        return prompt
+    def _sanitize_for_gemini(self, contents: list[genai_types.Content]) -> list[genai_types.Content]:
+        if not contents:
+            return []
+            
+        # Step 1: Normalize roles to "user" or "model"
+        valid_turns = []
+        for c in contents:
+            if not c.parts:
+                continue
+            role = c.role
+            if role in ["assistant", "model"]:
+                role = "model"
+            elif role in ["user", "tool"]:
+                role = "user"
+            else:
+                role = "user"
+            valid_turns.append(genai_types.Content(role=role, parts=list(c.parts)))
+            
+        if not valid_turns:
+            return []
+            
+        # Step 2: Merge consecutive turns with the same role
+        merged = [valid_turns[0]]
+        for i in range(1, len(valid_turns)):
+            curr = valid_turns[i]
+            prev = merged[-1]
+            if prev.role == curr.role:
+                prev.parts.extend(curr.parts)
+            else:
+                merged.append(curr)
+                
+        # Step 3: Validate function call / response pairing
+        final_clean = []
+        i = 0
+        while i < len(merged):
+            curr = merged[i]
+            has_func_call = any(p.function_call for p in (curr.parts or []))
+            has_func_resp = any(p.function_response for p in (curr.parts or []))
+            
+            if has_func_resp:
+                if not final_clean or final_clean[-1].role != "model" or not any(p.function_call for p in final_clean[-1].parts):
+                    text_parts = [p for p in curr.parts if p.text]
+                    if text_parts:
+                        if final_clean and final_clean[-1].role == "user":
+                            final_clean[-1].parts.extend(text_parts)
+                        else:
+                            final_clean.append(genai_types.Content(role="user", parts=text_parts))
+                    i += 1
+                    continue
+            
+            if has_func_call:
+                if i + 1 < len(merged) and merged[i+1].role == "user" and any(p.function_response for p in merged[i+1].parts):
+                    final_clean.append(curr)
+                    final_clean.append(merged[i+1])
+                    i += 2
+                    continue
+                else:
+                    text_parts = [p for p in curr.parts if p.text]
+                    if text_parts:
+                        if final_clean and final_clean[-1].role == "model":
+                            final_clean[-1].parts.extend(text_parts)
+                        else:
+                            final_clean.append(genai_types.Content(role="model", parts=text_parts))
+                    i += 1
+                    continue
+                    
+            final_clean.append(curr)
+            i += 1
+            
+        # Step 4: Final pass to guarantee strict alternation
+        strictly_alternating = []
+        for c in final_clean:
+            if not c.parts:
+                continue
+            if not strictly_alternating:
+                if c.role == "model":
+                    continue
+                strictly_alternating.append(c)
+            else:
+                if strictly_alternating[-1].role == c.role:
+                    strictly_alternating[-1].parts.extend(c.parts)
+                else:
+                    strictly_alternating.append(c)
+                    
+        return strictly_alternating
         
     async def process_message(self, user_text: str, cart_state: list = None) -> tuple[str, list, list]:
         """Processes a single user message and handles the tool loop. Returns (response_text, recommended_items)."""
@@ -209,38 +293,11 @@ Live Menu:
                         ))
                     contents.append(genai_types.Content(role="user", parts=parts))
 
-        # Sanitize contents to ensure valid Gemini conversation turns (no orphaned function call/responses)
-        clean_contents = []
-        i = 0
-        while i < len(contents):
-            curr = contents[i]
-            has_func_call = any(p.function_call for p in (curr.parts or []))
-            has_func_resp = any(p.function_response for p in (curr.parts or []))
-            
-            if has_func_resp:
-                if not clean_contents or not any(p.function_call for p in (clean_contents[-1].parts or [])):
-                    i += 1
-                    continue
-            
-            if has_func_call:
-                if i + 1 < len(contents) and any(p.function_response for p in (contents[i+1].parts or [])):
-                    clean_contents.append(curr)
-                    clean_contents.append(contents[i+1])
-                    i += 2
-                    continue
-                else:
-                    text_parts = [p for p in (curr.parts or []) if p.text]
-                    if text_parts:
-                        clean_contents.append(genai_types.Content(role=curr.role, parts=text_parts))
-                    i += 1
-                    continue
-                    
-            clean_contents.append(curr)
-            i += 1
-        contents = clean_contents
-
         # Add the new user message
         contents.append(genai_types.Content(role="user", parts=[genai_types.Part(text=user_text)]))
+        
+        # Sanitize contents to guarantee valid, strictly alternating Gemini conversation turns without orphaned calls
+        contents = self._sanitize_for_gemini(contents)
         
         # Save user turn
         await db.ai_waiter_turns.insert_one({
@@ -264,8 +321,9 @@ Live Menu:
         
         while loop_count < 5: # Max 5 tool turns per message
             loop_count += 1
+            contents = self._sanitize_for_gemini(contents)
             response = None
-            models_to_try = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
+            models_to_try = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.5-flash-lite"]
             last_err = None
             for model_name in models_to_try:
                 try:

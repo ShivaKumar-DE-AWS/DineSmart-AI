@@ -143,6 +143,17 @@ async def ai_waiter_websocket(websocket: WebSocket, session_id: str):
                     "history": formatted_history
                 })
                 
+                if mode == "voice":
+                    greeting_text = "Namaste! Welcome to our restaurant! I am your AI Waiter today. How can I delight you? What would you like to order today?"
+                    if len(formatted_history) > 1:
+                        greeting_text = "I am listening! What else would you like to order or explore from our menu?"
+                    try:
+                        audio_bytes = await generate_tts(greeting_text)
+                        if audio_bytes:
+                            await websocket.send_bytes(audio_bytes)
+                    except Exception as e:
+                        logger.error(f"Error generating welcome TTS for voice mode: {e}")
+                
             elif msg_type == "voice_start":
                 if not stt_client:
                     stt_client = SarvamSTTClient(on_transcript)

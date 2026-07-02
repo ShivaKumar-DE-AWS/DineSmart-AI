@@ -117,15 +117,6 @@ export function AIWaiterDock() {
     }
   }, [open]);
 
-  // Auto-greet when switching to Talk mode
-  useEffect(() => {
-    if (open && mode === "voice" && !hasGreetedRef.current) {
-      hasGreetedRef.current = true;
-      const greetingMsg = `Namaste! Welcome to ${restaurantName}! I am your AI Waiter today. How can I delight you? What would you like to order today?`;
-      wsSpeakText(greetingMsg);
-    }
-  }, [open, mode, wsSpeakText, restaurantName]);
-
   const speakText = useCallback((text: string) => {
     if (!ttsOn || !text) return;
     wsSpeakText(text);

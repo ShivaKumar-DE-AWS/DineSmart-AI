@@ -21,7 +21,7 @@ async def generate_tts(text: str) -> bytes:
     }
     payload = {
         "inputs": [text],
-        "target_language_code": "hi-IN",
+        "target_language_code": "en-IN",
         "speaker": "meera",
         "pitch": 0,
         "pace": 1.13,
