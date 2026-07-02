@@ -5,14 +5,141 @@ from typing import List, Dict, Any, Optional
 from motor.motor_asyncio import AsyncIOMotorClient
 from deps import db, now_iso
 
+# =========================================================
+# Diner profile constants — persistent, session-scoped memory
+# =========================================================
+DIET_TAG_MAP = {
+    "veg": {"veg", "vegetarian"},
+    "vegetarian": {"veg", "vegetarian"},
+    "non_veg": {"non-veg", "non_veg"},
+    "vegan": {"vegan"},
+    "jain": {"jain"},
+}
+# Tags that explicitly signal a dish is NOT safe for a given restriction
+DIET_CONFLICT_TAGS = {
+    "veg": {"non-veg", "non_veg"},
+    "vegetarian": {"non-veg", "non_veg"},
+    "vegan": {"non-veg", "non_veg", "veg", "vegetarian", "dairy", "egg", "honey"},
+    "jain": {"non-veg", "non_veg", "onion", "garlic", "root-vegetable"},
+}
+# Keyword → allergen family, used to scan name/description/tags for hidden allergens
+ALLERGEN_KEYWORDS = {
+    "nuts": ["nut", "cashew", "almond", "peanut", "pistachio", "walnut"],
+    "peanut": ["peanut", "groundnut"],
+    "dairy": ["milk", "cream", "butter", "ghee", "cheese", "paneer", "curd", "yogurt", "yoghurt"],
+    "gluten": ["wheat", "maida", "flour", "bread", "naan", "roti", "gluten"],
+    "egg": ["egg"],
+    "shellfish": ["shrimp", "prawn", "crab", "lobster", "shellfish"],
+    "soy": ["soy", "soya", "tofu"],
+    "sesame": ["sesame", "til"],
+}
+
+
+def _text_blob(item: Dict[str, Any]) -> str:
+    parts = [item.get("name", ""), item.get("description", "")] + list(item.get("tags", []) or [])
+    return " ".join(parts).lower()
+
+
+def _item_conflicts_with_diet(item: Dict[str, Any], diet: str) -> bool:
+    diet = (diet or "").lower().strip()
+    conflict_tags = DIET_CONFLICT_TAGS.get(diet)
+    if not conflict_tags:
+        return False
+    tags = {str(t).lower() for t in (item.get("tags") or [])}
+    return bool(tags & conflict_tags)
+
+
+def _item_conflicts_with_allergy(item: Dict[str, Any], allergy: str) -> bool:
+    allergy = (allergy or "").lower().strip()
+    keywords = ALLERGEN_KEYWORDS.get(allergy, [allergy] if allergy else [])
+    if not keywords:
+        return False
+    blob = _text_blob(item)
+    return any(kw in blob for kw in keywords)
+
+
+def _profile_conflict_reason(item: Dict[str, Any], profile: Dict[str, Any]) -> Optional[str]:
+    """Returns a human-readable reason if the item conflicts with the diner's stored
+    dietary restrictions or allergies, otherwise None. Errs on the side of caution
+    for allergies (exact substring match) but only hard-blocks diet on explicit tag conflicts."""
+    if not profile:
+        return None
+    for allergy in profile.get("allergies", []) or []:
+        if _item_conflicts_with_allergy(item, allergy):
+            return f"contains or may contain {allergy}, which conflicts with the guest's stated allergy"
+    for diet in profile.get("dietary_restrictions", []) or []:
+        if _item_conflicts_with_diet(item, diet):
+            return f"is tagged in a way that conflicts with the guest's {diet} preference"
+    return None
+
+
 class WaiterTools:
     def __init__(self, session_id: str, restaurant_id: str, table_id: str):
         self.session_id = session_id
         self.restaurant_id = restaurant_id
         self.table_id = table_id
 
+    async def get_diner_profile(self) -> Dict[str, Any]:
+        """Fetch the persisted diner profile (dietary restrictions, allergies, spice
+        preference, budget, party size) for this session. Never raises; returns {} if none."""
+        doc = await db.diner_profiles.find_one({"session_id": self.session_id})
+        if not doc:
+            return {}
+        doc.pop("_id", None)
+        return doc
+
+    async def update_diner_profile(
+        self,
+        dietary_restrictions: Optional[List[str]] = None,
+        allergies: Optional[List[str]] = None,
+        spice_preference: Optional[str] = None,
+        budget: Optional[float] = None,
+        party_size: Optional[int] = None,
+    ) -> str:
+        """Persist newly learned facts about the diner (merges with what's already known).
+        Call this the moment the diner mentions a dietary restriction, allergy, spice
+        preference, budget, or party size — even in passing."""
+        existing = await self.get_diner_profile()
+        merged_diet = set(existing.get("dietary_restrictions", []) or [])
+        merged_allergy = set(existing.get("allergies", []) or [])
+
+        if dietary_restrictions:
+            merged_diet |= {str(d).lower().strip() for d in dietary_restrictions if str(d).strip()}
+        if allergies:
+            merged_allergy |= {str(a).lower().strip() for a in allergies if str(a).strip()}
+
+        update: Dict[str, Any] = {
+            "session_id": self.session_id,
+            "restaurant_id": self.restaurant_id,
+            "dietary_restrictions": sorted(merged_diet),
+            "allergies": sorted(merged_allergy),
+            "updated_at": now_iso(),
+        }
+        if spice_preference:
+            update["spice_preference"] = str(spice_preference).lower().strip()
+        elif existing.get("spice_preference"):
+            update["spice_preference"] = existing["spice_preference"]
+
+        if budget is not None:
+            update["budget"] = float(budget)
+        elif existing.get("budget") is not None:
+            update["budget"] = existing["budget"]
+
+        if party_size is not None:
+            update["party_size"] = int(party_size)
+        elif existing.get("party_size") is not None:
+            update["party_size"] = existing["party_size"]
+
+        await db.diner_profiles.update_one(
+            {"session_id": self.session_id},
+            {"$set": update},
+            upsert=True,
+        )
+        return "Guest profile updated."
+
     async def search_menu(self, query: str, dietary_filter: str = "any", category: str = "") -> str:
         """Search the restaurant's live menu by free text and/or dietary filter."""
+        profile = await self.get_diner_profile()
         match_q: Dict[str, Any] = {"restaurant_id": self.restaurant_id, "available": True}
         
         if query:
@@ -34,23 +161,37 @@ class WaiterTools:
                 ])
             match_q["$or"] = or_conditions
             
-        if dietary_filter != "any":
-            if dietary_filter == "veg":
+        # If the diner hasn't specified a filter this turn, fall back to their
+        # remembered dietary restriction so results never need re-asking.
+        effective_filter = dietary_filter
+        if effective_filter == "any" and profile.get("dietary_restrictions"):
+            for d in profile["dietary_restrictions"]:
+                if d in DIET_TAG_MAP:
+                    effective_filter = d
+                    break
+
+        if effective_filter != "any":
+            if effective_filter in ("veg", "vegetarian"):
                 match_q["tags"] = {"$in": ["veg", "vegetarian"]}
-            elif dietary_filter == "non_veg":
+            elif effective_filter == "non_veg":
                 match_q["tags"] = {"$in": ["non-veg", "non_veg"]}
-            elif dietary_filter == "vegan":
+            elif effective_filter == "vegan":
                 match_q["tags"] = {"$in": ["vegan"]}
-            elif dietary_filter == "jain":
+            elif effective_filter == "jain":
                 match_q["tags"] = {"$in": ["jain"]}
 
         if category:
             match_q["category"] = {"$regex": re.escape(str(category).strip()), "$options": "i"}
             
         items = await db.menu.find(match_q).to_list(20)
+
+        # Safety net: drop anything that conflicts with a stated allergy, regardless
+        # of which filter/category was searched for.
+        if profile.get("allergies"):
+            items = [i for i in items if not any(_item_conflicts_with_allergy(i, a) for a in profile["allergies"])]
         
         if not items:
-            return "No items found matching the search criteria."
+            return "No items found matching the search criteria (some results may have been excluded due to the guest's stated allergies/diet)."
             
         result = []
         for i in items:
@@ -95,7 +236,16 @@ class WaiterTools:
             
         if not menu_item.get("available", True):
             return f"Sorry, {menu_item.get('name')} is currently unavailable."
-            
+
+        # Hard safety check against the guest's remembered allergies/diet before adding.
+        profile = await self.get_diner_profile()
+        conflict = _profile_conflict_reason(menu_item, profile)
+        if conflict:
+            return (
+                f"Cannot add {menu_item.get('name')}: it {conflict}. "
+                f"Please double-check with the guest before proceeding or suggest an alternative."
+            )
+
         from routers.cart import broadcast_cart
         
         cart = await db.table_carts.find_one({"session_id": self.session_id})
@@ -127,7 +277,41 @@ class WaiterTools:
         )
         
         broadcast_cart(self.session_id, items)
-        return f"Successfully added {quantity}x {menu_item.get('name')} to the cart."
+
+        hint = await self._course_flow_hint(items, menu_item.get("category", ""))
+        budget_note = await self._budget_note(items, profile)
+        return f"Successfully added {quantity}x {menu_item.get('name')} to the cart.{hint}{budget_note}"
+
+    async def _course_flow_hint(self, cart_items: List[Dict[str, Any]], just_added_category: str) -> str:
+        """Deterministic course-flow nudge: Starter -> Main -> Drink -> Dessert.
+        Returns a short internal note (not shown to the diner verbatim) telling the
+        model what natural upsell category makes sense next, without spamming."""
+        cat = (just_added_category or "").lower()
+        present_cats = {str(i.get("category", "")).lower() for i in cart_items}
+
+        def has(keyword: str) -> bool:
+            return any(keyword in c for c in present_cats)
+
+        if any(k in cat for k in ["main", "biryani", "curry", "rice"]) and not has("drink") and not has("beverage"):
+            return " [internal: consider suggesting one drink to pair with this]"
+        if any(k in cat for k in ["starter", "appetizer"]) and not any(has(k) for k in ["main", "biryani", "curry"]):
+            return " [internal: consider suggesting a main course next]"
+        if any(k in cat for k in ["main", "biryani", "curry"]) and not has("dessert") and not has("sweet"):
+            return " [internal: once the guest seems done ordering mains, consider suggesting a dessert]"
+        return ""
+
+    async def _budget_note(self, cart_items: List[Dict[str, Any]], profile: Dict[str, Any]) -> str:
+        """If the guest stated a budget, compute the real running total (incl. 5% tax)
+        and flag it if they're close to or over budget, so the model doesn't guess."""
+        budget = profile.get("budget") if profile else None
+        if not budget:
+            return ""
+        subtotal = sum(float(i.get("price", 0)) * int(i.get("qty", 1)) for i in cart_items)
+        total = round(subtotal * 1.05, 2)
+        remaining = round(budget - total, 2)
+        if remaining < 0:
+            return f" [internal: running total is ₹{total}, which is ₹{abs(remaining)} OVER the guest's stated ₹{budget} budget — flag this to the guest]"
+        return f" [internal: running total is ₹{total}, ₹{remaining} remaining within the guest's ₹{budget} budget]"
             
     async def update_order_item(self, cart_item_id: str, quantity: int, modifiers: List[str] = None) -> str:
         """Change quantity or modifiers of an item already in the cart. quantity=0 removes it."""
@@ -240,30 +424,51 @@ class WaiterTools:
         return f"Checkout successful! Order sent to kitchen with token {token}."
 
     async def get_recommendations(self, based_on_order: bool = True) -> str:
-        """Get upsell/pairing suggestions."""
+        """Get upsell/pairing suggestions, filtered by the guest's remembered diet,
+        allergies, and remaining budget."""
+        profile = await self.get_diner_profile()
         order_items = []
+        cart_subtotal = 0.0
         if based_on_order:
             cart = await db.table_carts.find_one({"session_id": self.session_id})
             if cart:
                 order_items = cart.get("items", [])
-                
-        drinks = await db.menu.find({"restaurant_id": self.restaurant_id, "available": True, "category": {"$regex": "drink|beverage", "$options": "i"}}).to_list(5)
-        desserts = await db.menu.find({"restaurant_id": self.restaurant_id, "available": True, "category": {"$regex": "dessert|sweet", "$options": "i"}}).to_list(5)
-        
+                cart_subtotal = sum(float(i.get("price", 0)) * int(i.get("qty", 1)) for i in order_items)
+
+        drinks = await db.menu.find({"restaurant_id": self.restaurant_id, "available": True, "category": {"$regex": "drink|beverage", "$options": "i"}}).to_list(10)
+        desserts = await db.menu.find({"restaurant_id": self.restaurant_id, "available": True, "category": {"$regex": "dessert|sweet", "$options": "i"}}).to_list(10)
+
+        def allowed(item: Dict[str, Any]) -> bool:
+            return _profile_conflict_reason(item, profile) is None
+
+        candidates = [d for d in (drinks + desserts) if allowed(d)]
+
+        budget = profile.get("budget") if profile else None
+        if budget:
+            remaining = float(budget) / 1.05 - cart_subtotal  # back out tax to compare against menu prices
+            candidates = [d for d in candidates if float(d.get("price", 0)) <= max(remaining, 0)]
+
         recs = []
         if order_items:
             recs.append("Based on the current order, I recommend pairing it with:")
         else:
             recs.append("Here are some popular recommendations:")
-            
-        for d in (drinks + desserts)[:5]:
-            recs.append(f"- {d['name']} (₹{d['price']})")
-            
+
+        for d in candidates[:5]:
+            recs.append(f"- {d['name']} (₹{d['price']}) (ID: {d['id']})")
+
         if len(recs) == 1:
-            bestsellers = await db.menu.find({"restaurant_id": self.restaurant_id, "available": True}).limit(3).to_list(3)
-            for d in bestsellers:
-                recs.append(f"- {d['name']} (₹{d['price']})")
-                
+            bestsellers = await db.menu.find({"restaurant_id": self.restaurant_id, "available": True}).limit(10).to_list(10)
+            bestsellers = [b for b in bestsellers if allowed(b)]
+            if budget:
+                remaining = float(budget) / 1.05 - cart_subtotal
+                bestsellers = [b for b in bestsellers if float(b.get("price", 0)) <= max(remaining, 0)]
+            for d in bestsellers[:3]:
+                recs.append(f"- {d['name']} (₹{d['price']}) (ID: {d['id']})")
+
+        if len(recs) == 1:
+            recs.append("Nothing fits within the remaining budget/diet right now — consider mentioning this to the guest.")
+
         return "\n".join(recs)
 
     async def escalate_to_staff(self, reason: str) -> str:

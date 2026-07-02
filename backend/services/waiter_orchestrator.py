@@ -91,6 +91,20 @@ WAITER_FUNCTIONS = [
         )
     ),
     genai_types.FunctionDeclaration(
+        name="update_diner_profile",
+        description="Persist a fact you just learned about the diner — a dietary restriction, allergy, spice preference, budget, or party size. Call this THE MOMENT the guest mentions any of these, even in passing, so it is never forgotten for the rest of the session.",
+        parameters=genai_types.Schema(
+            type=genai_types.Type.OBJECT,
+            properties={
+                "dietary_restrictions": genai_types.Schema(type=genai_types.Type.ARRAY, items=genai_types.Schema(type=genai_types.Type.STRING), description="e.g. ['vegetarian'], ['vegan'], ['jain']"),
+                "allergies": genai_types.Schema(type=genai_types.Type.ARRAY, items=genai_types.Schema(type=genai_types.Type.STRING), description="e.g. ['nuts', 'dairy']"),
+                "spice_preference": genai_types.Schema(type=genai_types.Type.STRING, description="e.g. 'mild', 'medium', 'extra spicy'"),
+                "budget": genai_types.Schema(type=genai_types.Type.NUMBER, description="Total budget in rupees the guest mentioned"),
+                "party_size": genai_types.Schema(type=genai_types.Type.INTEGER, description="Number of people being ordered for")
+            }
+        )
+    ),
+    genai_types.FunctionDeclaration(
         name="show_recommendations",
         description="Show specific dish chips in the UI when you recommend them. Pass the IDs of the dishes you are suggesting.",
         parameters=genai_types.Schema(
@@ -129,6 +143,25 @@ class WaiterOrchestrator:
             for m in menu_docs
         )
         
+        profile = await self.tools.get_diner_profile()
+        profile_lines = []
+        if profile.get("dietary_restrictions"):
+            profile_lines.append(f"- Dietary restriction(s): {', '.join(profile['dietary_restrictions'])}")
+        if profile.get("allergies"):
+            profile_lines.append(f"- Allergies (NEVER serve these): {', '.join(profile['allergies'])}")
+        if profile.get("spice_preference"):
+            profile_lines.append(f"- Spice preference: {profile['spice_preference']}")
+        if profile.get("budget"):
+            profile_lines.append(f"- Budget: ₹{profile['budget']} total (incl. tax)")
+        if profile.get("party_size"):
+            profile_lines.append(f"- Party size: {profile['party_size']}")
+        profile_block = (
+            "GUEST PROFILE (remembered facts, authoritative for the whole session — never contradict these):\n"
+            + "\n".join(profile_lines)
+            if profile_lines else
+            "GUEST PROFILE: Nothing remembered yet. The moment the guest mentions a diet, allergy, spice preference, budget, or party size, call update_diner_profile immediately."
+        )
+
         cart_str = "The user currently has NO items in their cart."
         if cart_state is not None:
             if cart_state:
@@ -144,6 +177,8 @@ class WaiterOrchestrator:
 You are speaking with a diner at table {self.table_id}.
 {cart_str}
 
+{profile_block}
+
 ### 1. CORE OPERATIONAL RULES & PERSONALITY
 - **Personalization & Hospitality:** Be friendly, patient, warm, and attentive. Use natural waiter conversational fillers like "Absolutely!", "Great choice!", "Coming right up!", "Wonderful choice", or "My pleasure!". Mirror the guest's energy and hospitality style.
 - **Proactive Up-selling & Course Flow:** Follow the natural dining flow: Starter -> Main Course -> Drink/Accompaniment -> Dessert. Never spam recommendations. Suggest 1 or 2 complementary items naturally based on what they just ordered.
@@ -152,12 +187,12 @@ You are speaking with a diner at table {self.table_id}.
 - **Tone:** Confident, warm, polite, professional restaurant waiter.
 
 ### 2. CONVERSATIONAL MEMORY & CONTEXT AWARENESS (CRITICAL)
-Throughout the dining session, you MUST remember and strictly respect the guest's preferences and context:
-- **Dietary Restrictions & Allergies:** If the guest mentions "I'm vegetarian", "no onions", "nut allergy", "Jain food", or "vegan", remember this permanently for the entire session. NEVER recommend any dish that violates their dietary restrictions or allergies unless an alternative exists.
-- **Spice Preference:** If they ask for "extra spicy" or "mild", recommend dishes and customize orders to match their exact spice tolerance.
-- **Budget constraints:** If they say "I have ₹400" or "food under ₹500", strictly filter and calculate all your recommendations to ensure the total meal fits comfortably within their budget.
-- **Party Size:** If they mention ordering for 2, 4, or a family, recommend appropriately sized combo packs, family packs, or scale quantities.
-- **Previous Selections:** Acknowledge what is already in their tray when suggesting pairings.
+Throughout the dining session, you MUST remember and strictly respect the guest's preferences and context. This is now backed by a persistent guest profile (see GUEST PROFILE above), not just conversation recall:
+- **Dietary Restrictions & Allergies:** The instant the guest mentions "I'm vegetarian", "no onions", "nut allergy", "Jain food", or "vegan", call `update_diner_profile` to save it — then it is enforced automatically for the rest of the session (search and add-to-cart will refuse conflicting items). Never override or contradict what's already in the GUEST PROFILE block.
+- **Spice Preference:** If they ask for "extra spicy" or "mild", call `update_diner_profile` with spice_preference, then customize orders and modifiers to match.
+- **Budget constraints:** If they say "I have ₹400" or "food under ₹500", call `update_diner_profile` with budget. Tool results may include an `[internal: ...]` note with the real computed running total — use that number, never estimate it yourself, and never say the `[internal: ...]` text aloud to the guest.
+- **Party Size:** If they mention ordering for 2, 4, or a family, call `update_diner_profile` with party_size and recommend appropriately sized combo packs, family packs, or scale quantities.
+- **Previous Selections:** Acknowledge what is already in their tray when suggesting pairings. Tool results may include an `[internal: ...]` upsell hint (e.g. suggest a drink or dessert next) — treat it as guidance for what to bring up naturally, never read it aloud.
 
 ### 3. RECOMMENDATIONS & TOOLS
 - When you suggest specific dishes, YOU MUST CALL the `show_recommendations` tool with the menu_item_ids or names of the dishes you are suggesting, so the UI can display them as interactive cards!
@@ -174,6 +209,8 @@ Throughout the dining session, you MUST remember and strictly respect the guest'
 Live Menu:
 {menu_block}
 """
+        return prompt
+
     def _sanitize_for_gemini(self, contents: list[genai_types.Content]) -> list[genai_types.Content]:
         if not contents:
             return []
@@ -418,6 +455,14 @@ Live Menu:
                         result_str = await self.tools.get_recommendations(args.get("based_on_order", True))
                     elif fc.name == "escalate_to_staff":
                         result_str = await self.tools.escalate_to_staff(args.get("reason", ""))
+                    elif fc.name == "update_diner_profile":
+                        result_str = await self.tools.update_diner_profile(
+                            dietary_restrictions=args.get("dietary_restrictions"),
+                            allergies=args.get("allergies"),
+                            spice_preference=args.get("spice_preference"),
+                            budget=args.get("budget"),
+                            party_size=args.get("party_size"),
+                        )
                     elif fc.name == "show_recommendations":
                         # Fetch the actual menu items to send to the frontend UI
                         item_ids = args.get("menu_item_ids", [])
