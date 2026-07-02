@@ -56,13 +56,13 @@ async def resend_otp(background_tasks: BackgroundTasks, user=Depends(require_use
         "created_at": now_iso()
     })
     
-    creds = {
+    creds = rest.get("initial_creds") or {
         "admin": {"email": rest.get("owner_email", ""), "password": "[Hidden - Set during registration]"},
         "kitchen": {"email": f"kitchen@{rest.get('slug', '')}.com", "password": "[Hidden - Check Staff Settings]"},
         "counter": {"email": f"counter@{rest.get('slug', '')}.com", "password": "[Hidden - Check Staff Settings]"}
     }
     from email_service import send_welcome_email, send_sms_otp
-    success, err_msg = send_welcome_email(rest.get("owner_email"), rest.get("name"), creds, otp)
+    success, err_msg = await send_welcome_email(rest.get("owner_email"), rest.get("name"), creds, otp)
     if rest.get("phone"):
         background_tasks.add_task(send_sms_otp, rest.get("phone"), otp)
         
@@ -100,7 +100,7 @@ async def verify_restaurant(req: VerifyReq, background_tasks: BackgroundTasks, u
     
     rest = await db.restaurants.find_one({"id": rid})
     if rest:
-        creds = {
+        creds = rest.get("initial_creds") or {
             "admin": {"email": rest.get("owner_email", ""), "password": "[Hidden - Set during registration]"},
             "kitchen": {"email": f"kitchen@{rest.get('slug', '')}.com", "password": "[Hidden - Check Staff Settings]"},
             "counter": {"email": f"counter@{rest.get('slug', '')}.com", "password": "[Hidden - Check Staff Settings]"}

@@ -317,6 +317,15 @@ async def request_restaurant_access(
         })
         creds[r] = {"email": uemail, "password": pw}
         
+    await db.restaurants.update_one({"id": rest_id}, {"$set": {"initial_creds": creds}})
+    verify_otp = str(random.randint(100000, 999999))
+    await db.verifications.insert_one({
+        "restaurant_id": rest_id,
+        "otp": verify_otp,
+        "created_at": now_iso()
+    })
+    background_tasks.add_task(send_welcome_email, email, name, creds, verify_otp)
+    
     # 6. Trigger AI Menu Extraction if uploaded
     if menu_path:
         from routers.ai import extract_menu_from_image
