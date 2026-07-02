@@ -1,5 +1,6 @@
 import os
 import uuid
+import re
 from typing import List, Dict, Any, Optional
 from motor.motor_asyncio import AsyncIOMotorClient
 from deps import db, now_iso
@@ -15,12 +16,23 @@ class WaiterTools:
         match_q: Dict[str, Any] = {"restaurant_id": self.restaurant_id, "available": True}
         
         if query:
-            match_q["$or"] = [
-                {"name": {"$regex": query, "$options": "i"}},
-                {"description": {"$regex": query, "$options": "i"}},
-                {"tags": {"$regex": query, "$options": "i"}},
-                {"category": {"$regex": query, "$options": "i"}}
+            clean_q = str(query).strip()
+            escaped_q = re.escape(clean_q)
+            or_conditions = [
+                {"name": {"$regex": escaped_q, "$options": "i"}},
+                {"description": {"$regex": escaped_q, "$options": "i"}},
+                {"tags": {"$regex": escaped_q, "$options": "i"}},
+                {"category": {"$regex": escaped_q, "$options": "i"}}
             ]
+            words = [re.escape(w) for w in re.findall(r"\b\w+\b", clean_q) if len(w) >= 3 and w.lower() not in {"what", "are", "the", "for", "with", "and", "can", "you", "show", "give", "some", "have", "our", "should", "order", "party", "people", "would", "like", "please", "recommend", "suggest", "about", "there", "today", "special", "specials"}]
+            if words:
+                word_regex = "|".join(words[:5])
+                or_conditions.extend([
+                    {"name": {"$regex": word_regex, "$options": "i"}},
+                    {"description": {"$regex": word_regex, "$options": "i"}},
+                    {"tags": {"$regex": word_regex, "$options": "i"}}
+                ])
+            match_q["$or"] = or_conditions
             
         if dietary_filter != "any":
             if dietary_filter == "veg":
@@ -33,7 +45,7 @@ class WaiterTools:
                 match_q["tags"] = {"$in": ["jain"]}
 
         if category:
-            match_q["category"] = {"$regex": category, "$options": "i"}
+            match_q["category"] = {"$regex": re.escape(str(category).strip()), "$options": "i"}
             
         items = await db.menu.find(match_q).to_list(20)
         

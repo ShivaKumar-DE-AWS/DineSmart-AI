@@ -2,6 +2,7 @@ import json
 import logging
 import uuid
 import re
+import asyncio
 from typing import List, Dict, Any, Optional
 from google import genai
 from google.genai import types as genai_types
@@ -233,11 +234,28 @@ Live Menu:
         
         while loop_count < 5: # Max 5 tool turns per message
             loop_count += 1
-            response = await self.client.aio.models.generate_content(
-                model='gemini-2.5-flash',
-                contents=contents,
-                config=config
-            )
+            response = None
+            models_to_try = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
+            last_err = None
+            for model_name in models_to_try:
+                try:
+                    response = await asyncio.wait_for(
+                        self.client.aio.models.generate_content(
+                            model=model_name,
+                            contents=contents,
+                            config=config
+                        ),
+                        timeout=15.0
+                    )
+                    break
+                except Exception as e:
+                    last_err = e
+                    logger.warning(f"[WaiterOrchestrator] Model {model_name} failed: {e}")
+                    continue
+            
+            if not response:
+                logger.error(f"[WaiterOrchestrator] All models failed: {last_err}")
+                raise last_err if last_err else Exception("All model attempts failed")
             
             # Check for function calls
             function_calls = []
@@ -315,12 +333,17 @@ Live Menu:
                     elif fc.name == "show_recommendations":
                         # Fetch the actual menu items to send to the frontend UI
                         item_ids = args.get("menu_item_ids", [])
-                        if item_ids:
+                        if isinstance(item_ids, (str, int, float)):
+                            item_ids = [str(item_ids)]
+                        if not isinstance(item_ids, list):
+                            item_ids = []
+                        clean_ids = [str(x).strip() for x in item_ids if str(x).strip()]
+                        if clean_ids:
                             items_docs = await db.menu.find({
                                 "$or": [
-                                    {"id": {"$in": item_ids}},
-                                    {"name": {"$in": item_ids}},
-                                    {"name": {"$regex": "|".join([re.escape(str(x)) for x in item_ids if str(x).strip()]), "$options": "i"}}
+                                    {"id": {"$in": clean_ids}},
+                                    {"name": {"$in": clean_ids}},
+                                    {"name": {"$regex": "|".join([re.escape(x) for x in clean_ids]), "$options": "i"}}
                                 ],
                                 "available": True
                             }).to_list(10)
@@ -368,12 +391,12 @@ Live Menu:
             
         rec_match = re.search(r"<recommend>(.*?)</recommend>", final_text, re.DOTALL | re.IGNORECASE)
         if rec_match:
-            raw_recs = [r.strip() for r in rec_match.group(1).split("|") if r.strip()]
+            raw_recs = [str(r).strip() for r in rec_match.group(1).split("|") if str(r).strip()]
             if raw_recs:
                 extra_docs = await db.menu.find({
                     "$or": [
                         {"name": {"$in": raw_recs}},
-                        {"name": {"$regex": "|".join([re.escape(str(x)) for x in raw_recs]), "$options": "i"}}
+                        {"name": {"$regex": "|".join([re.escape(x) for x in raw_recs]), "$options": "i"}}
                     ],
                     "available": True
                 }).to_list(10)
