@@ -7,7 +7,7 @@ import os
 logger = logging.getLogger(__name__)
 
 class SarvamSTTClient:
-    def __init__(self, on_transcript_callback):
+    def __init__(self, on_transcript_callback, language_code: str = "unknown"):
         self.api_key = os.getenv("SARVAM_API_KEY")
         if not self.api_key:
             logger.warning("SARVAM_API_KEY is not set!")
@@ -15,6 +15,7 @@ class SarvamSTTClient:
         self.ws_url = "wss://api.sarvam.ai/speech-to-text/ws"
         self.ws = None
         self.on_transcript = on_transcript_callback
+        self.language_code = language_code if language_code and language_code.strip() else "unknown"
         self.receive_task = None
         self.is_connected = False
         
@@ -23,16 +24,22 @@ class SarvamSTTClient:
             return
             
         try:
-            self.ws = await websockets.connect(
-                self.ws_url,
-                extra_headers={"api-subscription-key": self.api_key}
-            )
+            try:
+                self.ws = await websockets.connect(
+                    self.ws_url,
+                    additional_headers={"api-subscription-key": self.api_key}
+                )
+            except TypeError:
+                self.ws = await websockets.connect(
+                    self.ws_url,
+                    extra_headers={"api-subscription-key": self.api_key}
+                )
             self.is_connected = True
-            logger.info("Connected to Sarvam STT streaming API")
+            logger.info(f"Connected to Sarvam STT streaming API (language: {self.language_code})")
             
             # Send configuration
             config = {
-                "language_code": "hi-IN",
+                "language_code": self.language_code,
                 "model": "saaras:v1"
             }
             # The exact config schema might vary based on Sarvam's API version.

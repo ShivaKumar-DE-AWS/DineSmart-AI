@@ -210,6 +210,12 @@ Live Menu:
 """
         return prompt
 
+    def _strip_xml_tags(self, text: str) -> str:
+        if not text:
+            return ""
+        text = re.sub(r"<(quick_replies|recommend|add_to_cart|navigate)>.*?(?:</\1>|$)", "", text, flags=re.DOTALL | re.IGNORECASE)
+        return text.strip()
+
     def _sanitize_for_gemini(self, contents: list[genai_types.Content]) -> list[genai_types.Content]:
         if not contents:
             return []
@@ -309,7 +315,9 @@ Live Menu:
                 if doc.get("tool_calls"):
                     parts = []
                     if doc.get("content"):
-                        parts.append(genai_types.Part(text=doc["content"]))
+                        clean_content = self._strip_xml_tags(doc["content"])
+                        if clean_content:
+                            parts.append(genai_types.Part(text=clean_content))
                     for tc in doc["tool_calls"]:
                         parts.append(genai_types.Part.from_function_call(
                             name=tc["name"],
@@ -317,7 +325,9 @@ Live Menu:
                         ))
                     contents.append(genai_types.Content(role="model", parts=parts))
                 else:
-                    contents.append(genai_types.Content(role="model", parts=[genai_types.Part(text=doc["content"])]))
+                    clean_content = self._strip_xml_tags(doc.get("content", ""))
+                    if clean_content:
+                        contents.append(genai_types.Content(role="model", parts=[genai_types.Part(text=clean_content)]))
             elif doc["role"] == "tool":
                 # Add tool responses
                 if doc.get("tool_responses"):
@@ -405,7 +415,7 @@ Live Menu:
                     "turn_id": str(uuid.uuid4()),
                     "session_id": self.session_id,
                     "role": "assistant",
-                    "content": final_text,
+                    "content": self._strip_xml_tags(final_text),
                     "created_at": now_iso()
                 })
                 break
@@ -430,7 +440,7 @@ Live Menu:
                 "turn_id": str(uuid.uuid4()),
                 "session_id": self.session_id,
                 "role": "assistant",
-                "content": text_response,
+                "content": self._strip_xml_tags(text_response),
                 "tool_calls": tool_calls_record,
                 "created_at": now_iso()
             })
@@ -515,15 +525,15 @@ Live Menu:
             
         # Parse XML tags from final_text (quick_replies, recommend, add_to_cart, navigate)
         quick_replies = []
-        qr_match = re.search(r"<quick_replies>(.*?)</quick_replies>", final_text, re.DOTALL | re.IGNORECASE)
+        qr_match = re.search(r"<quick_replies>(.*?)(?:</quick_replies>|$)", final_text, re.DOTALL | re.IGNORECASE)
         if qr_match:
             raw_qrs = qr_match.group(1).split("|")
-            quick_replies = [q.strip() for q in raw_qrs if q.strip()]
-            final_text = re.sub(r"<quick_replies>.*?</quick_replies>", "", final_text, flags=re.DOTALL | re.IGNORECASE).strip()
+            quick_replies = [q.strip() for q in raw_qrs if q.strip() and not q.strip().startswith("<")]
+            final_text = re.sub(r"<quick_replies>.*?(?:</quick_replies>|$)", "", final_text, flags=re.DOTALL | re.IGNORECASE).strip()
             
-        rec_match = re.search(r"<recommend>(.*?)</recommend>", final_text, re.DOTALL | re.IGNORECASE)
+        rec_match = re.search(r"<recommend>(.*?)(?:</recommend>|$)", final_text, re.DOTALL | re.IGNORECASE)
         if rec_match:
-            raw_recs = [str(r).strip() for r in rec_match.group(1).split("|") if str(r).strip()]
+            raw_recs = [str(r).strip() for r in rec_match.group(1).split("|") if str(r).strip() and not str(r).strip().startswith("<")]
             if raw_recs:
                 extra_docs = await db.menu.find({
                     "$or": [
@@ -536,9 +546,9 @@ Live Menu:
                     d.pop("_id", None)
                     if not any(r.get("id") == d.get("id") for r in recommended_items):
                         recommended_items.append(d)
-            final_text = re.sub(r"<recommend>.*?</recommend>", "", final_text, flags=re.DOTALL | re.IGNORECASE).strip()
+            final_text = re.sub(r"<recommend>.*?(?:</recommend>|$)", "", final_text, flags=re.DOTALL | re.IGNORECASE).strip()
             
         # Clean up any stray XML tags
-        final_text = re.sub(r"<(add_to_cart|navigate)>.*?</\1>", "", final_text, flags=re.DOTALL | re.IGNORECASE).strip()
+        final_text = self._strip_xml_tags(final_text)
             
         return final_text, recommended_items, quick_replies

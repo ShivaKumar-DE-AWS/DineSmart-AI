@@ -52,6 +52,9 @@ export function useOrderStream() {
               );
             });
           }
+        } else if (data.type === "staff_call") {
+          qc.invalidateQueries({ queryKey: ["kds-notifications"] });
+          qc.invalidateQueries({ queryKey: ["counter-notifications"] });
         }
       } catch {
         // Ignore parse errors (keepalive lines etc.)

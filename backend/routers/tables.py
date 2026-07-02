@@ -221,6 +221,7 @@ async def call_staff(session_id: str, req: Optional[CallStaffReq] = None):
         "type": "staff_call",
         "title": f"Table {session.get('table_number', 'Unknown')} needs assistance",
         "body": body_text,
+        "message": f"Table {session.get('table_number', 'Unknown')}: {body_text}",
         "read": False,
         "restaurant_id": restaurant_id,
         "created_at": now_iso(),
@@ -238,7 +239,8 @@ async def call_staff(session_id: str, req: Optional[CallStaffReq] = None):
                 "table_number": session.get("table_number", "Unknown"),
                 "session_id": session_id,
                 "reasons": reasons_list,
-                "body": body_text
+                "body": body_text,
+                "message": f"Table {session.get('table_number', 'Unknown')}: {body_text}"
             })
         except Exception as e:
             print(f"Failed to broadcast staff call: {e}")

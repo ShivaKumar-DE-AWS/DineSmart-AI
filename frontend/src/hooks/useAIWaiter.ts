@@ -5,6 +5,11 @@ import { AIMessage, UserPreferences } from "@/types";
 
 export type Message = AIMessage;
 
+const cleanXmlTags = (str: string) => {
+    if (!str) return "";
+    return str.replace(/<(quick_replies|recommend|add_to_cart|navigate)>.*?(?:<\/\1>|$)/gis, "").trim();
+};
+
 export function useAIWaiter({ restaurantId, mode, onOrderUpdate }: { restaurantId: string; mode: 'chat' | 'voice'; onOrderUpdate?: (orderData: any) => void }) {
     const { session } = useTable();
     const storageKey = session?.id ? `ai_waiter_chat_${session.id}` : null;
@@ -15,7 +20,9 @@ export function useAIWaiter({ restaurantId, mode, onOrderUpdate }: { restaurantI
                 const saved = sessionStorage.getItem(storageKey);
                 if (saved) {
                     const parsed = JSON.parse(saved);
-                    if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        return parsed.map((m: any) => m.role === "assistant" && m.content ? { ...m, content: cleanXmlTags(m.content) } : m);
+                    }
                 }
             } catch (e) {}
         }
@@ -100,13 +107,13 @@ export function useAIWaiter({ restaurantId, mode, onOrderUpdate }: { restaurantI
                 const data = JSON.parse(event.data);
                 if (data.type === "session_started") {
                     if (data.history && Array.isArray(data.history) && data.history.length > 0) {
-                        setMessages(data.history);
+                        setMessages(data.history.map((m: any) => m.role === "assistant" && m.content ? { ...m, content: cleanXmlTags(m.content) } : m));
                     }
                 } else if (data.type === "assistant_text") {
                     setMessages(prev => [...prev, {
                         id: Date.now().toString(),
                         role: "assistant",
-                        content: data.text,
+                        content: cleanXmlTags(data.text),
                         recs: data.recs,
                         quick_replies: data.quick_replies
                     }]);

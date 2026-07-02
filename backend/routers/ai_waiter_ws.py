@@ -2,6 +2,7 @@ import asyncio
 import json
 import uuid
 import logging
+import re
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
 from deps import db, now_iso
 from services.waiter_orchestrator import WaiterOrchestrator
@@ -130,12 +131,15 @@ async def ai_waiter_websocket(websocket: WebSocket, session_id: str):
                     role = turn.get("role")
                     content = turn.get("content", "").strip()
                     if content and role in ["user", "assistant"]:
-                        formatted_history.append({
-                            "id": turn.get("turn_id", str(uuid.uuid4())),
-                            "role": role,
-                            "content": content,
-                            "created_at": turn.get("created_at", now_iso())
-                        })
+                        if role == "assistant":
+                            content = re.sub(r"<(quick_replies|recommend|add_to_cart|navigate)>.*?(?:</\1>|$)", "", content, flags=re.DOTALL | re.IGNORECASE).strip()
+                        if content:
+                            formatted_history.append({
+                                "id": turn.get("turn_id", str(uuid.uuid4())),
+                                "role": role,
+                                "content": content,
+                                "created_at": turn.get("created_at", now_iso())
+                            })
                         
                 await websocket.send_json({
                     "type": "session_started",
@@ -156,7 +160,8 @@ async def ai_waiter_websocket(websocket: WebSocket, session_id: str):
                 
             elif msg_type == "voice_start":
                 if not stt_client:
-                    stt_client = SarvamSTTClient(on_transcript)
+                    lang = msg.get("language", "unknown")
+                    stt_client = SarvamSTTClient(on_transcript, language_code=lang)
                     await stt_client.connect()
                 elif not stt_client.is_connected:
                     await stt_client.connect()
