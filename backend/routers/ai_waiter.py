@@ -7,7 +7,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from fastapi.responses import StreamingResponse, Response
 from deps import (
-    db, now_iso, GEMINI_API_KEY, ChatReq, TTSReq, require_user, check_pro_access
+    db, now_iso, GEMINI_API_KEY, ChatReq, TTSReq, require_user, check_pro_access, get_gemini_models
 )
 
 router = APIRouter(tags=["ai-waiter"])
@@ -105,42 +105,32 @@ async def _make_waiter_stream(session_id: str, message: str, system_prompt: str,
                 role = "user" if doc["role"] == "user" else "model"
                 history.append(genai_types.Content(role=role, parts=[genai_types.Part(text=doc["content"])]))
 
-            # Optimized Model Retry Loop (Fast-Fail)
-            # Curated list — gemini-2.0-flash first; removed list_models() which
-            # returned bad names like "gemini 1.5 pro" (spaces) causing 404s
-            models_to_try = [
-                "gemini-2.0-flash",
-                "gemini-1.5-flash",
-                "gemini-1.5-flash-latest",
-                "gemini-1.5-flash-001",
-                "gemini-1.5-flash-002",
-            ]
+            models_to_try = get_gemini_models(client)
             full = ""
             
             for model_name in models_to_try:
-                try:
-                    # Apply a strict timeout to each model attempt to prevent hanging
-                    response = await asyncio.wait_for(
-                        client.aio.models.generate_content_stream(
-                            model=model_name,
-                            contents=[*[{"role": h.role, "parts": [{"text": h.parts[0].text}]} for h in history],
-                                      {"role": "user", "parts": [{"text": message}]}],
-                            config=genai_types.GenerateContentConfig(system_instruction=system_prompt),
-                        ),
-                        timeout=10.0 # 10s timeout per model
-                    )
-                    async for chunk in response:
-                        if chunk.text:
-                            full += chunk.text
-                            yield f"data: {json.dumps({'delta': chunk.text})}\n\n"
-                    break
-                except Exception as e:
-                    print(f"[AI-WAITER] Model {model_name} failed: {str(e)}")
-                    err_str = str(e).lower()
-                    if any(kw in err_str for kw in ["quota", "rate", "not found", "unavailable", "timeout"]):
+                for api_ver in [None, "v1"]:
+                    try:
+                        c = client if not api_ver else genai.Client(api_key=GEMINI_API_KEY, http_options=genai_types.HttpOptions(api_version=api_ver))
+                        response = await asyncio.wait_for(
+                            c.aio.models.generate_content_stream(
+                                model=model_name,
+                                contents=[*[{"role": h.role, "parts": [{"text": h.parts[0].text}]} for h in history],
+                                          {"role": "user", "parts": [{"text": message}]}],
+                                config=genai_types.GenerateContentConfig(system_instruction=system_prompt),
+                            ),
+                            timeout=10.0 # 10s timeout per model
+                        )
+                        async for chunk in response:
+                            if chunk.text:
+                                full += chunk.text
+                                yield f"data: {json.dumps({'delta': chunk.text})}\n\n"
+                        break
+                    except Exception as e:
+                        print(f"[AI-WAITER] Model {model_name} (ver={api_ver}) failed: {str(e)}")
                         continue
-                    else:
-                        raise
+                if full:
+                    break
             else:
                 err_msg = "I'm a bit overwhelmed right now — please try again in a moment!"
                 yield f"data: {json.dumps({'error': err_msg})}\n\n"
@@ -256,30 +246,24 @@ async def ai_transcribe(file: UploadFile = File(...), language: str = Form(""), 
         prompt = "You are an expert transcriber. Transcribe the following audio exactly as spoken. Output ONLY the transcribed text, nothing else."
         if language and language.strip() and language.strip() != "auto":
             prompt += f" The expected language might be {language}."
-        # Curated list — gemini-2.0-flash first; removed list_models() which
-        # returned bad names like "gemini 1.5 pro" (spaces) causing 404s
-        models_to_try = [
-            "gemini-2.0-flash",
-            "gemini-1.5-flash",
-            "gemini-1.5-flash-latest",
-            "gemini-1.5-flash-001",
-            "gemini-1.5-flash-002",
-        ]
+        models_to_try = get_gemini_models(client)
         for model_name in models_to_try:
-            try:
-                response = await asyncio.to_thread(
-                    client.models.generate_content,
-                    model=model_name,
-                    contents=[prompt, genai_types.Part.from_bytes(data=raw, mime_type=mime)],
-                )
-                text = response.text.strip() if response and response.text else ""
-                return {"text": text}
-            except Exception as inner_e:
-                err_str = str(inner_e).lower()
-                if "quota" in err_str or "rate" in err_str or "not found" in err_str or "not supported" in err_str or "unavailable" in err_str:
-                    continue
-                raise
-        raise HTTPException(status_code=429, detail="All models at quota limit. Try again shortly.")
+            for api_ver in [None, "v1"]:
+                try:
+                    c = client if not api_ver else genai.Client(api_key=GEMINI_API_KEY, http_options=genai_types.HttpOptions(api_version=api_ver))
+                    response = await asyncio.to_thread(
+                        c.models.generate_content,
+                        model=model_name,
+                        contents=[prompt, genai_types.Part.from_bytes(data=raw, mime_type=mime)],
+                    )
+                    text = response.text.strip() if response and response.text else ""
+                    return {"text": text}
+                except Exception as inner_e:
+                    err_str = str(inner_e).lower()
+                    if any(kw in err_str for kw in ["quota", "rate", "not found", "not supported", "unavailable", "timeout"]):
+                        continue
+                    raise
+        raise HTTPException(status_code=429, detail="All models at quota limit or unavailable. Try again shortly.")
     except HTTPException:
         raise
     except Exception as e:

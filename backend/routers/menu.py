@@ -6,7 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from deps import (
     db, now_iso, require_user, require_roles, current_user, UPLOAD_DIR,
     MenuItemModel, InventoryItemModel,
-    MenuItemUpdateModel, InventoryItemUpdateModel, check_pro_access
+    MenuItemUpdateModel, InventoryItemUpdateModel, check_pro_access,
+    get_gemini_models
 )
 
 router = APIRouter(tags=["menu"])
@@ -122,28 +123,25 @@ async def seed_inventory_demo(user=Depends(require_user)):
     try:
         from google import genai
         from google.genai import types as genai_types
-        # Curated list — gemini-2.0-flash first; list_models() was appending
-        # bad names like "gemini 1.5 pro" (with spaces) causing 404s
-        models_to_try = [
-            "gemini-2.0-flash",
-            "gemini-1.5-flash",
-            "gemini-1.5-flash-latest",
-            "gemini-1.5-flash-001",
-            "gemini-1.5-flash-002",
-        ]
+        client_ai = genai.Client(api_key=GEMINI_API_KEY)
+        models_to_try = get_gemini_models(client_ai)
 
         response = None
         for model_name in models_to_try:
-            try:
-                response = await asyncio.to_thread(
-                    client_ai.models.generate_content,
-                    model=model_name,
-                    contents=prompt,
-                )
-                if response and getattr(response, "text", None):
-                    break
-            except Exception:
-                continue
+            for api_ver in [None, "v1"]:
+                try:
+                    c = client_ai if not api_ver else genai.Client(api_key=GEMINI_API_KEY, http_options=genai_types.HttpOptions(api_version=api_ver))
+                    response = await asyncio.to_thread(
+                        c.models.generate_content,
+                        model=model_name,
+                        contents=prompt,
+                    )
+                    if response and getattr(response, "text", None):
+                        break
+                except Exception:
+                    continue
+            if response and getattr(response, "text", None):
+                break
         if not response or not getattr(response, "text", None):
             raise HTTPException(status_code=500, detail="AI dish generation failed across all available Gemini models")
         data_str = response.text.strip()

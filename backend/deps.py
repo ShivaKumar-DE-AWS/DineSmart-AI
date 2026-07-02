@@ -46,6 +46,43 @@ if not JWT_SECRET:
 UPLOAD_DIR = ROOT_DIR / "uploads"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
+def get_gemini_models(client) -> list[str]:
+    """Dynamically discover available Gemini models via client.models.list(),
+    falling back to standard flash and pro models if discovery fails."""
+    discovered = []
+    try:
+        for m in client.models.list():
+            actions = getattr(m, "supported_actions", []) or getattr(m, "supported_generation_methods", [])
+            if not actions or any("generate" in str(a).lower() for a in actions):
+                name = getattr(m, "name", "")
+                if name:
+                    clean = name.replace("models/", "")
+                    if "gemini" in clean.lower() and not any(x in clean.lower() for x in ["vision", "embedding", "aqa", "imagen", "tts", "learn"]):
+                        if clean not in discovered:
+                            discovered.append(clean)
+    except Exception as e:
+        print(f"[Gemini] Dynamic model listing failed: {e}")
+
+    fallbacks = [
+        "gemini-2.0-flash",
+        "gemini-2.0-flash-001",
+        "gemini-2.0-flash-lite",
+        "gemini-1.5-flash",
+        "gemini-1.5-flash-latest",
+        "gemini-1.5-flash-001",
+        "gemini-1.5-flash-002",
+        "gemini-1.5-flash-8b",
+        "gemini-1.5-pro",
+        "gemini-1.5-pro-latest",
+        "gemini-1.5-pro-001",
+        "gemini-1.5-pro-002",
+    ]
+    for f in fallbacks:
+        if f not in discovered:
+            discovered.append(f)
+    return discovered
+
+
 # MongoDB
 kwargs = {}
 if "localhost" not in MONGO_URL and "127.0.0.1" not in MONGO_URL:

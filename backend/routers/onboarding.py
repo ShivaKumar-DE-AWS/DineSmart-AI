@@ -6,7 +6,7 @@ from typing import Optional
 from datetime import datetime, timezone, timedelta
 from pydantic import BaseModel
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends, Form, UploadFile, File
-from deps import db, now_iso, require_user, require_roles, GEMINI_API_KEY, hash_password
+from deps import db, now_iso, require_user, require_roles, GEMINI_API_KEY, hash_password, get_gemini_models
 from email_service import send_welcome_email
 
 router = APIRouter(tags=["onboarding"])
@@ -155,31 +155,26 @@ async def onboard_menu(file: UploadFile = File(...), user=Depends(require_user))
         ]
         Return ONLY valid JSON, nothing else. No markdown formatting like ```json.
         """
-        # Curated model list — gemini-2.0-flash first (most available), no pro models
-        # (list_models() was appending bad names like "gemini 1.5 pro" with spaces)
-        models_to_try = [
-            "gemini-2.0-flash",
-            "gemini-1.5-flash",
-            "gemini-1.5-flash-latest",
-            "gemini-1.5-flash-001",
-            "gemini-1.5-flash-002",
-        ]
-
+        models_to_try = get_gemini_models(client_ai)
 
         response = None
         last_err = None
         for model_name in models_to_try:
-            try:
-                response = await asyncio.to_thread(
-                    client_ai.models.generate_content,
-                    model=model_name,
-                    contents=[prompt, genai_types.Part.from_bytes(data=raw, mime_type=mime)],
-                )
-                if response and getattr(response, "text", None):
-                    break
-            except Exception as e:
-                last_err = e
-                continue
+            for api_ver in [None, "v1"]:
+                try:
+                    c = client_ai if not api_ver else genai.Client(api_key=GEMINI_API_KEY, http_options=genai_types.HttpOptions(api_version=api_ver))
+                    response = await asyncio.to_thread(
+                        c.models.generate_content,
+                        model=model_name,
+                        contents=[prompt, genai_types.Part.from_bytes(data=raw, mime_type=mime)],
+                    )
+                    if response and getattr(response, "text", None):
+                        break
+                except Exception as e:
+                    last_err = e
+                    continue
+            if response and getattr(response, "text", None):
+                break
         if not response or not getattr(response, "text", None):
             raise HTTPException(status_code=500, detail=f"Menu extraction failed across available models ({models_to_try[:5]}): {str(last_err)}")
         text = response.text.strip()

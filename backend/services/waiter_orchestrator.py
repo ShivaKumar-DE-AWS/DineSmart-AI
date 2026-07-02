@@ -6,7 +6,7 @@ import asyncio
 from typing import List, Dict, Any, Optional
 from google import genai
 from google.genai import types as genai_types
-from deps import db, now_iso, GEMINI_API_KEY
+from deps import db, now_iso, GEMINI_API_KEY, get_gemini_models
 from services.waiter_tools import WaiterTools
 
 logger = logging.getLogger(__name__)
@@ -368,31 +368,27 @@ Live Menu:
         while loop_count < 5: # Max 5 tool turns per message
             loop_count += 1
             contents = self._sanitize_for_gemini(contents)
-            # Curated list — gemini-2.0-flash first; removed list_models() which
-            # returned bad names like "gemini 1.5 pro" (spaces) causing 404s
-            models_to_try = [
-                "gemini-2.0-flash",
-                "gemini-1.5-flash",
-                "gemini-1.5-flash-latest",
-                "gemini-1.5-flash-001",
-                "gemini-1.5-flash-002",
-            ]
+            models_to_try = get_gemini_models(self.client)
             last_err = None
             for model_name in models_to_try:
-                try:
-                    response = await asyncio.wait_for(
-                        self.client.aio.models.generate_content(
-                            model=model_name,
-                            contents=contents,
-                            config=config
-                        ),
-                        timeout=15.0
-                    )
+                for api_ver in [None, "v1"]:
+                    try:
+                        c = self.client if not api_ver else genai.Client(api_key=GEMINI_API_KEY, http_options=genai_types.HttpOptions(api_version=api_ver))
+                        response = await asyncio.wait_for(
+                            c.aio.models.generate_content(
+                                model=model_name,
+                                contents=contents,
+                                config=config
+                            ),
+                            timeout=15.0
+                        )
+                        break
+                    except Exception as e:
+                        last_err = e
+                        logger.warning(f"[WaiterOrchestrator] Model {model_name} (ver={api_ver}) failed: {e}")
+                        continue
+                if response:
                     break
-                except Exception as e:
-                    last_err = e
-                    logger.warning(f"[WaiterOrchestrator] Model {model_name} failed: {e}")
-                    continue
             
             if not response:
                 logger.error(f"[WaiterOrchestrator] All models failed: {last_err}")
