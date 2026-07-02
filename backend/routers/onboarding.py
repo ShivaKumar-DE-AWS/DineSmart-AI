@@ -198,9 +198,29 @@ async def request_restaurant_access(
     if not email_otp:
         raise HTTPException(status_code=400, detail="Email address must be verified first")
         
+    existing_rest = await db.restaurants.find_one({"owner_email": email})
+    if existing_rest:
+        if existing_rest.get("status") == "deleted" or existing_rest.get("subscription_status") == "deleted":
+            old_id = existing_rest["id"]
+            old_slug = existing_rest.get("slug")
+            await db.restaurants.delete_one({"id": old_id})
+            await db.users.delete_many({"restaurant_id": old_id})
+            if old_slug:
+                await db.users.delete_many({"restaurant_slug": old_slug})
+                await db.restaurant_configs.delete_many({"slug": old_slug})
+        else:
+            raise HTTPException(status_code=400, detail="This email is already registered with an active restaurant. Please login or use a different email.")
+
     existing_user = await db.users.find_one({"email": email})
     if existing_user:
-        raise HTTPException(status_code=400, detail="This email is already registered. Please login or use a different email.")
+        rest_id = existing_user.get("restaurant_id")
+        rest = await db.restaurants.find_one({"id": rest_id}) if rest_id else None
+        if not rest or rest.get("status") == "deleted" or rest.get("subscription_status") == "deleted":
+            if rest_id:
+                await db.users.delete_many({"restaurant_id": rest_id})
+            await db.users.delete_many({"email": email})
+        else:
+            raise HTTPException(status_code=400, detail="This email is already registered. Please login or use a different email.")
 
     slug = name.lower().replace(" ", "-").replace("'", "")
     

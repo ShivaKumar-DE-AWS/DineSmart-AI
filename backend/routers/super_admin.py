@@ -149,8 +149,12 @@ async def delete_restaurant(restaurant_id: str, user=Depends(require_superadmin)
     await db.restaurants.update_one({"id": restaurant_id}, {"$set": {"subscription_status": "deleted", "status": "deleted"}})
     if slug:
         await db.restaurant_configs.delete_many({"slug": slug})
+        await db.users.delete_many({"restaurant_slug": slug})
         
     await db.users.delete_many({"restaurant_id": restaurant_id})
+    if restaurant.get("owner_email"):
+        await db.users.delete_many({"email": restaurant.get("owner_email")})
+        await db.otps.delete_many({"target": restaurant.get("owner_email")})
     await db.menu.delete_many({"restaurant_id": restaurant_id})
     await db.inventory.delete_many({"restaurant_id": restaurant_id})
     await db.tables.delete_many({"restaurant_id": restaurant_id})
