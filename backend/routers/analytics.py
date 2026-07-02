@@ -81,12 +81,23 @@ async def dashboard(user=Depends(require_user)):
     rest = await db.restaurants.find_one({"id": user.get("restaurant_id")}) if user.get("restaurant_id") else None
     sandbox_mode = rest.get("sandbox_mode", True) if rest else True
 
+    # Onboarding checks — menu and table counts
+    menu_q: Dict[str, Any] = {"available": True}
+    tables_q: Dict[str, Any] = {}
+    if user.get("restaurant_id"):
+        menu_q["restaurant_id"] = user["restaurant_id"]
+        tables_q["restaurant_id"] = user["restaurant_id"]
+    menu_count = await db.menu_items.count_documents(menu_q)
+    tables_count = await db.tables.count_documents(tables_q)
+
     return {
         "revenue_today": round(revenue_today, 2), "orders_today": total_orders,
         "ai_orders_today": ai_orders_count, "avg_ticket": round(avg_ticket, 2),
         "top_items": top_items, "low_stock_count": len(low_stock),
         "low_stock": low_stock, "status_counts": status_counts,
         "sandbox_mode": sandbox_mode,
+        "menu_count": menu_count,
+        "tables_count": tables_count,
     }
 
 @router.get("/api/analytics/revenue", dependencies=[Depends(require_roles("admin"))])

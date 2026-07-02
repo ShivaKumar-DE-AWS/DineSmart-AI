@@ -1,11 +1,9 @@
 "use client";
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
-import { TrendingUp, ShoppingBag, Receipt, AlertTriangle, Sparkles, Rocket, UtensilsCrossed, QrCode, CheckCircle2, ArrowRight } from "lucide-react";
+import { TrendingUp, ShoppingBag, Receipt, AlertTriangle, Rocket, UtensilsCrossed, QrCode, CheckCircle2, ArrowRight } from "lucide-react";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { useSession } from "@/stores/session";
 
@@ -17,7 +15,6 @@ const CHART_MARGIN = { top: 10, right: 20, left: -10, bottom: 0 };
 const formatDayShort = (d: string) => d.slice(5);
 
 export default function AdminDashboard() {
-  const router = useRouter();
   const { user } = useSession();
   const { data: dash } = useQuery({ queryKey: ["admin-dashboard", user?.restaurant_id], queryFn: () => api<any>("/api/analytics/dashboard"), refetchInterval: 15000 });
   const { data: rev } = useQuery({ queryKey: ["admin-revenue", user?.restaurant_id], queryFn: () => api<any>("/api/analytics/revenue?days=7"), refetchInterval: 15000 });
@@ -29,15 +26,22 @@ export default function AdminDashboard() {
     { label: "Low stock items", value: dash ? dash.low_stock_count : "—", icon: AlertTriangle, testid: "kpi-low-stock" },
   ];
 
-  const { data: tablesData } = useQuery({ queryKey: ["admin-tables-dashboard", user?.restaurant_id], queryFn: () => api<any>("/api/tables") });
-  const tablesCount = tablesData?.tables?.length || 0;
+  // ── Onboarding banner ──────────────────────────────────────────────────────
+  // All three checks come from the single dashboard query so they resolve
+  // together — no flash from mismatched loading states.
+  const dashLoaded = dash !== undefined;
+  const isSandbox    = !dashLoaded || dash?.sandbox_mode !== false;  // true while loading
+  const hasMenu      = dashLoaded && (dash?.menu_count ?? 0) > 0;
+  const hasTables    = dashLoaded && (dash?.tables_count ?? 0) > 0;
+  // Show banner until ALL three requirements are met
+  const showOnboarding = isSandbox || !hasMenu || !hasTables;
 
   return (
     <div>
-      {(dash?.sandbox_mode || tablesCount === 0) && (
+      {showOnboarding && (
         <div className="mb-8 bg-gradient-to-br from-amber-50 via-cream to-amber-50/50 border-2 border-amber-300 rounded-2xl p-6 shadow-md relative overflow-hidden">
           <div className="absolute -top-10 -right-10 w-48 h-48 bg-amber-200/40 rounded-full blur-3xl pointer-events-none" />
-          
+
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-5 border-b border-amber-200 mb-5 relative z-10">
             <div className="flex items-start gap-3.5">
               <div className="h-12 w-12 bg-amber-500 text-white rounded-2xl flex items-center justify-center shrink-0 shadow-md">
@@ -45,13 +49,15 @@ export default function AdminDashboard() {
               </div>
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="font-heading text-lg md:text-xl text-amber-950 font-bold">🚀 SmartDine AI — Onboarding & Sandbox Guide</h2>
-                  <span className="px-2.5 py-0.5 bg-amber-500 text-white font-mono text-[10px] uppercase font-bold rounded-full tracking-wider animate-bounce">
-                    🟡 Sandbox Mode Active
-                  </span>
+                  <h2 className="font-heading text-lg md:text-xl text-amber-950 font-bold">🚀 SmartDine AI — Onboarding &amp; Sandbox Guide</h2>
+                  {isSandbox && (
+                    <span className="px-2.5 py-0.5 bg-amber-500 text-white font-mono text-[10px] uppercase font-bold rounded-full tracking-wider animate-bounce">
+                      🟡 Sandbox Mode Active
+                    </span>
+                  )}
                 </div>
                 <p className="text-xs md:text-sm text-amber-900 mt-1 max-w-2xl">
-                  Your restaurant is currently in safe testing mode with simulated data. Follow these 3 simple steps to generate your AI menu, create QR dining tables, and go live!
+                  Complete all 3 steps below to go live. This guide will disappear automatically once your menu is ready, tables are created, and sandbox mode is removed.
                 </p>
               </div>
             </div>
@@ -63,55 +69,85 @@ export default function AdminDashboard() {
             </Link>
           </div>
 
+          {/* Progress tracker */}
+          {dashLoaded && (
+            <div className="flex gap-3 flex-wrap mb-5 relative z-10">
+              <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${hasMenu ? "bg-emerald-50 text-emerald-700 border-emerald-300" : "bg-amber-100 text-amber-800 border-amber-300"}`}>
+                {hasMenu ? <CheckCircle2 className="w-3.5 h-3.5" /> : <span>○</span>}
+                Menu {hasMenu ? "✓" : "Pending"}
+              </div>
+              <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${hasTables ? "bg-emerald-50 text-emerald-700 border-emerald-300" : "bg-amber-100 text-amber-800 border-amber-300"}`}>
+                {hasTables ? <CheckCircle2 className="w-3.5 h-3.5" /> : <span>○</span>}
+                Tables {hasTables ? "✓" : "Pending"}
+              </div>
+              <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${!isSandbox ? "bg-emerald-50 text-emerald-700 border-emerald-300" : "bg-amber-100 text-amber-800 border-amber-300"}`}>
+                {!isSandbox ? <CheckCircle2 className="w-3.5 h-3.5" /> : <span>○</span>}
+                Sandbox {!isSandbox ? "Removed ✓" : "Active"}
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 relative z-10">
             {/* Step 1: Menu */}
-            <div className="bg-white/80 backdrop-blur-sm border border-amber-200/80 rounded-xl p-4 flex flex-col justify-between hover:border-amber-400 transition shadow-sm">
+            <div className={`bg-white/80 backdrop-blur-sm border rounded-xl p-4 flex flex-col justify-between transition shadow-sm ${hasMenu ? "border-emerald-300 bg-emerald-50/60" : "border-amber-200/80 hover:border-amber-400"}`}>
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full">Step 1</span>
-                  <UtensilsCrossed className="w-4 h-4 text-amber-600" />
+                  <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${hasMenu ? "text-emerald-800 bg-emerald-100" : "text-amber-800 bg-amber-100"}`}>
+                    Step 1 {hasMenu ? "✓" : ""}
+                  </span>
+                  <UtensilsCrossed className={`w-4 h-4 ${hasMenu ? "text-emerald-600" : "text-amber-600"}`} />
                 </div>
-                <h4 className="font-heading font-bold text-sm text-ink mb-1">🍽️ Menu & AI Extraction</h4>
+                <h4 className="font-heading font-bold text-sm text-ink mb-1">🍽️ Menu &amp; AI Extraction</h4>
                 <p className="text-xs text-stone leading-relaxed mb-3">
-                  We seeded default dishes based on your cuisine! Want your real menu? Upload a photo or PDF of your menu card in Menu Manager for instant automatic AI extraction.
+                  {hasMenu
+                    ? `✅ ${dash?.menu_count} menu items ready. You can add more or upload a new menu card anytime.`
+                    : "We seeded default dishes based on your cuisine! Want your real menu? Upload a photo or PDF of your menu card in Menu Manager for instant automatic AI extraction."}
                 </p>
               </div>
-              <Link href="/admin/menu" className="text-xs font-bold text-amber-700 hover:text-amber-900 flex items-center gap-1 group">
-                ✨ Go to Menu Manager <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              <Link href="/admin/menu" className={`text-xs font-bold flex items-center gap-1 group ${hasMenu ? "text-emerald-700 hover:text-emerald-900" : "text-amber-700 hover:text-amber-900"}`}>
+                ✨ {hasMenu ? "Manage Menu" : "Go to Menu Manager"} <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
               </Link>
             </div>
 
             {/* Step 2: Tables & QR */}
-            <div className="bg-white/80 backdrop-blur-sm border border-amber-200/80 rounded-xl p-4 flex flex-col justify-between hover:border-amber-400 transition shadow-sm">
+            <div className={`bg-white/80 backdrop-blur-sm border rounded-xl p-4 flex flex-col justify-between transition shadow-sm ${hasTables ? "border-emerald-300 bg-emerald-50/60" : "border-amber-200/80 hover:border-amber-400"}`}>
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full">Step 2</span>
-                  <QrCode className="w-4 h-4 text-amber-600" />
+                  <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${hasTables ? "text-emerald-800 bg-emerald-100" : "text-amber-800 bg-amber-100"}`}>
+                    Step 2 {hasTables ? "✓" : ""}
+                  </span>
+                  <QrCode className={`w-4 h-4 ${hasTables ? "text-emerald-600" : "text-amber-600"}`} />
                 </div>
-                <h4 className="font-heading font-bold text-sm text-ink mb-1">🪑 Tables & QR Codes</h4>
+                <h4 className="font-heading font-bold text-sm text-ink mb-1">🪑 Tables &amp; QR Codes</h4>
                 <p className="text-xs text-stone leading-relaxed mb-3">
-                  Create table numbers (e.g., Table 1 to 10) and seating capacities. Download and print high-resolution QR codes to display on tables for instant self-service ordering!
+                  {hasTables
+                    ? `✅ ${dash?.tables_count} table${dash?.tables_count !== 1 ? "s" : ""} created. Print QR codes from the Tables page for each table.`
+                    : "Create table numbers (e.g., Table 1 to 10) and seating capacities. Download and print high-resolution QR codes to display on tables for instant self-service ordering!"}
                 </p>
               </div>
-              <Link href="/admin/tables" className="text-xs font-bold text-amber-700 hover:text-amber-900 flex items-center gap-1 group">
-                🖨️ Create Tables & QR <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              <Link href="/admin/tables" className={`text-xs font-bold flex items-center gap-1 group ${hasTables ? "text-emerald-700 hover:text-emerald-900" : "text-amber-700 hover:text-amber-900"}`}>
+                🖨️ {hasTables ? "Manage Tables" : "Create Tables & QR"} <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
               </Link>
             </div>
 
             {/* Step 3: Exit Sandbox */}
-            <div className="bg-white/80 backdrop-blur-sm border border-amber-200/80 rounded-xl p-4 flex flex-col justify-between hover:border-amber-400 transition shadow-sm">
+            <div className={`bg-white/80 backdrop-blur-sm border rounded-xl p-4 flex flex-col justify-between transition shadow-sm ${!isSandbox ? "border-emerald-300 bg-emerald-50/60" : "border-amber-200/80 hover:border-amber-400"}`}>
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">Step 3</span>
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${!isSandbox ? "text-emerald-800 bg-emerald-100" : "text-amber-800 bg-amber-100"}`}>
+                    Step 3 {!isSandbox ? "✓" : ""}
+                  </span>
+                  <CheckCircle2 className={`w-4 h-4 ${!isSandbox ? "text-emerald-600" : "text-amber-600"}`} />
                 </div>
-                <h4 className="font-heading font-bold text-sm text-ink mb-1">🚀 Go Live & Exit Sandbox</h4>
+                <h4 className="font-heading font-bold text-sm text-ink mb-1">🚀 Go Live &amp; Exit Sandbox</h4>
                 <p className="text-xs text-stone leading-relaxed mb-3">
-                  Once your menu and tables are ready, exit Sandbox mode in the Setup Wizard. This turns off test mode so you can accept real customer orders and live payments!
+                  {!isSandbox
+                    ? "✅ You are live! Real customer orders and payments are active."
+                    : "Once your menu and tables are ready, exit Sandbox mode in the Setup Wizard. This turns off test mode so you can accept real customer orders and live payments!"}
                 </p>
               </div>
-              <Link href="/admin/setup" className="text-xs font-bold text-emerald-700 hover:text-emerald-900 flex items-center gap-1 group">
-                🚀 Go Live Now <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              <Link href="/admin/setup" className={`text-xs font-bold flex items-center gap-1 group ${!isSandbox ? "text-emerald-700 hover:text-emerald-900" : "text-emerald-700 hover:text-emerald-900"}`}>
+                🚀 {!isSandbox ? "Setup Complete" : "Go Live Now"} <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
               </Link>
             </div>
           </div>
