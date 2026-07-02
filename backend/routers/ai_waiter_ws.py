@@ -119,7 +119,29 @@ async def ai_waiter_websocket(websocket: WebSocket, session_id: str):
                     upsert=True
                 )
                 orchestrator = WaiterOrchestrator(session_id, restaurant_id, table_id, mode)
-                await websocket.send_json({"type": "session_started", "session_id": session_id})
+                
+                # Fetch authoritative conversation history for this dining session
+                history_turns = await db.ai_waiter_turns.find({
+                    "session_id": {"$in": [session_id, f"{session_id}_chat", f"{session_id}_text", f"{session_id}_voice"]}
+                }).sort("created_at", 1).to_list(100)
+                
+                formatted_history = []
+                for turn in history_turns:
+                    role = turn.get("role")
+                    content = turn.get("content", "").strip()
+                    if content and role in ["user", "assistant"]:
+                        formatted_history.append({
+                            "id": turn.get("turn_id", str(uuid.uuid4())),
+                            "role": role,
+                            "content": content,
+                            "created_at": turn.get("created_at", now_iso())
+                        })
+                        
+                await websocket.send_json({
+                    "type": "session_started",
+                    "session_id": session_id,
+                    "history": formatted_history
+                })
                 
             elif msg_type == "voice_start":
                 if not stt_client:
@@ -133,6 +155,16 @@ async def ai_waiter_websocket(websocket: WebSocket, session_id: str):
                 if stt_client:
                     await stt_client.close()
                 await websocket.send_json({"type": "voice_stopped"})
+                
+            elif msg_type == "speak":
+                text = msg.get("text", "").strip()
+                if text:
+                    try:
+                        audio_bytes = await generate_tts(text)
+                        if audio_bytes:
+                            await websocket.send_bytes(audio_bytes)
+                    except Exception as e:
+                        logger.error(f"Error generating TTS for speak command: {e}")
                 
             elif msg_type == "user_text":
                 text = msg.get("text", "").strip()

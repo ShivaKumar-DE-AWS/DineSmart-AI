@@ -87,11 +87,13 @@ export function AIWaiterDock() {
     toast.success("Order updated by AI Waiter!");
   }, []);
 
-  const { messages, input, setInput, append, sendAudio, startVoice, stopVoice, isLoading: streaming, preferences, clearMessages } = useAIWaiter({
+  const { messages, input, setInput, append, sendAudio, startVoice, stopVoice, isLoading: streaming, preferences, clearMessages, ttsPlaying: hookTtsPlaying, speakText: wsSpeakText } = useAIWaiter({
     restaurantId: restaurantConfig?.id || "",
     mode: mode,
     onOrderUpdate: handleOrderUpdate
   });
+
+  const isPlayingAudio = hookTtsPlaying || ttsPlaying;
 
   useEffect(() => {
     const onOpen = (e: Event) => {
@@ -119,42 +121,15 @@ export function AIWaiterDock() {
   useEffect(() => {
     if (open && mode === "voice" && !hasGreetedRef.current) {
       hasGreetedRef.current = true;
-      void speakText(`Namaste! I'm your AI Waiter here at ${restaurantName}. I can help you explore the menu, recommend dishes based on your cravings, or add items to your cart. Feel free to type or tap the microphone to speak with me!`);
+      const greetingMsg = `Namaste! Welcome to ${restaurantName}! I am your AI Waiter today. How can I delight you? What would you like to order today?`;
+      wsSpeakText(greetingMsg);
     }
-  }, [open, mode]);
+  }, [open, mode, wsSpeakText, restaurantName]);
 
-  const speakText = useCallback(async (text: string) => {
+  const speakText = useCallback((text: string) => {
     if (!ttsOn || !text) return;
-    try {
-      const token = useSession.getState().token;
-      const res = await fetch(apiUrl("/api/ai-waiter/speak"), {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          ...(token ? { "Authorization": `Bearer ${token}` } : {})
-        },
-        body: JSON.stringify({ text, voice: "nova" }),
-      });
-      if (!res.ok) throw new Error(`TTS ${res.status}`);
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      if (ttsAudioRef.current) ttsAudioRef.current.pause();
-      const audio = new Audio(url);
-      ttsAudioRef.current = audio;
-      setTtsPlaying(true);
-      audio.play().catch((err) => {
-        console.warn("[ai-waiter] TTS playback blocked:", err);
-        setTtsPlaying(false);
-      });
-      audio.onended = () => {
-        URL.revokeObjectURL(url);
-        setTtsPlaying(false);
-      };
-    } catch (e) {
-      console.warn("[ai-waiter] TTS failed:", e);
-      setTtsPlaying(false);
-    }
-  }, [ttsOn]);
+    wsSpeakText(text);
+  }, [ttsOn, wsSpeakText]);
 
   const sendText = useCallback((text?: string) => {
     const normalized = typeof text === "string" ? text.trim() : "";
@@ -163,8 +138,8 @@ export function AIWaiterDock() {
   }, [append, streaming]);
 
   useEffect(() => {
-    vadPausedRef.current = !open || mode !== "voice" || streaming || voiceProcessing || ttsPlaying;
-  }, [open, mode, streaming, voiceProcessing, ttsPlaying]);
+    vadPausedRef.current = !open || mode !== "voice" || streaming || voiceProcessing || isPlayingAudio;
+  }, [open, mode, streaming, voiceProcessing, isPlayingAudio]);
 
   // Continuous Browser Speech Recognition
   useEffect(() => {
@@ -456,28 +431,6 @@ function ChatPane({
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-[#FAF5EC] text-[#1A1106]" data-testid="ai-chat-pane">
-      {/* Tone + Language selectors */}
-      <div className="px-4 pt-2.5 pb-2 flex items-center gap-2 border-b border-[#E7DFCB] bg-[#F3EBD8]/40" data-testid="chat-controls">
-        <div className="flex-1 grid grid-cols-2 gap-2">
-          <select
-            data-testid="chat-tone-select"
-            value={tone}
-            onChange={(e) => setTone(e.target.value as Tone)}
-            className="bg-white text-[#5C0E1B] text-[10px] font-royal tracking-[0.15em] uppercase border border-brand-secondary/40 rounded-full px-3 py-1 outline-none cursor-pointer focus:border-[#5C0E1B] font-bold shadow-xs"
-          >
-            {TONES.map((t) => <option key={t.code} value={t.code}>{t.label} Tone</option>)}
-          </select>
-          <select
-            data-testid="chat-language-select"
-            value={language}
-            onChange={(e) => setLanguage(e.target.value as Lang)}
-            className="bg-white text-[#5C0E1B] text-[10px] font-royal tracking-[0.15em] uppercase border border-brand-secondary/40 rounded-full px-3 py-1 outline-none cursor-pointer focus:border-[#5C0E1B] font-bold shadow-xs"
-          >
-            {LANGS.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
-          </select>
-        </div>
-      </div>
-
       {/* Messages */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-4 space-y-4" data-testid="ai-waiter-messages">
         {messages.map((m, idx) => (
@@ -715,15 +668,15 @@ function VoicePane({
             data-testid={recording ? "ai-voice-stop" : "ai-voice-start"}
             onClick={recording ? stopRecording : startRecording}
             disabled={voiceProcessing || streaming}
-            className={`h-20 w-20 rounded-full flex items-center justify-center shadow-2xl transition-all border-4 ${
+            className={`h-14 w-14 rounded-full flex items-center justify-center shadow-xl transition-all border-2 ${
               recording
                 ? "bg-gradient-to-br from-[#5C0E1B] to-[#921E2F] border-red-300 scale-105 animate-pulse"
                 : "bg-gradient-to-br from-[#DDB85C] to-[#8A6A1B] border-[#FAF5EC] hover:scale-105"
             } disabled:opacity-50`}
           >
-            {voiceProcessing || streaming ? <Loader2 className="h-8 w-8 animate-spin text-white" /> :
-              recording ? <Square className="h-8 w-8 text-white fill-current" /> :
-              <Mic className="h-9 w-9 text-[#1A1106]" />}
+            {voiceProcessing || streaming ? <Loader2 className="h-6 w-6 animate-spin text-white" /> :
+              recording ? <Square className="h-5 w-5 text-white fill-current" /> :
+              <Mic className="h-6 w-6 text-[#1A1106]" />}
           </button>
 
           <div className="text-center space-y-1">

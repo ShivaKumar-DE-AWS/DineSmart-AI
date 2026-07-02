@@ -108,7 +108,7 @@ WAITER_TOOL = genai_types.Tool(function_declarations=WAITER_FUNCTIONS)
 
 class WaiterOrchestrator:
     def __init__(self, session_id: str, restaurant_id: str, table_id: str, mode: str = "chat"):
-        self.session_id = f"{session_id}_{mode}"
+        self.session_id = session_id
         self.restaurant_id = restaurant_id
         self.table_id = table_id
         self.tools = WaiterTools(session_id, restaurant_id, table_id)
@@ -179,7 +179,7 @@ Live Menu:
     async def process_message(self, user_text: str, cart_state: list = None) -> tuple[str, list, list]:
         """Processes a single user message and handles the tool loop. Returns (response_text, recommended_items)."""
         # 1. Fetch History
-        history_docs = await db.ai_waiter_turns.find({"session_id": self.session_id}).sort("created_at", 1).to_list(20)
+        history_docs = await db.ai_waiter_turns.find({"session_id": self.session_id}).sort("created_at", 1).to_list(100)
         contents = []
         for doc in history_docs:
             if doc["role"] == "user":
@@ -208,6 +208,36 @@ Live Menu:
                             response={"result": tr["result"]}
                         ))
                     contents.append(genai_types.Content(role="user", parts=parts))
+
+        # Sanitize contents to ensure valid Gemini conversation turns (no orphaned function call/responses)
+        clean_contents = []
+        i = 0
+        while i < len(contents):
+            curr = contents[i]
+            has_func_call = any(p.function_call for p in (curr.parts or []))
+            has_func_resp = any(p.function_response for p in (curr.parts or []))
+            
+            if has_func_resp:
+                if not clean_contents or not any(p.function_call for p in (clean_contents[-1].parts or [])):
+                    i += 1
+                    continue
+            
+            if has_func_call:
+                if i + 1 < len(contents) and any(p.function_response for p in (contents[i+1].parts or [])):
+                    clean_contents.append(curr)
+                    clean_contents.append(contents[i+1])
+                    i += 2
+                    continue
+                else:
+                    text_parts = [p for p in (curr.parts or []) if p.text]
+                    if text_parts:
+                        clean_contents.append(genai_types.Content(role=curr.role, parts=text_parts))
+                    i += 1
+                    continue
+                    
+            clean_contents.append(curr)
+            i += 1
+        contents = clean_contents
 
         # Add the new user message
         contents.append(genai_types.Content(role="user", parts=[genai_types.Part(text=user_text)]))

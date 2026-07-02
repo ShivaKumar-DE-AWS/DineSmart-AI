@@ -7,30 +7,46 @@ export type Message = AIMessage;
 
 export function useAIWaiter({ restaurantId, mode, onOrderUpdate }: { restaurantId: string; mode: 'chat' | 'voice'; onOrderUpdate?: (orderData: any) => void }) {
     const { session } = useTable();
-    const [messages, setMessages] = useState<Message[]>([]);
+    const storageKey = session?.id ? `ai_waiter_chat_${session.id}` : null;
+    
+    const [messages, setMessages] = useState<Message[]>(() => {
+        if (typeof window !== 'undefined' && storageKey) {
+            try {
+                const saved = sessionStorage.getItem(storageKey);
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+                }
+            } catch (e) {}
+        }
+        return [{
+            id: "greeting",
+            role: "assistant",
+            content: `Namaste! I'm your AI Waiter. I can help you explore the menu, recommend dishes based on your cravings, or add items to your cart. Feel free to type or tap the microphone to speak with me!`
+        }];
+    });
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [preferences, setPreferences] = useState<UserPreferences>({});
+    const [ttsPlaying, setTtsPlaying] = useState(false);
     const wsRef = useRef<WebSocket | null>(null);
     const audioCtxRef = useRef<AudioContext | null>(null);
+
+    // Save messages to sessionStorage whenever they change
+    useEffect(() => {
+        if (typeof window !== 'undefined' && storageKey && messages.length > 0) {
+            try {
+                sessionStorage.setItem(storageKey, JSON.stringify(messages));
+            } catch (e) {}
+        }
+    }, [messages, storageKey]);
 
     // Connect to WebSocket
     useEffect(() => {
         if (!session?.id || !restaurantId) return;
-        
-        // Reset messages when mode changes
-        setMessages([{
-            id: "greeting",
-            role: "assistant",
-            content: `Namaste! I'm your AI Waiter. I can help you explore the menu, recommend dishes based on your cravings, or add items to your cart. Feel free to type or tap the microphone to speak with me!`
-        }]);
 
         // Build WebSocket URL
         let backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
-        
-        // If not explicitly provided, we must fallback smartly.
-        // Vercel Serverless (production) DOES NOT proxy WebSockets via rewrites. We must connect directly to the backend.
-        // Local Next.js dev server DOES proxy WebSockets.
         if (!backendUrl) {
             const isLocal = typeof window !== 'undefined' && window.location.hostname === 'localhost';
             backendUrl = isLocal ? 'http://localhost:3000' : 'https://api.smartdineai.co.in';
@@ -55,27 +71,38 @@ export function useAIWaiter({ restaurantId, mode, onOrderUpdate }: { restaurantI
 
         ws.onmessage = async (event) => {
             if (event.data instanceof Blob) {
-                // Handle binary audio payload
+                // Handle binary audio payload from Sarvam TTS
                 if (!audioCtxRef.current) {
                     audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
                 }
+                if (audioCtxRef.current.state === 'suspended') {
+                    try { await audioCtxRef.current.resume(); } catch (e) {}
+                }
                 const arrayBuffer = await event.data.arrayBuffer();
                 try {
-                    // Sarvam TTS gives a WAV or MP3 usually, but our code assumes decodeAudioData can handle it
                     const audioBuffer = await audioCtxRef.current.decodeAudioData(arrayBuffer);
                     const source = audioCtxRef.current.createBufferSource();
                     source.buffer = audioBuffer;
                     source.connect(audioCtxRef.current.destination);
+                    source.onended = () => {
+                        setTtsPlaying(false);
+                    };
+                    setTtsPlaying(true);
                     source.start(0);
                 } catch (e) {
                     console.error("[useAIWaiter] Error decoding audio:", e);
+                    setTtsPlaying(false);
                 }
                 return;
             }
 
             try {
                 const data = JSON.parse(event.data);
-                if (data.type === "assistant_text") {
+                if (data.type === "session_started") {
+                    if (data.history && Array.isArray(data.history) && data.history.length > 0) {
+                        setMessages(data.history);
+                    }
+                } else if (data.type === "assistant_text") {
                     setMessages(prev => [...prev, {
                         id: Date.now().toString(),
                         role: "assistant",
@@ -85,7 +112,6 @@ export function useAIWaiter({ restaurantId, mode, onOrderUpdate }: { restaurantI
                     }]);
                     setIsLoading(false);
                 } else if (data.type === "partial_transcript") {
-                    // We could expose partials, but for now we just log them
                     // console.log("Partial:", data.text);
                 } else if (data.type === "final_transcript") {
                     setMessages(prev => [...prev, {
@@ -100,7 +126,6 @@ export function useAIWaiter({ restaurantId, mode, onOrderUpdate }: { restaurantI
                     }
                 } else if (data.type === "error") {
                     console.error("[useAIWaiter] Server error:", data.message);
-                    // Hide the initial handshake requirement from the user
                     if (data.message !== "Session not initialized. Send session_start first.") {
                         setMessages(prev => [...prev, {
                             id: Date.now().toString(),
@@ -195,6 +220,12 @@ export function useAIWaiter({ restaurantId, mode, onOrderUpdate }: { restaurantI
         }
     }, []);
 
+    const speakText = useCallback((text: string) => {
+        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+            wsRef.current.send(JSON.stringify({ type: "speak", text }));
+        }
+    }, []);
+
     const clearMessages = useCallback(() => {
         setMessages([{
             id: "greeting",
@@ -214,6 +245,8 @@ export function useAIWaiter({ restaurantId, mode, onOrderUpdate }: { restaurantI
         isLoading,
         preferences,
         setPreferences,
-        clearMessages
+        clearMessages,
+        ttsPlaying,
+        speakText
     };
 }
