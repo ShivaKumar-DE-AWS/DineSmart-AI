@@ -4,6 +4,7 @@ import json
 import uuid
 from typing import Dict, Any, List
 from fastapi import APIRouter, Depends, Request, HTTPException
+from fastapi.responses import JSONResponse, StreamingResponse
 from deps import db, now_iso, require_user, current_user
 
 router = APIRouter(tags=["cart"])
@@ -52,18 +53,12 @@ async def update_cart(session_id: str, request: Request):
     return {"ok": True}
 
 @router.get("/api/tables/{session_id}/cart/stream")
-async def stream_cart(session_id: str, req: Request, user=Depends(current_user)):
-    """SSE endpoint: streams cart updates for table sessions. Bearer auth only."""
-    if not user:
-        return JSONResponse({"detail": "Authentication required"}, status_code=401)
-    # Verify user owns this session's restaurant
+async def stream_cart(session_id: str, req: Request):
+    """SSE endpoint: streams cart updates for table sessions."""
     session = await db.table_sessions.find_one({"id": session_id})
     if not session:
         return JSONResponse({"detail": "Session not found"}, status_code=404)
-    if session.get("restaurant_id") != user.get("restaurant_id"):
-        return JSONResponse({"detail": "Forbidden"}, status_code=403)
 
-    from fastapi.responses import StreamingResponse
     async def stream():
         q: asyncio.Queue = asyncio.Queue()
         cart_listeners.setdefault(session_id, []).append(q)

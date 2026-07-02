@@ -106,7 +106,7 @@ async def _make_waiter_stream(session_id: str, message: str, system_prompt: str,
                 history.append(genai_types.Content(role=role, parts=[genai_types.Part(text=doc["content"])]))
 
             # Optimized Model Retry Loop (Fast-Fail)
-            models_to_try = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
+            models_to_try = ["gemini-1.5-flash", "gemini-1.5-pro"]
             full = ""
             
             for model_name in models_to_try:
@@ -249,7 +249,7 @@ async def ai_transcribe(file: UploadFile = File(...), language: str = Form(""), 
         if language and language.strip() and language.strip() != "auto":
             prompt += f" The expected language might be {language}."
         mime = file.content_type or "audio/webm"
-        models_to_try = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
+        models_to_try = ["gemini-1.5-flash", "gemini-1.5-pro"]
         for model_name in models_to_try:
             try:
                 response = await asyncio.to_thread(

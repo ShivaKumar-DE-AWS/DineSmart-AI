@@ -55,8 +55,7 @@ WAITER_FUNCTIONS = [
     ),
     genai_types.FunctionDeclaration(
         name="get_order_summary",
-        description="Get the current order's items, quantities, and total. Use before checkout or whenever the diner asks.",
-        parameters=genai_types.Schema(type=genai_types.Type.OBJECT, properties={})
+        description="Get the current order's items, quantities, and total. Use before checkout or whenever the diner asks."
     ),
     genai_types.FunctionDeclaration(
         name="checkout",
@@ -360,7 +359,7 @@ Live Menu:
             loop_count += 1
             contents = self._sanitize_for_gemini(contents)
             response = None
-            models_to_try = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.5-flash-lite"]
+            models_to_try = ["gemini-1.5-flash", "gemini-1.5-pro"]
             last_err = None
             for model_name in models_to_try:
                 try:

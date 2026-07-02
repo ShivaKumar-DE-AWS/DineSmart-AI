@@ -125,7 +125,7 @@ async def seed_inventory_demo(user=Depends(require_user)):
         client_ai = genai.Client(api_key=GEMINI_API_KEY)
         response = await asyncio.to_thread(
             client_ai.models.generate_content,
-            model="gemini-2.5-flash",
+            model="gemini-1.5-flash",
             contents=prompt,
         )
         data_str = response.text.strip()
