@@ -255,12 +255,7 @@ async def admin_demo_creds(slug: str | None = None):
 
 @app.get("/api/super-admin/demo-creds")
 async def super_admin_demo_creds():
-    import json as _j, os as _o
-    p = _o.path.join(_o.path.dirname(__file__), "data", "superadmin.json")
-    if not _o.path.exists(p):
-        return {"users": []}
-    with open(p, "r", encoding="utf-8") as f:
-        return _j.load(f)
+    return {"users": []}
 
 # ponytail: middleware order matters - rate limit first, then security headers, then size limit
 app.add_middleware(RateLimitMiddleware)

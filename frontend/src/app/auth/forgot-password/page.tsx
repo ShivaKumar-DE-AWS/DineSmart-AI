@@ -44,12 +44,16 @@ function ForgotPasswordContent() {
     
     setLoading(true);
     try {
-      await api("/api/auth/reset-password", {
+      const res = await api<{ message: string; role?: string }>("/api/auth/reset-password", {
         method: "POST",
         body: JSON.stringify({ token, new_password: newPassword }),
       });
       toast.success("Password reset successfully. You can now log in.");
-      router.push("/auth/restaurant");
+      if (res.role === "superadmin") {
+        router.push("/auth/login");
+      } else {
+        router.push("/auth/restaurant");
+      }
     } catch (err: any) {
       toast.error(err.message || "Invalid or expired token");
     } finally {

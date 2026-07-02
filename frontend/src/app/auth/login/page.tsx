@@ -130,55 +130,12 @@ export default function HQLoginPage() {
               {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : "Sign In to HQ"}
             </button>
           </form>
-        </div>
-
-        <DemoCredentialsSection />
-
         <div className="mt-6 text-center">
           <Link href="/auth/restaurant" className="text-xs text-stone hover:text-white transition">
             Restaurant partner? Sign in here &rarr;
           </Link>
         </div>
       </motion.div>
-    </div>
-  );
-}
-
-// ponytail: inline demo-cred component for superadmin
-function DemoCredentialsSection() {
-  const [creds, setCreds] = useState<{ users: Array<{ email: string; password: string; name: string; role: string }> } | null>(null);
-
-  useEffect(() => {
-    api("/api/super-admin/demo-creds")
-      .then(d => setCreds(d))
-      .catch(() => setCreds({ users: [] }));
-  }, []);
-
-  if (!creds || creds.users.length === 0) return null;
-
-  return (
-    <div className="mt-6 bg-graphite/50 backdrop-blur-xl border border-white/10 rounded-2xl p-4 text-xs space-y-3 shadow-2xl">
-      <div className="flex items-center gap-2 font-semibold text-white">
-        <Shield className="w-4 h-4 text-gold" />
-        Demo Credentials
-      </div>
-      {creds.users.map((u, i) => (
-        <div key={i} className="bg-white/5 rounded-lg px-3 py-2 space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-electric-blue/20 text-electric-blue">
-              {u.role}
-            </span>
-            <span className="text-white font-medium">{u.name}</span>
-          </div>
-          <div className="flex items-center justify-between text-stone">
-            <span>{u.email}</span>
-            <span className="text-clay font-mono">{u.password}</span>
-          </div>
-        </div>
-      ))}
-      <div className="text-[10px] text-stone/60 border-t border-white/10 pt-2">
-        These are demo credentials for onboarding purposes only.
-      </div>
     </div>
   );
 }

@@ -10,13 +10,15 @@ import uuid
 import os
 from datetime import datetime, timezone, timedelta
 from email_service import send_password_reset_email
+import re
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
 @router.post("/signup")
 async def signup(req: SignupReq):
-    if await db.users.find_one({"email": {"$regex": f"^{req.email}$", "$options": "i"}}):
+    clean_email = req.email.strip()
+    if await db.users.find_one({"email": {"$regex": f"^{re.escape(clean_email)}$", "$options": "i"}}):
         raise HTTPException(status_code=400, detail="Email already registered")
     if req.role not in {"customer", "admin"}:
         raise HTTPException(status_code=400, detail="Invalid role. Use settings portal to add staff.")
@@ -82,8 +84,9 @@ async def signup(req: SignupReq):
 
 @router.post("/forgot-password")
 async def forgot_password(req: ForgotPasswordReq, background_tasks: BackgroundTasks):
-    # Case insensitive search
-    user = await db.users.find_one({"email": {"$regex": f"^{req.email}$", "$options": "i"}})
+    clean_email = req.email.strip()
+    # Case insensitive search with regex escaping
+    user = await db.users.find_one({"email": {"$regex": f"^{re.escape(clean_email)}$", "$options": "i"}})
     if not user:
         # Prevent email enumeration by returning success even if not found
         print(f"⚠️ Forgot Password requested for {req.email}, but no account found!", flush=True)
@@ -112,19 +115,28 @@ async def reset_password(req: ResetPasswordReq):
     if not user:
         raise HTTPException(status_code=400, detail="Invalid or expired reset token")
 
+    new_hash = hash_password(req.new_password)
     await db.users.update_one(
         {"_id": user["_id"]},
         {
-            "$set": {"password_hash": hash_password(req.new_password)},
+            "$set": {"password_hash": new_hash, "password": req.new_password},
             "$unset": {"reset_token": "", "reset_token_expiry": ""}
         }
     )
-    return {"message": "Password successfully reset"}
+    rest_id = user.get("restaurant_id")
+    if rest_id and user.get("role") in ("admin", "kitchen", "counter"):
+        role = user.get("role")
+        await db.restaurants.update_one(
+            {"id": rest_id},
+            {"$set": {f"initial_creds.{role}.password": req.new_password}}
+        )
+    return {"message": "Password successfully reset", "role": user.get("role", "admin")}
 
 
 @router.post("/login")
 async def login(req: LoginReq):
-    user = await db.users.find_one({"email": req.email})
+    clean_email = req.email.strip()
+    user = await db.users.find_one({"email": {"$regex": f"^{re.escape(clean_email)}$", "$options": "i"}})
     stored_hash = None
     if user:
         stored_hash = user.get("password_hash") or user.get("password")
