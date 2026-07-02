@@ -39,7 +39,7 @@ export default function RestaurantAuthPage() {
   const [regSecondaryColor, setRegSecondaryColor] = useState("#C9A348");
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [menuFile, setMenuFile] = useState<File | null>(null);
-  const [result, setResult] = useState<{ url: string; credentials: Record<string, { email: string; password: string }> } | null>(null);
+  const [result, setResult] = useState<{ url: string; slug?: string; credentials: Record<string, { email: string; password: string }> } | null>(null);
 
   // OTP State
   const [emailVerified, setEmailVerified] = useState(false);
@@ -168,8 +168,11 @@ export default function RestaurantAuthPage() {
         body: formData,
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || "Failed to create restaurant");
-      setResult({ url: data.url, credentials: data.credentials });
+      if (!res.ok) {
+        const errorMsg = typeof data.detail === "string" ? data.detail : Array.isArray(data.detail) ? data.detail.map((d: any) => d.msg || JSON.stringify(d)).join(", ") : JSON.stringify(data.detail || data) || "Failed to create restaurant";
+        throw new Error(errorMsg);
+      }
+      setResult({ url: data.url, slug: data.slug, credentials: data.credentials });
       toast.success("Restaurant created successfully!");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to create restaurant");
@@ -440,8 +443,8 @@ export default function RestaurantAuthPage() {
                     <div className="text-emerald-400 font-semibold text-sm">Trial Activated Successfully!</div>
                     <div>
                       <span className="text-stone">Your URL:</span>{" "}
-                      <a href={typeof window !== "undefined" ? `${window.location.protocol}//${result.url.replace("/r/", "")}.${window.location.hostname.replace("www.", "")}${window.location.port ? ":" + window.location.port : ""}/admin` : result.url} className="text-electric-blue hover:underline font-bold">
-                        {typeof window !== "undefined" ? `${window.location.protocol}//${result.url.replace("/r/", "")}.${window.location.hostname.replace("www.", "")}${window.location.port ? ":" + window.location.port : ""}/admin` : result.url}
+                      <a href={result.url.startsWith("http") ? result.url : (typeof window !== "undefined" && window.location.hostname.includes(".") && !window.location.hostname.includes("localhost") ? `${window.location.protocol}//${result.slug || result.url.replace("/r/", "").replace(/^\//, "").split("/")[0]}.${window.location.hostname.replace(/^(www\.|[^.]+\.)/, "")}${window.location.port ? ":" + window.location.port : ""}/admin` : result.url)} className="text-electric-blue hover:underline font-bold">
+                        {result.url.startsWith("http") ? result.url : (typeof window !== "undefined" && window.location.hostname.includes(".") && !window.location.hostname.includes("localhost") ? `${window.location.protocol}//${result.slug || result.url.replace("/r/", "").replace(/^\//, "").split("/")[0]}.${window.location.hostname.replace(/^(www\.|[^.]+\.)/, "")}${window.location.port ? ":" + window.location.port : ""}/admin` : result.url)}
                       </a>
                     </div>
                     <div className="space-y-1.5">
@@ -454,7 +457,7 @@ export default function RestaurantAuthPage() {
                       ))}
                     </div>
                     <Link
-                      href={typeof window !== "undefined" ? `${window.location.protocol}//${result.url.replace("/r/", "")}.${window.location.hostname.replace("www.", "")}${window.location.port ? ":" + window.location.port : ""}/admin` : result.url}
+                      href={result.url.startsWith("http") ? result.url : (typeof window !== "undefined" && window.location.hostname.includes(".") && !window.location.hostname.includes("localhost") ? `${window.location.protocol}//${result.slug || result.url.replace("/r/", "").replace(/^\//, "").split("/")[0]}.${window.location.hostname.replace(/^(www\.|[^.]+\.)/, "")}${window.location.port ? ":" + window.location.port : ""}/admin` : result.url)}
                       className="block text-center bg-white hover:bg-cream text-ink font-semibold rounded-lg py-2 text-xs transition mt-2"
                     >
                       Login to Admin Dashboard
