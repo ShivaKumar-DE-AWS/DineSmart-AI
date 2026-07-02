@@ -34,6 +34,7 @@ export default function RestaurantAuthPage() {
   const [regRestaurantName, setRegRestaurantName] = useState("");
   const [regPhone, setRegPhone] = useState("");
   const [regCuisine, setRegCuisine] = useState("");
+  const [regServiceType, setRegServiceType] = useState("fine_dining");
   const [regPrimaryColor, setRegPrimaryColor] = useState("#8A1A2A");
   const [regSecondaryColor, setRegSecondaryColor] = useState("#C9A348");
   const [logoFile, setLogoFile] = useState<File | null>(null);
