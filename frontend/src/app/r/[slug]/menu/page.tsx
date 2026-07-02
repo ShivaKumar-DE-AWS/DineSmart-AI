@@ -381,7 +381,7 @@ export default function MenuPage() {
             )}
           </AnimatePresence>
 
-        <div className="w-full max-w-[1000px] flex justify-center perspective-[2000px] relative min-h-[500px] md:min-h-[650px]">
+        <div className="w-full max-w-[1000px] flex flex-col items-center justify-center perspective-[2000px] relative min-h-[500px] md:min-h-[650px] overflow-hidden px-2">
 
           {isLoading ? (
             <div className="flex justify-center items-center h-[70vh]">
@@ -395,12 +395,12 @@ export default function MenuPage() {
             <>
               <HTMLFlipBook 
                 key={`book-${pages.length}-${q}-${dietFilter}-${showBestSellers}-${showChefSpecials}`}
-                width={320} 
-                height={520} 
+                width={300} 
+                height={480} 
                 size="stretch" 
-                minWidth={250} 
+                minWidth={230} 
                 maxWidth={450} 
-                minHeight={400} 
+                minHeight={380} 
                 maxHeight={650} 
                 maxShadowOpacity={0.5} 
                 showCover={true} 

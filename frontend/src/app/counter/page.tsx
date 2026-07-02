@@ -2,7 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { Order } from "@/types";
-import { Check, Clock, ChefHat, Bell, Utensils, Users, Sparkles, CreditCard, QrCode } from "lucide-react";
+import { Check, Clock, ChefHat, Bell, Utensils, Users, Sparkles, CreditCard } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useSession } from "@/stores/session";
 import { useRestaurantConfig, getRestaurantConfig } from "@/hooks/useRestaurantConfig";
@@ -17,70 +17,6 @@ function getRestaurantName(restaurantId?: string, restaurantSlug?: string): stri
   }
   if (!restaurantId) return "Counter";
   return restaurantId.replace("rest_", "").replace(/_001$/, "").replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase());
-}
-
-function printTakeawayMenuQr(slug: string, restaurantName: string) {
-  const menuUrl = `${window.location.origin}/r/${slug}/menu`;
-  const w = window.open("", "_blank");
-  if (!w) { toast.error("Popup blocked — allow popups to print"); return; }
-  w.document.write(`<!doctype html><html><head><title>${restaurantName} — Takeaway QR</title>
-    <style>
-      @page { margin: 0; size: 1200px 1600px; }
-      body { margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #FAF5EC; font-family: Georgia, serif; }
-      .card { width: 1200px; height: 1600px; background: #FAF5EC; border: 8px solid #5C0E1B; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px; }
-      .badge { font-size: 28px; background: #5C0E1B; color: #FAF5EC; padding: 10px 40px; border-radius: 40px; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 20px; }
-      .name { font-size: 56px; font-weight: bold; color: #5C0E1B; margin-bottom: 10px; }
-      .divider { width: 300px; height: 3px; background: #5C0E1B; margin: 20px auto; }
-      .subtitle { font-size: 32px; color: #8A6A1B; margin-bottom: 20px; }
-      .qr-wrap { margin: 40px 0; }
-      .qr-wrap img { width: 500px; height: 500px; }
-      .footer { font-size: 18px; color: #8A6A1B; margin-top: auto; }
-    </style></head><body>
-    <div class="card">
-      <div class="badge">Takeaway Menu</div>
-      <div class="name">${restaurantName}</div>
-      <div class="divider"></div>
-      <div class="subtitle">Scan to order takeaway</div>
-      <div class="qr-wrap"><img src="https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(menuUrl)}" alt="QR" /></div>
-      <div class="footer">Powered by SmartDine AI</div>
-    </div>
-    <script>window.onload=()=>{setTimeout(()=>window.print(),500)};</script>
-    </body></html>`);
-  w.document.close();
-}
-
-function printTakeawayQr(order: Order, slug: string, restaurantName: string) {
-  const trackUrl = `${window.location.origin}/r/${slug}/track/${order.id}`;
-  const w = window.open("", "_blank");
-  if (!w) { toast.error("Popup blocked — allow popups to print"); return; }
-  w.document.write(`<!doctype html><html><head><title>${restaurantName} — ${order.token}</title>
-    <style>
-      @page { margin: 0; size: 1200px 1600px; }
-      body { margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #FAF5EC; font-family: Georgia, serif; }
-      .card { width: 1200px; height: 1600px; background: #FAF5EC; border: 8px solid #5C0E1B; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px; }
-      .name { font-size: 48px; font-weight: bold; color: #5C0E1B; margin-bottom: 10px; }
-      .badge { font-size: 18px; background: #5C0E1B; color: #FAF5EC; padding: 6px 24px; border-radius: 40px; letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 20px; }
-      .divider { width: 240px; height: 2px; background: #5C0E1B; margin: 10px auto; }
-      .token { font-size: 96px; font-weight: bold; color: #5C0E1B; margin: 10px 0; }
-      .customer { font-size: 28px; color: #8A6A1B; margin-bottom: 30px; }
-      .qr-wrap { margin: 30px 0; }
-      .qr-wrap img { width: 400px; height: 400px; }
-      .instruction { font-size: 22px; color: #5C0E1B; margin-top: 20px; }
-      .footer { font-size: 18px; color: #8A6A1B; margin-top: auto; }
-    </style></head><body>
-    <div class="card">
-      <div class="badge">Takeaway</div>
-      <div class="name">${restaurantName}</div>
-      <div class="divider"></div>
-      <div class="token">${order.token}</div>
-      <div class="customer">${order.customer_name}</div>
-      <div class="qr-wrap"><img src="https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(trackUrl)}" alt="QR" /></div>
-      <div class="instruction">Scan to track your order</div>
-      <div class="footer">Powered by SmartDine AI</div>
-    </div>
-    <script>window.onload=()=>{setTimeout(()=>window.print(),500)};</script>
-    </body></html>`);
-  w.document.close();
 }
 
 export default function CounterPage() {
@@ -175,9 +111,6 @@ export default function CounterPage() {
             </div>
           </div>
           <div className="flex items-center gap-4">
-          <button onClick={() => printTakeawayMenuQr(slug, restaurantName)} className="inline-flex items-center gap-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-medium text-xs px-3 py-2 rounded-xl transition-all">
-            <QrCode className="h-4 w-4" /> Takeaway QR
-          </button>
           <div className="hidden md:flex items-center gap-6 text-xs">
               <div className="flex items-center gap-2 bg-zinc-900/80 border border-zinc-800 rounded-xl px-4 py-2.5">
                 <ChefHat className="h-4 w-4 text-blue-400" />
@@ -268,11 +201,6 @@ export default function CounterPage() {
                   <Clock className="h-3 w-3" />
                   {Math.floor((Date.now() - new Date(o.created_at).getTime()) / 60000)}m
                 </div>
-                {o.order_type === "takeaway" && (
-                  <button onClick={() => printTakeawayQr(o, slug, restaurantName)} className="mt-2 inline-flex items-center gap-1 text-[10px] text-emerald-400/60 hover:text-emerald-400" title="Print takeaway QR">
-                    <QrCode className="h-3 w-3" /> Print QR
-                  </button>
-                )}
               </div>
             ))}
             {preparing.length === 0 && (
@@ -324,7 +252,7 @@ export default function CounterPage() {
                   <span>{o.customer_name}</span>
                   <div className="flex items-center gap-1.5">
                     <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded">
-                      {o.payment_method === "upi" ? "UPI QR" : o.payment_method === "card_machine" ? "CARD" : "CASH"}
+                      {o.payment_method === "upi" ? "UPI" : o.payment_method === "card_machine" ? "CARD" : "CASH"}
                     </span>
                     <span className={`text-[10px] px-1.5 py-0.5 rounded ${o.payment_status === "paid" ? "bg-white/40" : "bg-red-500/80 text-white"}`}>
                       {o.payment_status === "paid" ? "PAID" : "UNPAID"}
@@ -340,11 +268,6 @@ export default function CounterPage() {
                   </div>
                 )}
                 <div className="mt-auto pt-4 flex gap-2 flex-col sm:flex-row">
-                  {o.order_type === "takeaway" && (
-                    <button onClick={() => printTakeawayQr(o, slug, restaurantName)} className="inline-flex items-center justify-center gap-1.5 bg-white/15 hover:bg-white/25 border border-white/30 text-white font-bold py-3 rounded-xl transition text-sm">
-                      <QrCode className="h-4 w-4" /> QR
-                    </button>
-                  )}
                   {o.payment_status !== "paid" && (
                     <button
                       onClick={() => markPaidMut.mutate({ id: o.id })}

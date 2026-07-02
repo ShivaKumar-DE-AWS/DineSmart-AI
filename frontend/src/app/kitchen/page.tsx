@@ -268,22 +268,22 @@ export default function KitchenPage() {
 
       {/* Staff Call Alert */}
       {notifications.length > 0 && (
-        <div className="max-w-7xl mx-auto px-6 mt-4">
-          <div className="bg-gradient-to-r from-red-600 to-red-500 rounded-2xl p-5 shadow-2xl shadow-red-500/20 flex items-center justify-between animate-pulse">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 mt-4">
+          <div className="bg-gradient-to-r from-red-600 to-red-500 rounded-2xl p-4 sm:p-5 shadow-2xl shadow-red-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-pulse">
             <div className="flex items-center gap-4 text-white">
-              <div className="h-12 w-12 rounded-xl bg-white/20 flex items-center justify-center">
+              <div className="h-12 w-12 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
                 <Bell className="h-6 w-6" />
               </div>
               <div>
-                <h3 className="font-bold text-lg">{notifications[0].title}</h3>
-                <p className="text-sm opacity-90">{notifications[0].body}</p>
+                <h3 className="font-bold text-lg">{notifications[0].title || `Table ${notifications[0].table_number || ''} needs assistance`}</h3>
+                <p className="text-sm opacity-95">{notifications[0].body || notifications[0].message || 'Assistance requested'}</p>
               </div>
             </div>
             <button
               onClick={() => markReadMut.mutate(notifications[0].id)}
-              className="bg-white text-red-600 px-6 py-2.5 rounded-xl text-sm font-bold uppercase tracking-wider hover:bg-white/90 transition-colors"
+              className="bg-white text-red-600 px-6 py-2.5 rounded-xl text-sm font-bold uppercase tracking-wider hover:bg-white/90 transition-colors shrink-0 self-end sm:self-auto shadow-md"
             >
-              Acknowledged
+              Acknowledge
             </button>
           </div>
         </div>
