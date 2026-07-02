@@ -1,18 +1,16 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { api, apiUrl } from "@/lib/api";
 import { useTable } from "@/stores/table";
+import { AIMessage, UserPreferences } from "@/types";
 
-export type Message = {
-    id: string;
-    role: 'user' | 'assistant' | 'system';
-    content: string;
-};
+export type Message = AIMessage;
 
 export function useAIWaiter({ restaurantId, mode, onOrderUpdate }: { restaurantId: string; mode: 'chat' | 'voice'; onOrderUpdate?: (orderData: any) => void }) {
     const { session } = useTable();
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+    const [preferences, setPreferences] = useState<UserPreferences>({});
     const wsRef = useRef<WebSocket | null>(null);
     const audioCtxRef = useRef<AudioContext | null>(null);
 
@@ -82,7 +80,8 @@ export function useAIWaiter({ restaurantId, mode, onOrderUpdate }: { restaurantI
                         id: Date.now().toString(),
                         role: "assistant",
                         content: data.text,
-                        recs: data.recs
+                        recs: data.recs,
+                        quick_replies: data.quick_replies
                     }]);
                     setIsLoading(false);
                 } else if (data.type === "partial_transcript") {
@@ -134,9 +133,34 @@ export function useAIWaiter({ restaurantId, mode, onOrderUpdate }: { restaurantI
         };
     }, [session?.id, restaurantId, mode, onOrderUpdate]);
 
+    const updatePreferencesFromText = useCallback((text: string) => {
+        const lower = text.toLowerCase();
+        setPreferences(prev => {
+            const next = { ...prev };
+            if (lower.includes("veg") || lower.includes("vegetarian")) next.dietary = "veg";
+            if (lower.includes("non-veg") || lower.includes("non veg") || lower.includes("chicken") || lower.includes("mutton")) next.dietary = "non-veg";
+            if (lower.includes("vegan")) next.dietary = "vegan";
+            if (lower.includes("jain")) next.dietary = "jain";
+            if (lower.includes("spicy") || lower.includes("hot")) next.spice = "spicy";
+            if (lower.includes("mild") || lower.includes("less spice") || lower.includes("no spicy")) next.spice = "mild";
+            const budgetMatch = lower.match(/under\s*(?:rs|₹)?\s*(\d+)|(\d+)\s*(?:rs|₹)?\s*budget/i);
+            if (budgetMatch) {
+                const b = parseInt(budgetMatch[1] || budgetMatch[2], 10);
+                if (!isNaN(b)) next.budget = b;
+            }
+            const partyMatch = lower.match(/(?:for|people|party of|guests)\s*(\d+)/i);
+            if (partyMatch) {
+                const p = parseInt(partyMatch[1], 10);
+                if (!isNaN(p)) next.partySize = p;
+            }
+            return next;
+        });
+    }, []);
+
     const append = useCallback((msg: { role: 'user', content: string }) => {
         setMessages(prev => [...prev, { id: Date.now().toString(), ...msg }]);
         setIsLoading(true);
+        updatePreferencesFromText(msg.content);
         if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
             import("@/stores/cart").then(({ useCart }) => {
                 if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
@@ -151,7 +175,7 @@ export function useAIWaiter({ restaurantId, mode, onOrderUpdate }: { restaurantI
             console.error("[useAIWaiter] WebSocket is not open");
             setIsLoading(false);
         }
-    }, []);
+    }, [updatePreferencesFromText]);
 
     const sendAudio = useCallback((pcmBytes: ArrayBuffer) => {
         if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
@@ -171,6 +195,14 @@ export function useAIWaiter({ restaurantId, mode, onOrderUpdate }: { restaurantI
         }
     }, []);
 
+    const clearMessages = useCallback(() => {
+        setMessages([{
+            id: "greeting",
+            role: "assistant",
+            content: `Namaste! I'm your AI Waiter. I can help you explore the menu, recommend dishes based on your cravings, or add items to your cart. Feel free to type or tap the microphone to speak with me!`
+        }]);
+    }, []);
+
     return {
         messages,
         input,
@@ -179,6 +211,9 @@ export function useAIWaiter({ restaurantId, mode, onOrderUpdate }: { restaurantI
         sendAudio,
         startVoice,
         stopVoice,
-        isLoading
+        isLoading,
+        preferences,
+        setPreferences,
+        clearMessages
     };
 }

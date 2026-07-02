@@ -20,6 +20,8 @@ export interface MenuItem {
   available: boolean;
   prep_time_min: number;
   tags?: string[];
+  spice_level?: number;
+  rating?: number;
 }
 
 export interface CartItem {
@@ -238,4 +240,20 @@ export function generateFunAlias(): GuestAlias {
   const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
   const suffix = Math.floor(Math.random() * 900) + 100;
   return { prefix, suffix };
+}
+
+export interface AIMessage {
+  id: string;
+  role: "user" | "assistant" | "system";
+  content: string;
+  recs?: MenuItem[];
+  quick_replies?: string[];
+}
+
+export interface UserPreferences {
+  dietary?: "veg" | "non-veg" | "vegan" | "jain" | "any";
+  spice?: "mild" | "medium" | "spicy" | "extra spicy";
+  budget?: number;
+  partySize?: number;
+  allergies?: string[];
 }

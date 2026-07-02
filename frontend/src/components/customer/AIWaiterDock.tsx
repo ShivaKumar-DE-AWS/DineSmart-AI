@@ -1,9 +1,8 @@
 // @ts-nocheck
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Sparkles, Send, X, Loader2, Mic, MessageSquare, BookOpen, Plus, Minus, Square, Volume2, VolumeX, ArrowRight } from "lucide-react";
-import { useRouter , useParams} from "next/navigation";
-import Link from "next/link";
+import { Sparkles, Send, X, Loader2, Mic, MessageSquare, Plus, Minus, Square, Volume2, VolumeX, ArrowRight, RotateCcw, Utensils, Check, Flame, Star, Clock, ShoppingBag } from "lucide-react";
+import { useRouter, useParams } from "next/navigation";
 import { useAIWaiter } from "@/hooks/useAIWaiter";
 import { useSession } from "@/stores/session";
 import { useRestaurantConfig } from "@/hooks/useRestaurantConfig";
@@ -14,7 +13,6 @@ import { useTable } from "@/stores/table";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import type { MenuItem } from "@/types";
-import { sortCategories } from "@/utils/categoryOrder";
 
 type Mode = "chat" | "voice";
 type Lang = "auto" | "en" | "hi" | "te" | "ur" | "ta" | "mr";
@@ -35,11 +33,31 @@ const TONES: { code: Tone; label: string }[] = [
   { code: "poetic",   label: "Poetic" },
 ];
 
+// Helper for clean image loading with fallback
+function ItemImage({ src, alt }: { src?: string; alt: string }) {
+  const [error, setError] = useState(false);
+  if (!src || error) {
+    return (
+      <div className="h-20 w-20 rounded-xl bg-gradient-to-br from-[#E7DFCB] to-[#DDB85C]/30 flex items-center justify-center shrink-0 border border-brand-secondary/20 shadow-inner">
+        <Utensils className="h-7 w-7 text-brand-primary/50" />
+      </div>
+    );
+  }
+  return (
+    <img
+      src={src}
+      alt={alt}
+      onError={() => setError(true)}
+      className="h-20 w-20 rounded-xl object-cover shrink-0 border border-brand-secondary/30 shadow-sm"
+    />
+  );
+}
+
 export function AIWaiterDock() {
   const params = useParams();
   const slug = params?.slug as string;
   const { config: restaurantConfig } = useRestaurantConfig();
-  const restaurantName = restaurantConfig?.name || "this restaurant";
+  const restaurantName = restaurantConfig?.name || "our restaurant";
 
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>("chat");
@@ -51,46 +69,11 @@ export function AIWaiterDock() {
   const [ttsPlaying, setTtsPlaying] = useState(false);
   const vadPausedRef = useRef(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
   const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
-  const vadCtxRef = useRef<AudioContext | null>(null);
-  const vadStreamRef = useRef<MediaStream | null>(null);
   const hasGreetedRef = useRef(false);
   const cart = useCart();
   const { session } = useTable();
   const router = useRouter();
-
-  // Draggable AI Waiter button state
-  const [dockPos, setDockPos] = useState({ x: -1, y: -1 }); // -1 = use CSS default
-  const dragRef = useRef({ dragging: false, startX: 0, startY: 0, startPosX: 0, startPosY: 0, moved: false });
-
-  useEffect(() => {
-    // Initialize position to bottom-right on mount
-    if (dockPos.x === -1) {
-      setDockPos({ x: window.innerWidth - 200, y: window.innerHeight - 80 });
-    }
-  }, [dockPos.x]);
-
-  const handleDragStart = (clientX: number, clientY: number) => {
-    dragRef.current = { dragging: true, startX: clientX, startY: clientY, startPosX: dockPos.x, startPosY: dockPos.y, moved: false };
-  };
-  const handleDragMove = (clientX: number, clientY: number) => {
-    if (!dragRef.current.dragging) return;
-    const dx = clientX - dragRef.current.startX;
-    const dy = clientY - dragRef.current.startY;
-    if (Math.abs(dx) > 5 || Math.abs(dy) > 5) dragRef.current.moved = true;
-    if (!dragRef.current.moved) return;
-    const newX = Math.max(0, Math.min(window.innerWidth - 180, dragRef.current.startPosX + dx));
-    const newY = Math.max(0, Math.min(window.innerHeight - 56, dragRef.current.startPosY + dy));
-    setDockPos({ x: newX, y: newY });
-  };
-  const handleDragEnd = () => {
-    const wasDrag = dragRef.current.moved;
-    dragRef.current.dragging = false;
-    dragRef.current.moved = false;
-    if (!wasDrag) setOpen(true); // tap = open
-  };
 
   const { data: menuData } = useQuery({
     queryKey: ["menu", restaurantConfig?.id],
@@ -99,46 +82,16 @@ export function AIWaiterDock() {
     staleTime: 30_000,
   });
   const menu = useMemo(() => (menuData?.items ?? []).filter((i) => i.available !== false), [menuData]);
-  const workletNodeRef = useRef<any>(null);
-
-  const menuByName = useMemo(() => {
-    const m = new Map<string, MenuItem>();
-    for (const it of menu) m.set(it.name.toLowerCase(), it);
-    return m;
-  }, [menu]);
-
-  const resolveRecs = useCallback((names: string[]): MenuItem[] => {
-    const out: MenuItem[] = [];
-    const seen = new Set<string>();
-    for (const n of names) {
-      const k = n.toLowerCase();
-      let hit = menuByName.get(k);
-      if (!hit) hit = menu.find((it) => it.name.toLowerCase().includes(k) || k.includes(it.name.toLowerCase()));
-      if (hit && !seen.has(hit.id)) { seen.add(hit.id); out.push(hit); }
-    }
-    return out.slice(0, 4);
-  }, [menu, menuByName]);
-
-  // Default suggestion chips when conversation is fresh — picks 3 popular dishes
-  const defaultRecChips = useMemo(() => {
-    const bestsellers = menu.filter((m) => m.tags?.includes("bestseller"));
-    const pool = bestsellers.length >= 3 ? bestsellers : menu;
-    return pool.slice(0, 3);
-  }, [menu]);
 
   const handleOrderUpdate = useCallback((orderData: any) => {
-    // When the backend AI updates the order, we want to resync our local cart state.
-    // We can just rely on the API polling, or directly mutate the cart.
-    // For simplicity, we'll let the user see the visual toast and the cart poll will pick it up.
     toast.success("Order updated by AI Waiter!");
   }, []);
 
-  const { messages, input, setInput, append, sendAudio, startVoice, stopVoice, isLoading: streaming } = useAIWaiter({
+  const { messages, input, setInput, append, sendAudio, startVoice, stopVoice, isLoading: streaming, preferences, clearMessages } = useAIWaiter({
     restaurantId: restaurantConfig?.id || "",
     mode: mode,
     onOrderUpdate: handleOrderUpdate
   });
-
 
   useEffect(() => {
     const onOpen = (e: Event) => {
@@ -162,8 +115,6 @@ export function AIWaiterDock() {
     }
   }, [open]);
 
-  
-  
   // Auto-greet when switching to Talk mode
   useEffect(() => {
     if (open && mode === "voice" && !hasGreetedRef.current) {
@@ -211,7 +162,6 @@ export function AIWaiterDock() {
     append({ role: "user", content: normalized });
   }, [append, streaming]);
 
-  // Update vadPausedRef whenever state changes
   useEffect(() => {
     vadPausedRef.current = !open || mode !== "voice" || streaming || voiceProcessing || ttsPlaying;
   }, [open, mode, streaming, voiceProcessing, ttsPlaying]);
@@ -250,7 +200,6 @@ export function AIWaiterDock() {
     recognition.continuous = true;
     recognition.interimResults = false;
     
-    // Map language
     let langCode = "en-IN";
     if (language === "hi") langCode = "hi-IN";
     if (language === "te") langCode = "te-IN";
@@ -279,11 +228,10 @@ export function AIWaiterDock() {
     recognition.onend = () => {
       setRecording(false);
       if (open && mode === "voice" && !vadPausedRef.current) {
-        try { recognition.start(); } catch (e) {} // Auto-restart if still in voice mode
+        try { recognition.start(); } catch (e) {}
       }
     };
     
-    // Start initial recognition
     if (!vadPausedRef.current) {
       try { recognition.start(); } catch (e) {}
     }
@@ -296,7 +244,6 @@ export function AIWaiterDock() {
     };
   }, [open, mode, language, sendText]);
 
-  // Pause recognition when TTS or streaming is active
   useEffect(() => {
     const rec = (window as any).activeSpeechRec;
     if (!rec) return;
@@ -315,117 +262,92 @@ export function AIWaiterDock() {
     setRecording(false);
   }, []);
 
-  const addToTray = (it: MenuItem) => { 
-    cart.add(it); 
-    sendText(`I have added ${it.name} to my cart.`);
-  };
-
-  // Get the most recent recommendations across messages — used to show chips above input
-  const latestRecs = useMemo(() => {
-    for (let i = messages.length - 1; i >= 0; i--) {
-      if (messages[i].recs && messages[i].recs!.length > 0) return messages[i].recs!;
-    }
-    return [] as MenuItem[];
-  }, [messages]);
-
-  const trayChips = latestRecs.length > 0 ? latestRecs : defaultRecChips;
-
-  const dynamicPrompts = useMemo(() => {
-    const items = cart.items || [];
-    if (items.length === 0) {
-      return [
-        "What's your signature dish?",
-        "Suggest a starter",
-        "Build me a meal for 2",
-        "Something not too spicy",
-      ];
-    }
-    
-    const hasStarter = items.some(i => {
-        const cat = i.category?.toLowerCase() || "";
-        return cat.includes('starter') || cat.includes('soup') || cat.includes('appetizer');
-    });
-    const hasMain = items.some(i => {
-        const cat = i.category?.toLowerCase() || "";
-        return cat.includes('main') || cat.includes('biryani') || cat.includes('curry') || cat.includes('bread');
-    });
-    const hasDessert = items.some(i => {
-        const cat = i.category?.toLowerCase() || "";
-        return cat.includes('dessert') || cat.includes('sweet') || cat.includes('ice');
-    });
-
-    if (hasMain && !hasDessert) {
-       return [
-         "Suggest a dessert",
-         "Add a refreshing drink",
-         "What's popular for sweets?",
-         "That's all, bill please"
-       ];
-    }
-    if (hasStarter && !hasMain) {
-       return [
-         "Suggest a main course",
-         `What goes well with ${items[0].name}?`,
-         "Add a refreshing drink",
-         "That's all, bill please"
-       ];
-    }
-    
-    return [
-      `What goes well with ${items[items.length - 1].name}?`,
-      "Suggest a dessert",
-      "Add a refreshing drink",
-      "That's all, bill please",
-    ];
-  }, [cart.items]);
-
   return (
     <>
       {!open && (
         <div className="fixed bottom-6 right-4 md:right-8 z-50 flex flex-col items-end">
           <button
             type="button"
-            aria-label={`Open AI Waiter`}
+            aria-label="Open AI Waiter"
             data-testid="ai-waiter-dock-btn"
             onClick={() => setOpen(true)}
-            className="flex items-center gap-2 bg-brand-primary text-white px-6 py-4 rounded-full shadow-2xl hover:shadow-[#5C0E1B]/50 hover:scale-105 transition-all group"
+            className="flex items-center gap-2.5 bg-gradient-to-r from-[#5C0E1B] to-[#8A1A2A] text-white px-6 py-4 rounded-full shadow-2xl hover:shadow-[#5C0E1B]/60 hover:scale-105 transition-all group border border-[#DDB85C]/50"
           >
-            <Mic className="w-5 h-5 group-hover:text-brand-secondary transition-colors" />
-            <span className="font-royal text-[12px] tracking-widest uppercase font-bold pr-1">AI Waiter</span>
+            <div className="relative flex items-center justify-center">
+              <Mic className="w-5 h-5 text-[#DDB85C] group-hover:scale-110 transition-transform" />
+              <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+            </div>
+            <span className="font-royal text-[13px] tracking-widest uppercase font-bold pr-1 text-[#FAF5EC]">AI Waiter</span>
           </button>
         </div>
       )}
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:justify-end p-0 sm:p-6" data-testid="ai-waiter-panel">
-          <button type="button" aria-label="Close AI Waiter" className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setOpen(false)} />
-          <div role="dialog" aria-modal="true" aria-labelledby="ai-waiter-title" className="relative z-10 w-full sm:w-[460px] sm:max-w-md h-[90vh] sm:h-[680px] sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden border bg-[#FAF5EC] border-brand-secondary/40">
+          <button type="button" aria-label="Close AI Waiter" className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={() => setOpen(false)} />
+          <div role="dialog" aria-modal="true" aria-labelledby="ai-waiter-title" className="relative z-10 w-full sm:w-[480px] sm:max-w-lg h-[95vh] sm:h-[700px] sm:max-h-[88vh] rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden border bg-[#FAF5EC] border-brand-secondary/50 animate-in slide-in-from-bottom sm:slide-in-from-right duration-300">
             {/* Header */}
-            <header className="px-5 py-4 flex items-center justify-between border-b mehfil-royal-bg text-[#FAF5EC] border-brand-secondary/30">
+            <header className="px-5 py-4 flex items-center justify-between border-b bg-gradient-to-r from-[#5C0E1B] via-[#7A1525] to-[#5C0E1B] text-[#FAF5EC] border-brand-secondary/40 shadow-md">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-[#DDB85C] to-[#8A6A1B] flex items-center justify-center shadow-md">
-                  <Sparkles className="h-5 w-5 text-[#5C0E1B]" />
+                <div className="relative h-11 w-11 rounded-full bg-gradient-to-br from-[#DDB85C] to-[#8A6A1B] flex items-center justify-center shadow-lg border border-[#FAF5EC]/30">
+                  <Sparkles className="h-5 w-5 text-[#5C0E1B] animate-pulse" />
+                  <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-emerald-500 border-2 border-[#5C0E1B]" title="Live & Ready" />
                 </div>
                 <div>
-                  <div id="ai-waiter-title" className="font-royal tracking-wider uppercase text-sm">{restaurantConfig?.ai_waiter?.name || "AI"} Concierge</div>
-                  <div className="font-editorial italic text-[10px] text-[#FAF5EC]/80">Your personal sommelier · live</div>
+                  <div id="ai-waiter-title" className="font-royal tracking-wider uppercase text-sm font-bold flex items-center gap-1.5">
+                    {restaurantConfig?.ai_waiter?.name || "AI Waiter"}
+                    <span className="text-[9px] bg-[#DDB85C] text-[#1A1106] px-1.5 py-0.5 rounded font-sans uppercase font-extrabold">Live</span>
+                  </div>
+                  <div className="font-editorial italic text-[11px] text-[#FAF5EC]/85">Your personal dining concierge</div>
                 </div>
               </div>
               <div className="flex items-center gap-1">
-                <button aria-label={ttsOn ? "Mute AI voice" : "Unmute AI voice"} data-testid="ai-tts-toggle" onClick={() => setTtsOn((v) => !v)} title={ttsOn ? "Mute voice" : "Unmute voice"} className="h-11 w-11 rounded-full hover:bg-brand-secondary/15 flex items-center justify-center text-brand-secondary">
+                <button
+                  aria-label="Reset conversation"
+                  onClick={() => { clearMessages && clearMessages(); toast.info("Conversation reset"); }}
+                  title="Reset Conversation"
+                  className="h-10 w-10 rounded-full hover:bg-white/10 flex items-center justify-center text-[#DDB85C] transition"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                </button>
+                <button
+                  aria-label={ttsOn ? "Mute AI voice" : "Unmute AI voice"}
+                  data-testid="ai-tts-toggle"
+                  onClick={() => setTtsOn((v) => !v)}
+                  title={ttsOn ? "Mute voice" : "Unmute voice"}
+                  className="h-10 w-10 rounded-full hover:bg-white/10 flex items-center justify-center text-[#DDB85C] transition"
+                >
                   {ttsOn ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
                 </button>
-                <button aria-label="Close AI Waiter" data-testid="ai-waiter-close" onClick={() => setOpen(false)} className="h-11 w-11 rounded-full hover:bg-brand-secondary/15 flex items-center justify-center text-[#FAF5EC]">
-                  <X className="h-4 w-4" />
+                <button
+                  aria-label="Close AI Waiter"
+                  data-testid="ai-waiter-close"
+                  onClick={() => setOpen(false)}
+                  className="h-10 w-10 rounded-full hover:bg-white/10 flex items-center justify-center text-[#FAF5EC] transition"
+                >
+                  <X className="h-5 w-5" />
                 </button>
               </div>
             </header>
 
+            {/* Context Pill Banner */}
+            {preferences && (preferences.partySize || preferences.dietary || preferences.budget || preferences.spice) && (
+              <div className="bg-[#F3EBD8] px-4 py-1.5 border-b border-[#E7DFCB] flex items-center justify-between text-[11px] font-royal tracking-wide text-[#5C0E1B]">
+                <div className="flex items-center gap-3 overflow-x-auto whitespace-nowrap py-0.5">
+                  <span className="font-bold flex items-center gap-1"><Sparkles className="w-3 h-3 text-[#8A6A1B]" /> Known Context:</span>
+                  {preferences.partySize && <span>👥 Party of {preferences.partySize}</span>}
+                  {preferences.dietary && <span>🌱 {preferences.dietary.toUpperCase()}</span>}
+                  {preferences.spice && <span>🌶️ {preferences.spice}</span>}
+                  {preferences.budget && <span>💰 Budget: ₹{preferences.budget}</span>}
+                </div>
+              </div>
+            )}
+
             {/* Mode tabs */}
-            <div className="flex border-b bg-[#FAF5EC] border-[#E7DFCB]" data-testid="ai-mode-tabs">
+            <div className="flex border-b bg-[#FAF5EC] border-[#E7DFCB] shadow-sm" data-testid="ai-mode-tabs">
               {([
-                { k: "chat", label: "Chat", icon: MessageSquare },
-                { k: "voice", label: "Talk", icon: Mic },
+                { k: "chat", label: "Chat Assistant", icon: MessageSquare },
+                { k: "voice", label: "Voice Sommelier", icon: Mic },
               ] as { k: Mode; label: string; icon: typeof MessageSquare }[]).map((t) => {
                 const active = mode === t.k;
                 return (
@@ -434,20 +356,19 @@ export function AIWaiterDock() {
                     data-testid={`ai-mode-${t.k}`}
                     aria-pressed={active}
                     onClick={() => setMode(t.k)}
-                    className={`flex-1 py-3 text-[11px] font-royal tracking-[0.2em] uppercase border-b-2 transition flex items-center justify-center gap-1.5 ${
+                    className={`flex-1 py-3 text-[11px] font-royal tracking-[0.2em] uppercase border-b-2 transition flex items-center justify-center gap-2 font-bold ${
                       active
-                        ? "border-brand-primary text-brand-primary bg-[#F3EBD8]"
-                        : "border-transparent text-[#1A1106]/60 hover:text-brand-primary"
+                        ? "border-[#5C0E1B] text-[#5C0E1B] bg-[#F3EBD8]/60"
+                        : "border-transparent text-[#1A1106]/60 hover:text-[#5C0E1B]"
                     }`}
                   >
-                    <t.icon className="h-3.5 w-3.5" /> {t.label}
+                    <t.icon className={`h-4 w-4 ${active ? "text-[#5C0E1B]" : "text-gray-400"}`} /> {t.label}
                   </button>
                 );
               })}
             </div>
 
             {/* Body */}
-
             {mode === "chat" && (
               <ChatPane
                 language={language}
@@ -460,9 +381,7 @@ export function AIWaiterDock() {
                 input={typeof input === "string" ? input : ""}
                 setInput={setInput}
                 sendText={sendText}
-                trayChips={trayChips}
                 onTapChip={(m) => { cart.add(m); toast.success(`${m.name} added to your tray`); }}
-                dynamicPrompts={dynamicPrompts}
                 onCheckout={() => { router.push(`/r/${slug}/checkout`); setOpen(false); }}
               />
             )}
@@ -477,6 +396,7 @@ export function AIWaiterDock() {
                 voiceProcessing={voiceProcessing}
                 startRecording={startRecording}
                 stopRecording={stopRecording}
+                ttsPlaying={ttsPlaying}
               />
             )}
           </div>
@@ -487,13 +407,28 @@ export function AIWaiterDock() {
 }
 
 // =====================================================================
+// WELCOME SCREEN CHIPS
 // =====================================================================
-// CHAT PANE — Mehfil cream/maroon (consistent with rest of customer site)
+const WELCOME_CHIPS = [
+  { icon: "👑", label: "What are today's Chef Specials?", text: "What are today's Chef Specials?" },
+  { icon: "🌶️", label: "Spicy non-veg starters", text: "Show me spicy non-veg starters" },
+  { icon: "🥗", label: "Best vegetarian options", text: "What are best vegetarian options?" },
+  { icon: "🥟", label: "Craving crispy & fried", text: "I'm craving something crispy & fried" },
+  { icon: "💰", label: "Meal under ₹500", text: "Recommend a meal under ₹500" },
+  { icon: "👨‍👩‍👧‍👦", label: "Party of 4 feast", text: "We are a party of 4, what should we order?" },
+  { icon: "🥤", label: "Drinks for Biryani", text: "What drinks go well with Biryani?" },
+  { icon: "🍨", label: "Sweet desserts", text: "What desserts do you have?" },
+  { icon: "⭐", label: "Top-rated bestsellers", text: "Show me your top-rated bestsellers" },
+  { icon: "⚡", label: "Fast preparation dishes", text: "What's the fastest dish to prepare?" },
+];
+
+// =====================================================================
+// CHAT PANE
 // =====================================================================
 function ChatPane({
   language, setLanguage, tone, setTone,
-  messages, streaming, scrollRef, input, setInput, sendText, trayChips, onTapChip,
-  dynamicPrompts, onCheckout
+  messages, streaming, scrollRef, input, setInput, sendText, onTapChip,
+  onCheckout
 }: {
   language: Lang; setLanguage: (l: Lang) => void;
   tone: Tone; setTone: (t: Tone) => void;
@@ -503,130 +438,208 @@ function ChatPane({
   input: string;
   setInput: (v: string) => void;
   sendText: (t?: string) => void;
-  trayChips: MenuItem[];
   onTapChip: (it: MenuItem) => void;
-  dynamicPrompts: string[];
   onCheckout: () => void;
 }) {
   const cart = useCart();
+  const [addedIds, setAddedIds] = useState<Record<string, boolean>>({});
+
+  const handleAddWithFeedback = (item: MenuItem) => {
+    onTapChip(item);
+    setAddedIds(prev => ({ ...prev, [item.id || item.name]: true }));
+    setTimeout(() => {
+      setAddedIds(prev => ({ ...prev, [item.id || item.name]: false }));
+    }, 2000);
+  };
+
+  const isOnlyGreeting = messages.length === 1 && messages[0].role === "assistant";
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-[#FAF5EC] text-[#1A1106]" data-testid="ai-chat-pane">
       {/* Tone + Language selectors */}
-      <div className="px-4 pt-3 flex items-center gap-2 border-b border-[#E7DFCB] pb-3" data-testid="chat-controls">
+      <div className="px-4 pt-2.5 pb-2 flex items-center gap-2 border-b border-[#E7DFCB] bg-[#F3EBD8]/40" data-testid="chat-controls">
         <div className="flex-1 grid grid-cols-2 gap-2">
           <select
             data-testid="chat-tone-select"
             value={tone}
             onChange={(e) => setTone(e.target.value as Tone)}
-            className="bg-white text-brand-primary text-[11px] font-royal tracking-[0.15em] uppercase border border-brand-secondary/40 rounded-full px-3 py-1.5 outline-none cursor-pointer focus:border-brand-primary"
+            className="bg-white text-[#5C0E1B] text-[10px] font-royal tracking-[0.15em] uppercase border border-brand-secondary/40 rounded-full px-3 py-1 outline-none cursor-pointer focus:border-[#5C0E1B] font-bold shadow-xs"
           >
-            {TONES.map((t) => <option key={t.code} value={t.code} className="bg-white text-[#1A1106]">{t.label}</option>)}
+            {TONES.map((t) => <option key={t.code} value={t.code}>{t.label} Tone</option>)}
           </select>
           <select
             data-testid="chat-language-select"
             value={language}
             onChange={(e) => setLanguage(e.target.value as Lang)}
-            className="bg-white text-brand-primary text-[11px] font-royal tracking-[0.15em] uppercase border border-brand-secondary/40 rounded-full px-3 py-1.5 outline-none cursor-pointer focus:border-brand-primary"
+            className="bg-white text-[#5C0E1B] text-[10px] font-royal tracking-[0.15em] uppercase border border-brand-secondary/40 rounded-full px-3 py-1 outline-none cursor-pointer focus:border-[#5C0E1B] font-bold shadow-xs"
           >
-            {LANGS.map((l) => <option key={l.code} value={l.code} className="bg-white text-[#1A1106]">{l.label}</option>)}
+            {LANGS.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
           </select>
         </div>
       </div>
 
-      {/* Your tray ribbon */}
-      <div className="px-5 pt-3 pb-3 border-b border-[#E7DFCB] flex items-center justify-between bg-[#F3EBD8]/60" data-testid="chat-tray-ribbon">
-        <div>
-          <div className="font-royal tracking-[0.3em] uppercase text-[10px] text-[#8A6A1B]">Your tray</div>
-          <div className="font-editorial italic text-[11px] text-[#1A1106]/65 mt-1">
-            {cart.count() === 0 ? "Nothing yet — say \u201Cadd the mutton biryani\u201D or tap a chip below." : `${cart.count()} item${cart.count() > 1 ? "s" : ""} · ${formatCurrency(cart.subtotal())}`}
-          </div>
-        </div>
-        <div className="text-right">
-          <div className="font-royal text-brand-primary text-sm" data-testid="chat-tray-total">{cart.count()} · {formatCurrency(cart.subtotal())}</div>
-        </div>
-      </div>
-
       {/* Messages */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-4 space-y-3" data-testid="ai-waiter-messages">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-4 space-y-4" data-testid="ai-waiter-messages">
         {messages.map((m, idx) => (
-          <div key={m.id} className={`max-w-[88%] ${m.role === "user" ? "ml-auto" : ""}`}>
+          <div key={m.id || idx} className={`flex flex-col ${m.role === "user" ? "items-end" : "items-start"}`}>
             <div
-              className={`rounded-2xl px-4 py-3 font-editorial italic text-[15px] leading-relaxed shadow-sm ${
+              className={`max-w-[88%] rounded-2xl px-4 py-3 font-editorial italic text-[15px] leading-relaxed shadow-sm ${
                 m.role === "user"
-                  ? "bg-brand-primary text-[#FAF5EC] rounded-br-sm"
-                  : "bg-white text-[#1A1106] rounded-bl-sm border border-brand-secondary/25"
+                  ? "bg-gradient-to-r from-[#5C0E1B] to-[#7A1525] text-[#FAF5EC] rounded-br-sm"
+                  : "bg-white text-[#1A1106] rounded-bl-sm border border-brand-secondary/30 shadow-md"
               }`}
               data-testid={`msg-${m.role}-${idx}`}
             >
               {m.content || (streaming && idx === messages.length - 1 ? <span className="opacity-60">…</span> : "")}
               {streaming && idx === messages.length - 1 && m.role === "assistant" && m.content && (
-                <span className="ml-1 inline-block w-1.5 h-4 bg-brand-primary align-middle animate-pulse" />
+                <span className="ml-1.5 inline-block w-2 h-4 bg-[#5C0E1B] align-middle animate-pulse" />
               )}
             </div>
+
+            {/* Rich Recommendation Cards */}
+            {m.recs && m.recs.length > 0 && (
+              <div className="mt-3 w-full space-y-2.5 pl-2 border-l-2 border-[#DDB85C]">
+                <div className="font-royal text-[10px] tracking-widest uppercase text-[#8A6A1B] font-bold">Recommended Dishes</div>
+                <div className="grid grid-cols-1 gap-2.5">
+                  {m.recs.map((r: MenuItem, rIdx: number) => {
+                    const isAdded = addedIds[r.id || r.name];
+                    return (
+                      <div key={r.id || rIdx} className="bg-white border border-brand-secondary/40 rounded-xl p-3 shadow-sm hover:shadow-md transition flex items-center justify-between gap-3 group">
+                        <ItemImage src={r.image_url} alt={r.name} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-royal font-bold text-[14px] text-[#5C0E1B] truncate">{r.name}</span>
+                            {r.tags && r.tags.includes("bestseller") && (
+                              <span className="text-[9px] bg-[#DDB85C]/30 text-[#8A6A1B] px-1.5 py-0.5 rounded font-royal uppercase tracking-wider font-semibold">Bestseller</span>
+                            )}
+                          </div>
+                          <p className="font-editorial italic text-[12px] text-gray-600 line-clamp-1 mt-0.5">{r.description || r.category}</p>
+                          <div className="flex items-center gap-3 mt-1.5 text-[11px] font-sans text-gray-500">
+                            <span className="font-royal font-bold text-[#5C0E1B] text-sm">{formatCurrency(r.price)}</span>
+                            {r.prep_time_min ? (
+                              <span className="flex items-center gap-0.5"><Clock className="w-3 h-3 text-[#8A6A1B]" /> {r.prep_time_min}m</span>
+                            ) : null}
+                            {r.rating ? (
+                              <span className="flex items-center gap-0.5 text-amber-600 font-semibold"><Star className="w-3 h-3 fill-amber-400 text-amber-500" /> {r.rating}</span>
+                            ) : null}
+                            {r.spice_level ? (
+                              <span title={`Spice level ${r.spice_level}/3`}>{"🌶️".repeat(r.spice_level)}</span>
+                            ) : null}
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-1.5 shrink-0">
+                          <button
+                            onClick={() => handleAddWithFeedback(r)}
+                            disabled={isAdded}
+                            className={`px-3 py-1.5 rounded-lg font-royal text-[11px] tracking-wider uppercase font-bold transition flex items-center justify-center gap-1 shadow-sm ${
+                              isAdded
+                                ? "bg-emerald-600 text-white"
+                                : "bg-[#5C0E1B] text-[#FAF5EC] hover:bg-[#7A1525]"
+                            }`}
+                          >
+                            {isAdded ? <Check className="w-3.5 h-3.5 animate-bounce" /> : <Plus className="w-3.5 h-3.5" />}
+                            {isAdded ? "Added" : "Add"}
+                          </button>
+                          <button
+                            onClick={() => sendText(`Modify ${r.name}: `)}
+                            className="text-[10px] font-editorial italic text-gray-500 hover:text-[#5C0E1B] underline text-center"
+                          >
+                            Customize
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Dynamic Quick Reply Chips */}
+            {m.quick_replies && m.quick_replies.length > 0 && (
+              <div className="mt-2.5 flex flex-wrap gap-1.5 pl-2">
+                {m.quick_replies.map((qr: string, qIdx: number) => (
+                  <button
+                    key={qIdx}
+                    onClick={() => sendText(qr)}
+                    disabled={streaming}
+                    className="bg-white/80 hover:bg-white border border-[#DDB85C] hover:border-[#5C0E1B] text-[#5C0E1B] px-3 py-1 rounded-full text-[11px] font-royal tracking-wide transition shadow-xs flex items-center gap-1 disabled:opacity-50"
+                  >
+                    <span>✨</span> {qr}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         ))}
-      </div>
 
-      {/* Suggestion chips */}
-      <div className="border-t border-[#E7DFCB] px-5 pt-3 pb-2 space-y-2 bg-[#FAF5EC]" data-testid="chat-chips">
-        {trayChips.length > 0 && (
-          <div className="flex flex-wrap gap-2" data-testid="chat-tap-and-order-chips">
-            {trayChips.map((r) => (
-              <button
-                key={r.id}
-                data-testid={`chip-tap-add-${r.id}`}
-                onClick={() => onTapChip(r)}
-                className="group inline-flex items-center gap-1.5 rounded-full bg-white border border-brand-primary/40 px-3.5 py-1.5 text-[10px] font-royal tracking-[0.18em] uppercase text-brand-primary hover:bg-brand-primary hover:text-[#FAF5EC] hover:border-brand-primary transition"
-              >
-                <Plus className="h-3 w-3" /> {r.name}
-                <span className="opacity-70 normal-case font-editorial italic text-[10px] tracking-normal ml-1">{formatCurrency(r.price)}</span>
-              </button>
-            ))}
+        {/* Welcome Screen Suggestion Grid when fresh */}
+        {isOnlyGreeting && (
+          <div className="pt-2 pb-4 animate-in fade-in duration-300">
+            <div className="text-center mb-3">
+              <span className="font-royal text-[11px] tracking-[0.2em] uppercase text-[#8A6A1B] bg-[#F3EBD8] px-3 py-1 rounded-full border border-[#DDB85C]/40">
+                How can I help you today?
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {WELCOME_CHIPS.map((chip, i) => (
+                <button
+                  key={i}
+                  onClick={() => sendText(chip.text)}
+                  disabled={streaming}
+                  className="bg-white/90 hover:bg-white border border-brand-secondary/30 hover:border-[#5C0E1B] p-2.5 rounded-xl text-left transition shadow-xs hover:shadow-md flex items-start gap-2 group disabled:opacity-50"
+                >
+                  <span className="text-lg shrink-0 group-hover:scale-110 transition-transform">{chip.icon}</span>
+                  <span className="font-editorial italic text-[12px] text-[#1A1106] group-hover:text-[#5C0E1B] leading-tight line-clamp-2">
+                    {chip.label}
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
         )}
-        <div className="flex flex-wrap gap-2">
-          {dynamicPrompts.map((q) => (
-            <button
-              key={q}
-              data-testid={`chip-quick-${q.replace(/\W+/g, "-").toLowerCase()}`}
-              onClick={() => sendText(q)}
-              disabled={streaming}
-              className="rounded-full border border-brand-secondary/50 px-3.5 py-1.5 text-[10px] font-royal tracking-[0.18em] uppercase text-[#8A6A1B] hover:border-brand-primary hover:text-brand-primary hover:bg-white transition disabled:opacity-40"
-            >
-              {q}
-            </button>
-          ))}
-          {cart.count() > 0 && (
-            <button
-              onClick={onCheckout}
-              data-testid="chip-checkout"
-              className="inline-flex items-center gap-1.5 rounded-full mehfil-btn-gold px-4 py-1.5 text-[10px] font-royal tracking-[0.18em] uppercase cursor-pointer"
-            >
-              <ArrowRight className="h-3 w-3" /> Checkout
-            </button>
-          )}
-        </div>
       </div>
+
+      {/* Floating Cart Preview Banner inside waiter panel */}
+      {cart.count() > 0 && (
+        <div className="mx-4 mb-2 p-3 bg-gradient-to-r from-[#5C0E1B] to-[#7A1525] text-white rounded-xl shadow-lg flex items-center justify-between border border-[#DDB85C]/40 animate-in slide-in-from-bottom duration-200">
+          <div className="flex items-center gap-2.5">
+            <div className="bg-[#DDB85C] text-[#1A1106] p-2 rounded-lg font-bold">
+              <ShoppingBag className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="font-royal text-[11px] tracking-wider uppercase text-[#DDB85C]">Your Dining Tray</div>
+              <div className="font-editorial text-sm font-bold">{cart.count()} items • {formatCurrency(cart.subtotal())}</div>
+            </div>
+          </div>
+          <button
+            onClick={onCheckout}
+            className="bg-[#DDB85C] hover:bg-[#c9a348] text-[#1A1106] px-4 py-2 rounded-lg font-royal text-xs uppercase font-extrabold tracking-wider transition flex items-center gap-1 shadow-sm"
+          >
+            <span>Checkout</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* Composer */}
       <div className="px-4 pb-4 pt-2 bg-[#FAF5EC] border-t border-[#E7DFCB]">
-        <div className="flex items-center gap-2 bg-white rounded-full border border-brand-secondary/40 p-1.5 focus-within:border-brand-primary">
+        <div className="flex items-center gap-2 bg-white rounded-full border border-brand-secondary/50 p-1.5 focus-within:border-[#5C0E1B] shadow-sm">
           <input
             data-testid="ai-waiter-input"
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && sendText(input)}
-            placeholder="Ask in any language…"
+            placeholder="Ask for recommendations, specials, or add dishes…"
             disabled={streaming}
-            className="flex-1 bg-transparent px-4 py-2 text-sm outline-none placeholder:text-[#1A1106]/40 text-[#1A1106] font-editorial italic"
+            className="flex-1 bg-transparent px-4 py-2 text-sm outline-none placeholder:text-gray-400 text-[#1A1106] font-editorial italic"
           />
           <button
             data-testid="ai-waiter-send"
             onClick={() => sendText(input)}
             aria-label="Send message"
             disabled={streaming || !(input || "").trim()}
-            className="h-9 w-9 rounded-full mehfil-btn-royal flex items-center justify-center disabled:opacity-40"
+            className="h-10 w-10 rounded-full bg-gradient-to-r from-[#5C0E1B] to-[#7A1525] hover:from-[#7A1525] hover:to-[#5C0E1B] text-white flex items-center justify-center disabled:opacity-40 transition shadow-md"
           >
             {streaming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </button>
@@ -637,40 +650,42 @@ function ChatPane({
 }
 
 // =====================================================================
-// VOICE PANE — recommendation cards still appear after voice replies
+// VOICE PANE
 // =====================================================================
 function VoicePane({
-  messages, streaming, scrollRef, onAdd, recording, voiceProcessing, startRecording, stopRecording,
+  messages, streaming, scrollRef, onAdd, recording, voiceProcessing, startRecording, stopRecording, ttsPlaying
 }: {
   messages: any[]; streaming: boolean; scrollRef: React.RefObject<HTMLDivElement>;
   onAdd: (it: MenuItem) => void;
   recording: boolean; voiceProcessing: boolean;
   startRecording: () => void; stopRecording: () => void;
+  ttsPlaying: boolean;
 }) {
   const params = useParams();
   const slug = params?.slug as string;
   const { config: voiceConfig } = useRestaurantConfig();
-  const aiName = voiceConfig?.ai_waiter?.name || "AI";
+  const aiName = voiceConfig?.ai_waiter?.name || "AI Waiter";
+
   return (
-    <>
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-5 space-y-3" data-testid="ai-waiter-messages-voice">
-        {messages.map((m, idx) => (
-          <div key={m.id} className="space-y-2">
-            <div className={`max-w-[88%] ${m.role === "user" ? "ml-auto" : ""} rounded-2xl px-4 py-3 font-editorial italic text-[15px] leading-relaxed ${
-              m.role === "user" ? "bg-brand-primary text-[#FAF5EC] rounded-br-sm" : "bg-white text-[#1A1106] rounded-bl-sm border border-brand-secondary/20"
+    <div className="flex-1 flex flex-col justify-between bg-[#FAF5EC]">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-5 space-y-4" data-testid="ai-waiter-messages-voice">
+        {messages.slice(-4).map((m, idx) => (
+          <div key={m.id || idx} className="space-y-2 animate-in fade-in duration-200">
+            <div className={`max-w-[88%] ${m.role === "user" ? "ml-auto" : ""} rounded-2xl px-4 py-3 font-editorial italic text-[15px] leading-relaxed shadow-sm ${
+              m.role === "user" ? "bg-gradient-to-r from-[#5C0E1B] to-[#7A1525] text-[#FAF5EC] rounded-br-sm" : "bg-white text-[#1A1106] rounded-bl-sm border border-brand-secondary/30 shadow-md"
             }`}>
               {m.content || (streaming && idx === messages.length - 1 ? "…" : "")}
             </div>
             {m.recs && m.recs.length > 0 && (
-              <div className="flex flex-wrap gap-2" data-testid={`voice-recs-${m.id}`}>
-                {m.recs.map((r) => (
+              <div className="flex flex-wrap gap-2 pt-1" data-testid={`voice-recs-${m.id}`}>
+                {m.recs.map((r: MenuItem, rIdx: number) => (
                   <button
-                    key={r.id}
+                    key={r.id || rIdx}
                     data-testid={`voice-rec-add-${r.id}`}
                     onClick={() => onAdd(r)}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-white border border-brand-secondary/40 px-3 py-1.5 text-[10px] font-royal tracking-[0.18em] uppercase text-brand-primary hover:bg-brand-primary hover:text-[#FAF5EC] transition"
+                    className="inline-flex items-center gap-1.5 rounded-full bg-white border border-[#DDB85C] px-3.5 py-1.5 text-[11px] font-royal tracking-wider uppercase text-[#5C0E1B] hover:bg-[#5C0E1B] hover:text-[#FAF5EC] transition shadow-xs font-bold"
                   >
-                    <Plus className="h-3 w-3" /> {r.name}
+                    <Plus className="h-3 w-3" /> {r.name} • {formatCurrency(r.price)}
                   </button>
                 ))}
               </div>
@@ -678,126 +693,48 @@ function VoicePane({
           </div>
         ))}
       </div>
-      <div className="p-5 border-t border-[#E7DFCB] bg-[#FAF5EC]">
-        <div className="flex flex-col items-center gap-2" data-testid="ai-voice-controls">
+
+      <div className="p-6 border-t border-[#E7DFCB] bg-gradient-to-b from-[#FAF5EC] to-[#F3EBD8]">
+        <div className="flex flex-col items-center gap-4" data-testid="ai-voice-controls">
+          {/* Animated Waveform / Speaking Feedback */}
+          <div className="h-8 flex items-center justify-center gap-1.5">
+            {recording || ttsPlaying || streaming ? (
+              <>
+                <div className="mehfil-wave-bar" />
+                <div className="mehfil-wave-bar" />
+                <div className="mehfil-wave-bar" />
+                <div className="mehfil-wave-bar" />
+                <div className="mehfil-wave-bar" />
+              </>
+            ) : (
+              <div className="font-royal text-[11px] tracking-[0.2em] uppercase text-gray-400">Ready to listen</div>
+            )}
+          </div>
+
           <button
             data-testid={recording ? "ai-voice-stop" : "ai-voice-start"}
             onClick={recording ? stopRecording : startRecording}
             disabled={voiceProcessing || streaming}
-            className={`h-16 w-16 rounded-full flex items-center justify-center shadow-2xl transition-all ${
-              recording ? "bg-brand-primary mehfil-glow" : "mehfil-btn-gold"
+            className={`h-20 w-20 rounded-full flex items-center justify-center shadow-2xl transition-all border-4 ${
+              recording
+                ? "bg-gradient-to-br from-[#5C0E1B] to-[#921E2F] border-red-300 scale-105 animate-pulse"
+                : "bg-gradient-to-br from-[#DDB85C] to-[#8A6A1B] border-[#FAF5EC] hover:scale-105"
             } disabled:opacity-50`}
           >
-            {voiceProcessing || streaming ? <Loader2 className="h-6 w-6 animate-spin text-[#FAF5EC]" /> :
-              recording ? <Square className="h-6 w-6 text-[#FAF5EC] fill-current" /> :
-              <Mic className="h-7 w-7 text-[#1A1106]" />}
+            {voiceProcessing || streaming ? <Loader2 className="h-8 w-8 animate-spin text-white" /> :
+              recording ? <Square className="h-8 w-8 text-white fill-current" /> :
+              <Mic className="h-9 w-9 text-[#1A1106]" />}
           </button>
-          <div className="font-royal tracking-[0.2em] uppercase text-[10px] text-brand-primary">
-            {voiceProcessing ? "Transcribing…" : recording ? "Listening… tap to send" : streaming ? `${aiName} is thinking…` : `Tap & speak to ${aiName}`}
+
+          <div className="text-center space-y-1">
+            <div className="font-royal tracking-[0.2em] uppercase text-xs font-bold text-[#5C0E1B]">
+              {voiceProcessing ? "Transcribing your order…" : recording ? "Listening… speak naturally" : streaming ? `${aiName} is replying…` : `Tap & speak to ${aiName}`}
+            </div>
+            <div className="font-editorial italic text-xs text-gray-500 max-w-xs text-center">
+              Try: &ldquo;We are 4 people, recommend spicy mutton biryani under 1500 rupees&rdquo;
+            </div>
           </div>
-          <div className="font-editorial italic text-[10px] text-[#1A1106]/50 text-center px-4">Try: &ldquo;Spicy biryani for two with a sweet finish&rdquo;</div>
         </div>
-      </div>
-    </>
-  );
-}
-
-// =====================================================================
-// EXPLORE PANE — list with qty controls when item is in cart
-// =====================================================================
-function ExploreList({ menu }: { menu: MenuItem[] }) {
-  const cart = useCart();
-  const [q, setQ] = useState("");
-  const categories = useMemo(() => ["All", ...sortCategories(Array.from(new Set(menu.map((m) => m.category))))], [menu]);
-  const [cat, setCat] = useState<string>("All");
-  
-  const filtered = menu.filter((m) =>
-    (!q.trim() || (m.name || "").toLowerCase().includes(q.toLowerCase()) || (m.description || "").toLowerCase().includes(q.toLowerCase()))
-  );
-
-  return (
-    <div className="flex-1 flex flex-col overflow-hidden" data-testid="ai-explore">
-      <div className="p-3 border-b border-[#E7DFCB] bg-[#FAF5EC]">
-        <input
-          data-testid="ai-explore-search"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Search the menu…"
-          className="w-full bg-white border border-brand-secondary/30 rounded-full px-4 py-2 text-sm outline-none font-editorial italic"
-        />
-        <div className="flex gap-1.5 overflow-x-auto mt-2 -mx-1 px-1 pb-1 custom-scrollbar">
-          {categories.map((c) => (
-            <button
-              key={c}
-              data-testid={`ai-explore-cat-${c}`}
-              onClick={() => setCat(c)}
-              className={`whitespace-nowrap rounded-full px-3 py-1 text-[10px] font-royal tracking-wider uppercase border transition ${
-                cat === c ? "bg-[#5C0E1B] text-[#FAF5EC] border-[#5C0E1B]" : "bg-white text-brand-primary border-brand-secondary/30"
-              }`}
-            >
-              {c}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className="flex-1 overflow-y-auto p-4 bg-[#FAF5EC]">
-        {categories.filter(c => c !== "All").map(c => {
-           if (cat !== "All" && cat !== c) return null;
-           const catItems = filtered.filter(m => m.category === c);
-           if (catItems.length === 0) return null;
-           
-           return (
-             <div key={c} className="mb-6 last:mb-2">
-               <h3 className="font-royal text-lg text-brand-primary mb-3 border-b border-brand-secondary/30 pb-1">{c}</h3>
-               <div className="space-y-3">
-                 {catItems.map(m => {
-                   const line = cart.items.find((i) => i.item_id === m.id);
-                   return (
-                     <div key={m.id} className="flex items-center gap-3 bg-white border border-brand-secondary/20 rounded-lg p-2.5 shadow-sm" data-testid={`ai-explore-item-${m.id}`}>
-                       <div className="h-16 w-16 rounded-md bg-cover bg-center shrink-0" style={{ backgroundImage: `url(${m.image_url})` }} />
-                       <div className="flex-1 min-w-0">
-                         <div className="font-royal text-[13px] text-brand-primary leading-tight line-clamp-1">{m.name}</div>
-                         <div className="font-editorial italic text-[11px] text-[#1A1106]/60 line-clamp-1 mt-0.5">{m.description}</div>
-                         <div className="font-royal text-xs text-brand-primary mt-1">{formatCurrency(m.price)}</div>
-                       </div>
-                       {line ? (
-                         <div className="flex items-center gap-1 bg-[#5C0E1B] text-[#FAF5EC] rounded-full p-1 shadow shrink-0" data-testid={`ai-explore-qty-${m.id}`}>
-                           <button
-                             data-testid={`ai-explore-dec-${m.id}`}
-                             onClick={() => cart.setQty(m.id, line.qty - 1)}
-                             className="h-6 w-6 rounded-full hover:bg-brand-secondary flex items-center justify-center"
-                           >
-                             <Minus className="h-3 w-3" />
-                           </button>
-                           <span className="px-1 w-4 text-center font-royal text-sm font-semibold" data-testid={`ai-explore-qty-val-${m.id}`}>{line.qty}</span>
-                           <button
-                             data-testid={`ai-explore-inc-${m.id}`}
-                             onClick={() => cart.setQty(m.id, line.qty + 1)}
-                             className="h-6 w-6 rounded-full hover:bg-brand-secondary flex items-center justify-center"
-                           >
-                             <Plus className="h-3 w-3" />
-                           </button>
-                         </div>
-                       ) : (
-                         <button
-                           data-testid={`ai-explore-add-${m.id}`}
-                           onClick={() => { cart.add(m); toast.success(`${m.name} added to your tray`); }}
-                           className="bg-[#5C0E1B] text-white hover:bg-brand-primary rounded px-3 py-1.5 text-[9px] font-royal font-bold uppercase transition shadow-sm border border-[#5C0E1B] shrink-0"
-                           title="Tap to add"
-                         >
-                           Add
-                         </button>
-                       )}
-                     </div>
-                   );
-                 })}
-               </div>
-             </div>
-           );
-        })}
-        {filtered.length === 0 && (
-          <div className="text-center py-10 font-editorial italic text-[#1A1106]/50 text-sm">No matches found.</div>
-        )}
       </div>
     </div>
   );

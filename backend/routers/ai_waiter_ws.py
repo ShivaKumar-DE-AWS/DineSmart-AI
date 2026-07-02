@@ -42,13 +42,14 @@ async def ai_waiter_websocket(websocket: WebSocket, session_id: str):
         # Process via Gemini
         try:
             # 1. Send text to orchestrator
-            response_text, recommended_items = await orchestrator.process_message(text, cart_state=cart_state)
+            response_text, recommended_items, quick_replies = await orchestrator.process_message(text, cart_state=cart_state)
             
             # 2. Send text and recs back to client
             await websocket.send_json({
                 "type": "assistant_text",
                 "text": response_text,
-                "recs": recommended_items
+                "recs": recommended_items,
+                "quick_replies": quick_replies
             })
             
             # 3. Stream Audio response

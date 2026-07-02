@@ -15,7 +15,12 @@ class WaiterTools:
         match_q: Dict[str, Any] = {"restaurant_id": self.restaurant_id, "available": True}
         
         if query:
-            match_q["name"] = {"$regex": query, "$options": "i"}
+            match_q["$or"] = [
+                {"name": {"$regex": query, "$options": "i"}},
+                {"description": {"$regex": query, "$options": "i"}},
+                {"tags": {"$regex": query, "$options": "i"}},
+                {"category": {"$regex": query, "$options": "i"}}
+            ]
             
         if dietary_filter != "any":
             if dietary_filter == "veg":

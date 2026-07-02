@@ -147,3 +147,71 @@
   background: var(--brand-secondary);
   color: #1A1106;
 }
+
+/* AI Waiter Specific Animations */
+@keyframes mehfilTypingBounce {
+  0%, 80%, 100% { transform: translateY(0); opacity: 0.5; }
+  40% { transform: translateY(-6px); opacity: 1; }
+}
+.mehfil-typing-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--brand-secondary);
+  animation: mehfilTypingBounce 1.4s infinite ease-in-out both;
+}
+.mehfil-typing-dot:nth-child(1) { animation-delay: -0.32s; }
+.mehfil-typing-dot:nth-child(2) { animation-delay: -0.16s; }
+.mehfil-typing-dot:nth-child(3) { animation-delay: 0s; }
+
+@keyframes mehfilPopIn {
+  0% { transform: scale(0.8); opacity: 0; }
+  70% { transform: scale(1.05); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.mehfil-pop-in {
+  animation: mehfilPopIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes mehfilWave {
+  0%, 100% { height: 6px; }
+  50% { height: 22px; }
+}
+.mehfil-wave-bar {
+  width: 3px;
+  background-color: var(--brand-secondary);
+  border-radius: 999px;
+  animation: mehfilWave 1.2s ease-in-out infinite;
+}
+.mehfil-wave-bar:nth-child(1) { animation-delay: -0.4s; }
+.mehfil-wave-bar:nth-child(2) { animation-delay: -0.2s; }
+.mehfil-wave-bar:nth-child(3) { animation-delay: -0.6s; }
+.mehfil-wave-bar:nth-child(4) { animation-delay: -0.1s; }
+.mehfil-wave-bar:nth-child(5) { animation-delay: -0.3s; }
+
+@keyframes mehfilSlideUp {
+  0% { transform: translateY(100%); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+.mehfil-slide-up {
+  animation: mehfilSlideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes mehfilFadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+.mehfil-fade-in {
+  animation: mehfilFadeIn 0.25s ease-out forwards;
+}
+
+.mehfil-hover-card {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.mehfil-hover-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 24px -10px rgba(138,26,42,0.25);
+  border-color: var(--brand-secondary);
+}
+
