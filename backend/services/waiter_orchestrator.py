@@ -368,15 +368,15 @@ Live Menu:
         while loop_count < 5: # Max 5 tool turns per message
             loop_count += 1
             contents = self._sanitize_for_gemini(contents)
-            models_to_try = ["gemini-1.5-flash-latest", "gemini-1.5-flash-002", "gemini-1.5-flash-001", "gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro-latest", "gemini-1.5-pro"]
-            try:
-                for m_info in self.client.models.list_models():
-                    if "generateContent" in getattr(m_info, "supported_generation_methods", []):
-                        name_clean = m_info.name.replace("models/", "")
-                        if name_clean not in models_to_try:
-                            models_to_try.append(name_clean)
-            except Exception:
-                pass
+            # Curated list — gemini-2.0-flash first; removed list_models() which
+            # returned bad names like "gemini 1.5 pro" (spaces) causing 404s
+            models_to_try = [
+                "gemini-2.0-flash",
+                "gemini-1.5-flash",
+                "gemini-1.5-flash-latest",
+                "gemini-1.5-flash-001",
+                "gemini-1.5-flash-002",
+            ]
             last_err = None
             for model_name in models_to_try:
                 try:

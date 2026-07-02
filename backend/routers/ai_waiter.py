@@ -106,15 +106,15 @@ async def _make_waiter_stream(session_id: str, message: str, system_prompt: str,
                 history.append(genai_types.Content(role=role, parts=[genai_types.Part(text=doc["content"])]))
 
             # Optimized Model Retry Loop (Fast-Fail)
-            models_to_try = ["gemini-1.5-flash-latest", "gemini-1.5-flash-002", "gemini-1.5-flash-001", "gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro-latest", "gemini-1.5-pro"]
-            try:
-                for m_info in client.models.list_models():
-                    if "generateContent" in getattr(m_info, "supported_generation_methods", []):
-                        name_clean = m_info.name.replace("models/", "")
-                        if name_clean not in models_to_try:
-                            models_to_try.append(name_clean)
-            except Exception:
-                pass
+            # Curated list — gemini-2.0-flash first; removed list_models() which
+            # returned bad names like "gemini 1.5 pro" (spaces) causing 404s
+            models_to_try = [
+                "gemini-2.0-flash",
+                "gemini-1.5-flash",
+                "gemini-1.5-flash-latest",
+                "gemini-1.5-flash-001",
+                "gemini-1.5-flash-002",
+            ]
             full = ""
             
             for model_name in models_to_try:
@@ -256,15 +256,15 @@ async def ai_transcribe(file: UploadFile = File(...), language: str = Form(""), 
         prompt = "You are an expert transcriber. Transcribe the following audio exactly as spoken. Output ONLY the transcribed text, nothing else."
         if language and language.strip() and language.strip() != "auto":
             prompt += f" The expected language might be {language}."
-        models_to_try = ["gemini-1.5-flash-latest", "gemini-1.5-flash-002", "gemini-1.5-flash-001", "gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro-latest", "gemini-1.5-pro"]
-        try:
-            for m_info in client.models.list_models():
-                if "generateContent" in getattr(m_info, "supported_generation_methods", []):
-                    name_clean = m_info.name.replace("models/", "")
-                    if name_clean not in models_to_try:
-                        models_to_try.append(name_clean)
-        except Exception:
-            pass
+        # Curated list — gemini-2.0-flash first; removed list_models() which
+        # returned bad names like "gemini 1.5 pro" (spaces) causing 404s
+        models_to_try = [
+            "gemini-2.0-flash",
+            "gemini-1.5-flash",
+            "gemini-1.5-flash-latest",
+            "gemini-1.5-flash-001",
+            "gemini-1.5-flash-002",
+        ]
         for model_name in models_to_try:
             try:
                 response = await asyncio.to_thread(
