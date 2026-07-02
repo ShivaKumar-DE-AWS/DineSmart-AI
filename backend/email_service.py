@@ -19,7 +19,7 @@ TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN", "")
 TWILIO_PHONE_NUMBER = os.environ.get("TWILIO_PHONE_NUMBER", "")
 
 async def _send_email(to_email: str, subject: str, html_content: str) -> tuple[bool, str]:
-    """Send email asynchronously using aiosmtplib."""
+    """Send email asynchronously using Resend API (if available) with automatic fallback to aiosmtplib."""
     # Always log the email locally just in case SMTP is blocked by the cloud provider
     print("=" * 60, flush=True)
     print(f"📧 EMAIL GENERATED (To: {to_email})", flush=True)
@@ -36,6 +36,33 @@ async def _send_email(to_email: str, subject: str, html_content: str) -> tuple[b
     print(f"Content: {text_content[:800]}...", flush=True)
     print("=" * 60, flush=True)
 
+    # 1. Try Resend API if key is present
+    if RESEND_API_KEY:
+        try:
+            resend_from = os.environ.get("RESEND_FROM") or os.environ.get("RESEND_FROM_EMAIL") or f"SmartDine AI <{SMTP_USER}>"
+            if "resend.dev" in resend_from and not os.environ.get("RESEND_FROM"):
+                resend_from = "SmartDine AI <onboarding@resend.dev>"
+            async with httpx.AsyncClient() as client:
+                res = await client.post(
+                    "https://api.resend.com/emails",
+                    headers={"Authorization": f"Bearer {RESEND_API_KEY}", "Content-Type": "application/json"},
+                    json={
+                        "from": resend_from,
+                        "to": [to_email],
+                        "subject": subject,
+                        "html": html_content
+                    },
+                    timeout=10
+                )
+                if res.is_success:
+                    print(f"✅ Successfully sent Resend email to {to_email}")
+                    return True, "Success"
+                else:
+                    print(f"⚠️ Resend API Error ({res.status_code}): {res.text}. Falling back to SMTP...")
+        except Exception as e:
+            print(f"⚠️ Resend API request failed: {str(e)}. Falling back to SMTP...")
+
+    # 2. Fallback to SMTP
     if not SMTP_PASSWORD:
         print("⚠️ SMTP_PASSWORD not set. Mock email only.")
         return True, "Mock success"
@@ -49,20 +76,18 @@ async def _send_email(to_email: str, subject: str, html_content: str) -> tuple[b
     msg.attach(part)
 
     try:
-        # Use aiosmtplib for async SMTP
-        async with aiosmtplib.SMTP(hostname=SMTP_SERVER, port=SMTP_PORT, timeout=10) as smtp:
-            if SMTP_PORT == 465:
-                await smtp.login(SMTP_USER, SMTP_PASSWORD)
-            else:
+        # Use aiosmtplib for async SMTP with proper TLS setting for port 465
+        use_tls = (SMTP_PORT == 465)
+        async with aiosmtplib.SMTP(hostname=SMTP_SERVER, port=SMTP_PORT, use_tls=use_tls, timeout=10) as smtp:
+            if not use_tls:
                 await smtp.starttls()
-                await smtp.login(SMTP_USER, SMTP_PASSWORD)
-            
+            await smtp.login(SMTP_USER, SMTP_PASSWORD)
             await smtp.send_message(msg)
         
-        print(f"✅ Successfully sent email to {to_email}")
+        print(f"✅ Successfully sent SMTP email to {to_email}")
         return True, "Success"
     except Exception as e:
-        print(f"❌ Failed to send email to {to_email}: {str(e)}")
+        print(f"❌ Failed to send SMTP email to {to_email}: {str(e)}")
         return False, str(e)
 
 async def send_password_reset_email(to_email: str, reset_token: str, frontend_url: str = "http://localhost:3000"):
@@ -186,28 +211,7 @@ async def send_verification_otp(to_email: str, otp: str):
       </body>
     </html>
     '''
-    
-    if RESEND_API_KEY:
-        try:
-            async with httpx.AsyncClient() as client:
-                await client.post(
-                    "https://api.resend.com/emails",
-                    headers={"Authorization": f"Bearer {RESEND_API_KEY}", "Content-Type": "application/json"},
-                    json={
-                        "from": "SmartDine AI <onboarding@resend.dev>",
-                        "to": [to_email],
-                        "subject": subject,
-                        "html": html
-                    },
-                    timeout=10
-                )
-            print(f"✅ Successfully sent Resend email to {to_email}")
-        except Exception as e:
-            print(f"❌ Failed to send Resend email to {to_email}: {str(e)}")
-            # Fallback to SMTP
-            await _send_email(to_email, subject, html)
-    else:
-        await _send_email(to_email, subject, html)
+    return await _send_email(to_email, subject, html)
 
 async def send_sms_otp(phone: str, otp: str):
     """Send SMS OTP asynchronously using Twilio."""
