@@ -45,8 +45,8 @@ export default function CounterPage() {
 
   const allOrders = data?.orders || [];
   const preparing = allOrders.filter((o) => ["confirmed", "preparing"].includes(o.status));
-  const ready = allOrders.filter((o) => o.status === "ready");
-  const servedToday = allOrders.filter((o) => o.status === "served").length;
+  const ready = allOrders.filter((o) => o.status === "ready" || (o.status === "served" && o.payment_status !== "paid"));
+  const servedToday = allOrders.filter((o) => o.status === "served" && o.payment_status === "paid").length;
 
   const readyIdsRef = useRef<Set<string> | null>(null);
   useEffect(() => {
@@ -59,6 +59,22 @@ export default function CounterPage() {
     }
     readyIdsRef.current = ids;
   }, [ready]);
+
+  const billIdsRef = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    const billOrders = allOrders.filter((o) => o.bill_requested && o.payment_status !== "paid");
+    const ids = new Set(billOrders.map((o) => o.id));
+    if (billIdsRef.current === null) { billIdsRef.current = ids; return; }
+    const fresh = billOrders.filter((o) => !billIdsRef.current!.has(o.id));
+    if (fresh.length) {
+      playChime("ready");
+      for (const o of fresh) {
+        notify(`🧾 BILL REQUESTED · Table ${o.table_number || o.token}`, `${o.customer_name} wants to settle ₹${o.total}`);
+        toast.info(`🧾 Table ${o.table_number || o.token} requested bill! Total: ₹${o.total}`, { duration: 10000, icon: '💰' });
+      }
+    }
+    billIdsRef.current = ids;
+  }, [allOrders]);
 
   const { data: notifsData } = useQuery({
     queryKey: ["counter-notifications", user?.restaurant_id],
@@ -222,8 +238,8 @@ export default function CounterPage() {
                 <Sparkles className="h-4.5 w-4.5 text-emerald-400" />
               </div>
               <div>
-                <p className="text-[10px] font-medium tracking-widest uppercase text-emerald-400/70">Ready for Pickup</p>
-                <h2 className="text-lg font-bold text-white">Serve Now</h2>
+                <p className="text-[10px] font-medium tracking-widest uppercase text-emerald-400/70">Ready / Active Tables</p>
+                <h2 className="text-lg font-bold text-white">Serve & Settle</h2>
               </div>
             </div>
             <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold text-2xl w-12 h-12 rounded-xl flex items-center justify-center">
@@ -231,8 +247,16 @@ export default function CounterPage() {
             </div>
           </div>
           <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 auto-rows-min gap-4 overflow-y-auto scrollbar-thin" data-testid="counter-ready">
-            {ready.map((o) => (
-              <div key={o.id} className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-2xl p-6 flex flex-col shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 transition-shadow" data-testid={`counter-ready-${o.token}`}>
+            {ready.map((o) => {
+              const isBillRequested = o.bill_requested && o.payment_status !== "paid";
+              const isServed = o.status === "served";
+              const cardBg = isBillRequested
+                ? "bg-gradient-to-br from-amber-600 to-amber-800 border-2 border-amber-300 animate-pulse shadow-xl shadow-amber-500/30"
+                : isServed
+                ? "bg-gradient-to-br from-blue-900 to-indigo-950 border border-blue-500/40 shadow-lg shadow-blue-500/20"
+                : "bg-gradient-to-br from-emerald-500 to-teal-600 shadow-lg shadow-emerald-500/20";
+              return (
+              <div key={o.id} className={`${cardBg} text-white rounded-2xl p-6 flex flex-col transition-shadow`} data-testid={`counter-ready-${o.token}`}>
                 <div className="flex items-center justify-between mb-2">
                   <div className="text-5xl font-bold leading-none">{o.token}</div>
                   <div className={`text-[9px] tracking-wider uppercase font-bold px-2 py-0.5 rounded-full ${
@@ -259,6 +283,16 @@ export default function CounterPage() {
                     </span>
                   </div>
                 </div>
+                {isBillRequested && (
+                  <div className="mt-3 bg-amber-400 text-amber-950 px-3 py-1.5 rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow">
+                    <span>🔔 BILL REQUESTED — SETTLE NOW</span>
+                  </div>
+                )}
+                {!isBillRequested && isServed && (
+                  <div className="mt-3 bg-blue-500/20 border border-blue-400/30 text-blue-200 px-3 py-1 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2">
+                    <span>🍽️ SERVED · EATING</span>
+                  </div>
+                )}
                 {(o.items.some((i) => i.notes) || o.notes) && (
                   <div className="mt-3 space-y-1 text-[11px]" data-testid={`counter-notes-${o.token}`}>
                     {o.items.filter((i) => i.notes).map((i) => (
@@ -271,22 +305,23 @@ export default function CounterPage() {
                   {o.payment_status !== "paid" && (
                     <button
                       onClick={() => markPaidMut.mutate({ id: o.id })}
-                      className="flex-1 bg-red-500/20 hover:bg-red-500/30 border border-red-400/50 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 text-sm"
+                      className="flex-1 bg-red-500/30 hover:bg-red-500/40 border border-red-300/60 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 text-sm shadow"
                     >
                       <CreditCard className="h-4 w-4" /> MARK PAID
                     </button>
                   )}
-                  <button
-                    disabled={o.payment_status !== "paid"}
-                    data-testid={`counter-serve-${o.token}`}
-                    onClick={() => mut.mutate({ id: o.id })}
-                    className={`flex-1 font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 text-sm ${o.payment_status === "paid" ? "bg-white text-emerald-600 hover:bg-white/90" : "bg-white/20 text-white/50 cursor-not-allowed"}`}
-                  >
-                    <Check className="h-4 w-4" /> MARK SERVED
-                  </button>
+                  {o.status !== "served" && (
+                    <button
+                      data-testid={`counter-serve-${o.token}`}
+                      onClick={() => mut.mutate({ id: o.id })}
+                      className="flex-1 font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 text-sm bg-white text-emerald-700 hover:bg-white/90 shadow"
+                    >
+                      <Check className="h-4 w-4" /> MARK SERVED
+                    </button>
+                  )}
                 </div>
               </div>
-            ))}
+            )})}
             {ready.length === 0 && (
               <div className="col-span-full flex flex-col items-center justify-center py-16">
                 <div className="h-14 w-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-4">

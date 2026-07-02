@@ -390,15 +390,7 @@ export default function CheckoutPage() {
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setShowSplitModal(true)}
-            className="mt-4 w-full bg-brand-primary/10 hover:bg-brand-primary/20 text-brand-primary border border-brand-primary/30 rounded-xl py-2.5 font-royal tracking-wider uppercase text-xs transition flex items-center justify-center gap-2"
-          >
-            <Scissors className="h-3.5 w-3.5" /> Split the Bill
-          </button>
-
-          <button onClick={submit} disabled={submitting} data-testid="place-order-btn" className="mt-3 w-full mehfil-btn-royal rounded-full py-3.5 font-royal tracking-[0.2em] uppercase text-xs disabled:opacity-50 inline-flex items-center justify-center gap-2">
+          <button onClick={submit} disabled={submitting} data-testid="place-order-btn" className="mt-6 w-full mehfil-btn-royal rounded-full py-3.5 font-royal tracking-[0.2em] uppercase text-xs disabled:opacity-50 inline-flex items-center justify-center gap-2">
             {submitting ? "Sending to the khansama…" : `Confirm Order — ${formatCurrency(total)}`}
           </button>
         </aside>

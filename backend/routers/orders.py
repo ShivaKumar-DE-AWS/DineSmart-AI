@@ -274,8 +274,8 @@ async def get_order(order_id: str, user=Depends(current_user)):
 
 @router.patch("/api/orders/{order_id}/status")
 async def update_status(order_id: str, body: OrderStatusUpdate, user=Depends(require_roles("admin", "kitchen", "counter"))):
-    if body.status is None and body.payment_status is None:
-        raise HTTPException(status_code=400, detail="Must provide status or payment_status")
+    if body.status is None and body.payment_status is None and body.bill_requested is None:
+        raise HTTPException(status_code=400, detail="Must provide status, payment_status, or bill_requested")
     
     update_data = {}
     if body.status is not None:
@@ -287,6 +287,13 @@ async def update_status(order_id: str, body: OrderStatusUpdate, user=Depends(req
         if body.payment_status not in {"pending", "paid", "unpaid", "failed"}:
             raise HTTPException(status_code=400, detail="Invalid payment_status")
         update_data["payment_status"] = body.payment_status
+        if body.payment_status == "paid":
+            update_data["paid_at"] = now_iso()
+            update_data["exit_code"] = f"PASS-{uuid.uuid4().hex[:6].upper()}"
+            update_data["bill_requested"] = False
+            
+    if body.bill_requested is not None:
+        update_data["bill_requested"] = body.bill_requested
         
     update_data["updated_at"] = now_iso()
     
@@ -298,6 +305,11 @@ async def update_status(order_id: str, body: OrderStatusUpdate, user=Depends(req
         raise HTTPException(status_code=404, detail="Order not found")
         
     order = await db.orders.find_one(q, {"_id": 0})
+    if body.payment_status == "paid":
+        if order.get("table_id"):
+            await db.tables.update_one({"id": order["table_id"]}, {"$set": {"status": "available", "current_session_id": None}})
+        if order.get("table_session_id"):
+            await db.table_sessions.update_one({"id": order["table_session_id"]}, {"$set": {"status": "closed", "closed_at": now_iso()}})
     
     # Broadcast status change to SSE subscribers
     broadcast_data = {"type": "status_update", "order_id": order_id, "token": order["token"]}
@@ -315,23 +327,26 @@ async def update_status(order_id: str, body: OrderStatusUpdate, user=Depends(req
         })
     if body.payment_status:
         broadcast_data["payment_status"] = body.payment_status
+    if body.bill_requested is not None:
+        broadcast_data["bill_requested"] = body.bill_requested
         
     broadcast_order_update(order.get("restaurant_id"), broadcast_data)
     return {"ok": True, **update_data}
+
 
 
 # =========================================================
 # Split Bill
 # =========================================================
 @router.post("/api/orders/{order_id}/split")
-async def split_bill(order_id: str, body: SplitBillReq, user=Depends(require_roles("admin", "counter"))):
+async def split_bill(order_id: str, body: SplitBillReq, user=Depends(current_user)):
     if len(body.splits) < 2:
         raise HTTPException(status_code=400, detail="At least 2 splits required")
     if len(body.splits) > 6:
         raise HTTPException(status_code=400, detail="Maximum 6 splits allowed")
 
     q: Dict[str, Any] = {"id": order_id}
-    if user.get("restaurant_id"):
+    if user and user.get("restaurant_id"):
         q["restaurant_id"] = user["restaurant_id"]
     order = await db.orders.find_one(q, {"_id": 0})
     if not order:
@@ -355,6 +370,46 @@ async def split_bill(order_id: str, body: SplitBillReq, user=Depends(require_rol
     broadcast_data = {"type": "status_update", "order_id": order_id, "token": order["token"], "split": True}
     broadcast_order_update(order.get("restaurant_id"), broadcast_data)
     return updated
+
+
+# =========================================================
+# Request Bill & Settle Table (Customer / Staff action)
+# =========================================================
+@router.post("/api/orders/{order_id}/request-bill")
+async def request_bill(order_id: str, user=Depends(current_user)):
+    q: Dict[str, Any] = {"id": order_id}
+    if user and user.get("restaurant_id"):
+        q["restaurant_id"] = user["restaurant_id"]
+    order = await db.orders.find_one(q, {"_id": 0})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    await db.orders.update_one(q, {"$set": {"bill_requested": True, "updated_at": now_iso()}})
+    if order.get("table_session_id"):
+        await db.table_sessions.update_one({"id": order["table_session_id"]}, {"$set": {"bill_requested": True}})
+        if order.get("table_id"):
+            await db.tables.update_one({"id": order["table_id"]}, {"$set": {"status": "bill_requested"}})
+
+    notif_id = str(uuid.uuid4())
+    await db.notifications.insert_one({
+        "id": notif_id,
+        "order_id": order_id,
+        "type": "staff_call",
+        "title": f"🧾 Bill Requested · Table {order.get('table_number', 'Takeaway')}",
+        "body": f"Customer {order.get('customer_name', 'Guest')} requested bill settlement (₹{order.get('total', 0)}).",
+        "message": f"Table {order.get('table_number', 'Takeaway')}: Requested bill to pay ₹{order.get('total', 0)}!",
+        "read": False,
+        "restaurant_id": order.get("restaurant_id"),
+        "created_at": now_iso(),
+        "table_number": order.get("table_number", "Unknown"),
+        "reasons": ["bill"]
+    })
+
+    broadcast_data = {"type": "status_update", "order_id": order_id, "token": order["token"], "bill_requested": True}
+    broadcast_order_update(order.get("restaurant_id"), broadcast_data)
+    updated = await db.orders.find_one(q, {"_id": 0})
+    return {"ok": True, "order": updated}
+
 
 
 # =========================================================

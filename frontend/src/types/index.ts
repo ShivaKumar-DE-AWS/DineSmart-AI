@@ -64,6 +64,9 @@ export interface Order {
   estimated_ready_at?: string;
   payment_method: string;
   payment_status?: string;
+  bill_requested?: boolean;
+  paid_at?: string;
+  exit_code?: string;
   notes?: string;
 }
 

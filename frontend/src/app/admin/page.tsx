@@ -1,6 +1,7 @@
 "use client";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
@@ -24,21 +25,37 @@ export default function AdminDashboard() {
   const kpis = [
     { label: "Revenue today", value: dash ? formatCurrency(dash.revenue_today) : "—", icon: TrendingUp, testid: "kpi-revenue" },
     { label: "Orders today", value: dash ? dash.orders_today : "—", icon: ShoppingBag, testid: "kpi-orders" },
-    { label: "AI Influence", value: dash ? (dash.orders_today > 0 ? Math.round((dash.ai_orders_today / dash.orders_today) * 100) + "%" : "0%") : "—", icon: Receipt, testid: "kpi-ai" },
+    { label: "AI Influence", value: dash && dash.orders_today ? `${Math.round((dash.ai_orders_today / dash.orders_today) * 100)}%` : "0%", icon: Receipt, testid: "kpi-ai" },
     { label: "Low stock items", value: dash ? dash.low_stock_count : "—", icon: AlertTriangle, testid: "kpi-low-stock" },
   ];
 
   const { data: tablesData } = useQuery({ queryKey: ["admin-tables-dashboard", user?.restaurant_id], queryFn: () => api<any>("/api/tables") });
   const tablesCount = tablesData?.tables?.length || 0;
 
-  useEffect(() => {
-    if (dash && dash.sandbox_mode) {
-      router.push("/admin/setup");
-    }
-  }, [dash, router]);
-
   return (
     <div>
+      {dash?.sandbox_mode && (
+        <div className="mb-6 bg-amber-50 border border-amber-300 rounded-xl p-5 shadow-sm relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="h-10 w-10 bg-amber-100 text-amber-700 rounded-xl flex items-center justify-center shrink-0 mt-0.5">
+              <Sparkles className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="font-heading text-base text-amber-900 font-bold">Sandbox Mode Active</h3>
+              <p className="text-xs text-amber-800 mt-1">
+                Your restaurant is currently in testing mode. Explore the dashboard and features with simulated data. To take real customer orders and exit Sandbox mode, verify your account now.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/admin/setup"
+            className="px-5 py-2.5 bg-amber-600 text-white font-bold text-xs rounded-xl hover:bg-amber-700 transition shrink-0 shadow flex items-center gap-1.5"
+          >
+            Exit Sandbox & Go Live →
+          </Link>
+        </div>
+      )}
+
       {tablesCount === 0 && (
         <div className="mb-6 bg-cream border border-brand-secondary/30 rounded-xl p-5 shadow-sm relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-brand-secondary/10 rounded-full blur-3xl" />

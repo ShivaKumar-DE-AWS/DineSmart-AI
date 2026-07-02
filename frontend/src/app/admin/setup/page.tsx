@@ -1,11 +1,12 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { api, apiUrl } from "@/lib/api";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { Sparkles, UtensilsCrossed, QrCode, ShieldCheck, Loader2, ArrowRight } from "lucide-react";
+import { Sparkles, UtensilsCrossed, QrCode, ShieldCheck, Loader2, ArrowRight, Upload, CheckCircle2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { useSession } from "@/stores/session";
 
 export default function SetupWizard() {
   const qc = useQueryClient();
@@ -19,6 +20,57 @@ export default function SetupWizard() {
   const [step, setStep] = useState(1);
   const [otp, setOtp] = useState("");
   const [sendingOtp, setSendingOtp] = useState(false);
+  const [uploadingMenu, setUploadingMenu] = useState(false);
+  const [importedCount, setImportedCount] = useState<number | null>(null);
+
+  const handleMenuUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingMenu(true);
+    try {
+      const token = useSession.getState().token;
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(apiUrl("/api/restaurants/onboard-menu"), {
+        method: "POST",
+        body: fd,
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({ detail: `HTTP ${res.status}` }));
+        throw new Error(j.detail || `HTTP ${res.status}`);
+      }
+      const j = await res.json();
+      const items = j.items || [];
+      if (items.length > 0) {
+        for (const item of items) {
+          await fetch(apiUrl("/api/menu"), {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify({
+              name: item.name || "Unknown Dish",
+              description: item.description || "",
+              price: Number(item.price) || 0,
+              category: item.category || "General",
+              image_url: item.image_url || "",
+              available: true,
+              prep_time_min: 15,
+              tags: ["ai-extracted"],
+            }),
+          });
+        }
+      }
+      setImportedCount(items.length);
+      toast.success(`Successfully imported ${items.length} menu items with AI!`);
+    } catch (err: any) {
+      toast.error(err.message || "AI extraction failed");
+    } finally {
+      setUploadingMenu(false);
+    }
+  };
 
   // If not sandbox, redirect to admin
   useEffect(() => {
@@ -78,8 +130,37 @@ export default function SetupWizard() {
 
         {step === 1 && (
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2"><UtensilsCrossed className="w-5 h-5 text-brand-secondary" /> Review Menu</h2>
-            <p className="text-stone text-sm mb-6">Our AI is extracting your menu if you uploaded one. Please review your menu items, set prices, and add any missing items.</p>
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2"><UtensilsCrossed className="w-5 h-5 text-brand-secondary" /> Review & AI Import Menu</h2>
+            <p className="text-stone text-sm mb-6">We seeded your restaurant with clean sample items so your store is ready. You can instantly extract your real menu from an image or PDF using AI below, or customize manually.</p>
+            
+            <div className="mb-6 p-6 border-2 border-dashed border-brand-secondary/40 rounded-2xl bg-brand-secondary/5 flex flex-col items-center justify-center text-center">
+              {uploadingMenu ? (
+                <div className="flex flex-col items-center gap-3 py-4">
+                  <Loader2 className="w-8 h-8 animate-spin text-brand-secondary" />
+                  <p className="font-bold text-sm text-ink">AI Vision is analyzing your menu card...</p>
+                  <p className="text-xs text-stone">Extracting dishes, prices, categories & generating food imagery</p>
+                </div>
+              ) : importedCount !== null ? (
+                <div className="flex flex-col items-center gap-2 py-4">
+                  <CheckCircle2 className="w-8 h-8 text-emerald-600" />
+                  <p className="font-bold text-sm text-emerald-900">Successfully Imported {importedCount} Items!</p>
+                  <p className="text-xs text-stone">Your menu is updated and ready for live customers.</p>
+                </div>
+              ) : (
+                <>
+                  <div className="h-12 w-12 bg-brand-secondary/10 rounded-full flex items-center justify-center text-brand-secondary mb-3">
+                    <Upload className="w-6 h-6" />
+                  </div>
+                  <h3 className="font-bold text-sm text-ink mb-1">Upload Menu Card / PDF for Instant AI Import</h3>
+                  <p className="text-xs text-stone max-w-md mb-4">Our Gemini AI model reads any menu format, categorizes dishes, parses prices, and even generates appetizing food photos automatically.</p>
+                  <label className="cursor-pointer px-5 py-2.5 bg-clay text-white font-bold text-xs rounded-xl hover:bg-clay-dark transition shadow inline-block">
+                    Choose Menu Image / PDF
+                    <input type="file" accept="image/*,application/pdf" onChange={handleMenuUpload} className="hidden" />
+                  </label>
+                </>
+              )}
+            </div>
+
             <div className="flex gap-4">
               <button onClick={() => window.open("/admin/menu", "_blank")} className="px-4 py-2 border border-bone rounded-lg text-sm font-medium hover:bg-cream">Open Menu Settings</button>
               <button onClick={() => setStep(2)} className="px-6 py-2 bg-brand-secondary text-white rounded-lg text-sm font-bold ml-auto flex items-center gap-2">Next <ArrowRight className="w-4 h-4" /></button>

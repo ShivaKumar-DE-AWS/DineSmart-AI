@@ -65,7 +65,20 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   const [notifiedSet] = useState(() => new Set<string>());
 
-  const [dismissedAnn, setDismissedAnn] = useState<string | null>(null);
+  const [dismissedAnn, setDismissedAnnState] = useState<string | null>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("smartdine_dismissed_ann");
+    }
+    return null;
+  });
+
+  const setDismissedAnn = (id: string | null) => {
+    setDismissedAnnState(id);
+    if (typeof window !== "undefined") {
+      if (id) localStorage.setItem("smartdine_dismissed_ann", id);
+      else localStorage.removeItem("smartdine_dismissed_ann");
+    }
+  };
 
   useEffect(() => {
     const unread = (notifsData?.notifications || []).filter((n: any) => !n.read && n.type === "staff_call");

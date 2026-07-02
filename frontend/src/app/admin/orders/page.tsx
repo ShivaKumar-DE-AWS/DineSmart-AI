@@ -23,6 +23,10 @@ export default function AdminOrders() {
     mutationFn: ({ id, status }: { id: string; status: string }) => api(`/api/orders/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-orders", undefined, user?.restaurant_id] }); toast.success("Status updated"); },
   });
+  const markPaidMut = useMutation({
+    mutationFn: ({ id }: { id: string }) => api(`/api/orders/${id}/status`, { method: "PATCH", body: JSON.stringify({ payment_status: "paid" }) }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-orders", undefined, user?.restaurant_id] }); toast.success("Marked PAID!"); },
+  });
 
   const downloadBill = async (orderId: string, tokenName: string) => {
     try {
@@ -75,7 +79,7 @@ export default function AdminOrders() {
           </thead>
           <tbody>
             {(data?.orders ?? []).map((o) => (
-              <tr key={o.id} className="border-b border-bone last:border-0" data-testid={`admin-order-row-${o.token}`}>
+              <tr key={o.id} className={`border-b border-bone last:border-0 transition-colors ${o.payment_status === "paid" ? "bg-emerald-50/60 hover:bg-emerald-100/50" : ""}`} data-testid={`admin-order-row-${o.token}`}>
                 <td className="px-4 py-3 font-mono font-semibold text-clay">{o.token}</td>
                 <td className="px-4 py-3">
                   <span className={`inline-flex items-center text-[10px] tracking-wider uppercase font-bold px-2 py-0.5 rounded-full ${
@@ -90,9 +94,24 @@ export default function AdminOrders() {
                 <td className="px-4 py-3 text-stone text-xs">{o.items.map((i) => `${i.qty}× ${i.name}`).join(", ")}</td>
                 <td className="px-4 py-3 font-medium">{formatCurrency(o.total)}</td>
                 <td className="px-4 py-3">
-                  <Badge variant={o.payment_method === "upi" ? "sage" : o.payment_method === "card_machine" ? "alert" : "warn"}>
-                    {o.payment_method === "upi" ? "UPI QR" : o.payment_method === "card_machine" ? "CARD MACHINE" : "CASH"}
-                  </Badge>
+                  <div className="flex flex-col gap-1 items-start">
+                    <Badge variant={o.payment_method === "upi" ? "sage" : o.payment_method === "card_machine" ? "alert" : "warn"}>
+                      {o.payment_method === "upi" ? "UPI QR" : o.payment_method === "card_machine" ? "CARD MACHINE" : "CASH"}
+                    </Badge>
+                    {o.payment_status === "paid" ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-600 text-white shadow-sm">
+                        ✅ PAID
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => markPaidMut.mutate({ id: o.id })}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-800 hover:bg-red-200 border border-red-300 transition shadow-sm"
+                        title="Click to mark order as paid"
+                      >
+                        ⏳ MARK PAID
+                      </button>
+                    )}
+                  </div>
                 </td>
                 <td className="px-4 py-3">
                   {o.order_type === "takeaway" ? (

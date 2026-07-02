@@ -165,73 +165,11 @@ async def onboard_menu(file: UploadFile = File(...), user=Depends(require_user))
         print(f"Exception details: {e}")
         raise HTTPException(status_code=500, detail=f"Menu extraction failed: {e}")
 
-async def _extract_and_save_menu_bg(rest_id: str, file_path: str, mime_type: str = "image/jpeg"):
-    """Background helper to extract menu items from uploaded image/PDF during registration and save them to DB."""
-    if not GEMINI_API_KEY:
-        print(f"[AI] GEMINI_API_KEY missing, skipping background menu extraction for {rest_id}")
-        return
-    try:
-        print(f"[AI] Starting background menu extraction for {rest_id} from {file_path}")
-        from google import genai
-        from google.genai import types as genai_types
-        import asyncio
-        import json
-        
-        with open(file_path, "rb") as f:
-            raw = f.read()
-            
-        client_ai = genai.Client(api_key=GEMINI_API_KEY)
-        prompt = """
-        You are an expert menu data extractor. I have provided an image or document of a restaurant menu.
-        Extract all the food items, their descriptions, prices, and categories into a structured JSON list.
-        Ensure prices are numbers (remove currency symbols).
-        Use this exact JSON schema:
-        [
-          {
-            "name": "string",
-            "description": "string",
-            "price": number,
-            "category": "string"
-          }
-        ]
-        Return ONLY valid JSON, nothing else. No markdown formatting like ```json.
-        """
-        response = await asyncio.to_thread(
-            client_ai.models.generate_content,
-            model="gemini-1.5-flash",
-            contents=[prompt, genai_types.Part.from_bytes(data=raw, mime_type=mime_type)],
-        )
-        text = response.text.strip()
-        if text.startswith("```json"):
-            text = text[7:]
-        if text.endswith("```"):
-            text = text[:-3]
-        text = text.strip()
-        items = json.loads(text)
-        
-        if items and isinstance(items, list) and len(items) > 0:
-            await db.menu.delete_many({"restaurant_id": rest_id})
-            for item in items:
-                item_doc = {
-                    "id": str(uuid.uuid4()),
-                    "restaurant_id": rest_id,
-                    "name": item.get("name", "Unnamed Item"),
-                    "description": item.get("description", ""),
-                    "price": float(item.get("price", 0)),
-                    "category": item.get("category", "General"),
-                    "available": True,
-                    "tags": ["ai-extracted"],
-                    "image_url": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&q=80"
-                }
-                await db.menu.insert_one(item_doc)
-            print(f"[AI] Successfully extracted and saved {len(items)} menu items for {rest_id}")
-    except Exception as e:
-        print(f"[AI] Background menu extraction failed for {rest_id}: {e}")
-
 @router.post("/api/restaurants/request")
 async def request_restaurant_access(
     background_tasks: BackgroundTasks,
     name: str = Form(...),
+    owner_name: Optional[str] = Form(None),
     email: str = Form(...),
     phone: str = Form(...),
     cuisine: str = Form(""),
@@ -239,7 +177,6 @@ async def request_restaurant_access(
     primary_color: str = Form(None),
     secondary_color: str = Form(None),
     logo: UploadFile = File(None),
-    menu: UploadFile = File(None),
     service_type: str = Form("fine_dining")
 ):
     """Public endpoint for self-serve onboarding. Grants a 14-day Pro trial instantly."""
@@ -285,7 +222,10 @@ async def request_restaurant_access(
         else:
             raise HTTPException(status_code=400, detail="This email is already registered. Please login or use a different email.")
 
-    slug = name.lower().replace(" ", "-").replace("'", "")
+    slug_clean = re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')
+    if not slug_clean:
+        slug_clean = "restaurant"
+    slug = slug_clean
     
     # check slug unique
     existing = await db.restaurants.find_one({"slug": slug})
@@ -320,13 +260,6 @@ async def request_restaurant_access(
             shutil.copyfileobj(logo.file, buffer)
         logo_url = f"/api/{logo_path}"
         
-    menu_path = ""
-    if menu and menu.filename:
-        os.makedirs("uploads", exist_ok=True)
-        menu_path = f"uploads/{uuid.uuid4().hex}_{menu.filename}"
-        with open(menu_path, "wb") as buffer:
-            shutil.copyfileobj(menu.file, buffer)
-    
     # 2. Create frontend config
     config = generate_frontend_config(name, slug, rest_id, phone, email, cuisine or "global")
     config["service_type"] = service_type or "fine_dining"
@@ -372,7 +305,7 @@ async def request_restaurant_access(
             "id": str(uuid.uuid4()),
             "email": uemail,
             "password_hash": hash_password(pw),
-            "name": f"{name} {r.capitalize()}",
+            "name": f"{owner_name or name} ({r.capitalize()})",
             "role": r,
             "restaurant_id": rest_id,
             "restaurant_slug": slug,
@@ -387,13 +320,8 @@ async def request_restaurant_access(
         "otp": verify_otp,
         "created_at": now_iso()
     })
-    background_tasks.add_task(send_welcome_email, email, name, creds, verify_otp)
+    background_tasks.add_task(send_welcome_email, email, owner_name or name, creds, verify_otp)
     
-    # 6. Trigger AI Menu Extraction if uploaded
-    if menu_path:
-        mime_type = menu.content_type or "image/jpeg"
-        background_tasks.add_task(_extract_and_save_menu_bg, rest_id, menu_path, mime_type)
-
     return {
         "status": "success",
         "url": f"https://{slug}.smartdineai.co.in/admin",

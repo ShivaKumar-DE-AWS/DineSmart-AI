@@ -38,7 +38,6 @@ export default function RestaurantAuthPage() {
   const [regPrimaryColor, setRegPrimaryColor] = useState("#8A1A2A");
   const [regSecondaryColor, setRegSecondaryColor] = useState("#C9A348");
   const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [menuFile, setMenuFile] = useState<File | null>(null);
   const [result, setResult] = useState<{ url: string; slug?: string; credentials: Record<string, { email: string; password: string }> } | null>(null);
 
   // OTP State
@@ -153,7 +152,8 @@ export default function RestaurantAuthPage() {
     setResult(null);
     try {
       const formData = new FormData();
-      formData.append("name", regName);
+      formData.append("name", regRestaurantName || regName);
+      formData.append("owner_name", regName);
       formData.append("email", regEmail);
       formData.append("phone", digits);
       formData.append("cuisine", regCuisine);
@@ -161,7 +161,6 @@ export default function RestaurantAuthPage() {
       formData.append("primary_color", regPrimaryColor);
       formData.append("secondary_color", regSecondaryColor);
       if (logoFile) formData.append("logo", logoFile);
-      if (menuFile) formData.append("menu", menuFile);
 
       const res = await fetch("/api/restaurants/request", {
         method: "POST",
@@ -414,11 +413,6 @@ export default function RestaurantAuthPage() {
                     <div className="space-y-1.5">
                       <label className="text-xs font-medium text-stone pl-1">Upload Logo (Optional)</label>
                       <input type="file" accept="image/*" onChange={e => setLogoFile(e.target.files?.[0] || null)} className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-stone text-xs file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:bg-white/10 file:text-white hover:file:bg-white/20" />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-medium text-stone pl-1">Upload Menu (Image/PDF for AI extraction)</label>
-                      <input type="file" accept="image/*,application/pdf" onChange={e => setMenuFile(e.target.files?.[0] || null)} className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-stone text-xs file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:bg-white/10 file:text-white hover:file:bg-white/20" />
                     </div>
 
                     <button

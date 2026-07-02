@@ -263,6 +263,7 @@ class OrderCreateReq(BaseModel):
 class OrderStatusUpdate(BaseModel):
     status: Optional[str] = None
     payment_status: Optional[str] = None
+    bill_requested: Optional[bool] = None
 
 class InventoryItemModel(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))

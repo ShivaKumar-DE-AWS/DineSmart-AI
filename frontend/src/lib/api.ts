@@ -60,7 +60,11 @@ export async function api<T = any>(path: string, init: RequestInit = {}): Promis
         // ponytail: Auto-logout if session is invalid or restaurant was deleted/revoked
         if (res.status === 401 || (res.status === 403 && (msg.includes("revoked") || msg.includes("deleted")))) {
           useSession.getState().clear();
-          if (typeof window !== "undefined") window.location.href = "/auth/login";
+          if (typeof window !== "undefined") {
+            const hostname = window.location.hostname;
+            const isSubdomain = hostname !== "smartdineai.co.in" && hostname !== "www.smartdineai.co.in" && hostname !== "localhost" && hostname !== "127.0.0.1";
+            window.location.href = isSubdomain ? "/login" : "/auth/login";
+          }
         }
         
         throw err;

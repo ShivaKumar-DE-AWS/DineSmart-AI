@@ -44,6 +44,8 @@ export function middleware(request: NextRequest) {
   // Prevent rewriting for static assets or paths that are already correct
   if (
     url.pathname.startsWith("/r/") ||
+    url.pathname.startsWith("/auth") ||
+    url.pathname.startsWith("/super-admin") ||
     url.pathname.startsWith("/api") ||
     url.pathname.startsWith("/_next") ||
     url.pathname.includes(".") // static files like .png, .ico

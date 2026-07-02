@@ -78,13 +78,15 @@ async def dashboard(user=Depends(require_user)):
     low_stock_q: Dict[str, Any] = {"$expr": {"$lte": ["$qty", "$reorder_level"]}}
     if user.get("restaurant_id"):
         low_stock_q["restaurant_id"] = user["restaurant_id"]
-    low_stock = await db.inventory.find(low_stock_q, {"_id": 0}).to_list(50)
+    rest = await db.restaurants.find_one({"id": user.get("restaurant_id")}) if user.get("restaurant_id") else None
+    sandbox_mode = rest.get("sandbox_mode", False) if rest else False
 
     return {
         "revenue_today": round(revenue_today, 2), "orders_today": total_orders,
         "ai_orders_today": ai_orders_count, "avg_ticket": round(avg_ticket, 2),
         "top_items": top_items, "low_stock_count": len(low_stock),
         "low_stock": low_stock, "status_counts": status_counts,
+        "sandbox_mode": sandbox_mode,
     }
 
 @router.get("/api/analytics/revenue", dependencies=[Depends(require_roles("admin"))])

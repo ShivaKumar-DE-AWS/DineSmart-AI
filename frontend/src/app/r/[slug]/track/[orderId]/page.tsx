@@ -2,15 +2,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { api, apiUrl } from "@/lib/api";
 import { useParams } from "next/navigation";
-import { fmtTime } from "@/lib/utils";
-import { CheckCircle2, ChefHat, ConciergeBell, ClipboardCheck, Clock, Bell, BellRing, BellOff, MapPin, Sparkles } from "lucide-react";
+import { fmtTime, formatCurrency } from "@/lib/utils";
+import { CheckCircle2, ChefHat, ConciergeBell, ClipboardCheck, Clock, Bell, BellRing, BellOff, MapPin, Sparkles, Scissors, X, CreditCard } from "lucide-react";
 import type { Order } from "@/types";
 import { useEffect, useRef, useState } from "react";
 import { playChime, ensureNotificationPermission, notify, isPushSupported, subscribeToOrderPush } from "@/lib/notify";
 import { useRestaurantConfig } from "@/hooks/useRestaurantConfig";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { CreditCard } from "lucide-react";
 
 const STAGES: Array<{ key: Order["status"]; label: string; line: string; icon: React.ElementType }> = [
   { key: "confirmed", label: "Confirmed", line: "The khansama has your scroll.", icon: ClipboardCheck },
@@ -46,6 +45,46 @@ export default function TrackPage() {
     if (Notification.permission === "granted") { setPushState("subscribed"); return; }
     setPushState("default");
   }, []);
+
+  const [showSplitModal, setShowSplitModal] = useState(false);
+  const [splitTab, setSplitTab] = useState<"equally" | "items" | "custom">("equally");
+  const [splitPeople, setSplitPeople] = useState(2);
+  const [selectedSplitItems, setSelectedSplitItems] = useState<Record<string, boolean>>({});
+  const [customSplitAmount, setCustomSplitAmount] = useState<string>("");
+
+  const getSplitAmount = () => {
+    if (!order) return 0;
+    const total = parseFloat(String(order.total || 0));
+    if (splitTab === "equally") return total / Math.max(1, splitPeople);
+    if (splitTab === "items") {
+      let sum = 0;
+      for (const item of order.items) {
+        const key = item.item_id || item.name;
+        if (selectedSplitItems[key]) sum += parseFloat(String(item.price || 0)) * item.qty;
+      }
+      return sum;
+    }
+    if (splitTab === "custom") {
+      const val = parseFloat(customSplitAmount);
+      return isNaN(val) ? 0 : val;
+    }
+    return total;
+  };
+
+  const [requestingBill, setRequestingBill] = useState(false);
+  const handleRequestBill = async () => {
+    try {
+      setRequestingBill(true);
+      const res = await fetch(apiUrl(`/api/orders/${orderId}/request-bill`), { method: "POST" });
+      if (!res.ok) throw new Error("Failed to request bill");
+      toast.success("Bill requested! Counter staff has been alerted.", { icon: "🧾" });
+      refetch();
+    } catch (e) {
+      toast.error("Could not request bill. Please call the server directly.");
+    } finally {
+      setRequestingBill(false);
+    }
+  };
 
   const enablePush = async () => {
     if (!orderId) return;
@@ -135,7 +174,7 @@ export default function TrackPage() {
       )}
 
       {/* Self-Service Payment Verification Notice */}
-      {(restaurantConfig?.service_type === "self_service" || order.order_type === "takeaway" || order.order_type === "quick_order") && !isCancelled && (
+      {(restaurantConfig?.service_type === "self_service" || order.order_type === "takeaway" || order.order_type === "quick_order") && !isCancelled && order.payment_status !== "paid" && (
         <div className="bg-[#FAF5EC] border-2 border-brand-primary/40 rounded-3xl p-5 mb-6 text-center shadow-md">
           <div className="font-royal text-xs font-bold uppercase tracking-widest text-brand-primary flex items-center justify-center gap-2">
             <Clock className="h-4 w-4 text-brand-secondary" /> Payment Verification Required Before Pickup
@@ -145,6 +184,59 @@ export default function TrackPage() {
           </p>
         </div>
       )}
+
+      {order.payment_status === "paid" ? (
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="bg-gradient-to-br from-emerald-800 via-teal-900 to-emerald-950 text-[#FAF5EC] rounded-3xl p-6 sm:p-8 shadow-2xl border-2 border-emerald-400/40 relative overflow-hidden text-center mb-6"
+          data-testid="digital-exit-pass"
+        >
+          <div className="absolute top-0 right-0 bg-emerald-500/20 px-4 py-1.5 rounded-bl-2xl font-mono text-[10px] tracking-widest text-emerald-300 uppercase font-bold">
+            VERIFIED GATE PASS
+          </div>
+          <div className="h-16 w-16 bg-emerald-500/20 border border-emerald-400/30 rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner">
+            <CheckCircle2 className="h-10 w-10 text-emerald-300 animate-pulse" />
+          </div>
+          <h2 className="font-editorial text-2xl sm:text-3xl font-bold tracking-wide text-white mb-1">
+            ✅ DIGITAL EXIT PASS
+          </h2>
+          <p className="font-royal text-xs uppercase tracking-[0.25em] text-emerald-300 font-bold mb-6">
+            Table Settled & Cleared to Leave
+          </p>
+          <div className="bg-black/30 backdrop-blur-md rounded-2xl p-4 border border-white/10 max-w-sm mx-auto space-y-2 font-mono text-sm text-left">
+            <div className="flex justify-between items-center text-emerald-200/80 text-xs">
+              <span>Token #</span>
+              <span className="font-bold text-white text-base">{order.token}</span>
+            </div>
+            {order.table_number != null && (
+              <div className="flex justify-between items-center text-emerald-200/80 text-xs">
+                <span>Table</span>
+                <span className="font-bold text-white text-base">Table {order.table_number}</span>
+              </div>
+            )}
+            <div className="flex justify-between items-center text-emerald-200/80 text-xs">
+              <span>Paid Amount</span>
+              <span className="font-bold text-emerald-300 text-base">₹{order.total}</span>
+            </div>
+            <div className="flex justify-between items-center text-emerald-200/80 text-xs border-t border-white/10 pt-2 mt-2">
+              <span>Exit Gate Verification</span>
+              <span className="font-black tracking-widest text-amber-300 text-sm bg-amber-500/20 px-2 py-0.5 rounded">
+                {order.exit_code || `PASS-${order.id.slice(-6).toUpperCase()}`}
+              </span>
+            </div>
+            <div className="flex justify-between items-center text-emerald-200/80 text-xs">
+              <span>Settled Timestamp</span>
+              <span className="text-white/90 text-xs">
+                {order.paid_at ? new Date(order.paid_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : new Date().toLocaleTimeString()}
+              </span>
+            </div>
+          </div>
+          <p className="font-editorial italic text-xs text-emerald-200/70 mt-6 max-w-md mx-auto">
+            Please show this verified digital exit pass to our host or security guard upon departure. Thank you for dining with us!
+          </p>
+        </motion.div>
+      ) : null}
 
       <div className="mehfil-card rounded-3xl p-7 md:p-9 mb-6">
         <div className="space-y-1" data-testid="track-stages">
@@ -264,6 +356,41 @@ export default function TrackPage() {
         </div>
       )}
 
+      {order.bill_requested && order.payment_status !== "paid" && !isCancelled && (
+        <div className="bg-amber-100 border-2 border-amber-400 text-amber-950 rounded-3xl p-5 mt-6 flex items-center gap-4 shadow-md animate-pulse">
+          <ConciergeBell className="h-8 w-8 text-amber-700 shrink-0" />
+          <div>
+            <div className="font-royal font-bold text-sm sm:text-base uppercase tracking-wider">🔔 Bill Settlement Requested</div>
+            <div className="font-editorial text-xs sm:text-sm text-amber-900 mt-1">Our counter staff has been alerted and is preparing your final bill. You may pay via UPI/Card or cash at the desk.</div>
+          </div>
+        </div>
+      )}
+
+      {order.payment_status !== "paid" && !isCancelled && (
+        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <button
+            type="button"
+            disabled={order.bill_requested || requestingBill}
+            onClick={handleRequestBill}
+            className={`w-full py-4 px-6 rounded-2xl font-royal uppercase tracking-widest text-xs font-bold transition flex items-center justify-center gap-2.5 shadow-lg ${
+              order.bill_requested
+                ? "bg-amber-500 text-amber-950 cursor-default"
+                : "bg-red-600 hover:bg-red-700 text-white shadow-red-500/20"
+            }`}
+          >
+            <ConciergeBell className="h-4 w-4 animate-bounce" />
+            {order.bill_requested ? "🔔 Bill Requested (Awaiting Staff)" : "🧾 Request Bill / Stop Dining"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowSplitModal(true)}
+            className="w-full bg-brand-primary/10 hover:bg-brand-primary/20 text-brand-primary border border-brand-primary/30 rounded-2xl py-4 px-6 font-royal tracking-wider uppercase text-xs font-bold transition flex items-center justify-center gap-2.5 shadow-sm"
+          >
+            <Scissors className="h-4 w-4" /> Bill & Split Calculator
+          </button>
+        </div>
+      )}
+
       {/* Download Receipt */}
       <div className="mt-6 flex justify-center">
         <button
@@ -288,6 +415,146 @@ export default function TrackPage() {
           Download Receipt
         </button>
       </div>
+
+      {showSplitModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fadeIn">
+          <div className="bg-[#FAF5EC] border border-[#E7DFCB] rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl relative text-[#1A1106] max-h-[90vh] overflow-y-auto">
+            <button 
+              onClick={() => setShowSplitModal(false)}
+              className="absolute top-5 right-5 h-9 w-9 rounded-full bg-[#1A1106]/5 hover:bg-[#1A1106]/10 flex items-center justify-center transition-colors"
+            >
+              <X className="h-5 w-5 text-[#1A1106]" />
+            </button>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="h-10 w-10 rounded-full bg-brand-primary/10 flex items-center justify-center text-brand-primary">
+                <Scissors className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="font-editorial text-xl sm:text-2xl font-bold text-[#1A1106]">Bill & Split Calculator</h3>
+                <p className="text-xs font-royal uppercase tracking-wider text-[#1A1106]/60">Total Table Bill: {formatCurrency(parseFloat(String(order.total || 0)))}</p>
+              </div>
+            </div>
+
+            <div className="mt-5 grid grid-cols-3 gap-2 border-b border-[#E7DFCB] pb-4">
+              <button
+                type="button"
+                onClick={() => setSplitTab("equally")}
+                className={`py-2 px-3 rounded-xl text-xs font-royal uppercase tracking-wider transition ${splitTab === "equally" ? "bg-brand-primary text-[#FAF5EC] shadow" : "text-[#1A1106]/70 hover:text-brand-primary"}`}
+              >
+                Split Equally
+              </button>
+              <button
+                type="button"
+                onClick={() => setSplitTab("items")}
+                className={`py-2 px-3 rounded-xl text-xs font-royal uppercase tracking-wider transition ${splitTab === "items" ? "bg-brand-primary text-[#FAF5EC] shadow" : "text-[#1A1106]/70 hover:text-brand-primary"}`}
+              >
+                By Items
+              </button>
+              <button
+                type="button"
+                onClick={() => setSplitTab("custom")}
+                className={`py-2 px-3 rounded-xl text-xs font-royal uppercase tracking-wider transition ${splitTab === "custom" ? "bg-brand-primary text-[#FAF5EC] shadow" : "text-[#1A1106]/70 hover:text-brand-primary"}`}
+              >
+                Custom Amount
+              </button>
+            </div>
+
+            {splitTab === "equally" && (
+              <div className="py-6 text-center">
+                <p className="font-editorial italic text-sm text-[#1A1106]/70 mb-4">How many people are sharing this bill?</p>
+                <div className="flex items-center justify-center gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setSplitPeople(p => Math.max(1, p - 1))}
+                    className="h-11 w-11 rounded-full bg-[#1A1106]/5 hover:bg-[#1A1106]/10 text-xl font-bold flex items-center justify-center transition"
+                  >-</button>
+                  <span className="font-editorial text-3xl font-bold text-brand-primary w-12">{splitPeople}</span>
+                  <button
+                    type="button"
+                    onClick={() => setSplitPeople(p => p + 1)}
+                    className="h-11 w-11 rounded-full bg-[#1A1106]/5 hover:bg-[#1A1106]/10 text-xl font-bold flex items-center justify-center transition"
+                  >+</button>
+                </div>
+              </div>
+            )}
+
+            {splitTab === "items" && (
+              <div className="py-4 space-y-2 max-h-56 overflow-y-auto pr-1">
+                <p className="font-editorial italic text-xs text-[#1A1106]/70 mb-2">Select the dishes you ordered:</p>
+                {order.items.map((item, idx) => {
+                  const key = item.item_id || `${item.name}-${idx}`;
+                  const isChecked = !!selectedSplitItems[key];
+                  return (
+                    <div
+                      key={key}
+                      onClick={() => setSelectedSplitItems(prev => ({ ...prev, [key]: !prev[key] }))}
+                      className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition ${isChecked ? "border-brand-primary bg-brand-primary/5" : "border-[#E7DFCB] bg-white/50 hover:bg-white"}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => {}}
+                          className="h-4 w-4 rounded border-gray-300 text-brand-primary focus:ring-brand-primary"
+                        />
+                        <div>
+                          <p className="font-medium text-xs text-[#1A1106]">{item.qty}× {item.name}</p>
+                        </div>
+                      </div>
+                      <span className="font-royal text-xs font-semibold text-brand-primary">{formatCurrency(parseFloat(String(item.price || 0)) * item.qty)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {splitTab === "custom" && (
+              <div className="py-6 text-center">
+                <p className="font-editorial italic text-sm text-[#1A1106]/70 mb-3">Enter the exact amount you want to pay:</p>
+                <div className="relative max-w-xs mx-auto">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 font-royal text-lg text-[#1A1106]/50">₹</span>
+                  <input
+                    type="number"
+                    placeholder="0.00"
+                    value={customSplitAmount}
+                    onChange={(e) => setCustomSplitAmount(e.target.value)}
+                    className="w-full bg-white border border-[#E7DFCB] rounded-2xl py-3 pl-10 pr-4 text-center font-royal text-2xl text-brand-primary focus:outline-none focus:border-brand-primary shadow-inner"
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="bg-[#1A1106]/5 rounded-2xl p-5 text-center mt-2 border border-[#1A1106]/10">
+              <p className="font-editorial italic text-xs text-[#1A1106]/60 uppercase tracking-widest">Your Share to Settle</p>
+              <p className="font-royal text-3xl font-bold text-brand-primary mt-1">
+                {formatCurrency(getSplitAmount())}
+              </p>
+              <p className="text-[10px] text-[#1A1106]/50 mt-1">
+                Total Bill: {formatCurrency(parseFloat(String(order.total || 0)))}
+              </p>
+            </div>
+
+            <div className="mt-6 flex flex-col sm:flex-row gap-3">
+              {restaurantConfig?.upi_id && (
+                <a
+                  href={`upi://pay?pa=${restaurantConfig.upi_id}&pn=${encodeURIComponent(restaurantConfig.name || "")}&am=${getSplitAmount().toFixed(2)}&cu=INR`}
+                  onClick={() => toast.success(`Opened UPI App for ${formatCurrency(getSplitAmount())}`)}
+                  className="flex-1 bg-brand-primary hover:bg-brand-primary/90 text-[#FAF5EC] py-3.5 px-5 rounded-xl font-royal uppercase tracking-wider text-xs text-center transition shadow-lg flex items-center justify-center gap-2"
+                >
+                  Pay Your Share via UPI
+                </a>
+              )}
+              <button
+                type="button"
+                onClick={() => setShowSplitModal(false)}
+                className="py-3.5 px-5 rounded-xl border border-[#E7DFCB] font-royal uppercase tracking-wider text-xs font-semibold text-[#1A1106]/70 hover:bg-[#1A1106]/5 transition"
+              >
+                Close Calculator
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
