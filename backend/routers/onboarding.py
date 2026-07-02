@@ -176,7 +176,8 @@ async def request_restaurant_access(
     primary_color: str = Form(None),
     secondary_color: str = Form(None),
     logo: UploadFile = File(None),
-    menu: UploadFile = File(None)
+    menu: UploadFile = File(None),
+    service_type: str = Form("fine_dining")
 ):
     """Public endpoint for self-serve onboarding. Grants a 14-day Pro trial instantly."""
     import shutil
@@ -209,6 +210,7 @@ async def request_restaurant_access(
         "slug": slug, 
         "owner_email": email,
         "phone": phone,
+        "service_type": service_type or "fine_dining",
         "plan_tier": "pro", 
         "subscription_status": "trial", 
         "trial_ends_at": trial_ends,
@@ -235,6 +237,7 @@ async def request_restaurant_access(
     
     # 2. Create frontend config
     config = generate_frontend_config(name, slug, rest_id, phone, email, cuisine or "global")
+    config["service_type"] = service_type or "fine_dining"
     if primary_color: config["primary_color"] = primary_color
     if secondary_color: config["secondary_color"] = secondary_color
     if logo_url: config["logo_url"] = logo_url

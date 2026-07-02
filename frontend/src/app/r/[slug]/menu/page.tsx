@@ -62,6 +62,7 @@ export default function MenuPage() {
     refetchOnWindowFocus: true,
   });
   const cart = useCart();
+  const [currentPageNum, setCurrentPageNum] = useState(0);
   const [flipped, setFlipped] = useState<Record<string, boolean>>({});
   const [q, setQ] = useState("");
   const [dietFilter, setDietFilter] = useState<DietFilter>("all");
@@ -407,7 +408,10 @@ export default function MenuPage() {
                 disableFlipByClick={true}
                 usePortrait={true}
                 ref={bookRef}
-              onFlip={(e) => { if(audioRef.current) audioRef.current.play().catch(()=>console.log("Audio blocked")); }}
+                onFlip={(e: any) => { 
+                  if(audioRef.current) audioRef.current.play().catch(()=>console.log("Audio blocked")); 
+                  if (typeof e?.data === "number") setCurrentPageNum(e.data);
+                }}
                 className="mx-auto drop-shadow-2xl rounded-r-xl"
               >
                 {/* FRONT COVER */}
@@ -459,15 +463,15 @@ export default function MenuPage() {
                                   )}
                                </div>
                              </div>
-                             <div className="shrink-0">
+                             <div className="shrink-0" onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()} onTouchEnd={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
                                 {inCart ? (
                                   <div className="flex items-center gap-1.5 bg-[#FAF5EC] text-brand-primary border border-[#E7DFCB] rounded px-1 py-1 shadow-sm">
-                                    <button onClick={() => cart.setQty(item.id, inCart.qty - 1)} className="h-4 w-4 flex items-center justify-center hover:text-brand-secondary"><Minus className="h-2 w-2" /></button>
-                                    <span className="font-royal text-[9px] font-bold w-2 text-center">{inCart.qty}</span>
-                                    <button onClick={() => cart.setQty(item.id, inCart.qty + 1)} className="h-4 w-4 flex items-center justify-center hover:text-brand-secondary"><Plus className="h-2 w-2" /></button>
+                                    <button type="button" onClick={(e) => { e.stopPropagation(); e.preventDefault(); cart.setQty(item.id, inCart.qty - 1); }} className="h-5 w-5 flex items-center justify-center hover:text-brand-secondary active:scale-95 transition"><Minus className="h-3 w-3" /></button>
+                                    <span className="font-royal text-[10px] font-bold w-3 text-center">{inCart.qty}</span>
+                                    <button type="button" onClick={(e) => { e.stopPropagation(); e.preventDefault(); cart.setQty(item.id, inCart.qty + 1); }} className="h-5 w-5 flex items-center justify-center hover:text-brand-secondary active:scale-95 transition"><Plus className="h-3 w-3" /></button>
                                   </div>
                                 ) : (
-                                    <button onClick={(e) => { e.stopPropagation(); cart.add(item); toast.success(`${item.name} added`); }} className="bg-[#5C0E1B] text-[#FAF5EC] hover:bg-brand-primary rounded px-3 py-1.5 text-[8px] font-royal font-bold uppercase transition shadow-sm border border-[#5C0E1B]">Add</button>
+                                    <button type="button" onClick={(e) => { e.stopPropagation(); e.preventDefault(); cart.add(item); toast.success(`${item.name} added`); }} className="bg-[#5C0E1B] text-[#FAF5EC] hover:bg-brand-primary rounded px-3 py-1.5 text-[9px] font-royal font-bold uppercase transition shadow-sm border border-[#5C0E1B] active:scale-95">Add</button>
                                 )}
                              </div>
                           </div>
@@ -496,8 +500,35 @@ export default function MenuPage() {
                   </div>
                 </Page>
               </HTMLFlipBook>
-              
-              
+
+              {/* Flip Book Navigation Controls */}
+              <div className="flex items-center justify-center gap-4 sm:gap-6 mt-6 mb-8 w-full z-20">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const flipper = bookRef.current?.pageFlip();
+                    if (flipper && typeof flipper.flipPrev === "function") flipper.flipPrev();
+                  }}
+                  className="flex items-center gap-2 bg-[#FAF5EC] border border-[#E7DFCB] text-brand-primary hover:bg-brand-primary hover:text-[#FAF5EC] px-5 py-2.5 rounded-full font-royal uppercase tracking-widest text-xs transition shadow-md active:scale-95"
+                >
+                  <ChevronLeft className="h-4 w-4" /> Previous
+                </button>
+
+                <div className="font-royal text-xs uppercase tracking-widest text-[#1A1106]/70 bg-[#E7DFCB]/50 px-4 py-2 rounded-full border border-[#E7DFCB]">
+                  Page {currentPageNum + 1} of {pages.length + 4}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const flipper = bookRef.current?.pageFlip();
+                    if (flipper && typeof flipper.flipNext === "function") flipper.flipNext();
+                  }}
+                  className="flex items-center gap-2 bg-[#FAF5EC] border border-[#E7DFCB] text-brand-primary hover:bg-brand-primary hover:text-[#FAF5EC] px-5 py-2.5 rounded-full font-royal uppercase tracking-widest text-xs transition shadow-md active:scale-95"
+                >
+                  Next <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
             </>
           )}
         </div>

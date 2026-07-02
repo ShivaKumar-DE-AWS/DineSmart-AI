@@ -4,7 +4,7 @@ import { api, apiUrl } from "@/lib/api";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { formatCurrency, fmtTime } from "@/lib/utils";
-import { CheckCircle2, Eye, Sparkles, Copy, CreditCard } from "lucide-react";
+import { CheckCircle2, Eye, Sparkles, Copy, CreditCard, Clock } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import type { Order } from "@/types";
@@ -93,6 +93,18 @@ export default function TokenPage() {
         </div>
       </motion.div>
 
+      {/* Self-Service Payment Verification Notice */}
+      {(restaurantConfig?.service_type === "self_service" || order.order_type === "takeaway" || order.order_type === "quick_order") && order.status !== "cancelled" && (
+        <div className="bg-[#FAF5EC] border-2 border-brand-primary/40 rounded-3xl p-5 mb-6 text-center shadow-md">
+          <div className="font-royal text-xs font-bold uppercase tracking-widest text-brand-primary flex items-center justify-center gap-2">
+            <Clock className="h-4 w-4 text-brand-secondary" /> Payment Verification Required Before Pickup
+          </div>
+          <p className="font-editorial italic text-xs text-[#1A1106]/80 mt-1.5 leading-relaxed">
+            Please settle your bill at the counter (or via mobile tap-to-pay below) and present your <span className="font-bold font-royal text-brand-primary">Token #{order.token}</span> to collect your order when ready.
+          </p>
+        </div>
+      )}
+
       <div className="mehfil-card rounded-2xl p-6 mb-6">
         <div className="flex items-center justify-between mb-4">
           <div className="mehfil-divider flex-1"><span className="font-royal tracking-[0.3em] text-[10px] uppercase">The feast</span></div>
@@ -138,26 +150,28 @@ export default function TokenPage() {
       {order.payment_method === "upi" && (
         <div className="mehfil-card rounded-3xl p-7 md:p-9 mb-6 text-center">
           <div className="font-royal tracking-[0.2em] text-[10px] uppercase text-brand-primary mb-2">Pay via UPI</div>
-          <p className="font-editorial italic text-xs text-[#1A1106]/60 mb-6">Scan to settle the bill securely from your phone.</p>
+          <p className="font-editorial italic text-xs text-[#1A1106]/60 mb-6">Scan or tap to settle the bill securely from your phone.</p>
           
           {(restaurantConfig?.payment_qr_url || restaurantConfig?.upi_id) ? (
             <>
-              <div className="bg-white p-3 rounded-2xl inline-block shadow-sm border border-brand-secondary/20 mb-4">
-                <img 
-                  src={restaurantConfig?.payment_qr_url || `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`upi://pay?pa=${restaurantConfig?.upi_id}&pn=${restaurantConfig?.name}&am=${order.total}&cu=INR`)}`} 
-                  alt="UPI QR Code" 
-                  className="w-48 h-auto object-contain"
-                />
-              </div>
-              {restaurantConfig?.upi_id && !restaurantConfig?.payment_qr_url && (
+              {order.order_type !== "takeaway" && (
+                <div className="bg-white p-3 rounded-2xl inline-block shadow-sm border border-brand-secondary/20 mb-4">
+                  <img 
+                    src={restaurantConfig?.payment_qr_url || `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`upi://pay?pa=${restaurantConfig?.upi_id}&pn=${restaurantConfig?.name}&am=${order.total}&cu=INR`)}`} 
+                    alt="UPI QR Code" 
+                    className="w-48 h-auto object-contain"
+                  />
+                </div>
+              )}
+              {restaurantConfig?.upi_id && !restaurantConfig?.payment_qr_url && order.order_type !== "takeaway" && (
                 <div className="font-mono text-[11px] text-[#1A1106]/70 uppercase tracking-widest">{restaurantConfig.upi_id}</div>
               )}
               {restaurantConfig?.upi_id && (
                 <a 
                   href={`upi://pay?pa=${restaurantConfig.upi_id}&pn=${encodeURIComponent(restaurantConfig.name)}&am=${order.total}&cu=INR`}
-                  className="mt-4 w-full flex items-center justify-center gap-2 bg-brand-primary text-white py-3 rounded-full font-royal uppercase tracking-widest text-xs shadow-md"
+                  className="mt-4 w-full flex items-center justify-center gap-2 bg-brand-primary text-[#FAF5EC] py-3.5 rounded-full font-royal uppercase tracking-widest text-xs shadow-lg shadow-brand-primary/20 hover:bg-brand-primary/90 transition"
                 >
-                  <span>Tap to Pay on Mobile</span>
+                  <span>Tap to Pay on Mobile — ₹{order.total}</span>
                 </a>
               )}
             </>

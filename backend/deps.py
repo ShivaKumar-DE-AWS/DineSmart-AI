@@ -291,6 +291,7 @@ class SignupReq(BaseModel):
     name: str
     role: str = "customer"
     restaurant_name: Optional[str] = None
+    service_type: Optional[str] = "fine_dining"
     
     @field_validator("password")
     @classmethod

@@ -196,23 +196,53 @@ async def get_table_session(session_id: str):
     return {"session": sess}
 
 
+class CallStaffReq(BaseModel):
+    reasons: Optional[List[str]] = None
+    note: Optional[str] = None
+
+
 @router.post("/api/tables/{session_id}/call-staff")
-async def call_staff(session_id: str):
+async def call_staff(session_id: str, req: Optional[CallStaffReq] = None):
     session = await db.table_sessions.find_one({"id": session_id})
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
     table = await db.tables.find_one({"id": session.get("table_id")}, {"_id": 0})
     restaurant_id = table.get("restaurant_id") if table else None
-    await db.notifications.insert_one({
-        "id": str(uuid.uuid4()),
+    
+    reasons_list = req.reasons if (req and req.reasons) else []
+    body_text = f"Requested: {', '.join(reasons_list)}" if reasons_list else "Customer requested staff attention"
+    if req and req.note:
+        body_text += f" ({req.note})"
+        
+    notification_id = str(uuid.uuid4())
+    notification = {
+        "id": notification_id,
         "order_id": None,
         "type": "staff_call",
-        "title": f"Table {session['table_number']} needs assistance",
-        "body": "Customer requested staff",
+        "title": f"Table {session.get('table_number', 'Unknown')} needs assistance",
+        "body": body_text,
         "read": False,
         "restaurant_id": restaurant_id,
         "created_at": now_iso(),
-    })
+        "table_number": session.get("table_number", "Unknown"),
+        "session_id": session_id,
+        "reasons": reasons_list
+    }
+    await db.notifications.insert_one(notification)
+    
+    if restaurant_id:
+        try:
+            from routers.orders import broadcast_order_update
+            broadcast_order_update(restaurant_id, {
+                "type": "staff_call",
+                "table_number": session.get("table_number", "Unknown"),
+                "session_id": session_id,
+                "reasons": reasons_list,
+                "body": body_text
+            })
+        except Exception as e:
+            print(f"Failed to broadcast staff call: {e}")
+            
     return {"ok": True}
 
 

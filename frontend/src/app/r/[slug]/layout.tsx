@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname , useParams} from "next/navigation";
 import { useEffect, useState, Suspense, useRef } from "react";
-import { ShoppingBag, Menu as MenuIcon, X, ChefHat, ArrowRight, BellRing, Instagram, Facebook, Twitter, Sparkles } from "lucide-react";
+import { ShoppingBag, Menu as MenuIcon, X, ChefHat, ArrowRight, BellRing, Instagram, Facebook, Twitter, Sparkles, Check } from "lucide-react";
 import { useCart } from "@/stores/cart";
 import { AIWaiterDock } from "@/components/customer/AIWaiterDock";
 import { MehfilLogo } from "@/components/customer/MehfilLogo";
@@ -14,6 +14,15 @@ import { Order } from "@/types";
 import { toast } from "sonner";
 import { useRestaurantConfig } from "@/hooks/useRestaurantConfig";
 import { useSession } from "@/stores/session";
+
+const STAFF_CALL_REASONS = [
+  { id: "Water / Refill", label: "Water / Refill", icon: "💧", desc: "Drinking water or ice" },
+  { id: "Request Bill / Payment", label: "Request Bill / Payment", icon: "🧾", desc: "Ready to settle the bill" },
+  { id: "Cutlery / Tissues", label: "Cutlery / Napkins / Tissues", icon: "🍴", desc: "Extra plates, spoons, or napkins" },
+  { id: "Condiments / Sauces", label: "Condiments / Sauces", icon: "🧂", desc: "Ketchup, salt, pepper, chilli" },
+  { id: "Clear Table", label: "Clear Table / Plates", icon: "🧹", desc: "Remove empty dishes" },
+  { id: "Order Assistance", label: "Order Assistance", icon: "📖", desc: "Help with menu or recommendations" },
+];
 
 export default function CustomerLayout({ children }: { children: React.ReactNode }) {
   const params = useParams();
@@ -124,7 +133,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
 
   useEffect(() => {
     if (!session?.id) return;
-    const base = process.env.NEXT_PUBLIC_BACKEND_URL || "";
+    const base = (process.env.NEXT_PUBLIC_BACKEND_URL || "").replace(/\/+$/, "");
     const es = new EventSource(`${base}/api/tables/${session.id}/cart/stream`);
     es.onmessage = (e) => {
       try {
@@ -143,18 +152,45 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
     }
   }, [cartItems, lastUpdatedBy, session?.id]);
 
-  // --- CALL STAFF ---
+  // --- CALL STAFF WITH GENERALIZED REASONS ---
   const [callingStaff, setCallingStaff] = useState(false);
-  const callStaff = async () => {
+  const [showCallModal, setShowCallModal] = useState(false);
+  const [selectedReasons, setSelectedReasons] = useState<string[]>([]);
+  const [customReasonNote, setCustomReasonNote] = useState("");
+
+  const callStaff = () => {
+    if (!session?.id) {
+      toast.error("Please join a table session first.");
+      return;
+    }
+    setShowCallModal(true);
+  };
+
+  const toggleReason = (id: string) => {
+    setSelectedReasons(prev => 
+      prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id]
+    );
+  };
+
+  const submitStaffCall = async () => {
     if (!session?.id) return;
     try {
       setCallingStaff(true);
-      await api(`/api/tables/${session.id}/call-staff`, { method: "POST" });
+      await api(`/api/tables/${session.id}/call-staff`, { 
+        method: "POST",
+        body: JSON.stringify({
+          reasons: selectedReasons,
+          note: customReasonNote.trim() || undefined,
+        }),
+      });
       toast.success("Staff has been notified and will be with you shortly!");
+      setShowCallModal(false);
+      setSelectedReasons([]);
+      setCustomReasonNote("");
     } catch (err) {
       toast.error("Failed to call staff.");
     } finally {
-      setTimeout(() => setCallingStaff(false), 3000);
+      setCallingStaff(false);
     }
   };
 
@@ -303,7 +339,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
               </div>
               {mounted && session && (
                 <button 
-                  onClick={callStaff} 
+                  onClick={() => { callStaff(); setMobileOpen(false); }} 
                   disabled={callingStaff}
                   className="w-full mt-4 text-left px-4 py-3 text-sm tracking-[0.15em] uppercase font-royal text-brand-primary hover:bg-[#E7DFCB]/30 border-t border-[#E7DFCB]"
                 >
@@ -425,6 +461,95 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
           </div>
         </div>
       </footer>
+
+      {showCallModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fadeIn">
+          <div className="bg-[#FAF5EC] border border-[#E7DFCB] rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl relative text-[#1A1106] max-h-[90vh] overflow-y-auto">
+            <button 
+              onClick={() => setShowCallModal(false)}
+              className="absolute top-5 right-5 h-9 w-9 rounded-full bg-[#1A1106]/5 hover:bg-[#1A1106]/10 flex items-center justify-center transition-colors"
+            >
+              <X className="h-5 w-5 text-[#1A1106]" />
+            </button>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="h-10 w-10 rounded-full bg-brand-primary/10 flex items-center justify-center text-brand-primary">
+                <BellRing className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="font-editorial text-xl sm:text-2xl font-bold text-[#1A1106]">Call Staff Assistance</h3>
+                <p className="text-xs font-royal uppercase tracking-wider text-[#1A1106]/60">Table {session?.table_number || "Guest"}</p>
+              </div>
+            </div>
+            <p className="text-sm text-[#1A1106]/80 my-4">
+              Select what you need so our team can prepare before arriving at your table:
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
+              {STAFF_CALL_REASONS.map((reason) => {
+                const isSelected = selectedReasons.includes(reason.id);
+                return (
+                  <div
+                    key={reason.id}
+                    onClick={() => toggleReason(reason.id)}
+                    className={`p-3.5 rounded-2xl border cursor-pointer transition-all flex items-start gap-3 select-none ${
+                      isSelected 
+                        ? "bg-brand-primary text-[#FAF5EC] border-brand-primary shadow-md" 
+                        : "bg-white/80 hover:bg-white text-[#1A1106] border-[#E7DFCB]"
+                    }`}
+                  >
+                    <span className="text-xl shrink-0 mt-0.5">{reason.icon}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-bold font-royal uppercase tracking-wide flex items-center justify-between">
+                        <span className="truncate">{reason.label}</span>
+                        {isSelected && <Check className="h-3.5 w-3.5 shrink-0 ml-1 text-brand-secondary" />}
+                      </div>
+                      <div className={`text-[11px] leading-tight mt-0.5 ${isSelected ? "text-[#FAF5EC]/80" : "text-[#1A1106]/60"}`}>
+                        {reason.desc}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="space-y-1.5 mb-6">
+              <label className="text-xs font-royal uppercase tracking-wider text-[#1A1106]/70 block">
+                Additional Note (Optional)
+              </label>
+              <input
+                type="text"
+                value={customReasonNote}
+                onChange={(e) => setCustomReasonNote(e.target.value)}
+                placeholder="e.g., Please bring high chair, extra spicy dip..."
+                className="w-full bg-white border border-[#E7DFCB] rounded-xl px-4 py-2.5 text-xs text-[#1A1106] focus:outline-none focus:border-brand-primary transition"
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowCallModal(false)}
+                className="flex-1 py-3 px-4 rounded-xl border border-[#E7DFCB] font-royal uppercase tracking-wider text-xs font-semibold text-[#1A1106]/70 hover:bg-[#1A1106]/5 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={submitStaffCall}
+                disabled={callingStaff}
+                className="flex-[2] py-3 px-4 rounded-xl bg-brand-primary text-[#FAF5EC] font-royal uppercase tracking-wider text-xs font-semibold hover:bg-brand-primary/90 transition shadow-lg shadow-brand-primary/20 flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {callingStaff ? "Notifying..." : (
+                  <>
+                    <BellRing className="h-4 w-4" />
+                    <span>Notify Staff</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -39,6 +39,7 @@ async def signup(req: SignupReq):
             "name": req.restaurant_name,
             "slug": slug,
             "owner_email": req.email,
+            "service_type": req.service_type or "fine_dining",
             "plan": "trial",
             "subscription_status": "active",
             "created_at": now_iso(),
@@ -46,6 +47,7 @@ async def signup(req: SignupReq):
 
         frontend_config = {
             "id": restaurant_id, "name": req.restaurant_name, "slug": slug,
+            "service_type": req.service_type or "fine_dining",
             "tagline": f"Welcome to {req.restaurant_name}",
             "description": f"A wonderful dining experience at {req.restaurant_name}.",
             "primary_color": "#8A1A2A", "secondary_color": "#C9A348", "accent_color": "#E8A317",

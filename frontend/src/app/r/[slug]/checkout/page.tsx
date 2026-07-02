@@ -8,7 +8,7 @@ import { formatCurrency } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { useRestaurantConfig } from "@/hooks/useRestaurantConfig";
 import { toast } from "sonner";
-import { Lock, CreditCard, ExternalLink, ArrowLeft, ScrollText, User2, ChefHat, Plus, Minus, Phone, Gift, Sparkles, MapPin } from "lucide-react";
+import { Lock, CreditCard, ExternalLink, ArrowLeft, ScrollText, User2, ChefHat, Plus, Minus, Phone, Gift, Sparkles, MapPin, Scissors, Check, X, Share2, Users } from "lucide-react";
 
 interface CustomerProfile {
   id: string;
@@ -38,15 +38,15 @@ const CHIPS_BY_TYPE: Record<string, string[]> = {
 };
 function getChipsForItem(name: string, category?: string): string[] {
   const cat = (category || "").toLowerCase();
-  if (cat.includes("sweet")) return CHIPS_BY_TYPE.sweets;
-  if (cat.includes("beverage")) return CHIPS_BY_TYPE.beverages;
-  if (cat.includes("bread")) return CHIPS_BY_TYPE.bread;
-  if (cat.includes("rice") || cat.includes("noodle")) return CHIPS_BY_TYPE.rice_noodles;
-  const nm = name.toLowerCase();
-  if (nm.includes("paneer") || nm.includes("dal") || nm.includes("veg")) return CHIPS_BY_TYPE.veg;
-  if (nm.includes("meetha") || nm.includes("jamun") || nm.includes("kheer") || nm.includes("sweet")) return CHIPS_BY_TYPE.sweets;
-  if (nm.includes("lassi") || nm.includes("chai") || nm.includes("soda") || nm.includes("drink")) return CHIPS_BY_TYPE.beverages;
-  return CHIPS_BY_TYPE.meat;
+  if (CHIPS_BY_TYPE[cat]) return CHIPS_BY_TYPE[cat];
+  const n = name.toLowerCase();
+  if (n.includes("chicken") || n.includes("mutton") || n.includes("fish") || n.includes("kebab") || n.includes("tikka") || n.includes("biryani")) return CHIPS_BY_TYPE["meat"];
+  if (n.includes("paneer") || n.includes("dal") || n.includes("sabzi") || n.includes("palak") || n.includes("chana")) return CHIPS_BY_TYPE["veg"];
+  if (n.includes("naan") || n.includes("roti") || n.includes("kulcha") || n.includes("paratha")) return CHIPS_BY_TYPE["bread"];
+  if (n.includes("lassi") || n.includes("chai") || n.includes("coffee") || n.includes("shake") || n.includes("juice") || n.includes("mojito")) return CHIPS_BY_TYPE["beverages"];
+  if (n.includes("kheer") || n.includes("jamun") || n.includes("halwa") || n.includes("ice cream") || n.includes("kulfi")) return CHIPS_BY_TYPE["sweets"];
+  if (n.includes("rice") || n.includes("pulao") || n.includes("noodle") || n.includes("hakka")) return CHIPS_BY_TYPE["rice_noodles"];
+  return ["Less spicy", "Extra spicy", "Serve hot", "No onion"];
 }
 
 
@@ -70,6 +70,34 @@ export default function CheckoutPage() {
   const subtotal = cart.subtotal();
   const tax = Math.round(subtotal * 0.05);
   const total = subtotal + tax;
+
+  // Split Bill State
+  const [showSplitModal, setShowSplitModal] = useState(false);
+  const [splitTab, setSplitTab] = useState<"equally" | "items" | "custom">("equally");
+  const [splitPeople, setSplitPeople] = useState(2);
+  const [selectedSplitItems, setSelectedSplitItems] = useState<Record<string, boolean>>({});
+  const [customSplitAmount, setCustomSplitAmount] = useState<string>("");
+
+  const getSplitAmount = () => {
+    if (splitTab === "equally") {
+      return total / Math.max(1, splitPeople);
+    }
+    if (splitTab === "items") {
+      let itemsSubtotal = 0;
+      cart.items.forEach(item => {
+        if (selectedSplitItems[item.item_id]) {
+          itemsSubtotal += item.price * item.qty;
+        }
+      });
+      const proportion = subtotal > 0 ? itemsSubtotal / subtotal : 0;
+      return itemsSubtotal + (tax * proportion);
+    }
+    if (splitTab === "custom") {
+      const val = parseFloat(customSplitAmount);
+      return isNaN(val) ? 0 : val;
+    }
+    return 0;
+  };
 
   useEffect(() => {
     api<{ stripe_enabled: boolean }>("/api/payment/config")
@@ -361,11 +389,164 @@ export default function CheckoutPage() {
               <span className="font-royal text-2xl text-brand-primary" data-testid="checkout-total">{formatCurrency(total)}</span>
             </div>
           </div>
-          <button onClick={submit} disabled={submitting} data-testid="place-order-btn" className="mt-6 w-full mehfil-btn-royal rounded-full py-3.5 font-royal tracking-[0.2em] uppercase text-xs disabled:opacity-50 inline-flex items-center justify-center gap-2">
+
+          <button
+            type="button"
+            onClick={() => setShowSplitModal(true)}
+            className="mt-4 w-full bg-brand-primary/10 hover:bg-brand-primary/20 text-brand-primary border border-brand-primary/30 rounded-xl py-2.5 font-royal tracking-wider uppercase text-xs transition flex items-center justify-center gap-2"
+          >
+            <Scissors className="h-3.5 w-3.5" /> Split the Bill
+          </button>
+
+          <button onClick={submit} disabled={submitting} data-testid="place-order-btn" className="mt-3 w-full mehfil-btn-royal rounded-full py-3.5 font-royal tracking-[0.2em] uppercase text-xs disabled:opacity-50 inline-flex items-center justify-center gap-2">
             {submitting ? "Sending to the khansama…" : `Confirm Order — ${formatCurrency(total)}`}
           </button>
         </aside>
       </div>
+
+      {showSplitModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fadeIn">
+          <div className="bg-[#FAF5EC] border border-[#E7DFCB] rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl relative text-[#1A1106] max-h-[90vh] overflow-y-auto">
+            <button 
+              onClick={() => setShowSplitModal(false)}
+              className="absolute top-5 right-5 h-9 w-9 rounded-full bg-[#1A1106]/5 hover:bg-[#1A1106]/10 flex items-center justify-center transition-colors"
+            >
+              <X className="h-5 w-5 text-[#1A1106]" />
+            </button>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="h-10 w-10 rounded-full bg-brand-primary/10 flex items-center justify-center text-brand-primary">
+                <Scissors className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="font-editorial text-xl sm:text-2xl font-bold text-[#1A1106]">Split the Bill</h3>
+                <p className="text-xs font-royal uppercase tracking-wider text-[#1A1106]/60">Total Table Bill: {formatCurrency(total)}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 bg-[#E7DFCB]/40 p-1.5 rounded-2xl my-4">
+              <button
+                type="button"
+                onClick={() => setSplitTab("equally")}
+                className={`py-2 px-3 rounded-xl text-xs font-royal uppercase tracking-wider transition ${splitTab === "equally" ? "bg-brand-primary text-[#FAF5EC] shadow" : "text-[#1A1106]/70 hover:text-brand-primary"}`}
+              >
+                Equally
+              </button>
+              <button
+                type="button"
+                onClick={() => setSplitTab("items")}
+                className={`py-2 px-3 rounded-xl text-xs font-royal uppercase tracking-wider transition ${splitTab === "items" ? "bg-brand-primary text-[#FAF5EC] shadow" : "text-[#1A1106]/70 hover:text-brand-primary"}`}
+              >
+                By Items
+              </button>
+              <button
+                type="button"
+                onClick={() => setSplitTab("custom")}
+                className={`py-2 px-3 rounded-xl text-xs font-royal uppercase tracking-wider transition ${splitTab === "custom" ? "bg-brand-primary text-[#FAF5EC] shadow" : "text-[#1A1106]/70 hover:text-brand-primary"}`}
+              >
+                Custom
+              </button>
+            </div>
+
+            {splitTab === "equally" && (
+              <div className="py-4 space-y-4 text-center">
+                <p className="text-xs font-royal uppercase tracking-wider text-[#1A1106]/70">How many people are sharing the bill?</p>
+                <div className="flex items-center justify-center gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setSplitPeople(p => Math.max(1, p - 1))}
+                    className="h-10 w-10 rounded-full border border-brand-primary text-brand-primary flex items-center justify-center font-bold text-lg hover:bg-brand-primary hover:text-white transition"
+                  >
+                    -
+                  </button>
+                  <span className="font-editorial text-3xl font-bold text-brand-primary w-12">{splitPeople}</span>
+                  <button
+                    type="button"
+                    onClick={() => setSplitPeople(p => p + 1)}
+                    className="h-10 w-10 rounded-full border border-brand-primary text-brand-primary flex items-center justify-center font-bold text-lg hover:bg-brand-primary hover:text-white transition"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {splitTab === "items" && (
+              <div className="py-2 space-y-2 max-h-52 overflow-y-auto pr-1 my-2 border-y border-[#E7DFCB]">
+                <p className="text-[11px] font-royal uppercase tracking-wider text-[#8A6A1B] mb-2">Check the dishes you ordered:</p>
+                {cart.items.map((item) => {
+                  const isChecked = !!selectedSplitItems[item.item_id];
+                  return (
+                    <div
+                      key={item.item_id}
+                      onClick={() => setSelectedSplitItems(prev => ({ ...prev, [item.item_id]: !prev[item.item_id] }))}
+                      className={`flex items-center justify-between p-2.5 rounded-xl border cursor-pointer transition ${isChecked ? "bg-brand-primary/10 border-brand-primary" : "bg-white border-[#E7DFCB]"}`}
+                    >
+                      <div className="flex items-center gap-2.5 overflow-hidden">
+                        <div className={`h-5 w-5 rounded-md flex items-center justify-center border text-xs ${isChecked ? "bg-brand-primary text-white border-brand-primary" : "border-[#E7DFCB] bg-white"}`}>
+                          {isChecked && <Check className="h-3 w-3" />}
+                        </div>
+                        <span className="text-xs font-editorial text-[#1A1106] truncate">{item.qty}× {item.name}</span>
+                      </div>
+                      <span className="text-xs font-royal font-semibold text-brand-primary shrink-0">{formatCurrency(item.price * item.qty)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {splitTab === "custom" && (
+              <div className="py-4 space-y-2">
+                <label className="text-xs font-royal uppercase tracking-wider text-[#1A1106]/70 block">
+                  Enter Your Custom Share Amount
+                </label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 font-royal font-bold text-brand-primary">₹</span>
+                  <input
+                    type="number"
+                    value={customSplitAmount}
+                    onChange={(e) => setCustomSplitAmount(e.target.value)}
+                    placeholder="0.00"
+                    className="w-full bg-white border border-[#E7DFCB] rounded-xl pl-8 pr-4 py-3 text-lg font-royal text-[#1A1106] focus:outline-none focus:border-brand-primary transition"
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="bg-brand-primary/5 border border-brand-primary/20 rounded-2xl p-4 my-4 flex items-center justify-between">
+              <div>
+                <div className="text-xs font-royal uppercase tracking-wider text-[#8A6A1B]">Your Calculated Share</div>
+                <div className="text-[11px] text-[#1A1106]/60 font-editorial italic">Includes proportional taxes</div>
+              </div>
+              <div className="font-royal text-2xl font-bold text-brand-primary">
+                {formatCurrency(getSplitAmount())}
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                type="button"
+                onClick={() => {
+                  const amt = getSplitAmount().toFixed(2);
+                  const upiUrl = `upi://pay?pa=${restaurantConfig?.contact?.email || 'smartdine@upi'}&pn=${encodeURIComponent(restaurantConfig?.name || 'SmartDine')}&am=${amt}&cu=INR`;
+                  window.open(upiUrl, '_blank');
+                  toast.success(`Opened UPI App for ${formatCurrency(getSplitAmount())}`);
+                }}
+                className="flex-1 py-3.5 px-4 rounded-xl bg-brand-primary text-[#FAF5EC] font-royal uppercase tracking-wider text-xs font-semibold hover:bg-brand-primary/90 transition shadow-lg shadow-brand-primary/20 flex items-center justify-center gap-2"
+              >
+                <CreditCard className="h-4 w-4" />
+                <span>Tap to Pay My Share (UPI)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowSplitModal(false)}
+                className="py-3.5 px-5 rounded-xl border border-[#E7DFCB] font-royal uppercase tracking-wider text-xs font-semibold text-[#1A1106]/70 hover:bg-[#1A1106]/5 transition"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

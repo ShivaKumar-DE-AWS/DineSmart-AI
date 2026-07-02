@@ -89,38 +89,3 @@ async def stream_cart(session_id: str, req: Request, user=Depends(current_user))
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no", "Connection": "keep-alive"}
     )
-
-@router.post("/api/tables/{session_id}/call-staff")
-async def call_staff(session_id: str, user=Depends(require_user)):
-    """Notify kitchen/counter staff that a table needs attention."""
-    # Create a notification for staff
-    session = await db.table_sessions.find_one({"id": session_id})
-    if not session:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=404, detail="Session not found")
-    
-    table_id = session.get("table_id")
-    table = await db.tables.find_one({"id": table_id})
-    table_number = table.get("number") if table else "Unknown"
-    restaurant_id = session.get("restaurant_id")
-    
-    # ponytail: use UUID for notification ID (not session_id) to avoid collision
-    notification_id = str(uuid.uuid4())
-    notification = {
-        "id": notification_id,
-        "type": "staff_call",
-        "title": f"Table {table_number} needs assistance",
-        "body": "Customer requested staff attention",
-        "read": False,
-        "restaurant_id": restaurant_id,
-        "created_at": now_iso(),
-        "table_number": table_number,
-        "session_id": session_id,
-    }
-    await db.notifications.insert_one(notification)
-    
-    # Broadcast to order stream listeners (kitchen/counter)
-    from routers.orders import broadcast_order_update
-    broadcast_order_update(restaurant_id, {"type": "staff_call", "table_number": table_number, "session_id": session_id})
-    
-    return {"ok": True}

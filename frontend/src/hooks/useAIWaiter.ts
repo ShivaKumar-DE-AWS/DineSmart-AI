@@ -52,7 +52,7 @@ export function useAIWaiter({ restaurantId, mode, onOrderUpdate }: { restaurantI
             backendUrl = isLocal ? 'http://localhost:3000' : 'https://api.smartdineai.co.in';
         }
         
-        const wsUrlStr = backendUrl.replace("http://", "ws://").replace("https://", "wss://");
+        const wsUrlStr = backendUrl.replace(/\/+$/, "").replace("http://", "ws://").replace("https://", "wss://");
         const wsUrl = `${wsUrlStr}/api/ws/ai-waiter/${session.id}`;
         
         const ws = new WebSocket(wsUrl);

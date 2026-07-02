@@ -94,6 +94,7 @@ export interface RestaurantConfig {
   id: string;
   name: string;
   slug: string;
+  service_type?: "fine_dining" | "self_service" | "cafeteria" | string;
   tagline: string;
   description: string;
   logo_url?: string;

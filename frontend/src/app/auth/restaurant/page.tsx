@@ -150,6 +150,7 @@ export default function RestaurantAuthPage() {
       formData.append("email", regEmail);
       formData.append("phone", regPhone);
       formData.append("cuisine", regCuisine);
+      formData.append("service_type", regServiceType);
       formData.append("primary_color", regPrimaryColor);
       formData.append("secondary_color", regSecondaryColor);
       if (logoFile) formData.append("logo", logoFile);
@@ -365,6 +366,18 @@ export default function RestaurantAuthPage() {
                           <option value="Fast Food" className="bg-ink text-white">Fast Food / QSR</option>
                           <option value="Fine Dining" className="bg-ink text-white">Fine Dining</option>
                           <option value="Generic" className="bg-ink text-white">Generic / Global</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-stone pl-1">Service Type</label>
+                      <div className="relative">
+                        <Store className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone pointer-events-none" />
+                        <select value={regServiceType} onChange={(e) => setRegServiceType(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-11 pr-4 text-white text-sm appearance-none" required>
+                          <option value="fine_dining" className="bg-ink text-white">Fine Dining / Table Service</option>
+                          <option value="self_service" className="bg-ink text-white">Self-Service / QSR / Food Court</option>
+                          <option value="cafeteria" className="bg-ink text-white">Café / Casual Dining</option>
                         </select>
                       </div>
                     </div>
