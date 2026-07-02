@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api, apiUrl } from "@/lib/api";
 import { useParams } from "next/navigation";
 import { fmtTime } from "@/lib/utils";
-import { CheckCircle2, ChefHat, ConciergeBell, ClipboardCheck, Clock, Bell, BellRing, BellOff, MapPin } from "lucide-react";
+import { CheckCircle2, ChefHat, ConciergeBell, ClipboardCheck, Clock, Bell, BellRing, BellOff, MapPin, Sparkles } from "lucide-react";
 import type { Order } from "@/types";
 import { useEffect, useRef, useState } from "react";
 import { playChime, ensureNotificationPermission, notify, isPushSupported, subscribeToOrderPush } from "@/lib/notify";
