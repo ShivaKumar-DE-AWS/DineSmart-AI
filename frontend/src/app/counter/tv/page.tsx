@@ -5,11 +5,12 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import type { Order } from "@/types";
 import { ChefHat, Sparkles, Volume2, VolumeX, Utensils, Clock } from "lucide-react";
-import { playChime } from "@/lib/chimes";
-import { useAuth } from "@/components/auth/AuthProvider";
+import { playChime } from "@/lib/notify";
+import { useSession } from "@/stores/session";
+
 
 export default function TVDisplayPage() {
-  const { user } = useAuth();
+  const { user } = useSession();
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [currentTime, setCurrentTime] = useState("");
 
