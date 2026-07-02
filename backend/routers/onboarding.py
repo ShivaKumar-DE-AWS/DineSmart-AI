@@ -170,7 +170,7 @@ async def request_restaurant_access(
     background_tasks: BackgroundTasks,
     name: str = Form(...),
     email: str = Form(...),
-    phone: str = Form("Not Provided"),
+    phone: str = Form(...),
     cuisine: str = Form(""),
     notes: str = Form(""),
     primary_color: str = Form(None),
@@ -182,6 +182,16 @@ async def request_restaurant_access(
     """Public endpoint for self-serve onboarding. Grants a 14-day Pro trial instantly."""
     import shutil
     import os
+    import re
+    
+    clean_phone = re.sub(r'\D', '', phone)
+    if len(clean_phone) == 12 and clean_phone.startswith("91"):
+        clean_phone = clean_phone[2:]
+    elif len(clean_phone) == 11 and clean_phone.startswith("0"):
+        clean_phone = clean_phone[1:]
+    if not re.match(r'^\d{10}$', clean_phone):
+        raise HTTPException(status_code=400, detail="Please provide a valid 10-digit mobile number.")
+    phone = clean_phone
     
     # 0. Check OTP verification
     email_otp = await db.otps.find_one({"target": email, "type": "email", "verified": True})

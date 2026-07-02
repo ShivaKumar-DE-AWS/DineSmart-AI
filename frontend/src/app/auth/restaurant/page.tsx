@@ -143,13 +143,19 @@ export default function RestaurantAuthPage() {
       return toast.error("Please verify your email address to continue.");
     }
     
+    const cleanPhone = regPhone.replace(/\D/g, "");
+    const digits = cleanPhone.length === 12 && cleanPhone.startsWith("91") ? cleanPhone.slice(2) : cleanPhone.length === 11 && cleanPhone.startsWith("0") ? cleanPhone.slice(1) : cleanPhone;
+    if (!/^\d{10}$/.test(digits)) {
+      return toast.error("Please enter a valid 10-digit mobile number.");
+    }
+    
     setBusy(true);
     setResult(null);
     try {
       const formData = new FormData();
       formData.append("name", regName);
       formData.append("email", regEmail);
-      formData.append("phone", regPhone || "Not Provided");
+      formData.append("phone", digits);
       formData.append("cuisine", regCuisine);
       formData.append("service_type", regServiceType);
       formData.append("primary_color", regPrimaryColor);
@@ -348,10 +354,10 @@ export default function RestaurantAuthPage() {
                       </div>
 
                       <div className="space-y-1.5">
-                        <label className="text-xs font-medium text-stone pl-1">Phone Number (Optional)</label>
+                        <label className="text-xs font-medium text-stone pl-1">Mobile Number (10 digits)</label>
                         <div className="relative">
                           <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone" />
-                          <input type="tel" value={regPhone} onChange={(e) => setRegPhone(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-11 pr-4 text-white text-sm" placeholder="+91 98765 43210" />
+                          <input type="tel" value={regPhone} onChange={(e) => setRegPhone(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-11 pr-4 text-white text-sm" placeholder="9876543210" required />
                         </div>
                       </div>
 
