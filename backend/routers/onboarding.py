@@ -47,12 +47,59 @@ SAMPLE_MENU_CAFE = [
     {"name": "Cold Brew", "description": "Slow-steeped cold brew coffee.", "price": 200, "category": "Beverages", "image_url": "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=600&q=80", "prep_time_min": 3, "tags": ["refreshing"]},
 ]
 
+SAMPLE_MENU_TIFFIN = [
+    {"name": "Ghee Roast Masala Dosa", "description": "Crispy fermented crepe roasted in pure ghee with potato masala.", "price": 120, "category": "Dosas", "image_url": "https://images.unsplash.com/photo-1668236543090-82eba5ee5976?w=600&q=80", "prep_time_min": 8, "tags": ["vegetarian", "bestseller"]},
+    {"name": "Steamed Idli (3 Pcs)", "description": "Soft steamed rice cakes served with sambar and 3 varieties of chutney.", "price": 60, "category": "Idli & Vada", "image_url": "https://images.unsplash.com/photo-1589301760014-d929f3979dbc?w=600&q=80", "prep_time_min": 5, "tags": ["vegetarian", "healthy"]},
+    {"name": "Medu Vada (2 Pcs)", "description": "Crispy golden lentil fritters studded with black pepper and curry leaves.", "price": 70, "category": "Idli & Vada", "image_url": "https://images.unsplash.com/photo-1626074353765-517a681e40be?w=600&q=80", "prep_time_min": 6, "tags": ["vegetarian", "classic"]},
+    {"name": "Ghee Pongal", "description": "Comforting blend of rice and yellow moong dal tempered with cashews, ghee and black pepper.", "price": 90, "category": "Specials", "image_url": "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=600&q=80", "prep_time_min": 7, "tags": ["vegetarian", "comfort"]},
+    {"name": "Onion Uttapam", "description": "Thick rice pancake topped with caramelized onions, green chilies and cilantro.", "price": 100, "category": "Uttapam", "image_url": "https://images.unsplash.com/photo-1630383249896-424e482df921?w=600&q=80", "prep_time_min": 10, "tags": ["vegetarian"]},
+    {"name": "Filter Coffee", "description": "Traditional authentic South Indian decoction coffee frothed with hot milk.", "price": 40, "category": "Beverages", "image_url": "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=600&q=80", "prep_time_min": 3, "tags": ["signature", "must-try"]},
+    {"name": "Mysore Bonda (4 Pcs)", "description": "Golden deep-fried spiced flour dumplings served with coconut chutney.", "price": 80, "category": "Snacks", "image_url": "https://images.unsplash.com/photo-1601050690597-df0568f70950?w=600&q=80", "prep_time_min": 8, "tags": ["vegetarian", "bestseller"]},
+    {"name": "Poori Bhaji", "description": "Fluffy deep-fried whole wheat breads served with spiced potato curry.", "price": 90, "category": "Specials", "image_url": "https://images.unsplash.com/photo-1626074353765-517a681e40be?w=600&q=80", "prep_time_min": 10, "tags": ["vegetarian"]},
+]
+
+SAMPLE_MENU_CHINESE = [
+    {"name": "Veg Fried Rice", "description": "Wok-tossed basmati rice with crunchy veggies and soy.", "price": 180, "category": "Rice & Noodles", "image_url": "https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=600&q=80", "prep_time_min": 12, "tags": ["vegetarian", "bestseller"]},
+    {"name": "Hakka Noodles", "description": "Classic stir-fried noodles with garlic, capsicum, and spring onions.", "price": 170, "category": "Rice & Noodles", "image_url": "https://images.unsplash.com/photo-1585032226651-759b368d7246?w=600&q=80", "prep_time_min": 12, "tags": ["vegetarian", "classic"]},
+    {"name": "Chilli Paneer Dry", "description": "Crispy paneer cubes tossed in spicy soy-chilli sauce with green peppers.", "price": 220, "category": "Starters", "image_url": "https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?w=600&q=80", "prep_time_min": 15, "tags": ["vegetarian", "spicy"]},
+    {"name": "Chicken Manchurian", "description": "Juicy chicken balls simmered in tangy garlic ginger gravy.", "price": 260, "category": "Mains", "image_url": "https://images.unsplash.com/photo-1525755662778-989d0524087e?w=600&q=80", "prep_time_min": 18, "tags": ["bestseller"]},
+    {"name": "Sweet Corn Soup", "description": "Warm comforting broth with crushed sweet corn and vegetables.", "price": 110, "category": "Soups", "image_url": "https://images.unsplash.com/photo-1547592166-23ac45744acd?w=600&q=80", "prep_time_min": 8, "tags": ["vegetarian", "comfort"]},
+    {"name": "Spring Rolls (6 Pcs)", "description": "Crispy fried rolls stuffed with julienned vegetables and served with sweet chilli dip.", "price": 150, "category": "Starters", "image_url": "https://images.unsplash.com/photo-1544025162-d76694265947?w=600&q=80", "prep_time_min": 10, "tags": ["vegetarian", "crunchy"]},
+]
+
+SAMPLE_MENU_FASTFOOD = [
+    {"name": "Crispy Paneer Burger", "description": "Crunchy paneer patty with lettuce, tomato, and tandoori mayo in a toasted bun.", "price": 150, "category": "Burgers", "image_url": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&q=80", "prep_time_min": 10, "tags": ["vegetarian", "bestseller"]},
+    {"name": "Classic Chicken Burger", "description": "Juicy fried chicken fillet with cheddar cheese and special house sauce.", "price": 180, "category": "Burgers", "image_url": "https://images.unsplash.com/photo-1586190848861-99aa4a171e90?w=600&q=80", "prep_time_min": 12, "tags": ["bestseller"]},
+    {"name": "Peri Peri French Fries", "description": "Golden crinkle-cut fries tossed in spicy peri-peri seasoning.", "price": 110, "category": "Sides & Fries", "image_url": "https://images.unsplash.com/photo-1576107232684-1279f3908594?w=600&q=80", "prep_time_min": 6, "tags": ["vegetarian", "spicy"]},
+    {"name": "Loaded Cheesy Nachos", "description": "Crispy tortilla chips topped with melted cheese, jalapeños, and salsa.", "price": 160, "category": "Snacks", "image_url": "https://images.unsplash.com/photo-1513456852971-30c0b8199d4d?w=600&q=80", "prep_time_min": 8, "tags": ["sharing", "vegetarian"]},
+    {"name": "Oreo Mudshake", "description": "Thick chocolate milkshake blended with crunchy Oreo cookies.", "price": 140, "category": "Shakes", "image_url": "https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=600&q=80", "prep_time_min": 5, "tags": ["sweet", "bestseller"]},
+]
+
 SAMPLE_MENUS = {
     "generic": SAMPLE_MENU_GENERIC,
     "indian": SAMPLE_MENU_INDIAN,
     "italian": SAMPLE_MENU_ITALIAN,
     "cafe": SAMPLE_MENU_CAFE,
+    "tiffin": SAMPLE_MENU_TIFFIN,
+    "chinese": SAMPLE_MENU_CHINESE,
+    "fastfood": SAMPLE_MENU_FASTFOOD,
 }
+
+def get_sample_menu_for_restaurant(cuisine: str, name: str) -> list[dict]:
+    combined = (str(cuisine) + " " + str(name)).lower()
+    if any(k in combined for k in ["tiffin", "south", "idli", "dosa", "udipi", "chennai", "bhavan", "vada", "pongal"]):
+        return SAMPLE_MENU_TIFFIN
+    if any(k in combined for k in ["chinese", "wok", "noodle", "dragon", "momos", "asian", "manchurian"]):
+        return SAMPLE_MENU_CHINESE
+    if any(k in combined for k in ["burger", "fast", "fry", "crispy", "wings", "kfc", "mc", "snack"]):
+        return SAMPLE_MENU_FASTFOOD
+    if any(k in combined for k in ["pizza", "pizzeria", "italian", "pasta"]):
+        return SAMPLE_MENU_ITALIAN
+    if any(k in combined for k in ["cafe", "coffee", "tea", "chai", "bistro", "bake"]):
+        return SAMPLE_MENU_CAFE
+    if any(k in combined for k in ["indian", "curry", "biryani", "mehfil", "darbar", "spice", "dhaba", "tandoor", "paneer", "kebab"]):
+        return SAMPLE_MENU_INDIAN
+    return SAMPLE_MENU_GENERIC
 
 def generate_frontend_config(name: str, slug: str, rest_id: str, phone: str, email: str, cuisine: str) -> dict:
     short_slug = slug.split('-')[0]
@@ -108,11 +155,32 @@ async def onboard_menu(file: UploadFile = File(...), user=Depends(require_user))
         ]
         Return ONLY valid JSON, nothing else. No markdown formatting like ```json.
         """
-        response = await asyncio.to_thread(
-            client_ai.models.generate_content,
-            model="gemini-1.5-flash",
-            contents=[prompt, genai_types.Part.from_bytes(data=raw, mime_type=mime)],
-        )
+        models_to_try = ["gemini-1.5-flash-latest", "gemini-1.5-flash-002", "gemini-1.5-flash-001", "gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro-latest", "gemini-1.5-pro"]
+        try:
+            for m_info in client_ai.models.list_models():
+                if "generateContent" in getattr(m_info, "supported_generation_methods", []):
+                    name_clean = m_info.name.replace("models/", "")
+                    if name_clean not in models_to_try:
+                        models_to_try.append(name_clean)
+        except Exception:
+            pass
+
+        response = None
+        last_err = None
+        for model_name in models_to_try:
+            try:
+                response = await asyncio.to_thread(
+                    client_ai.models.generate_content,
+                    model=model_name,
+                    contents=[prompt, genai_types.Part.from_bytes(data=raw, mime_type=mime)],
+                )
+                if response and getattr(response, "text", None):
+                    break
+            except Exception as e:
+                last_err = e
+                continue
+        if not response or not getattr(response, "text", None):
+            raise HTTPException(status_code=500, detail=f"Menu extraction failed across available models ({models_to_try[:5]}): {str(last_err)}")
         text = response.text.strip()
         if text.startswith("```json"):
             text = text[7:]
@@ -272,8 +340,7 @@ async def request_restaurant_access(
     })
     
     # 3. Seed sample menu based on cuisine
-    menu_key = cuisine.lower() if cuisine.lower() in SAMPLE_MENUS else "generic"
-    sample_menu = SAMPLE_MENUS[menu_key]
+    sample_menu = get_sample_menu_for_restaurant(cuisine or "", name or "")
     for item in sample_menu:
         item_doc = item.copy()
         item_doc["restaurant_id"] = rest_id
@@ -351,8 +418,7 @@ async def onboard_restaurant(name: str, email: str, phone: str, tables_count: in
         "slug": slug, "config": config, "created_at": now_iso()
     })
     # 3. Seed sample menu based on cuisine
-    menu_key = cuisine.lower() if cuisine.lower() in SAMPLE_MENUS else "generic"
-    sample_menu = SAMPLE_MENUS[menu_key]
+    sample_menu = get_sample_menu_for_restaurant(cuisine or "", name or "")
     for item in sample_menu:
         item_doc = item.copy()
         item_doc["restaurant_id"] = rest_id

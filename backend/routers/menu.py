@@ -122,12 +122,30 @@ async def seed_inventory_demo(user=Depends(require_user)):
     try:
         from google import genai
         from google.genai import types as genai_types
-        client_ai = genai.Client(api_key=GEMINI_API_KEY)
-        response = await asyncio.to_thread(
-            client_ai.models.generate_content,
-            model="gemini-1.5-flash",
-            contents=prompt,
-        )
+        models_to_try = ["gemini-1.5-flash-latest", "gemini-1.5-flash-002", "gemini-1.5-flash-001", "gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro-latest", "gemini-1.5-pro"]
+        try:
+            for m_info in client_ai.models.list_models():
+                if "generateContent" in getattr(m_info, "supported_generation_methods", []):
+                    name_clean = m_info.name.replace("models/", "")
+                    if name_clean not in models_to_try:
+                        models_to_try.append(name_clean)
+        except Exception:
+            pass
+
+        response = None
+        for model_name in models_to_try:
+            try:
+                response = await asyncio.to_thread(
+                    client_ai.models.generate_content,
+                    model=model_name,
+                    contents=prompt,
+                )
+                if response and getattr(response, "text", None):
+                    break
+            except Exception:
+                continue
+        if not response or not getattr(response, "text", None):
+            raise HTTPException(status_code=500, detail="AI dish generation failed across all available Gemini models")
         data_str = response.text.strip()
         if data_str.startswith("```json"):
             data_str = data_str[7:-3].strip()

@@ -233,7 +233,7 @@ async def get_restaurant_config(slug: str):
     if not rest:
         raise HTTPException(status_code=404, detail="Restaurant not found")
         
-    config["sandbox_mode"] = rest.get("sandbox_mode", False)
+    config["sandbox_mode"] = rest.get("sandbox_mode", True)
     
     # ponytail: mask passwords — config is public, passwords should never leak
     resp = copy.deepcopy(config)

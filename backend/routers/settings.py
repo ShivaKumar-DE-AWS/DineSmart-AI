@@ -15,6 +15,8 @@ async def get_admin_settings(user=Depends(require_user)):
     rest = await db.restaurants.find_one({"id": user["restaurant_id"]}, {"_id": 0})
     if not rest:
         raise HTTPException(status_code=404, detail="Restaurant not found")
+    if "sandbox_mode" not in rest:
+        rest["sandbox_mode"] = True
     return rest
 
 @router.put("/api/admin/settings", dependencies=[Depends(require_roles("admin"))])

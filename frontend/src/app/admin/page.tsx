@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
-import { TrendingUp, ShoppingBag, Receipt, AlertTriangle, Sparkles } from "lucide-react";
+import { TrendingUp, ShoppingBag, Receipt, AlertTriangle, Sparkles, Rocket, UtensilsCrossed, QrCode, CheckCircle2, ArrowRight } from "lucide-react";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { useSession } from "@/stores/session";
 
@@ -34,35 +34,87 @@ export default function AdminDashboard() {
 
   return (
     <div>
-      {dash?.sandbox_mode && (
-        <div className="mb-6 bg-amber-50 border border-amber-300 rounded-xl p-5 shadow-sm relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div className="flex items-start gap-3">
-            <div className="h-10 w-10 bg-amber-100 text-amber-700 rounded-xl flex items-center justify-center shrink-0 mt-0.5">
-              <Sparkles className="h-5 w-5" />
+      {(dash?.sandbox_mode || tablesCount === 0) && (
+        <div className="mb-8 bg-gradient-to-br from-amber-50 via-cream to-amber-50/50 border-2 border-amber-300 rounded-2xl p-6 shadow-md relative overflow-hidden">
+          <div className="absolute -top-10 -right-10 w-48 h-48 bg-amber-200/40 rounded-full blur-3xl pointer-events-none" />
+          
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-5 border-b border-amber-200 mb-5 relative z-10">
+            <div className="flex items-start gap-3.5">
+              <div className="h-12 w-12 bg-amber-500 text-white rounded-2xl flex items-center justify-center shrink-0 shadow-md">
+                <Rocket className="h-6 w-6 animate-pulse" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="font-heading text-lg md:text-xl text-amber-950 font-bold">🚀 SmartDine AI — Onboarding & Sandbox Guide</h2>
+                  <span className="px-2.5 py-0.5 bg-amber-500 text-white font-mono text-[10px] uppercase font-bold rounded-full tracking-wider animate-bounce">
+                    🟡 Sandbox Mode Active
+                  </span>
+                </div>
+                <p className="text-xs md:text-sm text-amber-900 mt-1 max-w-2xl">
+                  Your restaurant is currently in safe testing mode with simulated data. Follow these 3 simple steps to generate your AI menu, create QR dining tables, and go live!
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-heading text-base text-amber-900 font-bold">Sandbox Mode Active</h3>
-              <p className="text-xs text-amber-800 mt-1">
-                Your restaurant is currently in testing mode. Explore the dashboard and features with simulated data. To take real customer orders and exit Sandbox mode, verify your account now.
-              </p>
+            <Link
+              href="/admin/setup"
+              className="px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs md:text-sm rounded-xl transition shadow-lg hover:shadow-xl shrink-0 flex items-center gap-2"
+            >
+              🚀 Setup Wizard (Exit Sandbox) →
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 relative z-10">
+            {/* Step 1: Menu */}
+            <div className="bg-white/80 backdrop-blur-sm border border-amber-200/80 rounded-xl p-4 flex flex-col justify-between hover:border-amber-400 transition shadow-sm">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full">Step 1</span>
+                  <UtensilsCrossed className="w-4 h-4 text-amber-600" />
+                </div>
+                <h4 className="font-heading font-bold text-sm text-ink mb-1">🍽️ Menu & AI Extraction</h4>
+                <p className="text-xs text-stone leading-relaxed mb-3">
+                  We seeded default dishes based on your cuisine! Want your real menu? Upload a photo or PDF of your menu card in Menu Manager for instant automatic AI extraction.
+                </p>
+              </div>
+              <Link href="/admin/menu" className="text-xs font-bold text-amber-700 hover:text-amber-900 flex items-center gap-1 group">
+                ✨ Go to Menu Manager <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              </Link>
+            </div>
+
+            {/* Step 2: Tables & QR */}
+            <div className="bg-white/80 backdrop-blur-sm border border-amber-200/80 rounded-xl p-4 flex flex-col justify-between hover:border-amber-400 transition shadow-sm">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full">Step 2</span>
+                  <QrCode className="w-4 h-4 text-amber-600" />
+                </div>
+                <h4 className="font-heading font-bold text-sm text-ink mb-1">🪑 Tables & QR Codes</h4>
+                <p className="text-xs text-stone leading-relaxed mb-3">
+                  Create table numbers (e.g., Table 1 to 10) and seating capacities. Download and print high-resolution QR codes to display on tables for instant self-service ordering!
+                </p>
+              </div>
+              <Link href="/admin/tables" className="text-xs font-bold text-amber-700 hover:text-amber-900 flex items-center gap-1 group">
+                🖨️ Create Tables & QR <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              </Link>
+            </div>
+
+            {/* Step 3: Exit Sandbox */}
+            <div className="bg-white/80 backdrop-blur-sm border border-amber-200/80 rounded-xl p-4 flex flex-col justify-between hover:border-amber-400 transition shadow-sm">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">Step 3</span>
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                </div>
+                <h4 className="font-heading font-bold text-sm text-ink mb-1">🚀 Go Live & Exit Sandbox</h4>
+                <p className="text-xs text-stone leading-relaxed mb-3">
+                  Once your menu and tables are ready, exit Sandbox mode in the Setup Wizard. This turns off test mode so you can accept real customer orders and live payments!
+                </p>
+              </div>
+              <Link href="/admin/setup" className="text-xs font-bold text-emerald-700 hover:text-emerald-900 flex items-center gap-1 group">
+                🚀 Go Live Now <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              </Link>
             </div>
           </div>
-          <Link
-            href="/admin/setup"
-            className="px-5 py-2.5 bg-amber-600 text-white font-bold text-xs rounded-xl hover:bg-amber-700 transition shrink-0 shadow flex items-center gap-1.5"
-          >
-            Exit Sandbox & Go Live →
-          </Link>
-        </div>
-      )}
-
-      {tablesCount === 0 && (
-        <div className="mb-6 bg-cream border border-brand-secondary/30 rounded-xl p-5 shadow-sm relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-brand-secondary/10 rounded-full blur-3xl" />
-          <h2 className="font-heading text-lg text-brand-primary mb-2 flex items-center gap-2">
-            <Sparkles className="h-5 w-5" /> Welcome to SmartDine AI!
-          </h2>
-          <p className="text-sm text-stone mb-4">You have no tables configured yet. Head to tables settings to create them.</p>
         </div>
       )}
 

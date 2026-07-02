@@ -44,6 +44,7 @@ async def signup(req: SignupReq):
             "service_type": req.service_type or "fine_dining",
             "plan": "trial",
             "subscription_status": "active",
+            "sandbox_mode": True,
             "created_at": now_iso(),
         })
 

@@ -79,7 +79,7 @@ async def dashboard(user=Depends(require_user)):
     if user.get("restaurant_id"):
         low_stock_q["restaurant_id"] = user["restaurant_id"]
     rest = await db.restaurants.find_one({"id": user.get("restaurant_id")}) if user.get("restaurant_id") else None
-    sandbox_mode = rest.get("sandbox_mode", False) if rest else False
+    sandbox_mode = rest.get("sandbox_mode", True) if rest else True
 
     return {
         "revenue_today": round(revenue_today, 2), "orders_today": total_orders,
