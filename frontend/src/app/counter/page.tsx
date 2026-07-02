@@ -47,6 +47,7 @@ export default function CounterPage() {
   const preparing = allOrders.filter((o) => ["confirmed", "preparing"].includes(o.status));
   const ready = allOrders.filter((o) => o.status === "ready" || (o.status === "served" && o.payment_status !== "paid"));
   const servedToday = allOrders.filter((o) => o.status === "served" && o.payment_status === "paid").length;
+  const unpaidPreOrders = allOrders.filter((o) => o.payment_status !== "paid" && ["pending", "confirmed", "preparing"].includes(o.status));
 
   const readyIdsRef = useRef<Set<string> | null>(null);
   useEffect(() => {
@@ -112,11 +113,11 @@ export default function CounterPage() {
   }, [notifsData, notifiedSet, markReadMut]);
 
   return (
-    <div className="min-h-screen h-screen flex flex-col bg-[#0a0a0f] text-white overflow-hidden">
+    <div className="min-h-screen flex flex-col bg-[#0a0a0f] text-white">
       {/* Header */}
       <header className="relative overflow-hidden shrink-0">
         <div className="absolute inset-0 bg-gradient-to-r from-emerald-900/20 via-[#0a0a0f] to-[#0a0a0f]" />
-        <div className="relative px-6 py-5 flex items-center justify-between">
+        <div className="relative px-6 py-5 flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-4">
             <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
               <Utensils className="h-6 w-6 text-white" />
@@ -126,8 +127,16 @@ export default function CounterPage() {
               <h1 className="text-2xl font-bold text-white tracking-tight">Counter Dashboard</h1>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-          <div className="hidden md:flex items-center gap-6 text-xs">
+          <div className="flex items-center gap-4 flex-wrap">
+            <a
+              href="/counter/tv"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider bg-amber-500/20 text-amber-400 border border-amber-500/40 hover:bg-amber-500/30 transition shadow-lg active:scale-95"
+            >
+              📺 Open TV Monitor
+            </a>
+            <div className="hidden md:flex items-center gap-6 text-xs">
               <div className="flex items-center gap-2 bg-zinc-900/80 border border-zinc-800 rounded-xl px-4 py-2.5">
                 <ChefHat className="h-4 w-4 text-blue-400" />
                 <span className="text-zinc-400">Cooking</span>
@@ -147,6 +156,7 @@ export default function CounterPage() {
           </div>
         </div>
       </header>
+
 
       {/* Staff Call Alert Banner */}
       {(() => {
@@ -179,13 +189,13 @@ export default function CounterPage() {
       })()}
 
       {/* Main Content - Split View */}
-      <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-0 min-h-0">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-0 border-t border-zinc-800/50">
         {/* Preparing Column */}
-        <section className="border-r border-zinc-800/50 p-6 overflow-hidden flex flex-col">
+        <section className="border-b sm:border-b-0 sm:border-r border-zinc-800/50 p-6 flex flex-col">
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-3">
               <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-500/5 border border-blue-500/20 flex items-center justify-center">
-                <ChefHat className="h-4.5 w-4.5 text-blue-400" />
+                <ChefHat className="h-5 w-5 text-blue-400" />
               </div>
               <div>
                 <p className="text-[10px] font-medium tracking-widest uppercase text-blue-400/70">In Preparation</p>
@@ -196,18 +206,22 @@ export default function CounterPage() {
               {preparing.length}
             </div>
           </div>
-          <div className="flex-1 grid grid-cols-2 sm:grid-cols-3 auto-rows-min gap-3 overflow-y-auto scrollbar-thin" data-testid="counter-preparing">
+          <div
+            className="grid grid-cols-2 sm:grid-cols-3 auto-rows-min gap-3 overflow-y-auto dashboard-scroll scrollbar-dark"
+            style={{ maxHeight: "70vh" }}
+            data-testid="counter-preparing"
+          >
             {preparing.map((o) => (
-              <div key={o.id} className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5 text-center hover:border-blue-500/30 transition-colors group" data-testid={`counter-prep-${o.token}`}>
+              <div key={o.id} className="relative bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5 text-center hover:border-blue-500/30 transition-colors group" data-testid={`counter-prep-${o.token}`}>
                 <div className="text-4xl font-bold text-white mb-1 group-hover:text-blue-400 transition-colors">{o.token}</div>
-                <div className={`absolute top-2 right-2 text-[8px] tracking-wider uppercase font-bold px-1.5 py-0.5 rounded-full ${
+                <div className={`text-[8px] tracking-wider uppercase font-bold px-1.5 py-0.5 rounded-full mt-1 inline-block ${
                   o.order_type === "takeaway"
                     ? "bg-emerald-500/20 text-emerald-400"
                     : "bg-amber-500/20 text-amber-400"
                 }`}>
                   {o.order_type === "takeaway" ? "TAKEAWAY" : "DINE-IN"}
                 </div>
-                <div className="text-[10px] uppercase text-zinc-500 tracking-wider">{o.customer_name}</div>
+                <div className="text-[10px] uppercase text-zinc-500 tracking-wider mt-1">{o.customer_name}</div>
                 {o.table_number != null && (
                   <div className="mt-2 inline-flex items-center gap-1 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10px] font-bold px-2 py-0.5 rounded-lg">
                     <Users className="h-3 w-3" /> T{o.table_number}
@@ -231,7 +245,7 @@ export default function CounterPage() {
         </section>
 
         {/* Ready Column */}
-        <section className="p-6 overflow-hidden flex flex-col bg-gradient-to-br from-emerald-900/5 to-[#0a0a0f]">
+        <section className="p-6 flex flex-col bg-gradient-to-br from-emerald-900/5 to-[#0a0a0f]">
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-3">
               <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-emerald-500/20 to-emerald-500/5 border border-emerald-500/20 flex items-center justify-center">
@@ -246,7 +260,11 @@ export default function CounterPage() {
               {ready.length}
             </div>
           </div>
-          <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 auto-rows-min gap-4 overflow-y-auto scrollbar-thin" data-testid="counter-ready">
+          <div
+            className="grid grid-cols-1 sm:grid-cols-2 auto-rows-min gap-4 overflow-y-auto dashboard-scroll scrollbar-dark"
+            style={{ maxHeight: "70vh" }}
+            data-testid="counter-ready"
+          >
             {ready.map((o) => {
               const isBillRequested = o.bill_requested && o.payment_status !== "paid";
               const isServed = o.status === "served";

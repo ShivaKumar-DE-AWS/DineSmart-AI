@@ -184,7 +184,7 @@ export default function KitchenPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white">
+    <div className="min-h-screen bg-[#0a0a0f] text-white overflow-x-hidden">
       {/* Hero Header */}
       <header className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-amber-900/20 via-[#0a0a0f] to-[#0a0a0f]" />
@@ -321,7 +321,7 @@ export default function KitchenPage() {
             <p className="text-zinc-500 text-sm">No active orders. Take a breather.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 dashboard-scroll">
             {filteredQueue.map((o, idx) => {
               const elapsedMs = Date.now() - new Date(o.created_at).getTime();
               return (
