@@ -130,6 +130,8 @@ export default function HQLoginPage() {
               {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : "Sign In to HQ"}
             </button>
           </form>
+        </div>
+
         <div className="mt-6 text-center">
           <Link href="/auth/restaurant" className="text-xs text-stone hover:text-white transition">
             Restaurant partner? Sign in here &rarr;
