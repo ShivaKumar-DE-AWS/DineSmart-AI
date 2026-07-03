@@ -219,7 +219,7 @@ async def _call_gemini(prompt: str, event_type: str = "WELCOME") -> AIWaiterEven
 
         config = genai_types.GenerateContentConfig(
             temperature=0.2,
-            max_output_tokens=512,
+            max_output_tokens=256,
             response_mime_type="application/json",
             response_schema=AIWaiterEventResponse,
         )
@@ -233,7 +233,7 @@ async def _call_gemini(prompt: str, event_type: str = "WELCOME") -> AIWaiterEven
                         contents=prompt,
                         config=config,
                     ),
-                    timeout=15.0,
+                    timeout=6.0,
                 )
 
                 raw = (getattr(response, "text", None) or "").strip()

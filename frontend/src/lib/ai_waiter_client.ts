@@ -85,6 +85,30 @@ export async function sendAIWaiterEvent(
   proceedPayFn?: () => void
 ): Promise<AIWaiterEventResponse | null> {
   try {
+    // 1. Optimistic Instant UI for ITEM_ADDED (0ms delay!)
+    if (payload.event_type === "ITEM_ADDED" && payload.added_item) {
+      const item = payload.added_item;
+      const cat = (item.category || "").toLowerCase();
+      const name = item.name;
+      let instantMsg = `✨ Great taste! **${name}** is a wonderful choice.`;
+      
+      if (cat.includes("biryani") || cat.includes("main") || cat.includes("curry") || cat.includes("rice") || cat.includes("thali")) {
+        instantMsg = `✨ Added **${name}**! AI Waiter suggests pairing it with a cooling **Mint Raita**, **Butter Naan**, or a refreshing **Thums Up** for a royal feast!`;
+      } else if (cat.includes("starter") || cat.includes("kebab") || cat.includes("appetizer") || cat.includes("snack") || cat.includes("tikka")) {
+        instantMsg = `✨ **${name}** is a crowd favorite starter! Ready for mains? Our signature **Biryani** or **Dal Makhani** would follow beautifully.`;
+      } else if (cat.includes("bread") || cat.includes("naan") || cat.includes("roti") || cat.includes("paratha") || cat.includes("kulcha")) {
+        instantMsg = `✨ Fresh tandoori bread! **${name}** dips wonderfully into our rich **Butter Chicken**, **Paneer Masala**, or **Dal Makhani**.`;
+      } else if (cat.includes("drink") || cat.includes("beverage") || cat.includes("lassi") || cat.includes("mocktail") || cat.includes("shake")) {
+        instantMsg = `✨ So refreshing! Sip your **${name}** alongside our spicy tandoori grills or flavorful biryani!`;
+      } else if (cat.includes("dessert") || cat.includes("sweet") || cat.includes("ice cream") || cat.includes("gulab") || cat.includes("rasmalai")) {
+        instantMsg = `✨ A grand finale! **${name}** is the perfect royal sweet to conclude your feast.`;
+      } else {
+        instantMsg = `✨ **${name}** added to your thali! Check our Chef Specials for signature pairings!`;
+      }
+      
+      showAIToast(instantMsg, 20000);
+    }
+
     const response = await api<AIWaiterEventResponse>("/api/ai-waiter/event", {
       method: "POST",
       body: JSON.stringify({
@@ -98,9 +122,10 @@ export async function sendAIWaiterEvent(
 
     // Route to the correct UI handler
     if (response.action_type === "WELCOME") {
-      showAIWelcomeModal(response.dialogue_text);
+      showAIWelcomeModal(response.dialogue_text, 20000);
     } else if (response.action_type === "ITEM_VALIDATION") {
-      showAIToast(response.dialogue_text);
+      // Show AI response from Gemini if different or deeper
+      showAIToast(response.dialogue_text, 20000);
     } else if (response.action_type === "UPSELL_OFFER") {
       showAIUpsellSheet(response.dialogue_text, response.suggested_items, addToCartFn, proceedPayFn);
     }
@@ -272,7 +297,7 @@ function _bootstrapUI(): void {
   sheet.innerHTML = `
     <div class="ai-sheet-header">
       <span aria-hidden="true">✨</span>
-      <h3>Chef's Recommendation</h3>
+      <h3>AI Waiter Recommendation</h3>
     </div>
     <p class="ai-sheet-pitch" id="ai-sheet-pitch"></p>
     <div class="ai-upsell-list" id="ai-upsell-list"></div>
@@ -289,8 +314,8 @@ function _bootstrapUI(): void {
   welcome.innerHTML = `
     <div class="ai-welcome-backdrop" id="ai-welcome-backdrop"></div>
     <div class="ai-welcome-card">
-      <div class="ai-welcome-icon" aria-hidden="true">👨‍🍳</div>
-      <h2>Welcome!</h2>
+      <div class="ai-welcome-icon" aria-hidden="true">🤖</div>
+      <h2>AI Waiter Welcome</h2>
       <p id="ai-welcome-text"></p>
       <button class="ai-welcome-btn" id="ai-welcome-btn">View Menu</button>
     </div>
@@ -303,22 +328,24 @@ function _bootstrapUI(): void {
 let _toastTimer: ReturnType<typeof setTimeout> | null = null;
 
 /**
- * Show a Top Toast notification that auto-dismisses after 3 seconds.
+ * Show a Top Toast notification that auto-dismisses after 20 seconds.
  * Position: slides down from top — keeps thumb-scrolling zone free.
  */
-export function showAIToast(message: string, durationMs = 4000): void {
+export function showAIToast(message: string, durationMs = 20000): void {
   toast("✨ AI Waiter Suggestion", {
     description: message,
     duration: durationMs,
+    closeButton: true,
     style: {
       background: "#FAF5EC",
       color: "#1A1106",
-      border: "1px solid #8A6A1B",
-      fontSize: "13px",
+      border: "2px solid #8A6A1B",
+      fontSize: "15px",
+      fontWeight: "500",
       fontFamily: "var(--font-editorial, serif)",
-      padding: "12px 16px",
-      borderRadius: "12px",
-      boxShadow: "0 8px 24px rgba(138, 106, 27, 0.18)",
+      padding: "16px 20px",
+      borderRadius: "16px",
+      boxShadow: "0 10px 30px rgba(138, 106, 27, 0.22)",
     },
   });
 }
@@ -392,19 +419,21 @@ function _closeSheet(): void {
  * Show a Welcome center modal when the customer first opens the menu.
  * Auto-closes after 5 seconds if user does not interact.
  */
-export function showAIWelcomeModal(message: string, autoDismissMs = 6000): void {
-  toast("👨‍🍳 Welcome Greeting", {
+export function showAIWelcomeModal(message: string, autoDismissMs = 20000): void {
+  toast("🤖 AI Waiter Welcome", {
     description: message,
     duration: autoDismissMs,
+    closeButton: true,
     style: {
       background: "#FAF5EC",
       color: "#1A1106",
-      border: "1px solid #8A6A1B",
-      fontSize: "13px",
+      border: "2px solid #8A6A1B",
+      fontSize: "15px",
+      fontWeight: "500",
       fontFamily: "var(--font-editorial, serif)",
-      padding: "14px 18px",
-      borderRadius: "14px",
-      boxShadow: "0 8px 24px rgba(138, 106, 27, 0.18)",
+      padding: "16px 20px",
+      borderRadius: "16px",
+      boxShadow: "0 10px 30px rgba(138, 106, 27, 0.22)",
     },
   });
   _bootstrapUI();

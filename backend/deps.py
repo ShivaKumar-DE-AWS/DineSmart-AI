@@ -450,10 +450,24 @@ class SplitBillReq(BaseModel):
 # Token generation (daily per-restaurant sequential token)
 # =========================================================
 async def next_token(restaurant_id: str = "", order_type: str = "dine_in") -> str:
-    # ponytail: UUID-based short token with order_type prefix
-    suffix = uuid.uuid4().hex[:4].upper()
+    today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     prefix = "T" if order_type == "takeaway" else "D"
-    return f"{prefix}-{suffix}"
+    counter_id = f"{restaurant_id or 'default'}_{prefix}_{today_str}"
+    
+    try:
+        from pymongo import ReturnDocument
+        res = await db.token_counters.find_one_and_update(
+            {"_id": counter_id},
+            {"$inc": {"seq": 1}},
+            upsert=True,
+            return_document=ReturnDocument.AFTER
+        )
+        seq_num = res["seq"] if res and "seq" in res else 1
+        return f"{prefix}-{seq_num:03d}"
+    except Exception as e:
+        print(f"⚠️ Sequential token generation fallback: {e}", flush=True)
+        suffix = uuid.uuid4().hex[:4].upper()
+        return f"{prefix}-{suffix}"
 
 def clean(doc: Dict[str, Any]) -> Dict[str, Any]:
     if doc and "_id" in doc:
