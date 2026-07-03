@@ -17,6 +17,7 @@ import React from "react";
 import { sortCategories } from "@/utils/categoryOrder";
 
 import type { MenuItem } from "@/types";
+import { useTable } from "@/stores/table";
 
 type DietFilter = "all" | "veg" | "non-veg";
 
