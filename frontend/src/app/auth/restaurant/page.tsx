@@ -22,6 +22,18 @@ export default function RestaurantAuthPage() {
   const allRestaurants = useAllRestaurantConfigs();
   
   const [tab, setTab] = useState<Tab>("login");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const t = params.get("tab") || params.get("mode");
+      if (t === "register" || t === "signup" || t === "trial") {
+        setTab("register");
+      } else if (t === "login" || t === "signin") {
+        setTab("login");
+      }
+    }
+  }, []);
   const [busy, setBusy] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 

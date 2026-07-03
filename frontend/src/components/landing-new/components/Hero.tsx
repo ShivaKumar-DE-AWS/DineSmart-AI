@@ -31,7 +31,7 @@ export default function Hero() {
 
           {/* CTAs — full width stacked on mobile */}
           <div className="mt-7 w-full max-w-xs sm:max-w-none flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5 sm:gap-3">
-            <a href="#demo" className="btn-primary justify-center">{t("hero.cta.primary")} <ArrowRight className="w-4 h-4" /></a>
+            <a href="/auth/restaurant?tab=register" className="btn-primary justify-center">{t("hero.cta.primary")} <ArrowRight className="w-4 h-4" /></a>
             <a href="#how" className="btn-ghost justify-center"><PlayIcon className="w-4 h-4" /> {t("hero.cta.secondary")}</a>
           </div>
           <p className="mt-3 text-[11px] text-cream/45">{t("hero.note")}</p>

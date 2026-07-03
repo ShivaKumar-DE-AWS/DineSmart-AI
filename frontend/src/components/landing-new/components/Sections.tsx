@@ -258,7 +258,7 @@ export function LoginOptions() {
             </p>
           </div>
 
-          <a href="#demo" className="btn-primary w-full justify-center mt-6 py-4 text-base shadow-2xl">
+          <a href="/auth/restaurant?tab=register" className="btn-primary w-full justify-center mt-6 py-4 text-base shadow-2xl">
             Sign up free <ArrowRight className="w-4 h-4" />
           </a>
 
@@ -335,7 +335,7 @@ export function RestaurantQuiz() {
                 SmartDine for a <b className="text-cream">{answers[1]} {answers[0]}</b>
               </p>
               <p className="text-[13px] text-cream/55 mb-6">We'll solve your <b className="text-gold">{answers[2]}</b> challenge on day one.</p>
-              <a href="#demo" className="btn-primary justify-center mx-auto">See your personalised demo <ArrowRight className="w-4 h-4"/></a>
+              <a href="/auth/restaurant?tab=register" className="btn-primary justify-center mx-auto">Start your free setup <ArrowRight className="w-4 h-4"/></a>
               <button onClick={reset} className="mt-3 block w-full text-center text-[12px] text-cream/45 hover:text-cream">Start over →</button>
             </div>
           )}

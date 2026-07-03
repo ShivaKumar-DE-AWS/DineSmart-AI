@@ -96,7 +96,7 @@ export default function WebsiteFeature() {
                   </div>
                 </div>
               </div>
-              <a href="#demo" className="btn-primary w-full justify-center mt-3 sm:mt-4 !py-3 text-sm sm:text-base">
+              <a href="/auth/restaurant?tab=register" className="btn-primary w-full justify-center mt-3 sm:mt-4 !py-3 text-sm sm:text-base">
                 Claim my domain <ArrowRight className="w-3.5 h-3.5" />
               </a>
             </div>

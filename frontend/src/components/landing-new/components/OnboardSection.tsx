@@ -122,7 +122,7 @@ export default function OnboardSection() {
             We'll contact you on WhatsApp and build everything while you sip a chai.
           </p>
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 max-w-md mx-auto">
-            <a href="/auth/restaurant" className="btn-primary justify-center flex-1 py-4 text-base">
+            <a href="/auth/restaurant?tab=register" className="btn-primary justify-center flex-1 py-4 text-base">
               Start free setup <ArrowRight className="w-4 h-4" />
             </a>
             <a href="https://wa.me/918333871783?text=Hi!%20I%20want%20to%20start%20my%2010-minute%20SmartDine%20setup" target="_blank" rel="noopener noreferrer"
