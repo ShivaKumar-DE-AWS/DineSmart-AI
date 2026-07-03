@@ -9,6 +9,7 @@ import { api } from "@/lib/api";
 import { useRestaurantConfig } from "@/hooks/useRestaurantConfig";
 import { toast } from "sonner";
 import { Lock, CreditCard, ExternalLink, ArrowLeft, ScrollText, User2, ChefHat, Plus, Minus, Phone, Gift, Sparkles, MapPin, Scissors, Check, X, Share2, Users } from "lucide-react";
+import { sendAIWaiterEvent, showAIUpsellSheet } from "@/lib/ai_waiter_client";
 
 interface CustomerProfile {
   id: string;
@@ -138,6 +139,61 @@ export default function CheckoutPage() {
     if (idx >= 0) parts.splice(idx, 1);
     else parts.push(chip);
     cart.setNote(item_id, parts.join(", "));
+  };
+
+  /**
+   * AI Waiter CHECKOUT interceptor.
+   * Fires the CHECKOUT event to get upsell suggestions, shows the Bottom Sheet
+   * to the user, then calls submit() when the user proceeds.
+   * If AI Waiter fails or times out, falls through directly to submit().
+   */
+  const handleCheckout = async () => {
+    const restId = restaurantConfig?.id;
+    if (!restId || cart.items.length === 0) { submit(); return; }
+
+    try {
+      const aiRes = await sendAIWaiterEvent(
+        {
+          event_type: "CHECKOUT",
+          restaurant_id: restId,
+          cart_state: cart.items.map(ci => ({
+            item_id: ci.item_id,
+            name: ci.name,
+            price: ci.price,
+            qty: ci.qty,
+            category: (ci as any).category ?? undefined,
+          })),
+        },
+        // addToCart callback: add upsell item to cart and then proceed
+        (suggestedItem) => {
+          cart.add({
+            id: suggestedItem.item_id,
+            item_id: suggestedItem.item_id,
+            name: suggestedItem.name,
+            price: suggestedItem.price,
+            qty: 1,
+            description: "",
+            category: "",
+            image_url: "",
+            available: true,
+            prep_time_min: 10,
+            tags: [],
+          } as any);
+          toast.success(`${suggestedItem.name} added to your order!`);
+          submit();
+        },
+        // proceedToPay callback: user skips upsell → place order directly
+        () => { submit(); }
+      );
+      // If AI returned no suggestions or a non-UPSELL response, proceed immediately
+      if (!aiRes || aiRes.action_type !== "UPSELL_OFFER" || aiRes.suggested_items.length === 0) {
+        submit();
+      }
+      // Otherwise the Bottom Sheet handles the user decision flow via callbacks above
+    } catch {
+      // AI Waiter failure → fall through to order placement without interruption
+      submit();
+    }
   };
 
   const submit = async () => {
@@ -390,7 +446,7 @@ export default function CheckoutPage() {
             </div>
           </div>
 
-          <button onClick={submit} disabled={submitting} data-testid="place-order-btn" className="mt-6 w-full mehfil-btn-royal rounded-full py-3.5 font-royal tracking-[0.2em] uppercase text-xs disabled:opacity-50 inline-flex items-center justify-center gap-2">
+          <button onClick={handleCheckout} disabled={submitting} data-testid="place-order-btn" className="mt-6 w-full mehfil-btn-royal rounded-full py-3.5 font-royal tracking-[0.2em] uppercase text-xs disabled:opacity-50 inline-flex items-center justify-center gap-2">
             {submitting ? "Sending to the khansama…" : `Confirm Order — ${formatCurrency(total)}`}
           </button>
         </aside>

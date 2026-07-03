@@ -9,6 +9,7 @@ import { formatCurrency } from "@/lib/utils";
 import { Plus, Minus, BookOpen, Search, ShoppingBag, Sparkles, Flame, Leaf, X, ChevronLeft, ChevronRight, LayoutGrid, BotMessageSquare, Send } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
+import { sendAIWaiterEvent } from "@/lib/ai_waiter_client";
 
 import dynamic from "next/dynamic";
 const HTMLFlipBook = dynamic(() => import("react-pageflip") as any, { ssr: false }) as any;
@@ -84,6 +85,45 @@ export default function MenuPage() {
       setTimeGreeting("Good Afternoon, explore our");
     }
   }, []);
+
+  // AI Waiter: fire QR_SCAN welcome once restaurant config is loaded
+  const _aiWelcomeFired = useRef(false);
+  useEffect(() => {
+    if (!restaurantConfig?.id || _aiWelcomeFired.current) return;
+    _aiWelcomeFired.current = true;
+    // Non-blocking: runs in background; never throws or delays menu rendering
+    sendAIWaiterEvent({
+      event_type: "QR_SCAN",
+      restaurant_id: restaurantConfig.id,
+    }).catch(() => {/* silent — AI Waiter must never block menu */});
+  }, [restaurantConfig?.id]);
+
+  // AI Waiter: fire ITEM_ADDED toast on every add-to-cart action
+  const handleAddToCart = useCallback((item: MenuItem) => {
+    cart.add(item);
+    toast.success(`${item.name} added`);
+    if (!restaurantConfig?.id) return;
+    const cartItems = useCart.getState().items;
+    // Fire-and-forget: never awaited so cart flow is instant
+    sendAIWaiterEvent({
+      event_type: "ITEM_ADDED",
+      restaurant_id: restaurantConfig.id,
+      cart_state: cartItems.map(ci => ({
+        item_id: ci.item_id,
+        name: ci.name,
+        price: ci.price,
+        qty: ci.qty,
+        category: ci.category ?? undefined,
+      })),
+      added_item: {
+        item_id: item.id ?? "",
+        name: item.name,
+        price: item.price,
+        qty: 1,
+        category: item.category ?? undefined,
+      },
+    }).catch(() => {/* silent */});
+  }, [restaurantConfig?.id, cart]);
 
   const audioRef = useRef<HTMLAudioElement>(null);
   
@@ -348,7 +388,7 @@ export default function MenuPage() {
                           {cart.items.find(i => i.item_id === item.id) ? (
                               <button className="bg-brand-secondary text-[#1A1106] rounded px-3 py-1 text-[9px] font-royal font-bold uppercase shadow-sm cursor-default">Added</button>
                           ) : (
-                              <button onClick={(e) => { e.stopPropagation(); cart.add(item); toast.success(`${item.name} added`); }} className="bg-brand-primary hover:bg-[#5C0E1B] text-white rounded px-3 py-1 text-[9px] font-royal font-bold uppercase transition shadow-sm border border-[#5C0E1B]">Add</button>
+                              <button onClick={(e) => { e.stopPropagation(); handleAddToCart(item); }} className="bg-brand-primary hover:bg-[#5C0E1B] text-white rounded px-3 py-1 text-[9px] font-royal font-bold uppercase transition shadow-sm border border-[#5C0E1B]">Add</button>
                           )}
                        </div>
                     </div>
@@ -450,7 +490,7 @@ export default function MenuPage() {
                                     <button type="button" onClick={(e) => { e.stopPropagation(); e.preventDefault(); cart.setQty(item.id, inCart.qty + 1); }} className="h-5 w-5 flex items-center justify-center hover:text-brand-secondary active:scale-95 transition"><Plus className="h-3 w-3" /></button>
                                   </div>
                                 ) : (
-                                    <button type="button" onClick={(e) => { e.stopPropagation(); e.preventDefault(); cart.add(item); toast.success(`${item.name} added`); }} className="bg-[#5C0E1B] text-[#FAF5EC] hover:bg-brand-primary rounded px-3 py-1.5 text-[9px] font-royal font-bold uppercase transition shadow-sm border border-[#5C0E1B] active:scale-95">Add</button>
+                                    <button type="button" onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleAddToCart(item); }} className="bg-[#5C0E1B] text-[#FAF5EC] hover:bg-brand-primary rounded px-3 py-1.5 text-[9px] font-royal font-bold uppercase transition shadow-sm border border-[#5C0E1B] active:scale-95">Add</button>
                                 )}
                              </div>
                           </div>
@@ -550,7 +590,7 @@ export default function MenuPage() {
                                  <button onClick={() => cart.setQty(item.id, inCart.qty + 1)} className="h-5 w-5 flex items-center justify-center hover:text-brand-secondary"><Plus className="h-3 w-3" /></button>
                                </div>
                             ) : (
-                               <button onClick={() => { cart.add(item); toast.success(`${item.name} added`); }} className="bg-white border border-bone text-brand-primary hover:bg-[#FAF5EC] rounded-lg shadow-md px-6 py-1.5 text-[10px] font-royal font-bold uppercase transition">ADD</button>
+                               <button onClick={() => { handleAddToCart(item); }} className="bg-white border border-bone text-brand-primary hover:bg-[#FAF5EC] rounded-lg shadow-md px-6 py-1.5 text-[10px] font-royal font-bold uppercase transition">ADD</button>
                             )}
                           </div>
                         </div>

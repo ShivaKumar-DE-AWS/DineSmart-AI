@@ -62,6 +62,7 @@ RATE_LIMITS: Dict[str, str] = {
     "/api/payment/checkout/session": "10/minute",
     "/api/restaurants/request": "2/hour",
     "/api/tables": "50/minute",  # ponytail: rate limit cart SSE endpoints
+    "/api/ai-waiter/event": "30/minute",  # Prevent Gemini quota abuse
 }
 
 # Custom rate limit middleware using slowapi's limiter
@@ -146,6 +147,15 @@ async def check_db_connection():
         DB_AVAILABLE = False
         print(f"[startup] CRITICAL ERROR: MongoDB connection failed: {e}")
         print("[startup] Skipping all DB seed/index tasks to allow app to start.")
+
+    # Connect cache service singletons to Redis (non-fatal if Redis is unavailable)
+    try:
+        from cache_service import menu_cache, config_cache
+        await menu_cache.connect()
+        await config_cache.connect()
+        print("[startup] ✅ CacheService connected (menu_cache, config_cache)")
+    except Exception as e:
+        print(f"[startup] ⚠️  CacheService Redis connect failed (non-fatal): {e}")
 
 @app.get("/api/health")
 async def public_health():
@@ -294,6 +304,7 @@ from routers.cart import router as cart_router
 from routers.campaigns import router as campaigns_router
 from routers.pricing import router as pricing_router
 from routers.otp import router as otp_router
+from routers.ai_waiter_event import router as ai_waiter_router
 
 app.include_router(auth_router)
 app.include_router(menu_router)
@@ -314,6 +325,7 @@ app.include_router(cart_router)
 app.include_router(campaigns_router)
 app.include_router(pricing_router)
 app.include_router(otp_router)
+app.include_router(ai_waiter_router)
 
 
 # =========================================================
