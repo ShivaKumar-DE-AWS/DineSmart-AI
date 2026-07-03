@@ -20,7 +20,7 @@ export default function AdminOrders() {
   const { user } = useSession();
   const [filter, setFilter] = useState<string>("");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const { data } = useQuery({ queryKey: ["admin-orders", filter, user?.restaurant_id], queryFn: () => { const params = new URLSearchParams(); if (filter) params.set("status_filter", filter); return api<{ orders: Order[] }>(`/api/orders?${params.toString()}`); }, refetchInterval: 15000 });
+  const { data } = useQuery({ queryKey: ["admin-orders", filter, user?.restaurant_id], queryFn: () => { const params = new URLSearchParams(); if (filter) params.set("status_filter", filter); return api<{ orders: Order[] }>(`/api/orders?${params.toString()}`); }, refetchInterval: 10000 });
   const mut = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) => api(`/api/orders/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-orders", undefined, user?.restaurant_id] }); toast.success("Status updated"); },

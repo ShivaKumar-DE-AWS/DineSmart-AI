@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Clock, X, Sparkles, ArrowRight, RefreshCw, Utensils, User } from "lucide-react";
 import { MehfilLogo } from "@/components/customer/MehfilLogo";
+import { sendAIWaiterEvent } from "@/lib/ai_waiter_client";
 
 /**
  * Watches for ?t=<qr_token> on any customer route. When present:
@@ -111,6 +112,7 @@ export function TableSessionGuard({ slug }: { slug?: string }) {
           localStorage.setItem("sd-takeaway-name", displayName);
         }
         toast.success(`Welcome to ${restaurantName}, ${displayName}! Takeaway ready.`);
+        sendAIWaiterEvent({ event_type: "QR_SCAN", restaurant_id: restaurantConfig?.id || slugFromPath || "", cart_state: [] }).catch(() => {/* silent */});
         setQrToken(null);
         router.replace(`/r/${slugFromPath}`, { scroll: false });
         return;
@@ -133,6 +135,7 @@ export function TableSessionGuard({ slug }: { slug?: string }) {
 
       setSession(res.session);
       toast.success(`Welcome to Table ${res.table.number}, ${displayName}!`);
+      sendAIWaiterEvent({ event_type: "QR_SCAN", restaurant_id: restaurantConfig?.id || res.table.restaurant_id || slugFromPath || "", cart_state: [] }).catch(() => {/* silent */});
       setQrToken(null);
       router.replace(`/r/${slugFromPath}`, { scroll: false });
     } catch (e) {

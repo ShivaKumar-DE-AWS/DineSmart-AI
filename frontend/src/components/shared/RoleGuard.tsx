@@ -23,6 +23,21 @@ export function RoleGuard({ allow, children }: { allow: Role[]; children: React.
   useEffect(() => {
     if (!hydrated) return;
     if (!user) {
+      if (typeof window !== "undefined") {
+        try {
+          const stored = localStorage.getItem("sd-session");
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (parsed?.state?.user && parsed?.state?.token) {
+              useSession.getState().setSession(parsed.state.user, parsed.state.token);
+              if (parsed.state.restaurantSlug) {
+                useSession.getState().setRestaurantSlug(parsed.state.restaurantSlug);
+              }
+              return;
+            }
+          }
+        } catch {}
+      }
       const isSubdomain = typeof window !== "undefined" && window.location.hostname !== "smartdineai.co.in" && window.location.hostname !== "www.smartdineai.co.in" && window.location.hostname !== "localhost";
       const loginUrl = isSubdomain ? "/login" : "/auth/restaurant";
       router.replace(`${loginUrl}?next=${encodeURIComponent(path || "/")}`);

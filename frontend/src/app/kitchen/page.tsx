@@ -53,7 +53,7 @@ export default function KitchenPage() {
   const { data } = useQuery({
     queryKey: ["kds-orders", user?.restaurant_id],
     queryFn: () => api<{ orders: Order[] }>("/api/orders?limit=200"),
-    refetchInterval: 15000, // 15s auto-refresh fallback — SSE handles real-time push
+    refetchInterval: 10000, // 10s auto-refresh fallback — SSE handles real-time push
   });
   const mut = useMutation({
     mutationFn: ({ id, status }: { id: string; status: Order["status"] }) =>
@@ -130,7 +130,7 @@ export default function KitchenPage() {
   const { data: resData } = useQuery({
     queryKey: ["kds-reservations"],
     queryFn: () => api<{ reservations: Reservation[] }>("/api/reservations/today"),
-    refetchInterval: 30_000,
+    refetchInterval: 10000,
   });
   const reservations = resData?.reservations || [];
 

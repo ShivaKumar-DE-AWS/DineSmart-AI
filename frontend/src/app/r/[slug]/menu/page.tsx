@@ -85,21 +85,26 @@ export default function MenuPage() {
 
   useEffect(() => {
     const hour = new Date().getHours();
-    if (hour >= 16 || hour < 4) {
+    if (hour >= 18 && hour <= 23) {
       setIsDinnerTime(true);
-      setTimeGreeting("Good Evening, explore our");
+      setTimeGreeting("Tonight's");
     } else {
       setIsDinnerTime(false);
-      setTimeGreeting("Good Afternoon, explore our");
+      setTimeGreeting("Our");
     }
   }, []);
 
-  // AI Waiter: fire QR_SCAN welcome once restaurant config is loaded
+  // AI Waiter: fire QR_SCAN welcome once restaurant config is loaded and session is active
   const _aiWelcomeFired = useRef(false);
   useEffect(() => {
     if (!restaurantConfig?.id || _aiWelcomeFired.current) return;
+    const session = useTable.getState().session;
+    const isTakeaway = typeof window !== "undefined" && localStorage.getItem("sd-order-type") === "takeaway";
+    const isTableJoin = typeof window !== "undefined" && (window.location.search.includes("t=") || window.location.search.includes("table="));
+    if (!session && !isTakeaway) return;
+    if (isTableJoin && !session) return;
+
     _aiWelcomeFired.current = true;
-    // Non-blocking: runs in background; never throws or delays menu rendering
     sendAIWaiterEvent({
       event_type: "QR_SCAN",
       restaurant_id: restaurantConfig.id,

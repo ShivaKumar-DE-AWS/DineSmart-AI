@@ -42,7 +42,7 @@ export default function AdminReservationsPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["admin-reservations"],
     queryFn: () => api<{ reservations: Reservation[] }>("/api/reservations"),
-    refetchInterval: 15_000,
+    refetchInterval: 10000,
   });
   const [filter, setFilter] = useState<"all" | Reservation["status"]>("all");
 
