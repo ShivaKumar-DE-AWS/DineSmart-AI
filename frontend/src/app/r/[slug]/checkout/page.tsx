@@ -151,6 +151,7 @@ export default function CheckoutPage() {
     const restId = restaurantConfig?.id;
     if (!restId || cart.items.length === 0) { submit(); return; }
 
+    setSubmitting(true);
     try {
       const aiRes = await sendAIWaiterEvent(
         {
@@ -188,8 +189,10 @@ export default function CheckoutPage() {
       // If AI returned no suggestions or a non-UPSELL response, proceed immediately
       if (!aiRes || aiRes.action_type !== "UPSELL_OFFER" || aiRes.suggested_items.length === 0) {
         submit();
+      } else {
+        // Bottom Sheet is now open; stop button spinner while user decides
+        setSubmitting(false);
       }
-      // Otherwise the Bottom Sheet handles the user decision flow via callbacks above
     } catch {
       // AI Waiter failure → fall through to order placement without interruption
       submit();

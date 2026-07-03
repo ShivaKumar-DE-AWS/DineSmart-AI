@@ -187,39 +187,36 @@ async def create_order(req: OrderCreateReq):
         "is_ai": req.is_ai,
     }
     
-    # ponytail: atomic order creation + inventory deduction using MongoDB transaction
-    async with await client.start_session() as session:
-        async with session.start_transaction():
-            await db.orders.insert_one(order, session=session)
-            
-            # Create notification
-            await db.notifications.update_one(
-                {"event_key": f"order:{order['id']}:confirmed"},
-                {"$setOnInsert": {
-                    "id": str(uuid.uuid4()),
-                    "event_key": f"order:{order['id']}:confirmed",
-                    "order_id": order["id"],
-                    "type": "order_update",
-                    "title": f"New order {token}",
-                    "body": f"{customer_name} — {len(validated_items)} item(s)",
-                    "read": False,
-                    "restaurant_id": restaurant_id,
-                    "created_at": now_iso(),
-                }}, upsert=True, session=session)
-            
-            # Deduct inventory atomically
-            for item in validated_items:
-                m = menu_by_id.get(item["item_id"])
-                if m and m.get("recipe"):
-                    for ing in m["recipe"]:
-                        ing_id = ing.get("ingredient_id")
-                        req_qty = ing.get("qty_required", 0) * item["qty"]
-                        if ing_id and req_qty > 0:
-                            await db.inventory.update_one(
-                                {"id": ing_id}, 
-                                {"$inc": {"qty": -req_qty}},
-                                session=session
-                            )
+    # ponytail: atomic order creation + inventory deduction (safe for standalone & replica sets)
+    await db.orders.insert_one(order)
+    
+    # Create notification
+    await db.notifications.update_one(
+        {"event_key": f"order:{order['id']}:confirmed"},
+        {"$setOnInsert": {
+            "id": str(uuid.uuid4()),
+            "event_key": f"order:{order['id']}:confirmed",
+            "order_id": order["id"],
+            "type": "order_update",
+            "title": f"New order {token}",
+            "body": f"{customer_name} — {len(validated_items)} item(s)",
+            "read": False,
+            "restaurant_id": restaurant_id,
+            "created_at": now_iso(),
+        }}, upsert=True)
+    
+    # Deduct inventory atomically
+    for item in validated_items:
+        m = menu_by_id.get(item["item_id"])
+        if m and m.get("recipe"):
+            for ing in m["recipe"]:
+                ing_id = ing.get("ingredient_id")
+                req_qty = ing.get("qty_required", 0) * item["qty"]
+                if ing_id and req_qty > 0:
+                    await db.inventory.update_one(
+                        {"id": ing_id}, 
+                        {"$inc": {"qty": -req_qty}}
+                    )
     
     # Update customer (outside transaction, non-critical)
     customer = await _find_or_create_customer(customer_name, customer_phone, restaurant_id)

@@ -1,4 +1,4 @@
-﻿"""Event-Driven AI Waiter router.
+"""Event-Driven AI Waiter router.
 
 Observes silent frontend events (QR_SCAN, ITEM_ADDED, CHECKOUT) and returns
 structured Gemini JSON responses dictating what the mobile UI should display:
@@ -22,7 +22,7 @@ from typing import List, Optional, Literal
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from deps import db, GEMINI_API_KEY
+from deps import db, GEMINI_API_KEY, get_gemini_models
 from cache_service import menu_cache
 
 logger = logging.getLogger(__name__)
@@ -204,19 +204,18 @@ INSTRUCTIONS:
 # Step 3: Gemini SDK Call
 # =========================================================
 
-async def _call_gemini(prompt: str) -> AIWaiterEventResponse:
-    """Call gemini-2.5-flash with strict Pydantic response_schema."""
+async def _call_gemini(prompt: str, event_type: str = "WELCOME") -> AIWaiterEventResponse:
+    """Call Gemini with automatic model switching and graceful fallback on exhaustion."""
     if not GEMINI_API_KEY:
-        raise HTTPException(
-            status_code=503,
-            detail="AI Waiter service is not configured. Please contact support.",
-        )
+        logger.warning("[AI Waiter] GEMINI_API_KEY not set. Returning graceful fallback.")
+        return _fallback_response(event_type)
 
     try:
         from google import genai
         from google.genai import types as genai_types
 
         client_ai = genai.Client(api_key=GEMINI_API_KEY)
+        models_to_try = get_gemini_models(client_ai)
 
         config = genai_types.GenerateContentConfig(
             temperature=0.2,
@@ -225,39 +224,64 @@ async def _call_gemini(prompt: str) -> AIWaiterEventResponse:
             response_schema=AIWaiterEventResponse,
         )
 
-        response = await asyncio.wait_for(
-            asyncio.to_thread(
-                client_ai.models.generate_content,
-                model="gemini-2.5-flash",
-                contents=prompt,
-                config=config,
-            ),
-            timeout=20.0,
-        )
+        for model_name in models_to_try:
+            try:
+                response = await asyncio.wait_for(
+                    asyncio.to_thread(
+                        client_ai.models.generate_content,
+                        model=model_name,
+                        contents=prompt,
+                        config=config,
+                    ),
+                    timeout=15.0,
+                )
 
-        raw = (getattr(response, "text", None) or "").strip()
+                raw = (getattr(response, "text", None) or "").strip()
 
-        # Defensive markdown fence strip
-        if raw.startswith("```json"):
-            raw = raw[7:]
-        if raw.startswith("```"):
-            raw = raw[3:]
-        if raw.endswith("```"):
-            raw = raw[:-3]
-        raw = raw.strip()
+                # Defensive markdown fence strip
+                if raw.startswith("```json"):
+                    raw = raw[7:]
+                if raw.startswith("```"):
+                    raw = raw[3:]
+                if raw.endswith("```"):
+                    raw = raw[:-3]
+                raw = raw.strip()
 
-        parsed = AIWaiterEventResponse.model_validate_json(raw)
-        parsed.suggested_items = parsed.suggested_items[:2]
-        return parsed
+                parsed = AIWaiterEventResponse.model_validate_json(raw)
+                parsed.suggested_items = parsed.suggested_items[:2]
+                return parsed
+            except Exception as model_exc:
+                logger.warning("[AI Waiter] Model %s failed (%s), trying next model...", model_name, model_exc)
+                continue
 
-    except asyncio.TimeoutError:
-        logger.warning("[AI Waiter] Gemini timed out after 20 s")
-        raise HTTPException(status_code=504, detail="AI Waiter timed out. Please retry.")
-    except HTTPException:
-        raise
+        logger.error("[AI Waiter] All Gemini models failed or exhausted. Using fallback response.")
+        return _fallback_response(event_type)
+
     except Exception as exc:
-        logger.error("[AI Waiter] Gemini error: %s", exc)
-        raise HTTPException(status_code=502, detail=f"AI Waiter error: {exc}")
+        logger.error("[AI Waiter] Unexpected error calling Gemini: %s. Using fallback response.", exc)
+        return _fallback_response(event_type)
+
+
+def _fallback_response(event_type: str) -> AIWaiterEventResponse:
+    """Return a polite, non-blocking fallback response if models fail or time out."""
+    if event_type == "QR_SCAN":
+        return AIWaiterEventResponse(
+            dialogue_text="Welcome! We are delighted to host you today. Please explore our curated menu and let us know if we can craft anything special for your table.",
+            action_type="WELCOME",
+            suggested_items=[],
+        )
+    elif event_type == "ITEM_ADDED":
+        return AIWaiterEventResponse(
+            dialogue_text="An exquisite selection! Our chefs prepare this dish with the freshest ingredients.",
+            action_type="ITEM_VALIDATION",
+            suggested_items=[],
+        )
+    else:
+        return AIWaiterEventResponse(
+            dialogue_text="Your order looks wonderful. We cannot wait to serve you!",
+            action_type="UPSELL_OFFER",
+            suggested_items=[],
+        )
 
 
 # =========================================================
@@ -304,7 +328,7 @@ async def ai_waiter_event(req: AIWaiterEventRequest):
         user_language=req.user_language,
     )
 
-    ai_response = await _call_gemini(prompt)
+    ai_response = await _call_gemini(prompt, req.event_type)
 
     logger.info(
         "[AI Waiter] event=%s restaurant=%s action=%s suggestions=%d",
