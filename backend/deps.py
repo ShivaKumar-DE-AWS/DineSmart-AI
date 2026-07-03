@@ -64,6 +64,10 @@ def get_gemini_models(client) -> list[str]:
         print(f"[Gemini] Dynamic model listing failed: {e}")
 
     fallbacks = [
+        "gemini-2.5-flash",
+        "gemini-2.5-pro",
+        "gemini-3-flash",
+        "gemini-3.1-flash",
         "gemini-2.0-flash",
         "gemini-2.0-flash-001",
         "gemini-2.0-flash-lite",

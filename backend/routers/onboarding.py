@@ -172,8 +172,10 @@ async def onboard_menu(file: UploadFile = File(...), user=Depends(require_user))
                         timeout=15.0
                     )
                     if response and getattr(response, "text", None):
+                        print(f"[SmartDine AI] Successfully extracted menu using model: {model_name} (api_ver: {api_ver})")
                         break
                 except Exception as e:
+                    print(f"[SmartDine AI Auto-Switch] Model '{model_name}' (api_ver: {api_ver}) exhausted/errored ({str(e)}). Automatically switching to next available model...")
                     last_err = e
                     continue
             if response and getattr(response, "text", None):
@@ -189,49 +191,47 @@ async def onboard_menu(file: UploadFile = File(...), user=Depends(require_user))
         import json
         items = json.loads(text)
 
-        async def generate_food_image(prompt: str, item_name: str) -> str:
-            try:
-                import uuid as _uuid
-                from deps import UPLOAD_DIR
-                result = await asyncio.to_thread(
-                    client_ai.models.generate_images,
-                    model='imagen-3.0-generate-002',
-                    prompt=f"A professional, mouth-watering food photography shot STRICTLY representing the dish: '{item_name}'. {prompt}. High quality, cinematic lighting, restaurant plating. The image MUST clearly depict {item_name}.",
-                    config=genai_types.GenerateImagesConfig(
-                        number_of_images=1,
-                        output_mime_type="image/jpeg",
-                        aspect_ratio="16:9"
-                    )
-                )
-                if result.generated_images:
-                    image_bytes = result.generated_images[0].image.image_bytes
-                    file_name = f"{_uuid.uuid4().hex}.jpg"
-                    file_path = UPLOAD_DIR / file_name
-                    with open(file_path, "wb") as f:
-                        f.write(image_bytes)
-                    return f"/api/uploads/{file_name}"
-            except Exception as e:
-                print(f"Image generation failed for {prompt}: {e}")
-            return ""
+        # To prevent Gemini API token/quota exhaustion and HTTP 429 errors from Imagen image generation,
+        # we assign beautiful, attractive gourmet food photography URLs to all extracted dishes based on their name and category.
+        def get_attractive_food_image(dish_name: str, category: str = "") -> str:
+            name_lower = (str(dish_name) + " " + str(category)).lower()
+            if any(k in name_lower for k in ["burger", "cheeseburger", "slider", "patty"]):
+                return "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=800&q=80"
+            elif any(k in name_lower for k in ["pizza", "margherita", "pepperoni", "crust"]):
+                return "https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=800&q=80"
+            elif any(k in name_lower for k in ["pasta", "spaghetti", "penne", "noodle", "ramen", "macaroni"]):
+                return "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80"
+            elif any(k in name_lower for k in ["biryani", "rice", "pulao", "fried rice", "mandhi"]):
+                return "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=800&q=80"
+            elif any(k in name_lower for k in ["curry", "masala", "paneer", "dal", "gravy", "chicken tikka", "butter chicken", "korma"]):
+                return "https://images.unsplash.com/photo-1585937421612-70a008356fbe?auto=format&fit=crop&w=800&q=80"
+            elif any(k in name_lower for k in ["salad", "green", "caesar", "sprouts"]):
+                return "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=800&q=80"
+            elif any(k in name_lower for k in ["sushi", "roll", "sashimi", "japan", "tempura"]):
+                return "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?auto=format&fit=crop&w=800&q=80"
+            elif any(k in name_lower for k in ["steak", "grill", "bbq", "ribs", "lamb", "chop", "kebab", "tandoori"]):
+                return "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80"
+            elif any(k in name_lower for k in ["taco", "mexican", "burrito", "quesadilla", "nachos", "fajita"]):
+                return "https://images.unsplash.com/photo-1565299585323-38d6b0865b47?auto=format&fit=crop&w=800&q=80"
+            elif any(k in name_lower for k in ["seafood", "fish", "prawn", "shrimp", "salmon", "crab", "lobster", "calamari"]):
+                return "https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?auto=format&fit=crop&w=800&q=80"
+            elif any(k in name_lower for k in ["cake", "dessert", "ice cream", "sweet", "chocolate", "pastry", "brownie", "tiramisu", "gulab", "rasgulla", "pudding"]):
+                return "https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&w=800&q=80"
+            elif any(k in name_lower for k in ["drink", "cocktail", "mocktail", "juice", "shake", "coffee", "tea", "beverage", "cola", "soda", "lemonade"]):
+                return "https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=800&q=80"
+            elif any(k in name_lower for k in ["soup", "broth", "chowder", "shorba"]):
+                return "https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&w=800&q=80"
+            elif any(k in name_lower for k in ["sandwich", "wrap", "panini", "toast", "club"]):
+                return "https://images.unsplash.com/photo-1528735602780-2552fd46c7af?auto=format&fit=crop&w=800&q=80"
+            elif any(k in name_lower for k in ["fry", "fries", "chips", "wedges", "onion rings", "samosa", "pakora", "appetizer", "starter"]):
+                return "https://images.unsplash.com/photo-1576107232684-1279f3908594?auto=format&fit=crop&w=800&q=80"
+            else:
+                return "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80"
 
-        # To prevent HTTP 502 / 504 Gateway Timeouts from sequential image generation (which takes ~80-150s for 20 dishes),
-        # we generate images concurrently for at most the top 2 items with a strict 3.5s timeout,
-        # leaving remaining items with empty image_url so extraction completes reliably in under 4 seconds.
-        async def process_item_fast(item, generate_img=False):
-            if generate_img:
-                try:
-                    prompt = item.get("image_prompt", item["name"] + " " + item.get("description", ""))
-                    img_url = await asyncio.wait_for(generate_food_image(prompt, item.get("name", "")), timeout=3.5)
-                    item["image_url"] = img_url
-                    return item
-                except Exception:
-                    pass
-            item["image_url"] = ""
-            return item
+        for item in items:
+            item["image_url"] = get_attractive_food_image(item.get("name", ""), item.get("category", ""))
 
-        tasks = [process_item_fast(item, generate_img=(idx < 2)) for idx, item in enumerate(items)]
-        processed_items = await asyncio.gather(*tasks)
-        return {"items": list(processed_items)}
+        return {"items": items}
     except Exception as e:
         print(f"Exception details: {e}")
         raise HTTPException(status_code=500, detail=f"Menu extraction failed: {e}")
