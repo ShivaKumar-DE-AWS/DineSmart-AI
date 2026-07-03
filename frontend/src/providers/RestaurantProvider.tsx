@@ -36,13 +36,6 @@ const DEFAULT_CONFIG: RestaurantConfig = {
     dinner: "6:00 PM to 11:00 PM",
     open_days: "Open all 7 days",
   },
-  ai_waiter: {
-    name: "AI Waiter",
-    personality: "Friendly and helpful",
-    greeting: "Namaste! Welcome to our restaurant. How can I help you today?",
-    languages: ["en"],
-    tones: ["friendly"],
-  },
   reviews: [],
   offers: [],
   menu_config: {
@@ -113,7 +106,6 @@ export function generateRestaurantConfig(restaurantData: {
   history?: RestaurantConfig["history"];
   specialties?: string[];
   famous_dishes?: RestaurantConfig["famous_dishes"];
-  ai_waiter_name?: string;
 }): RestaurantConfig {
   return {
     id: `rest_${restaurantData.slug.replace(/-/g, "_")}`,
@@ -135,7 +127,7 @@ export function generateRestaurantConfig(restaurantData: {
       { icon: "Users", title: "Family Friendly", description: "Bring the whole family." },
       { icon: "ChefHat", title: "Expert Chefs", description: "Our chefs are masters of their craft." },
       { icon: "Flame", title: "Fast Service", description: "Quick preparation without compromising quality." },
-      { icon: "Sparkles", title: "AI Assistant", description: "Smart ordering at your fingertips." },
+      { icon: "Sparkles", title: "Digital Ordering", description: "Smart ordering at your fingertips." },
     ],
     contact: {
       phone: restaurantData.phone || "+91 98765 43210",
@@ -147,13 +139,6 @@ export function generateRestaurantConfig(restaurantData: {
       lunch: "12:00 PM to 3:00 PM",
       dinner: "6:00 PM to 11:00 PM",
       open_days: "Open all 7 days",
-    },
-    ai_waiter: {
-      name: restaurantData.ai_waiter_name || "AI Waiter",
-      personality: "Friendly and helpful",
-      greeting: `Namaste! Welcome to ${restaurantData.name}. How can I help you today?`,
-      languages: ["en"],
-      tones: ["friendly"],
     },
     reviews: [],
     offers: [],

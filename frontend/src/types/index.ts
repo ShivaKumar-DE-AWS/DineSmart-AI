@@ -131,9 +131,6 @@ export interface RestaurantConfig {
   // Business Hours
   hours: BusinessHours;
 
-  // AI Waiter Settings
-  ai_waiter: AIWaiterConfig;
-
   // Reviews / Testimonials
   reviews: Review[];
 
@@ -195,14 +192,6 @@ export interface BusinessHours {
   lunch: string;
   dinner: string;
   open_days: string;
-}
-
-export interface AIWaiterConfig {
-  name: string;
-  personality: string;
-  greeting: string;
-  languages: string[];
-  tones: string[];
 }
 
 export interface Review {

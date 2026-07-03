@@ -58,9 +58,6 @@ RATE_LIMITS: Dict[str, str] = {
     "/api/auth/signup": "5/minute",
     "/api/auth/guest": "20/minute",
     "/api/orders": "30/minute",
-    "/api/ai-waiter/chat": "15/minute",
-    "/api/ai-waiter/transcribe": "10/minute",
-    "/api/ai-waiter/speak": "10/minute",
     "/api/reservations": "15/minute",
     "/api/payment/checkout/session": "10/minute",
     "/api/restaurants/request": "2/hour",
@@ -282,8 +279,6 @@ from routers.auth import router as auth_router
 from routers.menu import router as menu_router
 from routers.orders import router as orders_router
 from routers.tables import router as tables_router
-from routers.ai_waiter import router as ai_router
-from routers.ai_waiter_ws import router as ai_waiter_ws_router
 from routers.super_admin import router as super_admin_router
 from routers.audit import router as audit_router
 from routers.announcements import router as announcements_router
@@ -304,8 +299,6 @@ app.include_router(auth_router)
 app.include_router(menu_router)
 app.include_router(orders_router)
 app.include_router(tables_router)
-app.include_router(ai_router)
-app.include_router(ai_waiter_ws_router)
 app.include_router(super_admin_router)
 app.include_router(audit_router)
 app.include_router(announcements_router)
@@ -527,7 +520,6 @@ async def backfill_restaurant_configs():
                         ],
                         "contact": {"phone": "", "email": "", "address": ""},
                         "hours": {"lunch": "12:00 PM to 3:00 PM", "dinner": "6:00 PM to 11:00 PM", "open_days": "Open all 7 days"},
-                        "ai_waiter": {"name": f"{name} AI", "personality": "Warm and knowledgeable", "greeting": f"Welcome to {name}!", "languages": ["en"], "tones": ["friendly"]},
                     }
                     await db.restaurant_configs.insert_one({
                         "slug": slug,

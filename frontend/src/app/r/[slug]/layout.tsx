@@ -4,7 +4,6 @@ import { usePathname , useParams} from "next/navigation";
 import { useEffect, useState, Suspense, useRef } from "react";
 import { ShoppingBag, Menu as MenuIcon, X, ChefHat, ArrowRight, BellRing, Instagram, Facebook, Twitter, Sparkles, Check } from "lucide-react";
 import { useCart } from "@/stores/cart";
-import { AIWaiterDock } from "@/components/customer/AIWaiterDock";
 import { MehfilLogo } from "@/components/customer/MehfilLogo";
 import { TableSessionGuard } from "@/components/customer/TableSessionGuard";
 import { useQuery } from "@tanstack/react-query";
@@ -378,7 +377,6 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
           </div>
         </Link>
       )}
-      {(path === `/r/${slug}` || path === `/r/${slug}/menu` || path === `/` || path === `/menu`) && <AIWaiterDock />}
 
       {/* Footer */}
       <footer className="mt-20 mehfil-royal-bg text-[#FAF5EC]" data-testid="mehfil-footer">

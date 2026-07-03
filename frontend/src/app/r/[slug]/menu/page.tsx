@@ -70,30 +70,9 @@ export default function MenuPage() {
   const [showChefSpecials, setShowChefSpecials] = useState(false);
     const [viewMode, setViewMode] = useState<"book" | "quick">("book");
   const [showSpecialsInsert, setShowSpecialsInsert] = useState(true);
-  const [showAIChat, setShowAIChat] = useState(false);
   const [quickCategory, setQuickCategory] = useState("All");
   const [isDinnerTime, setIsDinnerTime] = useState(false);
   const [timeGreeting, setTimeGreeting] = useState("Our");
-  const [aiChatInput, setAiChatInput] = useState("");
-  const [aiChatMessages, setAiChatMessages] = useState<{ role: string; content: string }[]>([
-    { role: "assistant", content: `Welcome to ${restaurantConfig?.name || "our restaurant"}! I am your AI assistant today. Would you like a pairing recommendation or help deciding?` }
-  ]);
-  const aiChatScrollRef = useRef<HTMLDivElement>(null);
-
-  const sendAiChat = useCallback(() => {
-    const text = aiChatInput.trim();
-    if (!text) return;
-    setAiChatMessages((prev) => [...prev, { role: "user", content: text }]);
-    setAiChatInput("");
-    // Auto-reply with a simple echo + suggestion as ponytail: full AI integration via /api/chat would go here
-    setTimeout(() => {
-      setAiChatMessages((prev) => [...prev, { role: "assistant", content: `Great choice! I'd recommend pairing ${text} with our chef's special tonight. Would you like to add it to your tray?` }]);
-    }, 600);
-  }, [aiChatInput]);
-
-  useEffect(() => {
-    aiChatScrollRef.current?.scrollTo({ top: aiChatScrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [aiChatMessages]);
 
   useEffect(() => {
     const hour = new Date().getHours();

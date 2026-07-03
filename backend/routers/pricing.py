@@ -22,8 +22,8 @@ CURRENCY_MAP = {
 DEFAULT_CURRENCY = {"currency": "USD", "symbol": "$", "rate": 1, "pro": 18, "enterprise": 59}
 
 PLAN_FEATURES = {
-    "starter": ["Unlimited AI Waiter sessions", "Menu management", "Order queueing", "Table management"],
-    "pro": ["Everything in Starter", "Unlimited monthly orders", "AI Waiter capabilities", "Advanced analytics dashboard", "Priority customer support"],
+    "starter": ["Unlimited customer sessions", "Menu management", "Order queueing", "Table management"],
+    "pro": ["Everything in Starter", "Unlimited monthly orders", "Advanced analytics dashboard", "Priority customer support"],
     "enterprise": ["Everything in Pro", "Dedicated account manager", "Custom integrations", "White-label branding", "SLA guarantee", "Bulk API access"],
 }
 

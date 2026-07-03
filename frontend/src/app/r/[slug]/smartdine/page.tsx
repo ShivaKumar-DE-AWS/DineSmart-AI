@@ -30,8 +30,8 @@ const FEATURES = [
   },
   {
     icon: MessageCircle,
-    title: "AI Waiter",
-    description: "Your personal dining assistant that recommends dishes, answers questions, and places orders — available 24/7.",
+    title: "Instant Digital Ordering",
+    description: "Browse the interactive menu, customize dishes, and order directly from your device.",
   },
   {
     icon: Clock,
@@ -75,7 +75,7 @@ const BENEFITS_FOR_RESTAURANTS = [
 
 const HOW_IT_WORKS = [
   { step: 1, title: "Scan QR Code", description: "Scan the QR code at your table to access the restaurant's digital menu.", icon: QrCode },
-  { step: 2, title: "Talk to AI Waiter", description: "Ask our AI for recommendations or browse the menu yourself.", icon: MessageCircle },
+  { step: 2, title: "Explore Menu", description: "Browse photos, prices, and detailed descriptions of all our signature dishes.", icon: MessageCircle },
   { step: 3, title: "Place Your Order", description: "Add items to your cart and customize as you like.", icon: Smartphone },
   { step: 4, title: "Track & Enjoy", description: "Watch your order progress and get notified when it's ready.", icon: Clock },
 ];
@@ -329,7 +329,7 @@ export default function SmartDinePage() {
             Ready to <span className="font-editorial italic mehfil-gold-gradient">experience</span> SmartDine?
           </h2>
           <p className="font-editorial italic text-lg text-[#1A1106]/75 mt-6 max-w-2xl mx-auto">
-            Start by exploring our menu or talking to our AI Waiter. The future of dining is here.
+            Start by exploring our menu and ordering digitally from your table. The future of dining is here.
           </p>
           <div className="mt-10 flex flex-wrap gap-4 justify-center">
             <Link href={`/r/${slug}/menu`} className="mehfil-btn-royal rounded-full px-8 py-3.5 text-sm tracking-[0.2em] uppercase font-royal inline-flex items-center gap-2">

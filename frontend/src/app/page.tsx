@@ -3,7 +3,7 @@ import { HeroSection } from "@/components/landing/HeroSection";
 import { SocialProofBar } from "@/components/landing/SocialProofBar";
 import { ProblemSection } from "@/components/landing/ProblemSection";
 import { SolutionSection } from "@/components/landing/SolutionSection";
-import { AIWaiterShowcase } from "@/components/landing/AIWaiterShowcase";
+import { PartnerRestaurants } from "@/components/landing/PartnerRestaurants";
 import { ProductFeatures } from "@/components/landing/ProductFeatures";
 import { InteractiveDemo } from "@/components/landing/InteractiveDemo";
 import { ROICalculator } from "@/components/landing/ROICalculator";
@@ -23,7 +23,7 @@ export default function Home() {
       <SocialProofBar />
       <ProblemSection />
       <SolutionSection />
-      <AIWaiterShowcase />
+      <PartnerRestaurants />
       <ProductFeatures />
       <InteractiveDemo />
       <ROICalculator />

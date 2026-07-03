@@ -26,13 +26,6 @@ export const EMPTY_RESTAURANT_CONFIG: RestaurantConfig = {
   contact: { phone: "", email: "", address: "" },
   social_links: {},
   hours: { lunch: "", dinner: "", open_days: "" },
-  ai_waiter: {
-    name: "AI Waiter",
-    personality: "Friendly and helpful",
-    greeting: "How may I help with your order?",
-    languages: ["en"],
-    tones: ["friendly"],
-  },
   reviews: [],
   offers: [],
   menu_config: {
@@ -55,7 +48,6 @@ function validateRestaurantConfig(value: unknown, requestedSlug: string): Restau
     contact: { ...EMPTY_RESTAURANT_CONFIG.contact, ...(config.contact || {}) },
     hours: { ...EMPTY_RESTAURANT_CONFIG.hours, ...(config.hours || {}) },
     social_links: { ...(config.social_links || {}) },
-    ai_waiter: { ...EMPTY_RESTAURANT_CONFIG.ai_waiter, ...(config.ai_waiter || {}) },
     menu_config: { ...EMPTY_RESTAURANT_CONFIG.menu_config, ...(config.menu_config || {}) },
   } as RestaurantConfig;
 }

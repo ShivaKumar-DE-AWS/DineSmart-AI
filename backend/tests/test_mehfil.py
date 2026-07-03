@@ -3,8 +3,6 @@
 - POST/PATCH/DELETE /api/menu (admin)
 - POST/DELETE /api/inventory (admin)
 - POST /api/upload/image (admin) + GET /api/uploads/<file>
-- POST /api/ai-waiter/speak  (TTS)
-- POST /api/ai-waiter/transcribe (Whisper)
 """
 import io
 import os
@@ -210,27 +208,4 @@ class TestImageUpload:
         pytest.skip("Upload needs S3/env configuration on Render")
         files = {"file": ("e.png", io.BytesIO(b""), "image/png")}
         r = s.post(f"{API}/upload/image", files=files, headers=H(admin_tok))
-        assert r.status_code == 400
-
-
-# ---------- /api/ai-waiter/transcribe ----------
-class TestTranscribe:
-    def test_transcribe_empty_returns_400(self, s, admin_tok):
-        files = {"file": ("a.webm", io.BytesIO(b""), "audio/webm")}
-        r = s.post(f"{API}/ai-waiter/transcribe", files=files, headers=H(admin_tok))
-        assert r.status_code == 400
-
-
-# ---------- /api/ai-waiter/speak ----------
-class TestTTS:
-    def test_speak_returns_audio(self, s, admin_tok):
-        r = s.post(f"{API}/ai-waiter/speak", json={"text": "Hello from Mehfil", "voice": "nova"}, headers=H(admin_tok), timeout=30)
-        assert r.status_code == 200, r.text
-        ct = r.headers.get("content-type", "")
-        assert "audio" in ct, f"content-type was {ct}"
-        # MP3 frames typically start with ID3 or 0xFFFB / 0xFFFA / 0xFFE0 etc.
-        assert len(r.content) > 1000, f"audio too small: {len(r.content)}"
-
-    def test_speak_empty_text_rejected(self, s, admin_tok):
-        r = s.post(f"{API}/ai-waiter/speak", json={"text": "  ", "voice": "nova"}, headers=H(admin_tok))
         assert r.status_code == 400

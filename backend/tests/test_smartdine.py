@@ -196,44 +196,4 @@ def test_payment_intent(s):
     assert j["intent_id"].startswith("upi_")
     assert abs(j["amount"] - 540.5) < 0.01
 
-# ---------- AI Waiter ----------
-def test_ai_waiter_stream(s, guest, admin):
-    import pytest
-    """AI waiter stream — skip if GEMINI_API_KEY not configured."""
-    resp = s.post(f"{API}/ai-waiter/chat", json={"session_id": "preflight", "message": "ping", "restaurant_id": admin["user"]["restaurant_id"]}, headers=hdr(guest["token"]))
-    if resp.status_code == 500:
-        pytest.skip("AI Waiter not configured (GEMINI_API_KEY missing)")
-    session_id = f"TEST_{uuid.uuid4().hex[:8]}"
-    payload = {"session_id": session_id, "message": "Recommend one vegetarian main please.", "restaurant_id": admin["user"]["restaurant_id"]}
-    got_delta = False
-    err = None
-    with s.post(f"{API}/ai-waiter/chat", json=payload, headers=hdr(guest["token"]), stream=True, timeout=60) as r:
-        assert r.status_code == 200, r.text
-        start = time.time()
-        for raw in r.iter_lines(decode_unicode=True):
-            if raw is None or raw == "":
-                continue
-            if raw.startswith("data:"):
-                data = raw[5:].strip()
-                try:
-                    obj = json.loads(data)
-                except Exception:
-                    continue
-                if "delta" in obj:
-                    got_delta = True
-                    break
-                if obj.get("error"):
-                    err = obj["error"]
-                    break
-                if obj.get("done"):
-                    break
-            if time.time() - start > 45:
-                break
-    assert got_delta, f"No delta received. error={err}"
 
-    # history
-    time.sleep(1.5)
-    r2 = s.get(f"{API}/ai-waiter/history", params={"session_id": session_id, "restaurant_id": admin["user"]["restaurant_id"]}, headers=hdr(guest["token"]))
-    assert r2.status_code == 200
-    msgs = r2.json()["messages"]
-    assert any(m["role"] == "user" for m in msgs)

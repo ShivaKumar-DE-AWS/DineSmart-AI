@@ -120,7 +120,6 @@ def generate_frontend_config(name: str, slug: str, rest_id: str, phone: str, ema
         ],
         "contact": {"phone": phone, "email": email, "address": ""},
         "hours": {"lunch": "12:00 PM to 3:00 PM", "dinner": "6:00 PM to 11:00 PM", "open_days": "Open all 7 days"},
-        "ai_waiter": {"name": f"{name} AI", "personality": "Warm and knowledgeable", "greeting": f"Welcome to {name}!", "languages": ["en"], "tones": ["friendly"]},
     }
 
 @router.post("/api/restaurants/onboard-menu", dependencies=[Depends(require_roles("admin"))])

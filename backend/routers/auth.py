@@ -62,7 +62,6 @@ async def signup(req: SignupReq):
             ],
             "contact": {"phone": "", "email": req.email, "address": ""},
             "hours": {"lunch": "12:00 PM to 3:00 PM", "dinner": "6:00 PM to 11:00 PM", "open_days": "Open all 7 days"},
-            "ai_waiter": {"name": f"{req.restaurant_name} AI", "personality": "Warm and knowledgeable", "greeting": f"Welcome to {req.restaurant_name}! How can I help you today?", "languages": ["en"], "tones": ["friendly"]},
         }
         await db.restaurant_configs.insert_one({
             "slug": slug,

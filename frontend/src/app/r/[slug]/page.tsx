@@ -26,16 +26,9 @@ export default function NativeAppHomeMenu() {
   const cart = useCart();
   const [q, setQ] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
-  const [showAIChat, setShowAIChat] = useState(false);
-  const [aiChatInput, setAiChatInput] = useState("");
   const [mounted, setMounted] = useState(false);
   
   useEffect(() => setMounted(true), []);
-
-  const [aiChatMessages, setAiChatMessages] = useState<{ role: string; content: string }[]>([
-    { role: "assistant", content: `Welcome to ${restaurantConfig?.name || "our restaurant"}! I'm your AI Sommelier today. What are you craving?` }
-  ]);
-  const aiChatScrollRef = useRef<HTMLDivElement>(null);
 
   const items = useMemo(() => (data?.items ?? []).filter((i) => i.available !== false), [data]);
 
@@ -62,20 +55,6 @@ export default function NativeAppHomeMenu() {
     
     return { categories: sortedCategories, sortedFiltered: sorted };
   }, [filtered]);
-
-  const sendAiChat = useCallback(() => {
-    const text = aiChatInput.trim();
-    if (!text) return;
-    setAiChatMessages((prev) => [...prev, { role: "user", content: text }]);
-    setAiChatInput("");
-    setTimeout(() => {
-      setAiChatMessages((prev) => [...prev, { role: "assistant", content: `Great choice! I'd recommend pairing that with our chef's special. Want me to add it?` }]);
-    }, 600);
-  }, [aiChatInput]);
-
-  useEffect(() => {
-    aiChatScrollRef.current?.scrollTo({ top: aiChatScrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [aiChatMessages]);
 
   return (
     <div className="bg-[#FAF5EC] min-h-screen pb-28 relative -mt-[76px]">

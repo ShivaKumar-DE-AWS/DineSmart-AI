@@ -11,7 +11,6 @@ const nextConfig = {
       { protocol: "https", hostname: "customer-assets.emergentagent.com" },
     ],
   },
-  eslint: { ignoreDuringBuilds: false },
   typescript: { ignoreBuildErrors: false },
   async rewrites() {
     // Attempt to use NEXT_PUBLIC_BACKEND_URL, fallback to REACT_APP_BACKEND_URL
