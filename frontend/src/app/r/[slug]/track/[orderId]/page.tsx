@@ -372,11 +372,13 @@ export default function TrackPage() {
             type="button"
             disabled={order.bill_requested || requestingBill}
             onClick={handleRequestBill}
-            className={`w-full py-4 px-6 rounded-2xl font-royal uppercase tracking-widest text-xs font-bold transition flex items-center justify-center gap-2.5 shadow-lg ${
-              order.bill_requested
-                ? "bg-amber-500 text-amber-950 cursor-default"
-                : "bg-red-600 hover:bg-red-700 text-white shadow-red-500/20"
-            }`}
+            style={{
+              background: order.bill_requested ? "#D4AC0D" : "linear-gradient(135deg, #C0392B 0%, #A93226 100%)",
+              color: "#FFFFFF",
+              border: "none",
+              boxShadow: "0 6px 16px rgba(192, 57, 43, 0.25)"
+            }}
+            className="w-full py-4 px-6 rounded-2xl font-royal uppercase tracking-widest text-xs font-bold transition flex items-center justify-center gap-2.5 shadow-lg hover:opacity-90 active:scale-[0.98]"
           >
             <ConciergeBell className="h-4 w-4 animate-bounce" />
             {order.bill_requested ? "🔔 Bill Requested (Awaiting Staff)" : "🧾 Request Bill / Stop Dining"}
@@ -384,7 +386,13 @@ export default function TrackPage() {
           <button
             type="button"
             onClick={() => setShowSplitModal(true)}
-            className="w-full bg-brand-primary/10 hover:bg-brand-primary/20 text-brand-primary border border-brand-primary/30 rounded-2xl py-4 px-6 font-royal tracking-wider uppercase text-xs font-bold transition flex items-center justify-center gap-2.5 shadow-sm"
+            style={{
+              background: "#FFFFFF",
+              color: "#C0392B",
+              border: "2px solid #C0392B",
+              boxShadow: "0 4px 12px rgba(0,0,0,0.06)"
+            }}
+            className="w-full rounded-2xl py-4 px-6 font-royal tracking-wider uppercase text-xs font-bold transition flex items-center justify-center gap-2.5 hover:bg-red-50 active:scale-[0.98]"
           >
             <Scissors className="h-4 w-4" /> Bill & Split Calculator
           </button>
@@ -409,7 +417,13 @@ export default function TrackPage() {
               toast.error("Failed to download receipt");
             }
           }}
-          className="rounded-full border border-brand-secondary/40 px-6 py-3 font-royal text-xs tracking-widest uppercase text-brand-primary hover:bg-brand-primary/5 transition inline-flex items-center gap-2"
+          style={{
+            background: "#FFFFFF",
+            color: "#8A6A1B",
+            border: "2px solid #8A6A1B",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.06)"
+          }}
+          className="rounded-full px-6 py-3 font-royal text-xs tracking-widest uppercase font-bold hover:bg-amber-50 transition inline-flex items-center gap-2 active:scale-[0.98]"
         >
           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
           Download Receipt

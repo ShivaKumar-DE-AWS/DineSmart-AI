@@ -31,7 +31,15 @@ export default function NativeAppHomeMenu() {
   
   useEffect(() => setMounted(true), []);
 
-  // AI Waiter: Welcome note is handled when joining table / menu session only
+  // AI Waiter: fire QR_SCAN welcome when landing on menu page
+  useEffect(() => {
+    if (!restaurantConfig?.id || !mounted) return;
+    sendAIWaiterEvent({
+      event_type: "QR_SCAN",
+      restaurant_id: restaurantConfig.id,
+      cart_state: [],
+    }).catch(() => {/* silent */});
+  }, [restaurantConfig?.id, mounted]);
 
   // AI Waiter: fire ITEM_ADDED toast on every add-to-cart action
   const handleAddToCart = useCallback((item: MenuItem) => {

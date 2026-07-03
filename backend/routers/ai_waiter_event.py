@@ -273,7 +273,7 @@ async def _call_gemini(prompt: str, event_type: str = "WELCOME", fav_item: str =
                         contents=prompt,
                         config=config,
                     ),
-                    timeout=2.0,  # Strategy 3: 2.0s Circuit Breaker timeout
+                    timeout=4.5,  # Strategy 3: 4.5s Circuit Breaker timeout
                 )
 
                 raw = (getattr(response, "text", None) or "").strip()
@@ -319,11 +319,14 @@ def _fallback_response(event_type: str, fav_item: str = "") -> AIWaiterEventResp
             suggested_items=[],
         )
     else:
-        # Strategy 3: Circuit Breaker fallback during CHECKOUT -> empty suggested_items, routes straight to pay
+        # Strategy 3: Circuit Breaker fallback during CHECKOUT -> return classic signature pairings
         return AIWaiterEventResponse(
-            dialogue_text="Your order looks wonderful. We cannot wait to serve you!",
+            dialogue_text="To complete your feast, our Chef recommends these signature pairings:",
             action_type="UPSELL_OFFER",
-            suggested_items=[],
+            suggested_items=[
+                AISuggestedItem(item_id="bread-naan", name="Butter Naan", price=50.0, reason="Fresh tandoori bread baked to perfection."),
+                AISuggestedItem(item_id="bev-lassi", name="Sweet Lassi", price=90.0, reason="Traditional chilled yogurt drink to refresh your palate.")
+            ],
         )
 
 

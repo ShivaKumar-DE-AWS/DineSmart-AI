@@ -171,7 +171,7 @@ export async function sendAIWaiterEvent(
       const sessionKey = "sd_ai_welcomed_" + (tableSession?.id || payload.restaurant_id);
       if (typeof window !== "undefined" && window.sessionStorage) {
         const lastWelcomed = sessionStorage.getItem(sessionKey);
-        if (lastWelcomed && (Date.now() - parseInt(lastWelcomed, 10)) < 300000) {
+        if (lastWelcomed && (Date.now() - parseInt(lastWelcomed, 10)) < 3000) {
           return null;
         }
         sessionStorage.setItem(sessionKey, Date.now().toString());
@@ -199,6 +199,63 @@ export async function sendAIWaiterEvent(
       }
 
       showAIWelcomeModal(timeGreeting, 20000);
+    }
+
+    // 2. Optimistic Instant UI for ITEM_ADDED (0ms delay with Palate & Spice Balance + One-Tap Upsell!)
+    if (payload.event_type === "ITEM_ADDED" && payload.added_item) {
+      const item = payload.added_item;
+      const cat = (item.category || "").toLowerCase();
+      const name = item.name;
+      const isSpicy = /spicy|guntur|vindaloo|masala|kebab|chilli|pepper|tikka|tandoori|peri|schezwan|curry|kolhapuri|mirch|fry/i.test(`${name} ${cat}`);
+      
+      let instantMsg = `✨ Great taste! ${name} is a wonderful choice.`;
+      let suggestedAction: { label: string; onClick: () => void } | undefined = undefined;
+
+      if (isSpicy) {
+        const rec = { id: "cool-1", name: "Sweet Lassi", price: 90, category: "Beverages" };
+        instantMsg = `🌶️ ${name} has a bold, spicy flavor profile! AI Waiter suggests pairing it with a cooling ${rec.name} (₹${rec.price}) to balance your palate perfectly.`;
+        suggestedAction = {
+          label: `+ Add ${rec.name} (₹${rec.price})`,
+          onClick: () => {
+            useCart.getState().add({ id: rec.id, name: rec.name, price: rec.price, category: rec.category } as any, 1);
+          }
+        };
+      } else if (cat.includes("biryani") || cat.includes("main") || cat.includes("curry") || cat.includes("rice") || cat.includes("thali")) {
+        const rec = { id: "side-1", name: "Mint Raita", price: 80, category: "Sides" };
+        instantMsg = `✨ Added ${name}! AI Waiter suggests pairing it with a cooling ${rec.name} or Butter Naan for a royal feast!`;
+        suggestedAction = {
+          label: `+ Add ${rec.name} (₹${rec.price})`,
+          onClick: () => {
+            useCart.getState().add({ id: rec.id, name: rec.name, price: rec.price, category: rec.category } as any, 1);
+          }
+        };
+      } else if (cat.includes("starter") || cat.includes("kebab") || cat.includes("appetizer") || cat.includes("snack") || cat.includes("tikka")) {
+        const rec = { id: "bread-1", name: "Butter Naan", price: 50, category: "Breads" };
+        instantMsg = `✨ ${name} is a crowd favorite starter! Ready for mains? Pair it with fresh tandoori bread or Biryani.`;
+        suggestedAction = {
+          label: `+ Add ${rec.name} (₹${rec.price})`,
+          onClick: () => {
+            useCart.getState().add({ id: rec.id, name: rec.name, price: rec.price, category: rec.category } as any, 1);
+          }
+        };
+      } else if (cat.includes("bread") || cat.includes("naan") || cat.includes("roti") || cat.includes("paratha") || cat.includes("kulcha")) {
+        const rec = { id: "main-1", name: "Dal Makhani", price: 220, category: "Main Course" };
+        instantMsg = `✨ Fresh tandoori bread! ${name} dips wonderfully into our signature ${rec.name} or Butter Chicken.`;
+        suggestedAction = {
+          label: `+ Add ${rec.name} (₹${rec.price})`,
+          onClick: () => {
+            useCart.getState().add({ id: rec.id, name: rec.name, price: rec.price, category: rec.category } as any, 1);
+          }
+        };
+      } else {
+        instantMsg = `✨ ${name} added to your thali! Check our Chef Specials for signature pairings!`;
+      }
+      
+      if (suggestedAction) {
+        showAIToast(instantMsg, 4000, suggestedAction);
+      } else {
+        showAIToast(instantMsg, 3000);
+      }
     }
 
     // Strategy 2: Smart Frontend Debouncing (1.5s delay for ITEM_ADDED network calls)
@@ -237,6 +294,13 @@ export async function sendAIWaiterEvent(
                 device_id: getOrCreateAnonID(),
               }),
             });
+            if (response) {
+              if (response.action_type === "UPSELL_OFFER" && response.suggested_items.length > 0) {
+                showAIUpsellSheet(response.dialogue_text, response.suggested_items, addToCartFn, proceedPayFn);
+              } else if (response.action_type === "ITEM_VALIDATION" && response.dialogue_text) {
+                showAIToast(response.dialogue_text, 4000);
+              }
+            }
             if (_pendingItemAddedResolve) _pendingItemAddedResolve(response);
           } catch (e) {
             if (_pendingItemAddedResolve) _pendingItemAddedResolve(null);
@@ -336,23 +400,29 @@ function _bootstrapUI(): void {
     #ai-waiter-sheet {
       position: fixed;
       bottom: -100%;
-      left: 0; right: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 520px;
       background: #FFFFFF;
       border-radius: 24px 24px 0 0;
-      padding: 28px 20px 32px;
-      box-shadow: 0 -6px 30px rgba(0,0,0,0.12);
+      padding: 24px 20px 28px;
+      box-shadow: 0 -10px 40px rgba(0,0,0,0.2);
       z-index: 9998;
       transition: bottom 0.4s cubic-bezier(0.1, 1, 0.2, 1);
       font-family: system-ui, -apple-system, sans-serif;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
     }
     #ai-waiter-sheet.show { bottom: 0; }
     .ai-sheet-header {
       display: flex; align-items: center; gap: 8px;
-      margin-bottom: 10px;
+      margin-bottom: 10px; flex-shrink: 0;
     }
     .ai-sheet-header h3 { margin: 0; font-size: 18px; font-weight: 700; color: #222; }
-    .ai-sheet-pitch { font-size: 15px; color: #555; line-height: 1.55; margin-bottom: 22px; }
-    .ai-upsell-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+    .ai-sheet-pitch { font-size: 15px; color: #555; line-height: 1.55; margin-bottom: 16px; flex-shrink: 0; }
+    .ai-upsell-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; overflow-y: auto; max-height: 45vh; padding-right: 4px; }
     .ai-upsell-card {
       flex-direction: column; gap: 12px;
       background: linear-gradient(135deg, #FFFFFF 0%, #FAF8F5 100%);
