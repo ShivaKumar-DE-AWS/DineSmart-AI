@@ -46,7 +46,7 @@ export default function App() {
 
   return (
     <I18nCtx.Provider value={value}>
-      <div id="top" className="relative min-h-screen">
+      <div id="top" className="relative min-h-screen bg-[#07070a] text-[#f6efe2] font-sans selection:bg-[#e8b96b] selection:text-[#07070a] overflow-x-hidden" style={{ background: "radial-gradient(1100px 500px at 70% -5%, rgba(232,185,107,0.12), transparent 60%), radial-gradient(800px 500px at -5% 40%, rgba(176,107,255,0.10), transparent 60%), #07070a", color: "#f6efe2" }}>
         <Nav />
         <main>
           <Hero />
