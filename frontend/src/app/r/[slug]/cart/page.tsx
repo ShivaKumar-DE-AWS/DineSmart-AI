@@ -31,7 +31,7 @@ export default function CartPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-5 md:px-10 py-12" data-testid="cart-page">
+    <div className="max-w-6xl mx-auto px-3 sm:px-5 md:px-10 py-8 sm:py-12 overflow-x-hidden" data-testid="cart-page">
       <div className="text-center mb-10">
         <div className="mehfil-divider mb-4 max-w-xs mx-auto"><span className="font-royal tracking-[0.4em] text-[10px] uppercase">Your thali</span></div>
         <h1 className="font-royal text-4xl md:text-5xl text-brand-primary tracking-wide" data-testid="cart-title">
@@ -50,24 +50,28 @@ export default function CartPage() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.04 }}
-              className="mehfil-card flex items-center gap-4 rounded-xl p-4"
+              className="mehfil-card flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 rounded-xl p-4"
               data-testid={`cart-row-${uid}`}
             >
-              <div className="flex-1">
-                <div className="font-royal text-[15px] text-brand-primary leading-tight">{i.name}</div>
-                {i.notes && <div className="text-xs text-[#1A1106]/70 mt-1 italic">{i.notes}</div>}
+              <div className="flex-1 min-w-0 w-full sm:w-auto">
+                <div className="font-royal text-[15px] text-brand-primary leading-tight break-words">{i.name}</div>
+                {i.notes && <div className="text-xs text-[#1A1106]/70 mt-1 italic break-words">{i.notes}</div>}
                 {i.modifiers && i.modifiers.length > 0 && (
-                   <div className="text-xs text-[#1A1106]/70 mt-1">{i.modifiers.join(", ")}</div>
+                   <div className="text-xs text-[#1A1106]/70 mt-1 break-words">{i.modifiers.join(", ")}</div>
                 )}
                 <div className="font-editorial italic text-xs text-[#1A1106]/60 mt-0.5">{formatCurrency(i.price)} each</div>
               </div>
-              <div className="flex items-center gap-1 bg-[#5C0E1B] text-[#FAF5EC] rounded-full p-1 shadow">
-                <button onClick={() => cart.setQty(uid, i.qty - 1)} data-testid={`cart-dec-${uid}`} className="h-8 w-8 rounded-full hover:bg-brand-primary flex items-center justify-center"><Minus className="h-3.5 w-3.5" /></button>
-                <span className="px-2 w-7 text-center font-royal text-sm font-semibold" data-testid={`cart-qty-${uid}`}>{i.qty}</span>
-                <button onClick={() => cart.setQty(uid, i.qty + 1)} data-testid={`cart-inc-${uid}`} className="h-8 w-8 rounded-full hover:bg-brand-primary flex items-center justify-center"><Plus className="h-3.5 w-3.5" /></button>
+              <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto mt-2 sm:mt-0 pt-2 sm:pt-0 border-t sm:border-0 border-brand-secondary/15">
+                <div className="flex items-center gap-1 bg-[#5C0E1B] text-[#FAF5EC] rounded-full p-1 shadow shrink-0">
+                  <button onClick={() => cart.setQty(uid, i.qty - 1)} data-testid={`cart-dec-${uid}`} className="h-8 w-8 rounded-full hover:bg-brand-primary flex items-center justify-center"><Minus className="h-3.5 w-3.5" /></button>
+                  <span className="px-2 w-7 text-center font-royal text-sm font-semibold" data-testid={`cart-qty-${uid}`}>{i.qty}</span>
+                  <button onClick={() => cart.setQty(uid, i.qty + 1)} data-testid={`cart-inc-${uid}`} className="h-8 w-8 rounded-full hover:bg-brand-primary flex items-center justify-center"><Plus className="h-3.5 w-3.5" /></button>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <div className="font-royal text-base text-brand-primary sm:w-24 sm:text-right">{formatCurrency(i.price * i.qty)}</div>
+                  <button onClick={() => cart.remove(uid)} data-testid={`cart-remove-${uid}`} className="text-[#1A1106]/40 hover:text-brand-primary p-2 transition shrink-0" title="Remove"><Trash2 className="h-4 w-4" /></button>
+                </div>
               </div>
-              <div className="font-royal text-base text-brand-primary w-24 text-right">{formatCurrency(i.price * i.qty)}</div>
-              <button onClick={() => cart.remove(uid)} data-testid={`cart-remove-${uid}`} className="text-[#1A1106]/40 hover:text-brand-primary p-2 transition" title="Remove"><Trash2 className="h-4 w-4" /></button>
             </motion.div>
           )})}
         </div>

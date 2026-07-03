@@ -130,15 +130,15 @@ export default function CheckoutPage() {
     return () => clearTimeout(handle);
   }, [phone, name]);
 
-  const toggleChip = (item_id: string, chip: string) => {
-    const line = cart.items.find((i) => i.item_id === item_id);
+  const toggleChip = (uid: string, chip: string) => {
+    const line = cart.items.find((i) => (i.cart_item_id || i.item_id) === uid || i.item_id === uid);
     if (!line) return;
     const current = (line.notes || "").trim();
     const parts = current ? current.split(/,\s*/).filter(Boolean) : [];
     const idx = parts.findIndex((p) => p.toLowerCase() === chip.toLowerCase());
     if (idx >= 0) parts.splice(idx, 1);
     else parts.push(chip);
-    cart.setNote(item_id, parts.join(", "));
+    cart.setNote(line.cart_item_id || line.item_id, parts.join(", "));
   };
 
   /**
@@ -200,7 +200,7 @@ export default function CheckoutPage() {
   };
 
   const submit = async () => {
-    const finalName = table?.customer_name || name.trim();
+    const finalName = table?.customer_name || profile?.name || name.trim() || "Guest";
     if (!finalName) { toast.error("Please share your name — every great meal starts with a name."); return; }
     if (cart.items.length === 0) { toast.error("Your thali is empty"); return; }
     setSubmitting(true);
@@ -212,7 +212,7 @@ export default function CheckoutPage() {
         restaurant_id: restId,
         order_type: table?.id ? "dine_in" : "takeaway",
         customer_name: finalName,
-        customer_phone: phone.trim() || undefined,
+        customer_phone: table?.customer_phone || profile?.phone || phone.trim() || undefined,
         items: cart.items.map((i) => {
           const courseText = i.course && i.course !== "Auto (Natural pace)" ? `[Serve: ${i.course}] ` : "";
           const finalNotes = `${courseText}${i.notes?.trim() || ""}`.trim();
@@ -255,43 +255,6 @@ export default function CheckoutPage() {
       <div className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-5">
 
-          {/* Customer Identity — name is REQUIRED for order */}
-          <section className="mehfil-card rounded-2xl p-6" data-testid="checkout-customer">
-            <div className="mehfil-divider mb-4"><span className="font-royal tracking-[0.3em] text-[10px] uppercase flex items-center gap-1.5"><User2 className="h-3 w-3" /> Your Name</span></div>
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div>
-                <label className="font-royal tracking-wider uppercase text-[10px] text-[#8A6A1B]">Name *</label>
-                <input
-                  required
-                  data-testid="checkout-name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Your name"
-                  className="mt-1.5 w-full bg-white border border-brand-secondary/30 rounded-full px-4 py-2.5 text-sm outline-none font-editorial focus:border-brand-primary"
-                />
-              </div>
-              <div>
-                <label className="font-royal tracking-wider uppercase text-[10px] text-[#8A6A1B]">Phone (optional)</label>
-                <input
-                  data-testid="checkout-phone"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="For order updates"
-                  type="tel"
-                  className="mt-1.5 w-full bg-white border border-brand-secondary/30 rounded-full px-4 py-2.5 text-sm outline-none font-editorial focus:border-brand-primary"
-                />
-              </div>
-            </div>
-            {profile && (
-              <div className="mt-3 flex items-center gap-2 bg-brand-secondary/10 rounded-xl px-3 py-2 border border-brand-secondary/30">
-                <Gift className="h-4 w-4 text-brand-secondary" />
-                <span className="font-royal text-[11px] text-brand-primary tracking-wider">
-                  Welcome back, {profile.name}! {profile.points > 0 ? `${profile.points} points · ` : ""}{profile.orders_count} past orders
-                </span>
-              </div>
-            )}
-          </section>
-
           <section className="mehfil-card rounded-2xl p-6" data-testid="checkout-cooking-instructions">
             <div className="mehfil-divider mb-4"><span className="font-royal tracking-[0.3em] text-[10px] uppercase flex items-center gap-1.5"><ChefHat className="h-3 w-3" /> Cooking instructions</span></div>
             <p className="font-editorial italic text-xs text-[#1A1106]/65 mb-5 leading-relaxed">
@@ -299,9 +262,10 @@ export default function CheckoutPage() {
             </p>
             <div className="space-y-5">
               {cart.items.map((line) => {
+                const uid = line.cart_item_id || line.item_id;
                 const selected = (line.notes || "").split(/,\s*/).map((s) => s.toLowerCase()).filter(Boolean);
                 return (
-                  <div key={line.item_id} className="border border-brand-secondary/20 rounded-xl p-4 bg-white/60" data-testid={`cook-card-${line.item_id}`}>
+                  <div key={uid} className="border border-brand-secondary/20 rounded-xl p-4 bg-white/60" data-testid={`cook-card-${uid}`}>
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-3">
                       <div className="flex items-center gap-2">
                         <span className="h-7 w-7 rounded-full bg-brand-primary text-[#FAF5EC] font-royal text-xs flex items-center justify-center">{line.qty}</span>
@@ -311,26 +275,26 @@ export default function CheckoutPage() {
                         <select
                           className="bg-[#FAF5EC] border border-brand-secondary/30 rounded-full px-2 py-1.5 text-[9px] sm:text-[10px] font-royal tracking-[0.1em] uppercase outline-none text-brand-primary focus:border-brand-primary cursor-pointer"
                           value={line.course || "Auto (Natural pace)"}
-                          onChange={(e) => cart.setCourse(line.item_id, e.target.value)}
+                          onChange={(e) => cart.setCourse(uid, e.target.value)}
                         >
                           {COURSES.map((c) => <option key={c} value={c}>{c}</option>)}
                         </select>
                         <div className="flex items-center gap-1 bg-[#FAF5EC] rounded-full p-0.5 border border-brand-secondary/30 shrink-0">
-                          <button data-testid={`cook-dec-${line.item_id}`} onClick={() => cart.setQty(line.item_id, line.qty - 1)} className="h-7 w-7 rounded-full hover:bg-brand-primary hover:text-[#FAF5EC] flex items-center justify-center transition-colors"><Minus className="h-3 w-3" /></button>
+                          <button data-testid={`cook-dec-${uid}`} onClick={() => cart.setQty(uid, line.qty - 1)} className="h-7 w-7 rounded-full hover:bg-brand-primary hover:text-[#FAF5EC] flex items-center justify-center transition-colors"><Minus className="h-3 w-3" /></button>
                           <span className="px-1 w-5 text-center font-royal text-xs">{line.qty}</span>
-                          <button data-testid={`cook-inc-${line.item_id}`} onClick={() => cart.setQty(line.item_id, line.qty + 1)} className="h-7 w-7 rounded-full hover:bg-brand-primary hover:text-[#FAF5EC] flex items-center justify-center transition-colors"><Plus className="h-3 w-3" /></button>
+                          <button data-testid={`cook-inc-${uid}`} onClick={() => cart.setQty(uid, line.qty + 1)} className="h-7 w-7 rounded-full hover:bg-brand-primary hover:text-[#FAF5EC] flex items-center justify-center transition-colors"><Plus className="h-3 w-3" /></button>
                         </div>
                       </div>
                     </div>
-                    <div className="flex flex-wrap gap-1.5 mb-3" data-testid={`cook-chips-${line.item_id}`}>
+                    <div className="flex flex-wrap gap-1.5 mb-3" data-testid={`cook-chips-${uid}`}>
                       {getChipsForItem(line.name, line.category).map((c) => {
                         const active = selected.includes(c.toLowerCase());
                         return (
                           <button
                             key={c}
                             type="button"
-                            data-testid={`cook-chip-${line.item_id}-${c.replace(/\W+/g, "-").toLowerCase()}`}
-                            onClick={() => toggleChip(line.item_id, c)}
+                            data-testid={`cook-chip-${uid}-${c.replace(/\W+/g, "-").toLowerCase()}`}
+                            onClick={() => toggleChip(uid, c)}
                             className={`rounded-full px-3 py-1 text-[10px] font-royal tracking-[0.15em] uppercase border transition ${
                               active
                                 ? "bg-brand-primary text-[#FAF5EC] border-brand-primary shadow"
@@ -343,9 +307,9 @@ export default function CheckoutPage() {
                       })}
                     </div>
                     <input
-                      data-testid={`cook-note-${line.item_id}`}
+                      data-testid={`cook-note-${uid}`}
                       value={line.notes || ""}
-                      onChange={(e) => cart.setNote(line.item_id, e.target.value)}
+                      onChange={(e) => cart.setNote(uid, e.target.value)}
                       placeholder="Type extra preferences — e.g. extra crispy, family-size portion…"
                       className="w-full bg-white border border-brand-secondary/30 rounded-full px-4 py-2 text-xs outline-none font-editorial italic focus:border-brand-primary"
                     />

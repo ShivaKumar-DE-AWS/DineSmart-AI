@@ -29,23 +29,23 @@ export const useCart = create<CartState>()(
       restaurantSlug: null,
       lastUpdatedBy: "local",
       add: (item, qty = 1) => set((s) => {
-        const existing = s.items.find((i) => i.item_id === item.id && !i.notes && !i.course);
+        const existing = s.items.find((i) => (i.item_id === item.id || i.cart_item_id === item.id) && !i.notes && !i.course);
         if (existing) {
-          return { items: s.items.map((i) => i.cart_item_id === existing.cart_item_id ? { ...i, qty: i.qty + qty } : i), lastUpdatedBy: "local" };
+          return { items: s.items.map((i) => (i.cart_item_id === existing.cart_item_id && i.item_id === existing.item_id) ? { ...i, qty: i.qty + qty } : i), lastUpdatedBy: "local" };
         }
         return { items: [...s.items, { cart_item_id: ((typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") ? crypto.randomUUID() : Math.random().toString(36).substring(2) + Date.now().toString(36)), item_id: item.id, name: item.name, price: item.price, qty, category: item.category }], lastUpdatedBy: "local" };
       }),
-      remove: (id) => set((s) => ({ items: s.items.filter((i) => (i.cart_item_id || i.item_id) !== id), lastUpdatedBy: "local" })),
+      remove: (id) => set((s) => ({ items: s.items.filter((i) => i.cart_item_id !== id && i.item_id !== id && (i.cart_item_id || i.item_id) !== id), lastUpdatedBy: "local" })),
       setQty: (id, qty) => set((s) => ({
-        items: qty <= 0 ? s.items.filter((i) => (i.cart_item_id || i.item_id) !== id) : s.items.map((i) => (i.cart_item_id || i.item_id) === id ? { ...i, qty } : i),
+        items: qty <= 0 ? s.items.filter((i) => i.cart_item_id !== id && i.item_id !== id && (i.cart_item_id || i.item_id) !== id) : s.items.map((i) => (i.cart_item_id === id || i.item_id === id || (i.cart_item_id || i.item_id) === id) ? { ...i, qty } : i),
         lastUpdatedBy: "local"
       })),
       setCourse: (id, course) => set((s) => ({
-        items: s.items.map((i) => (i.cart_item_id || i.item_id) === id ? { ...i, course } : i),
+        items: s.items.map((i) => (i.cart_item_id === id || i.item_id === id || (i.cart_item_id || i.item_id) === id) ? { ...i, course } : i),
         lastUpdatedBy: "local"
       })),
       setNote: (id, notes) => set((s) => ({
-        items: s.items.map((i) => (i.cart_item_id || i.item_id) === id ? { ...i, notes: notes || undefined } : i),
+        items: s.items.map((i) => (i.cart_item_id === id || i.item_id === id || (i.cart_item_id || i.item_id) === id) ? { ...i, notes: notes || undefined } : i),
         lastUpdatedBy: "local"
       })),
       setItems: (items) => set({ items, lastUpdatedBy: "remote" }),

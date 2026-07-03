@@ -1,5 +1,5 @@
 "use client";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -69,11 +69,19 @@ export default function MenuPage() {
   const [dietFilter, setDietFilter] = useState<DietFilter>("all");
   const [showBestSellers, setShowBestSellers] = useState(false);
   const [showChefSpecials, setShowChefSpecials] = useState(false);
-    const [viewMode, setViewMode] = useState<"book" | "quick">("book");
+  const searchParams = useSearchParams();
+  const initialMode = searchParams?.get("mode") === "quick" ? "quick" : "book";
+  const [viewMode, setViewMode] = useState<"book" | "quick">(initialMode);
   const [showSpecialsInsert, setShowSpecialsInsert] = useState(true);
   const [quickCategory, setQuickCategory] = useState("All");
   const [isDinnerTime, setIsDinnerTime] = useState(false);
   const [timeGreeting, setTimeGreeting] = useState("Our");
+
+  useEffect(() => {
+    if (searchParams?.get("mode") === "quick") {
+      setViewMode("quick");
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const hour = new Date().getHours();

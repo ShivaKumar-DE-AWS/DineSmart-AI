@@ -237,8 +237,8 @@ export default function TokenPage() {
         <Link href={`/r/${slug}/track/${order.id}`} data-testid="token-track-link" className="inline-flex items-center justify-center gap-2 mehfil-btn-royal rounded-full px-6 py-3.5 font-royal tracking-[0.2em] uppercase text-xs">
           <Eye className="h-4 w-4" /> Track live
         </Link>
-        <Link href={`/r/${slug}/menu`} className="inline-flex items-center justify-center gap-2 rounded-full px-6 py-3.5 font-royal tracking-[0.2em] uppercase text-xs border border-brand-primary/30 text-brand-primary hover:bg-brand-primary/5 transition">
-          <Sparkles className="h-4 w-4" /> Add to the mehfil
+        <Link href={`/r/${slug}/menu?mode=quick`} className="inline-flex items-center justify-center gap-2 rounded-full px-6 py-3.5 font-royal tracking-[0.2em] uppercase text-xs border border-brand-primary/30 text-brand-primary hover:bg-brand-primary/5 transition">
+          <Sparkles className="h-4 w-4" /> Go back to menu
         </Link>
       </div>
     </div>
