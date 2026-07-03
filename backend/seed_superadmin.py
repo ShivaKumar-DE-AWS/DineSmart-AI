@@ -12,7 +12,12 @@ from deps import db, hash_password, now_iso
 
 
 async def seed():
-    email = "admin@smartdine.ai"
+    email = "admin@smartdineai.co.in"
+    old_user = await db.users.find_one({"email": "admin@smartdine.ai"})
+    if old_user:
+        await db.users.update_one({"_id": old_user["_id"]}, {"$set": {"email": email}})
+        print(f"✓ Migrated old superadmin email to {email}")
+
     existing = await db.users.find_one({"email": email})
     if existing:
         print(f"✓ Superadmin already exists: {email}")

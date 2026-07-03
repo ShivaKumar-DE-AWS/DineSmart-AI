@@ -592,7 +592,12 @@ async def seed_superadmin():
     """Idempotent superadmin seed hook for Render deploys."""
     from deps import hash_password
     try:
-        email = "admin@smartdine.ai"
+        email = "admin@smartdineai.co.in"
+        old_user = await db.users.find_one({"email": "admin@smartdine.ai"})
+        if old_user:
+            await db.users.update_one({"_id": old_user["_id"]}, {"$set": {"email": email}})
+            print(f"[startup] ✓ Migrated old superadmin email to {email}")
+
         existing = await db.users.find_one({"email": email})
         if not existing:
             user_id = str(uuid.uuid4())

@@ -92,6 +92,46 @@ async def forgot_password(req: ForgotPasswordReq, background_tasks: BackgroundTa
         print(f"⚠️ Forgot Password requested for {req.email}, but no account found!", flush=True)
         return {"message": "If an account with that email exists, a reset link has been sent."}
 
+    role = user.get("role")
+    
+    # 1. Reject kitchen and counter accounts explicitly
+    if role in ("kitchen", "counter") or role not in ("superadmin", "admin"):
+        raise HTTPException(
+            status_code=403,
+            detail="Kitchen and Counter account passwords cannot be reset via email. Please ask your Restaurant Admin to reset your password from the dashboard settings."
+        )
+
+    # 2. Verify registered email for superadmin
+    if role == "superadmin":
+        superadmin_email = os.environ.get("SUPERADMIN_EMAIL", "admin@smartdineai.co.in")
+        if clean_email.lower() != superadmin_email.lower() and clean_email.lower() != "admin@smartdineai.co.in" and clean_email.lower() != "admin@smartdine.ai" and clean_email.lower() != str(user.get("email", "")).lower():
+            raise HTTPException(
+                status_code=403,
+                detail="Verification mail can only be sent to the official registered superadmin email address."
+            )
+
+    # 3. Verify registered email for restaurant admin
+    if role == "admin":
+        rest_id = user.get("restaurant_id")
+        rest_slug = user.get("restaurant_slug")
+        query = []
+        if rest_id:
+            query.append({"id": rest_id})
+        if rest_slug:
+            query.append({"slug": rest_slug})
+        
+        rest = await db.restaurants.find_one({"$or": query}) if query else None
+        if not rest:
+            print(f"⚠️ Forgot Password: No associated restaurant found for admin user {clean_email}", flush=True)
+            return {"message": "If an account with that email exists, a reset link has been sent."}
+            
+        registered_email = rest.get("owner_email") or rest.get("email") or rest.get("initial_creds", {}).get("admin", {}).get("email")
+        if not registered_email or clean_email.lower() != str(registered_email).lower():
+            raise HTTPException(
+                status_code=403,
+                detail="Verification mail can only be sent to the email address registered with this restaurant."
+            )
+
     reset_token = str(uuid.uuid4())
     expiry = datetime.now(timezone.utc) + timedelta(hours=1)
 
@@ -103,6 +143,7 @@ async def forgot_password(req: ForgotPasswordReq, background_tasks: BackgroundTa
     frontend_url = os.environ.get("FRONTEND_URL", "https://smartdineai.co.in")
     background_tasks.add_task(send_password_reset_email, user.get("email"), reset_token, frontend_url)
     return {"message": "If an account with that email exists, a reset link has been sent."}
+
 
 
 @router.post("/reset-password")
