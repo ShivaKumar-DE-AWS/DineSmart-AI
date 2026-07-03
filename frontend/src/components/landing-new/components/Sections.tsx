@@ -652,8 +652,8 @@ export function Footer() {
     { label: "How it works", href: "#how" },
     { label: "Results", href: "#results" },
     { label: "Book demo", href: "#demo" },
-    { label: "👨‍🍳 Restaurant Portal", href: "/auth/restaurant" },
-    { label: "🛡️ Super Admin Portal", href: "/auth/login" },
+    { label: "👩‍🍳 SmartDine Staff", href: "/auth/restaurant" },
+    { label: "🏪 Restaurant Partners", href: "/auth/login" },
     { label: "📱 Live Menu Demo", href: "/r/mehfil-hyderabad" },
   ];
   const contactLinks = [

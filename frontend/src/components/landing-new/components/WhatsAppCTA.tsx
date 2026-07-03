@@ -12,14 +12,12 @@ export default function WhatsAppCTA() {
     return () => clearTimeout(timer);
   }, []);
 
-  // auto-show tooltip once
+  // auto-show tooltip once and keep visible
   useEffect(() => {
     if (!show) return;
     const open = setTimeout(() => setExpanded(true), 800);
-    const close = setTimeout(() => setExpanded(false), 5500);
     return () => {
       clearTimeout(open);
-      clearTimeout(close);
     };
   }, [show]);
 

@@ -42,10 +42,10 @@ export default function Nav() {
           <div className="hidden md:flex items-center gap-1.5">
             <LangSwitcher compact />
             <a href="/auth/restaurant" className="text-[12px] text-cream/80 hover:text-cream border border-white/10 hover:border-white/25 rounded-full px-3 py-1.5 transition whitespace-nowrap">
-              👨‍🍳 Restaurant Portal
+              👩‍🍳 SmartDine Staff
             </a>
             <a href="/auth/login" className="text-[12px] text-gold/90 hover:text-gold border border-gold/30 hover:border-gold/60 rounded-full px-3 py-1.5 transition whitespace-nowrap font-medium">
-              🛡️ Super Admin Login
+              🏪 Restaurant Partners
             </a>
             <a href="/auth/restaurant" className="btn-primary !py-2 !px-4 text-sm">Sign up free <ArrowRight className="w-3.5 h-3.5" /></a>
           </div>
@@ -65,12 +65,12 @@ export default function Nav() {
               ))}
               <li>
                 <a href="/auth/restaurant" onClick={() => setOpen(false)} className="flex items-center gap-2 px-3 py-3 text-cream/85 border-b border-white/5">
-                  👨‍🍳 <span>Restaurant Portal Login</span>
+                  👩‍🍳 <span>SmartDine Staff</span>
                 </a>
               </li>
               <li>
                 <a href="/auth/login" onClick={() => setOpen(false)} className="flex items-center gap-2 px-3 py-3 text-gold border-b border-white/5 font-medium">
-                  🛡️ <span>Super Admin Login</span>
+                  🏪 <span>Restaurant Partners</span>
                 </a>
               </li>
             </ul>
