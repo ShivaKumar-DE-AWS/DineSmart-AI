@@ -462,8 +462,8 @@ async def next_token(restaurant_id: str = "", order_type: str = "dine_in") -> st
             upsert=True,
             return_document=ReturnDocument.AFTER
         )
-        seq_num = res["seq"] if res and "seq" in res else 1
-        return f"{prefix}-{seq_num:03d}"
+        seq_num = (res["seq"] if res and "seq" in res else 1) + 100
+        return f"{prefix}-{seq_num}"
     except Exception as e:
         print(f"⚠️ Sequential token generation fallback: {e}", flush=True)
         suffix = uuid.uuid4().hex[:4].upper()
