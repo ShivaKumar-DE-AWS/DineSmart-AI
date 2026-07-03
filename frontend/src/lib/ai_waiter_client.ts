@@ -165,72 +165,6 @@ export async function sendAIWaiterEvent(
   proceedPayFn?: () => void
 ): Promise<AIWaiterEventResponse | null> {
   try {
-    // 1. Optimistic Instant UI for ITEM_ADDED (0ms delay with Palate & Spice Balance + One-Tap Upsell!)
-    if (payload.event_type === "ITEM_ADDED" && payload.added_item) {
-      const item = payload.added_item;
-      const cat = (item.category || "").toLowerCase();
-      const name = item.name;
-      const isSpicy = /spicy|guntur|vindaloo|masala|kebab|chilli|pepper|tikka|tandoori|peri|schezwan|curry|kolhapuri|mirch|fry/i.test(`${name} ${cat}`);
-      
-      let instantMsg = `✨ Great taste! **${name}** is a wonderful choice.`;
-      let suggestedAction: { label: string; onClick: () => void } | undefined = undefined;
-
-      if (isSpicy) {
-        const coolingOptions = [
-          { id: "cool-1", name: "Sweet Lassi", price: 90, category: "Beverages" },
-          { id: "cool-2", name: "Mint Raita", price: 80, category: "Sides" },
-          { id: "cool-3", name: "Fresh Buttermilk", price: 60, category: "Beverages" },
-        ];
-        const rec = coolingOptions[Math.floor(Math.random() * coolingOptions.length)];
-        instantMsg = `🌶️ **${name}** has a bold, spicy flavor profile! AI Waiter suggests pairing it with a cooling **${rec.name}** (₹${rec.price}) to balance your palate perfectly.`;
-        suggestedAction = {
-          label: `+ Add ${rec.name} (₹${rec.price})`,
-          onClick: () => {
-            useCart.getState().add({ id: rec.id, name: rec.name, price: rec.price, category: rec.category } as any, 1);
-          }
-        };
-      } else if (cat.includes("biryani") || cat.includes("main") || cat.includes("curry") || cat.includes("rice") || cat.includes("thali")) {
-        const rec = { id: "side-1", name: "Mint Raita", price: 80, category: "Sides" };
-        instantMsg = `✨ Added **${name}**! AI Waiter suggests pairing it with a cooling **${rec.name}** or **Butter Naan** for a royal feast!`;
-        suggestedAction = {
-          label: `+ Add ${rec.name} (₹${rec.price})`,
-          onClick: () => {
-            useCart.getState().add({ id: rec.id, name: rec.name, price: rec.price, category: rec.category } as any, 1);
-          }
-        };
-      } else if (cat.includes("starter") || cat.includes("kebab") || cat.includes("appetizer") || cat.includes("snack") || cat.includes("tikka")) {
-        const rec = { id: "bread-1", name: "Butter Naan", price: 50, category: "Breads" };
-        instantMsg = `✨ **${name}** is a crowd favorite starter! Ready for mains? Pair it with fresh tandoori bread or Biryani.`;
-        suggestedAction = {
-          label: `+ Add ${rec.name} (₹${rec.price})`,
-          onClick: () => {
-            useCart.getState().add({ id: rec.id, name: rec.name, price: rec.price, category: rec.category } as any, 1);
-          }
-        };
-      } else if (cat.includes("bread") || cat.includes("naan") || cat.includes("roti") || cat.includes("paratha") || cat.includes("kulcha")) {
-        const rec = { id: "main-1", name: "Dal Makhani", price: 220, category: "Main Course" };
-        instantMsg = `✨ Fresh tandoori bread! **${name}** dips wonderfully into our signature **${rec.name}** or Butter Chicken.`;
-        suggestedAction = {
-          label: `+ Add ${rec.name} (₹${rec.price})`,
-          onClick: () => {
-            useCart.getState().add({ id: rec.id, name: rec.name, price: rec.price, category: rec.category } as any, 1);
-          }
-        };
-      } else if (cat.includes("drink") || cat.includes("beverage") || cat.includes("lassi") || cat.includes("mocktail") || cat.includes("shake")) {
-        instantMsg = `✨ So refreshing! Sip your **${name}** alongside our spicy tandoori grills or flavorful biryani!`;
-      } else if (cat.includes("dessert") || cat.includes("sweet") || cat.includes("ice cream") || cat.includes("gulab") || cat.includes("rasmalai")) {
-        instantMsg = `✨ A grand finale! **${name}** is the perfect royal sweet to conclude your feast.`;
-      } else {
-        instantMsg = `✨ **${name}** added to your thali! Check our Chef Specials for signature pairings!`;
-      }
-      
-      // Only show AI Waiter suggestion pop-up when there is an actionable pairing suggestion button!
-      // For general items, let the standard 3-second green notification toast handle it alone.
-      if (suggestedAction) {
-        showAIToast(instantMsg, 20000, suggestedAction);
-      }
-    }
-
     // 2. Optimistic Instant UI for QR_SCAN Welcome (Time-of-Day + Table Size Sharing Recognition)
     if (payload.event_type === "QR_SCAN") {
       const tableSession = useTable.getState().session;
@@ -550,30 +484,36 @@ let _toastTimer: ReturnType<typeof setTimeout> | null = null;
  */
 export function showAIToast(
   message: string,
-  durationMs = 20000,
+  durationMs = 4000,
   action?: { label: string; onClick: () => void }
 ): void {
+  const cleanMsg = message ? message.replace(/\*\*/g, "") : "";
   toast("✨ AI Waiter Suggestion", {
-    description: message,
+    description: cleanMsg,
     duration: durationMs,
     closeButton: true,
     action: action ? {
-      label: action.label,
+      label: action.label.replace(/\*\*/g, ""),
       onClick: () => {
         action.onClick();
-        toast.success(`${action.label.replace("++ ", "").replace("+ Add ", "")} added to order!`, { duration: 3000 });
+        toast.success(`${action.label.replace("++ ", "").replace("+ Add ", "").replace(/\*\*/g, "")} added to order!`, { duration: 3000 });
       },
     } : undefined,
     style: {
       background: "#FAF5EC",
       color: "#1A1106",
       border: "2px solid #8A6A1B",
-      fontSize: "15px",
+      fontSize: "14px",
       fontWeight: "500",
       fontFamily: "var(--font-editorial, serif)",
-      padding: "16px 20px",
-      borderRadius: "16px",
+      padding: "14px 18px",
+      borderRadius: "14px",
       boxShadow: "0 10px 30px rgba(138, 106, 27, 0.22)",
+      display: "flex",
+      flexDirection: "column",
+      gap: "8px",
+      width: "100%",
+      maxWidth: "360px",
     },
     actionButtonStyle: {
       background: "#8A6A1B",
@@ -584,7 +524,9 @@ export function showAIToast(
       border: "none",
       cursor: "pointer",
       fontSize: "13px",
-      marginLeft: "auto",
+      width: "100%",
+      textAlign: "center",
+      marginTop: "4px",
     },
   });
 }
@@ -607,19 +549,19 @@ export function showAIUpsellSheet(
   const skipBtn = document.getElementById("ai-skip-btn");
   if (!overlay || !sheet || !pitch || !list || !skipBtn) return;
 
-  pitch.textContent = pitchText;
+  pitch.textContent = pitchText ? _cleanText(pitchText) : "";
 
   // Build upsell cards in clean horizontal sentence structure with full-width horizontal addition button below
   list.innerHTML = items
     .map(
       (item) => `
-      <div class="ai-upsell-card">
-        <div class="ai-upsell-card-header">
-          <h4>${_esc(item.name)}</h4>
-          <span class="price">₹${item.price.toFixed(0)}</span>
+      <div class="ai-upsell-card" style="display: flex; flex-direction: column; gap: 8px; background: #FFFFFF; padding: 14px 16px; border-radius: 16px; border: 1px solid #EAE5DD; box-shadow: 0 4px 12px rgba(0,0,0,0.03); width: 100%;">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; width: 100%;">
+          <h4 style="margin: 0; font-size: 16px; font-weight: 700; color: #1E1B18;">${_cleanText(item.name)}</h4>
+          <span style="color: #C0392B; font-weight: 700; font-size: 14px; background: #FDE8E6; padding: 2px 10px; border-radius: 6px; white-space: nowrap;">₹${item.price.toFixed(0)}</span>
         </div>
-        ${item.reason ? `<p class="reason">${_esc(item.reason)}</p>` : `<p class="reason">Recommended by chef to complement your dining selection.</p>`}
-        <button class="ai-add-btn" data-item-id="${_esc(item.item_id)}">
+        <p style="margin: 0; font-size: 13.5px; color: #5C554E; line-height: 1.4;">${_cleanText(item.reason || "Recommended by chef to complement your dining selection.")}</p>
+        <button class="ai-add-btn" data-item-id="${_esc(item.item_id)}" style="width: 100%; background: linear-gradient(135deg, #C0392B 0%, #A93226 100%); color: #FFF; border: none; padding: 11px; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 4px; box-shadow: 0 4px 10px rgba(192, 57, 43, 0.2);">
           <span>+ Add to Feast · ₹${item.price.toFixed(0)}</span>
         </button>
       </div>`
@@ -673,7 +615,7 @@ export function showAIWelcomeModal(message: string, autoDismissMs = 20000): void
   const btn     = document.getElementById("ai-welcome-btn");
   if (!welcome || !text || !btn) return;
 
-  text.textContent = message;
+  text.textContent = _cleanText(message);
   welcome.classList.remove("hidden");
 
   const close = () => welcome.classList.add("hidden");
@@ -686,6 +628,13 @@ export function showAIWelcomeModal(message: string, autoDismissMs = 20000): void
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
+
+/** Strip markdown asterisks and escape HTML for clean UI display. */
+function _cleanText(str: string): string {
+  if (!str) return "";
+  const cleaned = str.replace(/\*\*/g, "").replace(/\*/g, "");
+  return _esc(cleaned);
+}
 
 /** Escape HTML to prevent XSS from AI-generated text inserted into DOM. */
 function _esc(str: string): string {
