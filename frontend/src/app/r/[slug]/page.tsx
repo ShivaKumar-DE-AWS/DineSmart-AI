@@ -151,7 +151,7 @@ export default function NativeAppHomeMenu() {
       </div>
 
       {/* 3. Native App Layout for Items */}
-      <div className="max-w-4xl mx-auto px-4 md:px-10 pt-8 relative z-10">
+      <div className="max-w-4xl mx-auto px-4 md:px-10 pt-8 pb-36 relative z-10">
         {isLoading ? (
           <div className="flex justify-center py-20">
             <div className="w-8 h-8 border-4 border-brand-primary border-t-transparent rounded-full animate-spin" />
@@ -229,17 +229,22 @@ export default function NativeAppHomeMenu() {
             initial={{ y: 100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 100, opacity: 0 }}
-            className="fixed bottom-6 left-4 md:left-8 z-30 bg-white text-brand-primary border border-[#E7DFCB] rounded-2xl shadow-2xl flex items-center gap-3 px-5 py-3 hover:bg-[#FAF5EC] transition-colors"
+            className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 bg-[#1A1106] text-[#FAF5EC] border border-brand-secondary/50 rounded-full shadow-2xl flex items-center justify-between gap-6 px-6 py-3.5 hover:bg-[#2A1C0A] transition-all w-[92%] max-w-sm cursor-pointer"
           >
-            <div className="relative bg-brand-primary/10 p-2 rounded-xl">
-              <ShoppingBag className="h-6 w-6 text-brand-primary" />
-              <div className="absolute -top-2 -right-2 bg-brand-secondary text-brand-primary text-[11px] font-bold h-5 w-5 rounded-full flex items-center justify-center shadow-md">
-                {cart.count()}
+            <div className="flex items-center gap-3">
+              <div className="relative bg-brand-secondary/20 p-2 rounded-full">
+                <ShoppingBag className="h-5 w-5 text-brand-secondary" />
+                <div className="absolute -top-1.5 -right-1.5 bg-brand-secondary text-[#1A1106] text-[11px] font-bold h-5 w-5 rounded-full flex items-center justify-center shadow-md">
+                  {cart.count()}
+                </div>
+              </div>
+              <div className="flex flex-col items-start border-l border-brand-secondary/30 pl-3">
+                <span className="text-[10px] font-royal tracking-widest uppercase text-brand-secondary leading-none mb-1">Your Tray</span>
+                <span className="text-sm font-royal font-bold leading-none text-[#FAF5EC]">{cart.count()} {cart.count() === 1 ? 'Item' : 'Items'}</span>
               </div>
             </div>
-            <div className="flex flex-col items-start border-l border-[#E7DFCB] pl-3">
-              <span className="text-[10px] font-royal tracking-widest uppercase text-[#1A1106]/60 leading-none mb-1">Your Tray</span>
-              <span className="text-base font-royal font-bold leading-none">{formatCurrency(cart.subtotal())}</span>
+            <div className="flex items-center gap-2 bg-brand-secondary text-[#1A1106] font-royal font-bold text-sm px-4 py-2 rounded-full shadow-md hover:brightness-110">
+              <span>View · {formatCurrency(cart.subtotal())}</span>
             </div>
           </motion.a>
         )}

@@ -174,7 +174,7 @@ export function TableSessionGuard({ slug }: { slug?: string }) {
             initial={{ y: -50, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: -50, opacity: 0 }}
-            className="fixed top-0 left-0 right-0 z-50 bg-[#1A1106] border-b border-brand-secondary/30 px-4 py-2 flex items-center justify-between shadow-lg"
+            className="sticky top-0 w-full z-50 bg-[#1A1106] border-b border-brand-secondary/30 px-4 py-2.5 flex items-center justify-between shadow-lg"
             data-testid="table-session-banner"
           >
             <div className="flex items-center gap-2.5 overflow-hidden">
