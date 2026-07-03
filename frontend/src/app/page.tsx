@@ -1,39 +1,6 @@
-import { Navigation } from "@/components/landing/Navigation";
-import { HeroSection } from "@/components/landing/HeroSection";
-import { SocialProofBar } from "@/components/landing/SocialProofBar";
-import { ProblemSection } from "@/components/landing/ProblemSection";
-import { SolutionSection } from "@/components/landing/SolutionSection";
-import { PartnerRestaurants } from "@/components/landing/PartnerRestaurants";
-import { ProductFeatures } from "@/components/landing/ProductFeatures";
-import { InteractiveDemo } from "@/components/landing/InteractiveDemo";
-import { ROICalculator } from "@/components/landing/ROICalculator";
-import { HowItWorks } from "@/components/landing/HowItWorks";
-import { CustomerSuccess } from "@/components/landing/CustomerSuccess";
-import { DashboardShowcase } from "@/components/landing/DashboardShowcase";
-import { ComparisonSection } from "@/components/landing/ComparisonSection";
-import { FreeTrialSection } from "@/components/landing/FreeTrialSection";
-import { FAQSection } from "@/components/landing/FAQSection";
-import { Footer } from "@/components/landing/Footer";
+"use client";
+import LandingApp from "@/components/landing-new/App";
 
 export default function Home() {
-  return (
-    <div className="min-h-screen bg-ink selection:bg-electric-blue/30 font-sans text-cream overflow-x-hidden">
-      <Navigation />
-      <HeroSection />
-      <SocialProofBar />
-      <ProblemSection />
-      <SolutionSection />
-      <PartnerRestaurants />
-      <ProductFeatures />
-      <InteractiveDemo />
-      <ROICalculator />
-      <HowItWorks />
-      <CustomerSuccess />
-      <DashboardShowcase />
-      <ComparisonSection />
-      <FreeTrialSection />
-      <FAQSection />
-      <Footer />
-    </div>
-  );
+  return <LandingApp />;
 }

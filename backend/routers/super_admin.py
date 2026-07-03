@@ -247,7 +247,7 @@ async def cleanup_test_data(user=Depends(require_superadmin)):
     result["tickets_deleted"] = td.deleted_count
 
     # Remove INTRUSION_TEST menu items
-    mi = await db.menu_items.delete_many({
+    mi = await db.menu.delete_many({
         "name": {"$regex": "INTRUSION_TEST", "$options": "i"}
     })
     result["menu_items_deleted"] = mi.deleted_count

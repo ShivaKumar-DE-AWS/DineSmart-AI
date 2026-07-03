@@ -14,6 +14,7 @@ const config: Config = {
       },
       colors: {
         // Customer / Admin (warm earth)
+        bg: "#07070a",
         cream: "#F6F4F0",
         ink: "#050505", // Deepened for premium dark mode
         clay: "#D95333", // Matched to logo 'Dine'
@@ -23,7 +24,12 @@ const config: Config = {
         bone: "#2A2A2A", // Darkened for dark mode borders
         
         // Brand accents
-        gold: "#EAB308",
+        gold: "#e8b96b",
+        "gold-bright": "#f6d488",
+        orange: "#ff7a3d",
+        red: "#e23e3e",
+        "ai-1": "#6a7bff",
+        "ai-2": "#b06bff",
         "electric-blue": "#2A64F6",
 
         // Dynamic Brand Theme (defaults to Mehfil colors if not set)

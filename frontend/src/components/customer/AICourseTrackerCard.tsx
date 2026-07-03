@@ -30,7 +30,7 @@ export function AICourseTrackerCard() {
         { item_id: "bev-1", name: "Sweet Lassi", price: 90, reason: "Traditional chilled yogurt drink" },
         { item_id: "bev-2", name: "Mint Raita", price: 80, reason: "Cooling spiced mint yogurt" },
       ];
-    } else if (status.missingCategory === "Dessert") {
+    } else if (status.missingCategory === "Dessert" || status.missingCategory === "Desserts") {
       suggestedItems = [
         { item_id: "des-1", name: "Gulab Jamun (2 pcs)", price: 90, reason: "Warm royal sweet dumplings" },
         { item_id: "des-2", name: "Rasmalai", price: 110, reason: "Rich saffron milk sweet delicacies" },

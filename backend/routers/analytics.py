@@ -78,6 +78,7 @@ async def dashboard(user=Depends(require_user)):
     low_stock_q: Dict[str, Any] = {"$expr": {"$lte": ["$qty", "$reorder_level"]}}
     if user.get("restaurant_id"):
         low_stock_q["restaurant_id"] = user["restaurant_id"]
+    low_stock = await db.inventory.find(low_stock_q, {"_id": 0}).to_list(100)
     rest = await db.restaurants.find_one({"id": user.get("restaurant_id")}) if user.get("restaurant_id") else None
     sandbox_mode = rest.get("sandbox_mode", True) if rest else True
     is_verified = rest.get("is_verified", False) if rest else False
@@ -88,7 +89,7 @@ async def dashboard(user=Depends(require_user)):
     if user.get("restaurant_id"):
         menu_q["restaurant_id"] = user["restaurant_id"]
         tables_q["restaurant_id"] = user["restaurant_id"]
-    menu_count = await db.menu_items.count_documents(menu_q)
+    menu_count = await db.menu.count_documents(menu_q)
     tables_count = await db.tables.count_documents(tables_q)
 
     return {

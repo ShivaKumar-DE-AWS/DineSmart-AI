@@ -232,6 +232,7 @@ INSTRUCTIONS:
    NEVER fabricate items not in menu JSON.
    Use EXACT item_id name price from the menu. Fill reason with <=8 word phrase.
 4. dialogue_text: warm 1-2 sentence pitch explaining why these complement the order.
+   CRITICAL CULINARY RULE: Your dialogue_text and your suggested_items MUST agree 100%. If your dialogue_text mentions recommending Desserts, EVERY item in suggested_items MUST be a dessert. Never promise one category and suggest dishes from another.
 5. If cart is already balanced (main + drink + bread/side present):
    dialogue_text = "Your order looks incredible. We cannot wait to serve you!"
    suggested_items = []"""

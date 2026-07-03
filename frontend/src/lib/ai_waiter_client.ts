@@ -236,10 +236,11 @@ export async function sendAIWaiterEvent(
       const tableSession = useTable.getState().session;
       const sessionKey = "sd_ai_welcomed_" + (tableSession?.id || payload.restaurant_id);
       if (typeof window !== "undefined" && window.sessionStorage) {
-        if (sessionStorage.getItem(sessionKey)) {
+        const lastWelcomed = sessionStorage.getItem(sessionKey);
+        if (lastWelcomed && (Date.now() - parseInt(lastWelcomed, 10)) < 300000) {
           return null;
         }
-        sessionStorage.setItem(sessionKey, "1");
+        sessionStorage.setItem(sessionKey, Date.now().toString());
       }
 
       const hour = new Date().getHours();
@@ -328,16 +329,7 @@ export async function sendAIWaiterEvent(
 
     // Route to the correct UI handler
     if (response.action_type === "WELCOME") {
-      const tableSession = useTable.getState().session;
-      const sessionKey = "sd_ai_welcomed_" + (tableSession?.id || payload.restaurant_id);
-      if (typeof window !== "undefined" && window.sessionStorage) {
-        if (!sessionStorage.getItem(sessionKey)) {
-          sessionStorage.setItem(sessionKey, "1");
-          showAIWelcomeModal(response.dialogue_text, 20000);
-        }
-      } else {
-        showAIWelcomeModal(response.dialogue_text, 20000);
-      }
+      showAIWelcomeModal(response.dialogue_text, 20000);
     } else if (response.action_type === "ITEM_VALIDATION") {
       showAIToast(response.dialogue_text, 20000);
     } else if (response.action_type === "UPSELL_OFFER") {
@@ -428,21 +420,27 @@ function _bootstrapUI(): void {
     .ai-sheet-pitch { font-size: 15px; color: #555; line-height: 1.55; margin-bottom: 22px; }
     .ai-upsell-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
     .ai-upsell-card {
-      display: flex; justify-content: space-between; align-items: center;
-      background: #F8F9FA; padding: 14px 16px;
-      border-radius: 14px; border: 1px solid #E8E8E8;
+      flex-direction: column; gap: 12px;
+      background: linear-gradient(135deg, #FFFFFF 0%, #FAF8F5 100%);
+      padding: 16px 18px; border-radius: 16px; border: 1px solid #EAE5DD;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.04);
+      transition: all 0.2s ease;
     }
-    .ai-upsell-card h4 { margin: 0 0 2px; font-size: 16px; color: #222; font-weight: 600; }
-    .ai-upsell-card .reason { font-size: 12px; color: #888; margin: 0; }
-    .ai-upsell-card .price { color: #C0392B; font-weight: 700; font-size: 15px; }
+    .ai-upsell-card:hover { border-color: #D6C7B2; box-shadow: 0 6px 18px rgba(192, 57, 43, 0.08); }
+    .ai-upsell-card-header { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+    .ai-upsell-card h4 { margin: 0; font-size: 16.5px; color: #1E1B18; font-weight: 700; }
+    .ai-upsell-card .price { color: #C0392B; font-weight: 700; font-size: 15px; background: #FDE8E6; padding: 3px 10px; border-radius: 8px; }
+    .ai-upsell-card .reason { font-size: 13.5px; color: #5C554E; margin: 0; line-height: 1.5; font-style: normal; }
     .ai-add-btn {
-      background: #C0392B; color: #FFF; border: none;
-      padding: 10px 18px; border-radius: 10px;
-      font-size: 14px; font-weight: 700; cursor: pointer;
-      flex-shrink: 0; margin-left: 12px;
-      transition: opacity 0.2s;
+      width: 100%; background: linear-gradient(135deg, #C0392B 0%, #A93226 100%);
+      color: #FFF; border: none; padding: 12px; border-radius: 12px;
+      font-size: 14.5px; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      box-shadow: 0 4px 10px rgba(192, 57, 43, 0.2);
+      transition: all 0.2s ease;
     }
-    .ai-add-btn:active { opacity: 0.8; }
+    .ai-add-btn:hover { background: linear-gradient(135deg, #D35400 0%, #C0392B 100%); box-shadow: 0 6px 14px rgba(192, 57, 43, 0.3); }
+    .ai-add-btn:active { transform: scale(0.98); }
     .ai-skip-btn {
       width: 100%; background: none; border: none;
       color: #777; font-size: 15px; font-weight: 500;
@@ -451,41 +449,45 @@ function _bootstrapUI(): void {
     .ai-skip-btn:hover { color: #333; }
 
     /* ── Welcome Modal ── */
+    @keyframes aiWelcomePop {
+      0% { opacity: 0; transform: scale(0.9) translateY(12px); }
+      100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
     #ai-waiter-welcome {
-      position: fixed;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 9999;
-      padding: 20px;
+      position: fixed; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      z-index: 9999; padding: 20px;
     }
     #ai-waiter-welcome.hidden { display: none; }
     .ai-welcome-backdrop {
-      position: absolute;
-      inset: 0;
-      background: rgba(0,0,0,0.4);
-      backdrop-filter: blur(4px);
+      position: absolute; inset: 0;
+      background: rgba(0,0,0,0.5); backdrop-filter: blur(5px);
     }
     .ai-welcome-card {
       position: relative;
-      background: #FFFFFF;
-      border-radius: 20px;
-      padding: 32px 24px;
-      max-width: 340px;
-      width: 100%;
-      text-align: center;
-      box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+      background: linear-gradient(135deg, #FFFFFF 0%, #FAF6F0 100%);
+      border-radius: 24px; padding: 36px 28px;
+      max-width: 380px; width: 100%; text-align: center;
+      border: 1px solid #EAE0D0;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.25), 0 0 0 1px rgba(192, 57, 43, 0.1);
+      animation: aiWelcomePop 0.35s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    .ai-welcome-icon { font-size: 36px; margin-bottom: 12px; }
-    .ai-welcome-card h2 { margin: 0 0 10px; font-size: 20px; font-weight: 700; color: #222; }
-    .ai-welcome-card p { margin: 0 0 22px; font-size: 15px; color: #555; line-height: 1.55; }
+    .ai-welcome-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: #FDE8E6; color: #C0392B;
+      padding: 6px 14px; border-radius: 50px;
+      font-size: 13px; font-weight: 700; margin-bottom: 16px;
+    }
+    .ai-welcome-card h2 { margin: 0 0 12px; font-size: 22px; font-weight: 800; color: #1E1B18; }
+    .ai-welcome-card p { margin: 0 0 26px; font-size: 15.5px; color: #4A443E; line-height: 1.6; }
     .ai-welcome-btn {
-      background: #C0392B; color: #FFF; border: none;
-      padding: 14px 32px; border-radius: 50px;
-      font-size: 16px; font-weight: 700; cursor: pointer;
-      width: 100%;
+      background: linear-gradient(135deg, #C0392B 0%, #A93226 100%); color: #FFF; border: none;
+      padding: 16px 32px; border-radius: 50px;
+      font-size: 16px; font-weight: 700; cursor: pointer; width: 100%;
+      box-shadow: 0 6px 16px rgba(192, 57, 43, 0.25); transition: all 0.2s ease;
     }
+    .ai-welcome-btn:hover { background: linear-gradient(135deg, #D35400 0%, #C0392B 100%); box-shadow: 0 8px 20px rgba(192, 57, 43, 0.35); }
+    .ai-welcome-btn:active { transform: scale(0.98); }
   `;
   document.head.appendChild(style);
 
@@ -528,10 +530,11 @@ function _bootstrapUI(): void {
   welcome.innerHTML = `
     <div class="ai-welcome-backdrop" id="ai-welcome-backdrop"></div>
     <div class="ai-welcome-card">
+      <div class="ai-welcome-badge"><span>👑 Royal AI Waiter</span></div>
       <div class="ai-welcome-icon" aria-hidden="true">🤖</div>
-      <h2>AI Waiter Welcome</h2>
+      <h2>Welcome to SmartDine!</h2>
       <p id="ai-welcome-text"></p>
-      <button class="ai-welcome-btn" id="ai-welcome-btn">View Menu</button>
+      <button class="ai-welcome-btn" id="ai-welcome-btn">Explore Royal Feast →</button>
     </div>
   `;
   document.body.appendChild(welcome);
@@ -606,17 +609,19 @@ export function showAIUpsellSheet(
 
   pitch.textContent = pitchText;
 
-  // Build upsell cards
+  // Build upsell cards in clean horizontal sentence structure with full-width horizontal addition button below
   list.innerHTML = items
     .map(
       (item) => `
       <div class="ai-upsell-card">
-        <div>
+        <div class="ai-upsell-card-header">
           <h4>${_esc(item.name)}</h4>
-          ${item.reason ? `<p class="reason">${_esc(item.reason)}</p>` : ""}
           <span class="price">₹${item.price.toFixed(0)}</span>
         </div>
-        <button class="ai-add-btn" data-item-id="${_esc(item.item_id)}">Add +</button>
+        ${item.reason ? `<p class="reason">${_esc(item.reason)}</p>` : `<p class="reason">Recommended by chef to complement your dining selection.</p>`}
+        <button class="ai-add-btn" data-item-id="${_esc(item.item_id)}">
+          <span>+ Add to Feast · ₹${item.price.toFixed(0)}</span>
+        </button>
       </div>`
     )
     .join("");
