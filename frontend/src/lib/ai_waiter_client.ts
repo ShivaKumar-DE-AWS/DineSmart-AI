@@ -35,6 +35,7 @@ import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { useCart } from "@/stores/cart";
 import { useTable } from "@/stores/table";
+import { getOrCreateAnonID } from "@/lib/notify";
 
 // ── Course Progression & Meal Balance Helper ───────────────────────────────
 export function getMealBalanceStatus(cartItems: { category?: string; name: string }[]): {
@@ -120,6 +121,29 @@ export interface AIWaiterEventResponse {
   action_type: "WELCOME" | "ITEM_VALIDATION" | "UPSELL_OFFER";
   suggested_items: AISuggestedItem[];
 }
+
+// ── Device Locale Detection ────────────────────────────────────────────────
+/**
+ * Detect the browser / device locale and format it for Gemini localization.
+ * Examples: "Telugu (te-IN)", "Hindi (hi-IN)", "Spanish (es-ES)", "English (en-US)"
+ */
+function getDeviceLanguage(): string {
+  if (typeof navigator === "undefined" || !navigator.language) {
+    return "English (en-US)";
+  }
+  const code = navigator.language;
+  try {
+    const displayNames = new Intl.DisplayNames(["en"], { type: "language" });
+    const name = displayNames.of(code) || "English";
+    return `${name} (${code})`;
+  } catch {
+    return code;
+  }
+}
+
+// ── Smart Frontend Debouncing (Strategy 2) ─────────────────────────────────
+let _itemAddedDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+let _pendingItemAddedResolve: ((val: AIWaiterEventResponse | null) => void) | null = null;
 
 // ── Core API Call ──────────────────────────────────────────────────────────
 
@@ -242,14 +266,63 @@ export async function sendAIWaiterEvent(
       showAIWelcomeModal(timeGreeting, 20000);
     }
 
+    // Strategy 2: Smart Frontend Debouncing (1.5s delay for ITEM_ADDED network calls)
+    if (payload.event_type === "ITEM_ADDED") {
+      return new Promise<AIWaiterEventResponse | null>((resolve) => {
+        if (_itemAddedDebounceTimer) {
+          clearTimeout(_itemAddedDebounceTimer);
+          if (_pendingItemAddedResolve) {
+            _pendingItemAddedResolve(null);
+          }
+        }
+        _pendingItemAddedResolve = resolve;
+
+        _itemAddedDebounceTimer = setTimeout(async () => {
+          _itemAddedDebounceTimer = null;
+          const currentCart = useCart.getState().items || [];
+          const updatedCartState = currentCart.map(i => ({
+            item_id: i.item_id || "",
+            name: i.name,
+            price: i.price,
+            qty: i.qty,
+            category: i.category,
+          })) as any[];
+
+          try {
+            const response = await api<AIWaiterEventResponse>("/api/ai-waiter/event", {
+              method: "POST",
+              body: JSON.stringify({
+                event_type: payload.event_type,
+                event: payload.event_type,
+                restaurant_id: payload.restaurant_id,
+                cart_state: updatedCartState,
+                current_cart: updatedCartState,
+                added_item: payload.added_item ?? null,
+                user_language: payload.user_language ?? getDeviceLanguage(),
+                device_id: getOrCreateAnonID(),
+              }),
+            });
+            if (_pendingItemAddedResolve) _pendingItemAddedResolve(response);
+          } catch (e) {
+            if (_pendingItemAddedResolve) _pendingItemAddedResolve(null);
+          } finally {
+            _pendingItemAddedResolve = null;
+          }
+        }, 1500);
+      });
+    }
+
     const response = await api<AIWaiterEventResponse>("/api/ai-waiter/event", {
       method: "POST",
       body: JSON.stringify({
         event_type: payload.event_type,
+        event: payload.event_type,
         restaurant_id: payload.restaurant_id,
         cart_state: payload.cart_state ?? [],
+        current_cart: payload.cart_state ?? [],
         added_item: payload.added_item ?? null,
-        user_language: payload.user_language ?? "English",
+        user_language: payload.user_language ?? getDeviceLanguage(),
+        device_id: getOrCreateAnonID(),
       }),
     });
 
@@ -266,10 +339,7 @@ export async function sendAIWaiterEvent(
         showAIWelcomeModal(response.dialogue_text, 20000);
       }
     } else if (response.action_type === "ITEM_VALIDATION") {
-      // Prevent multiple stacked pop-ups for one dish click: if ITEM_ADDED already fired, do not show duplicate toast!
-      if (payload.event_type !== "ITEM_ADDED") {
-        showAIToast(response.dialogue_text, 20000);
-      }
+      showAIToast(response.dialogue_text, 20000);
     } else if (response.action_type === "UPSELL_OFFER") {
       showAIUpsellSheet(response.dialogue_text, response.suggested_items, addToCartFn, proceedPayFn);
     }

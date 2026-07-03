@@ -100,6 +100,16 @@ if "localhost" not in MONGO_URL and "127.0.0.1" not in MONGO_URL:
 client = AsyncIOMotorClient(MONGO_URL, serverSelectionTimeoutMS=30000, **kwargs)
 db = client[DB_NAME]
 
+# Redis
+import redis.asyncio as redis
+REDIS_URL = os.environ.get("REDIS_URL", "")
+redis_client: Optional[redis.Redis] = None
+if REDIS_URL:
+    try:
+        redis_client = redis.from_url(REDIS_URL, encoding="utf-8", decode_responses=True)
+    except Exception as e:
+        print(f"[deps] Redis init failed: {e}")
+
 # =========================================================
 # Time helpers
 # =========================================================
@@ -304,6 +314,7 @@ class OrderCreateReq(BaseModel):
     is_ai: bool = False
     order_type: str = "dine_in"
     idempotency_key: Optional[str] = None
+    device_id: Optional[str] = None
 
 class OrderStatusUpdate(BaseModel):
     status: Optional[str] = None
@@ -421,6 +432,21 @@ class PushSubscription(BaseModel):
     endpoint: str
     keys: Dict[str, str]
     order_id: Optional[str] = None
+    restaurant_id: Optional[str] = None
+    device_id: Optional[str] = None
+
+class EventRequest(BaseModel):
+    event: str
+    device_id: str
+    current_cart: Optional[List[Dict[str, Any]]] = []
+    restaurant_id: Optional[str] = None
+    session_id: Optional[str] = None
+
+class PushBroadcastReq(BaseModel):
+    title: Optional[str] = "Mahika's Multi Cuisine"
+    body: str
+    url: Optional[str] = "/"
+    restaurant_id: Optional[str] = None
 
 class RestaurantRequestReq(BaseModel):
     name: str

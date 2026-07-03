@@ -91,6 +91,17 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return out;
 }
 
+/** Generates or retrieves secure anonymous device ID for privacy-first loyalty and push recognition. */
+export function getOrCreateAnonID(): string {
+  if (typeof window === "undefined") return "";
+  let deviceId = localStorage.getItem("mahika_anon_id");
+  if (!deviceId) {
+    deviceId = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : "anon-" + Math.random().toString(36).substring(2, 15);
+    localStorage.setItem("mahika_anon_id", deviceId);
+  }
+  return deviceId;
+}
+
 /** Returns true if browser supports Service Worker Push API. */
 export function isPushSupported(): boolean {
   return typeof window !== "undefined"
@@ -125,6 +136,7 @@ export async function subscribeToRestaurantPush(restaurantId: string): Promise<b
         endpoint: json.endpoint,
         keys: { p256dh: json.keys.p256dh, auth: json.keys.auth },
         restaurant_id: restaurantId,
+        device_id: getOrCreateAnonID(),
       }),
     });
     return res.ok;
@@ -136,13 +148,11 @@ export async function subscribeToRestaurantPush(restaurantId: string): Promise<b
 
 export async function subscribeToOrderPush(orderId: string): Promise<boolean> {
   if (!isPushSupported()) return false;
-  // Permission
   const perm = await ensureNotificationPermission();
   if (perm !== "granted") return false;
   try {
     const reg = await navigator.serviceWorker.register("/sw.js");
     await navigator.serviceWorker.ready;
-    // VAPID public key
     const { key } = await api<{ key: string }>("/api/push/vapid-public-key");
     if (!key) return false;
     let sub = await reg.pushManager.getSubscription();
@@ -161,11 +171,49 @@ export async function subscribeToOrderPush(orderId: string): Promise<boolean> {
         endpoint: json.endpoint,
         keys: { p256dh: json.keys.p256dh, auth: json.keys.auth },
         order_id: orderId,
+        device_id: getOrCreateAnonID(),
       }),
     });
     return res.ok;
   } catch (err) {
     console.warn("[push] subscribe failed:", err);
+    return false;
+  }
+}
+
+/** Subscribe to offers after payment/checkout (anonymous lock-screen broadcast). */
+export async function subscribeToOffers(restaurantId?: string, orderId?: string): Promise<boolean> {
+  if (!isPushSupported()) return false;
+  const perm = await ensureNotificationPermission();
+  if (perm !== "granted") return false;
+  try {
+    const reg = await navigator.serviceWorker.register("/sw.js");
+    await navigator.serviceWorker.ready;
+    const { key } = await api<{ key: string }>("/api/push/vapid-public-key");
+    if (!key) return false;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(key),
+      });
+    }
+    const json = sub.toJSON() as { endpoint?: string; keys?: { p256dh?: string; auth?: string } };
+    if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) return false;
+    const res = await fetch(apiUrl("/api/notifications/subscribe"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        endpoint: json.endpoint,
+        keys: { p256dh: json.keys.p256dh, auth: json.keys.auth },
+        restaurant_id: restaurantId,
+        order_id: orderId,
+        device_id: getOrCreateAnonID(),
+      }),
+    });
+    return res.ok;
+  } catch (err) {
+    console.warn("[push] subscribeToOffers failed:", err);
     return false;
   }
 }

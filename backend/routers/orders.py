@@ -4,6 +4,7 @@ import uuid
 import asyncio
 import json
 import re
+import logging
 from datetime import datetime, timezone, timedelta
 from typing import Optional, Dict, Any, List
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -12,9 +13,10 @@ from fpdf import FPDF
 from deps import (
     db, now_iso, TAX_RATE, require_user, require_roles, current_user, jwt_verify,
     client, next_token, OrderCreateReq, OrderStatusUpdate,
-    PaymentReq, CheckoutSessionReq, SplitBillReq,
+    PaymentReq, CheckoutSessionReq, SplitBillReq, redis_client,
 )
 
+logger = logging.getLogger(__name__)
 router = APIRouter(tags=["orders"])
 
 
@@ -185,6 +187,7 @@ async def create_order(req: OrderCreateReq):
         "idempotency_key": idempotency_key,
         "payment_status": "unpaid" if req.payment_method in {"cash", "upi", "card_machine"} else "pending",
         "is_ai": req.is_ai,
+        "device_id": req.device_id,
     }
     
     # ponytail: atomic order creation + inventory deduction (safe for standalone & replica sets)
@@ -222,6 +225,27 @@ async def create_order(req: OrderCreateReq):
     customer = await _find_or_create_customer(customer_name, customer_phone, restaurant_id)
     if customer and customer.get("id"):
         await _on_order_paid({**order, "customer_id": customer["id"]})
+    
+    # Step 5: Post-Checkout Aggregation & Redis Caching
+    if req.device_id:
+        try:
+            pipeline = [
+                {"$match": {"device_id": req.device_id, "status": {"$ne": "cancelled"}}},
+                {"$unwind": "$items"},
+                {"$group": {"_id": "$items.name", "count": {"$sum": "$items.qty"}}},
+                {"$sort": {"count": -1}},
+                {"$limit": 1}
+            ]
+            res = await db.orders.aggregate(pipeline).to_list(1)
+            if res and res[0].get("_id"):
+                fav = str(res[0]["_id"])
+                if redis_client:
+                    try:
+                        await redis_client.setex(f"fav_item:{req.device_id}", 86400 * 30, fav)
+                    except Exception as e:
+                        logger.debug("[AI Memory] Redis setex failed: %s", e)
+        except Exception as e:
+            logger.debug("[AI Memory] Aggregation failed: %s", e)
     
     # Broadcast to SSE subscribers (kitchen/counter real-time)
     broadcast_order_update(restaurant_id, {"type": "new_order", "order": {k: v for k, v in order.items() if k != "_id"}})

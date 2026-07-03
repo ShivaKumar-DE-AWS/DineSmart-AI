@@ -22,7 +22,7 @@ from typing import List, Optional, Literal
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from deps import db, GEMINI_API_KEY, get_gemini_models
+from deps import db, GEMINI_API_KEY, get_gemini_models, redis_client
 from cache_service import menu_cache
 
 logger = logging.getLogger(__name__)
@@ -30,6 +30,39 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["ai-waiter"])
 
 MENU_CACHE_TTL = 3600  # 1 hour
+
+
+async def get_favorite_item(device_id: Optional[str]) -> str:
+    """Retrieve returning customer's favorite item from Redis fast cache or MongoDB aggregation."""
+    if not device_id:
+        return ""
+    if redis_client:
+        try:
+            cached = await redis_client.get(f"fav_item:{device_id}")
+            if cached:
+                return cached.decode() if isinstance(cached, bytes) else str(cached)
+        except Exception as e:
+            logger.debug("[AI Memory] Redis lookup failed: %s", e)
+    try:
+        pipeline = [
+            {"$match": {"device_id": device_id, "status": {"$ne": "cancelled"}}},
+            {"$unwind": "$items"},
+            {"$group": {"_id": "$items.name", "count": {"$sum": "$items.qty"}}},
+            {"$sort": {"count": -1}},
+            {"$limit": 1}
+        ]
+        res = await db.orders.aggregate(pipeline).to_list(1)
+        if res and res[0].get("_id"):
+            fav = str(res[0]["_id"])
+            if redis_client:
+                try:
+                    await redis_client.setex(f"fav_item:{device_id}", 86400 * 30, fav)
+                except Exception:
+                    pass
+            return fav
+    except Exception as e:
+        logger.debug("[AI Memory] MongoDB lookup failed: %s", e)
+    return ""
 
 
 # =========================================================
@@ -47,11 +80,14 @@ class CartItemPayload(BaseModel):
 
 class AIWaiterEventRequest(BaseModel):
     """Incoming event payload sent by the frontend."""
-    event_type: Literal["QR_SCAN", "ITEM_ADDED", "CHECKOUT"]
+    event_type: Optional[str] = "QR_SCAN"
+    event: Optional[str] = None
     restaurant_id: str
     cart_state: List[CartItemPayload] = []
+    current_cart: Optional[List[CartItemPayload]] = None
     added_item: Optional[CartItemPayload] = None
     user_language: str = "English"
+    device_id: Optional[str] = None
 
 
 class SuggestedItemSchema(BaseModel):
@@ -116,6 +152,7 @@ def _build_prompt(
     added_item: Optional[CartItemPayload],
     menu_snapshot: List[dict],
     user_language: str,
+    fav_item: str = "",
 ) -> str:
     """Build the master Gemini prompt dynamically per event type."""
     menu_json = json.dumps(
@@ -141,25 +178,27 @@ def _build_prompt(
         or "empty"
     )
 
-    base = f"""You are a warm knowledgeable restaurant host at a premium Indian restaurant.
-You respond only in {user_language}.
-You are NOT a chatbot. You observe the customer dining journey and react with brief
-appetizing friendly messages (max 2 sentences) to enhance their experience.
-Never be pushy robotic or sales-y. Speak like a knowledgeable friend.
+    base = f"""# CONTEXT INJECTIONS
+You will receive four pieces of live data per request:
+1. [CURRENT_EVENT]: {event_type}
+2. [USER_LANGUAGE]: {user_language}
+3. [CART_STATE]: {cart_summary}
+4. [MENU_METADATA]: {menu_json}
 
-RESTAURANT MENU (JSON):
-{menu_json}
-
-CUSTOMER CART:
-{cart_summary}"""
+# EVENT BEHAVIOR RULES
+- **LANGUAGE LOCK:** The `dialogue_text` output MUST be written fluently and naturally in the language specified in [USER_LANGUAGE]. The `action_type` and JSON keys must remain in English.
+- You are a warm knowledgeable restaurant host at a premium Indian restaurant.
+- You are NOT a chatbot. You observe the customer dining journey and react with brief appetizing friendly messages (max 2 sentences) to enhance their experience.
+- Never be pushy robotic or sales-y. Speak like a knowledgeable friend."""
 
     if event_type == "QR_SCAN":
-        return f"""{base}
+        memory_str = f"\n[MEMORY INJECTION: This returning customer frequently orders {fav_item}. Suggest it warmly upon greeting, e.g., 'Welcome back! Would you like to start with your usual {fav_item}?']" if fav_item else ""
+        return f"""{base}{memory_str}
 
 EVENT: Customer just scanned the QR code and opened the menu for the first time.
 INSTRUCTIONS:
 1. Set action_type = "WELCOME"
-2. dialogue_text: warm personal welcome max 2 sentences. Invite them to explore.
+2. dialogue_text: warm personal welcome max 2 sentences. Invite them to explore.{' Warmly mention their favorite item ' + fav_item + '!' if fav_item else ''}
 3. suggested_items: empty list []."""
 
     if event_type == "ITEM_ADDED":
@@ -204,11 +243,11 @@ INSTRUCTIONS:
 # Step 3: Gemini SDK Call
 # =========================================================
 
-async def _call_gemini(prompt: str, event_type: str = "WELCOME") -> AIWaiterEventResponse:
+async def _call_gemini(prompt: str, event_type: str = "WELCOME", fav_item: str = "") -> AIWaiterEventResponse:
     """Call Gemini with automatic model switching and graceful fallback on exhaustion."""
     if not GEMINI_API_KEY:
         logger.warning("[AI Waiter] GEMINI_API_KEY not set. Returning graceful fallback.")
-        return _fallback_response(event_type)
+        return _fallback_response(event_type, fav_item)
 
     try:
         from google import genai
@@ -233,7 +272,7 @@ async def _call_gemini(prompt: str, event_type: str = "WELCOME") -> AIWaiterEven
                         contents=prompt,
                         config=config,
                     ),
-                    timeout=6.0,
+                    timeout=2.0,  # Strategy 3: 2.0s Circuit Breaker timeout
                 )
 
                 raw = (getattr(response, "text", None) or "").strip()
@@ -255,28 +294,31 @@ async def _call_gemini(prompt: str, event_type: str = "WELCOME") -> AIWaiterEven
                 continue
 
         logger.error("[AI Waiter] All Gemini models failed or exhausted. Using fallback response.")
-        return _fallback_response(event_type)
+        return _fallback_response(event_type, fav_item)
 
     except Exception as exc:
         logger.error("[AI Waiter] Unexpected error calling Gemini: %s. Using fallback response.", exc)
-        return _fallback_response(event_type)
+        return _fallback_response(event_type, fav_item)
 
 
-def _fallback_response(event_type: str) -> AIWaiterEventResponse:
+def _fallback_response(event_type: str, fav_item: str = "") -> AIWaiterEventResponse:
     """Return a polite, non-blocking fallback response if models fail or time out."""
     if event_type == "QR_SCAN":
+        msg = f"Welcome back! Would you like to start with your usual {fav_item}? We are delighted to host you today." if fav_item else "Welcome! We are delighted to host you today. Please explore our curated menu and let us know if we can craft anything special for your table."
         return AIWaiterEventResponse(
-            dialogue_text="Welcome! We are delighted to host you today. Please explore our curated menu and let us know if we can craft anything special for your table.",
+            dialogue_text=msg,
             action_type="WELCOME",
             suggested_items=[],
         )
     elif event_type == "ITEM_ADDED":
+        # Strategy 3: Circuit Breaker silent fallback during ITEM_ADDED -> empty dialogue_text
         return AIWaiterEventResponse(
-            dialogue_text="An exquisite selection! Our chefs prepare this dish with the freshest ingredients.",
+            dialogue_text="",
             action_type="ITEM_VALIDATION",
             suggested_items=[],
         )
     else:
+        # Strategy 3: Circuit Breaker fallback during CHECKOUT -> empty suggested_items, routes straight to pay
         return AIWaiterEventResponse(
             dialogue_text="Your order looks wonderful. We cannot wait to serve you!",
             action_type="UPSELL_OFFER",
@@ -300,12 +342,21 @@ async def ai_waiter_event(req: AIWaiterEventRequest):
     Returns:
         AIWaiterEventResponse: { dialogue_text, action_type, suggested_items }
     """
+    if not req.event_type and req.event:
+        req.event_type = req.event
+    if not req.cart_state and req.current_cart:
+        req.cart_state = req.current_cart
+
     if not req.restaurant_id or not req.restaurant_id.strip():
         raise HTTPException(status_code=400, detail="restaurant_id is required and cannot be empty.")
 
     # ITEM_ADDED: infer added_item from last cart entry if caller omitted it
     if req.event_type == "ITEM_ADDED" and not req.added_item and req.cart_state:
         req.added_item = req.cart_state[-1]
+
+    fav_item = ""
+    if req.device_id and req.event_type == "QR_SCAN":
+        fav_item = await get_favorite_item(req.device_id)
 
     # Step 2: Get menu (Redis -> MongoDB fallback)
     menu_snapshot = await get_cached_menu(req.restaurant_id)
@@ -326,9 +377,10 @@ async def ai_waiter_event(req: AIWaiterEventRequest):
         added_item=req.added_item,
         menu_snapshot=menu_snapshot,
         user_language=req.user_language,
+        fav_item=fav_item,
     )
 
-    ai_response = await _call_gemini(prompt, req.event_type)
+    ai_response = await _call_gemini(prompt, req.event_type, fav_item)
 
     logger.info(
         "[AI Waiter] event=%s restaurant=%s action=%s suggestions=%d",

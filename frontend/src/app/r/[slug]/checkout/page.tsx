@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { Lock, CreditCard, ExternalLink, ArrowLeft, ScrollText, User2, ChefHat, Plus, Minus, Phone, Gift, Sparkles, MapPin, Scissors, Check, X, Share2, Users } from "lucide-react";
 import { sendAIWaiterEvent, showAIUpsellSheet } from "@/lib/ai_waiter_client";
 import { AICourseTrackerCard } from "@/components/customer/AICourseTrackerCard";
+import { getOrCreateAnonID, subscribeToOffers } from "@/lib/notify";
 
 interface CustomerProfile {
   id: string;
@@ -228,10 +229,12 @@ export default function CheckoutPage() {
         table_session_id: table?.id || undefined,
         table_number: table?.table_number || undefined,
         is_ai: cart.isAi,
+        device_id: getOrCreateAnonID(),
       };
       const res = await api<{ order_id: string; token: string }>("/api/orders", { method: "POST", body: JSON.stringify(payload) });
       cart.clear();
       toast.success("Your order is on its way to the kitchen");
+      subscribeToOffers(restaurantConfig?.id || slug, res.order_id).catch(() => {});
       router.push(`/r/${slug}/token/${res.order_id}`);
     } catch (e) {
       const err = e as Error;

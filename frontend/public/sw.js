@@ -53,21 +53,22 @@ self.addEventListener("push", (event) => {
   } catch {
     data = {};
   }
-  const title = data.title || "SmartDine";
-  const body = data.body || "";
+  const title = data.title || "Mahika's Multi Cuisine";
+  const body = data.body || "Special offer inside!";
   const opts = {
     body,
-    icon: "/favicon.ico",
-    badge: "/favicon.ico",
+    icon: data.icon || "/favicon.ico",
+    badge: data.badge || "/favicon.ico",
     vibrate: [200, 100, 200],
-    data: data.data || {},
+    data: { url: data.url || "/", ...(data.data || {}) },
   };
   event.waitUntil(self.registration.showNotification(title, opts));
 });
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const urlToOpen = new URL("/", self.location.origin);
+  const targetPath = (event.notification.data && event.notification.data.url) ? event.notification.data.url : "/";
+  const urlToOpen = new URL(targetPath, self.location.origin);
   event.waitUntil(
     clients.matchAll({ type: "window", includeUncontrolled: true }).then((windowClients) => {
       for (const client of windowClients) {
