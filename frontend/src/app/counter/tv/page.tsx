@@ -106,6 +106,11 @@ export default function TVDisplayPage() {
                 <div className="text-xs font-bold uppercase tracking-widest text-zinc-400">
                   {o.order_type === "takeaway" ? "Takeaway" : "Dine-In"}
                 </div>
+                {o.items && o.items.length > 0 && (
+                  <div className="mt-3 text-xs text-zinc-300 font-medium line-clamp-2 bg-zinc-800/80 px-2.5 py-1.5 rounded-xl w-full text-left">
+                    {o.items.map(i => `${i.qty}× ${i.name}`).join(", ")}
+                  </div>
+                )}
               </div>
             ))}
             {preparing.length === 0 && (
@@ -141,6 +146,11 @@ export default function TVDisplayPage() {
                 <div className="bg-white/20 backdrop-blur-md text-white font-extrabold text-sm px-4 py-1.5 rounded-full uppercase tracking-widest mt-2 border border-white/30">
                   {o.table_number ? `Table ${o.table_number}` : "Please Collect"}
                 </div>
+                {o.items && o.items.length > 0 && (
+                  <div className="mt-3 text-xs text-white/95 font-medium line-clamp-2 bg-black/20 px-2.5 py-1.5 rounded-xl w-full text-left">
+                    {o.items.map(i => `${i.qty}× ${i.name}`).join(", ")}
+                  </div>
+                )}
               </div>
             ))}
             {ready.length === 0 && (

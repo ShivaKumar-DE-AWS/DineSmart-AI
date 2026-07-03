@@ -140,8 +140,14 @@ async def forgot_password(req: ForgotPasswordReq, background_tasks: BackgroundTa
         {"$set": {"reset_token": reset_token, "reset_token_expiry": expiry}}
     )
 
-    frontend_url = os.environ.get("FRONTEND_URL", "https://smartdineai.co.in")
-    background_tasks.add_task(send_password_reset_email, user.get("email"), reset_token, frontend_url)
+    frontend_url = os.environ.get("FRONTEND_URL", "https://smartdineai.co.in").rstrip("/")
+    target_email = user.get("email")
+    if role == "superadmin":
+        target_email = os.environ.get("SUPERADMIN_EMAIL", "admin@smartdineai.co.in")
+    elif role == "admin" and "registered_email" in locals() and registered_email:
+        target_email = str(registered_email)
+
+    background_tasks.add_task(send_password_reset_email, target_email, reset_token, frontend_url)
     return {"message": "If an account with that email exists, a reset link has been sent."}
 
 

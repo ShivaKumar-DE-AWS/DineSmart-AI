@@ -200,11 +200,24 @@ export async function sendAIWaiterEvent(
         instantMsg = `✨ **${name}** added to your thali! Check our Chef Specials for signature pairings!`;
       }
       
-      showAIToast(instantMsg, 20000, suggestedAction);
+      // Only show AI Waiter suggestion pop-up when there is an actionable pairing suggestion button!
+      // For general items, let the standard 3-second green notification toast handle it alone.
+      if (suggestedAction) {
+        showAIToast(instantMsg, 20000, suggestedAction);
+      }
     }
 
     // 2. Optimistic Instant UI for QR_SCAN Welcome (Time-of-Day + Table Size Sharing Recognition)
     if (payload.event_type === "QR_SCAN") {
+      const tableSession = useTable.getState().session;
+      const sessionKey = "sd_ai_welcomed_" + (tableSession?.id || payload.restaurant_id);
+      if (typeof window !== "undefined" && window.sessionStorage) {
+        if (sessionStorage.getItem(sessionKey)) {
+          return null;
+        }
+        sessionStorage.setItem(sessionKey, "1");
+      }
+
       const hour = new Date().getHours();
       let timeGreeting = "👨‍🍳 Welcome to our royal dining hall!";
       if (hour >= 5 && hour < 11) {
@@ -217,7 +230,6 @@ export async function sendAIWaiterEvent(
         timeGreeting = "🌙 Good evening! Unwind tonight with our signature royal dinner spread, slow-cooked curries, and fragrant biryanis.";
       }
 
-      const tableSession = useTable.getState().session;
       if (tableSession && tableSession.table_number) {
         timeGreeting = `🤖 Welcome to Table ${tableSession.table_number}! ${timeGreeting} 👥 Table Dining Tip: Explore our Sharing Platters and Family Combos crafted specially for table groups!`;
       } else {
@@ -243,10 +255,21 @@ export async function sendAIWaiterEvent(
 
     // Route to the correct UI handler
     if (response.action_type === "WELCOME") {
-      showAIWelcomeModal(response.dialogue_text, 20000);
+      const tableSession = useTable.getState().session;
+      const sessionKey = "sd_ai_welcomed_" + (tableSession?.id || payload.restaurant_id);
+      if (typeof window !== "undefined" && window.sessionStorage) {
+        if (!sessionStorage.getItem(sessionKey)) {
+          sessionStorage.setItem(sessionKey, "1");
+          showAIWelcomeModal(response.dialogue_text, 20000);
+        }
+      } else {
+        showAIWelcomeModal(response.dialogue_text, 20000);
+      }
     } else if (response.action_type === "ITEM_VALIDATION") {
-      // Show AI response from Gemini if different or deeper
-      showAIToast(response.dialogue_text, 20000);
+      // Prevent multiple stacked pop-ups for one dish click: if ITEM_ADDED already fired, do not show duplicate toast!
+      if (payload.event_type !== "ITEM_ADDED") {
+        showAIToast(response.dialogue_text, 20000);
+      }
     } else if (response.action_type === "UPSELL_OFFER") {
       showAIUpsellSheet(response.dialogue_text, response.suggested_items, addToCartFn, proceedPayFn);
     }
@@ -569,22 +592,6 @@ function _closeSheet(): void {
  * Auto-closes after 5 seconds if user does not interact.
  */
 export function showAIWelcomeModal(message: string, autoDismissMs = 20000): void {
-  toast("🤖 AI Waiter Welcome", {
-    description: message,
-    duration: autoDismissMs,
-    closeButton: true,
-    style: {
-      background: "#FAF5EC",
-      color: "#1A1106",
-      border: "2px solid #8A6A1B",
-      fontSize: "15px",
-      fontWeight: "500",
-      fontFamily: "var(--font-editorial, serif)",
-      padding: "16px 20px",
-      borderRadius: "16px",
-      boxShadow: "0 10px 30px rgba(138, 106, 27, 0.22)",
-    },
-  });
   _bootstrapUI();
   const welcome = document.getElementById("ai-waiter-welcome");
   const text    = document.getElementById("ai-welcome-text");

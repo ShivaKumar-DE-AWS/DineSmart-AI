@@ -109,7 +109,7 @@ export default function MenuPage() {
   // AI Waiter: fire ITEM_ADDED toast on every add-to-cart action
   const handleAddToCart = useCallback((item: MenuItem) => {
     cart.add(item);
-    toast.success(`${item.name} added`);
+    toast.success(`${item.name} added`, { duration: 3000 });
     if (!restaurantConfig?.id) return;
     const cartItems = useCart.getState().items;
     // Fire-and-forget: never awaited so cart flow is instant

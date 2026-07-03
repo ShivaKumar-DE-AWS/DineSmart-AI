@@ -34,7 +34,7 @@ async def get_analytics(user=Depends(require_user)):
 
 @router.get("/api/analytics/dashboard", dependencies=[Depends(require_roles("admin"))])
 async def dashboard(user=Depends(require_user)):
-    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+    today_start = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     q: Dict[str, Any] = {"created_at": {"$gte": today_start}}
     if user.get("restaurant_id"):
         q["restaurant_id"] = user["restaurant_id"]
@@ -105,8 +105,8 @@ async def dashboard(user=Depends(require_user)):
 @router.get("/api/analytics/revenue", dependencies=[Depends(require_roles("admin"))])
 async def revenue_series(days: int = 7, user=Depends(require_user)):
     start = datetime.now(timezone.utc) - timedelta(days=days - 1)
-    start = start.replace(hour=0, minute=0, second=0, microsecond=0)
-    q: Dict[str, Any] = {"created_at": {"$gte": start.isoformat()}}
+    start_str = start.strftime("%Y-%m-%d")
+    q: Dict[str, Any] = {"created_at": {"$gte": start_str}}
     if user.get("restaurant_id"):
         q["restaurant_id"] = user["restaurant_id"]
     pipeline = [

@@ -31,21 +31,12 @@ export default function NativeAppHomeMenu() {
   
   useEffect(() => setMounted(true), []);
 
-  // AI Waiter: fire QR_SCAN welcome once restaurant config is loaded
-  const _aiWelcomeFired = useRef(false);
-  useEffect(() => {
-    if (!restaurantConfig?.id || _aiWelcomeFired.current) return;
-    _aiWelcomeFired.current = true;
-    sendAIWaiterEvent({
-      event_type: "QR_SCAN",
-      restaurant_id: restaurantConfig.id,
-    }).catch(() => {/* silent */});
-  }, [restaurantConfig?.id]);
+  // AI Waiter: Welcome note is handled when joining table / menu session only
 
   // AI Waiter: fire ITEM_ADDED toast on every add-to-cart action
   const handleAddToCart = useCallback((item: MenuItem) => {
     cart.add(item);
-    toast.success(`${item.name} added`);
+    toast.success(`${item.name} added`, { duration: 3000 });
     if (!restaurantConfig?.id) return;
     const cartItems = useCart.getState().items;
     sendAIWaiterEvent({

@@ -112,7 +112,7 @@ export function TableSessionGuard({ slug }: { slug?: string }) {
         }
         toast.success(`Welcome to ${restaurantName}, ${displayName}! Takeaway ready.`);
         setQrToken(null);
-        router.replace(`/r/${slugFromPath}/menu`, { scroll: false });
+        router.replace(`/r/${slugFromPath}`, { scroll: false });
         return;
       }
 

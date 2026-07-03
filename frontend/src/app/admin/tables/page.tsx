@@ -47,16 +47,16 @@ function tableQrUrl(slug: string, qrToken: string): string {
 function takeawayMenuUrl(slug: string): string {
   const finalSlug = slug === "mehfil-hyderabad" ? "mehfil" : slug;
   if (typeof window !== "undefined" && window.location.hostname.includes("smartdineai.co.in")) {
-    return `https://${finalSlug}.smartdineai.co.in/menu?type=takeaway`;
+    return `https://${finalSlug}.smartdineai.co.in?type=takeaway`;
   }
-  return `${customerOrigin()}/r/${finalSlug}/menu?type=takeaway`;
+  return `${customerOrigin()}/r/${finalSlug}?type=takeaway`;
 }
 
 function printTakeawayMenuQr(slug: string, restaurantName: string) {
   const finalSlug = slug === "mehfil-hyderabad" ? "mehfil" : slug;
-  let menuUrl = `${customerOrigin()}/r/${finalSlug}/menu?type=takeaway`;
+  let menuUrl = `${customerOrigin()}/r/${finalSlug}?type=takeaway`;
   if (typeof window !== "undefined" && window.location.hostname.includes("smartdineai.co.in")) {
-    menuUrl = `https://${finalSlug}.smartdineai.co.in/menu?type=takeaway`;
+    menuUrl = `https://${finalSlug}.smartdineai.co.in?type=takeaway`;
   }
   
   const w = window.open("", "_blank");

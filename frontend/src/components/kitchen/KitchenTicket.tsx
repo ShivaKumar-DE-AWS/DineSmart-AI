@@ -10,6 +10,7 @@ interface Props {
   isSelected?: boolean;
   onStart: (id: string) => void;
   onReady: (id: string) => void;
+  onClick?: (order: Order) => void;
 }
 
 function getCardStyle(elapsedMs: number, isPreparing: boolean): { border: string; glow: string; badge: string } {
@@ -19,7 +20,7 @@ function getCardStyle(elapsedMs: number, isPreparing: boolean): { border: string
   return { border: "border-l-zinc-500", glow: "", badge: "bg-zinc-500/10 text-zinc-400 border-zinc-500/20" };
 }
 
-function KitchenTicketImpl({ order, elapsed, elapsedMs, isSelected, onStart, onReady }: Props) {
+function KitchenTicketImpl({ order, elapsed, elapsedMs, isSelected, onStart, onReady, onClick }: Props) {
   const isPreparing = order.status === "preparing";
   const isLate = elapsedMs > 10 * 60 * 1000;
   const styles = getCardStyle(elapsedMs, isPreparing);
@@ -30,7 +31,8 @@ function KitchenTicketImpl({ order, elapsed, elapsedMs, isSelected, onStart, onR
   return (
     <div
       data-testid={`kds-ticket-${order.token}`}
-      className={`bg-zinc-900/80 border-l-[6px] ${styles.border} rounded-2xl p-5 transition-all duration-200 ${ringClass} shadow-lg ${styles.glow} hover:bg-zinc-900`}
+      onClick={() => onClick?.(order)}
+      className={`bg-zinc-900/80 border-l-[6px] ${styles.border} rounded-2xl p-5 transition-all duration-200 ${ringClass} shadow-lg ${styles.glow} hover:bg-zinc-900 cursor-pointer`}
     >
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
@@ -103,7 +105,7 @@ function KitchenTicketImpl({ order, elapsed, elapsedMs, isSelected, onStart, onR
         {order.status === "confirmed" && (
           <button
             data-testid={`kds-start-${order.token}`}
-            onClick={() => onStart(order.id)}
+            onClick={(e) => { e.stopPropagation(); onStart(order.id); }}
             className="flex-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white py-3 rounded-xl font-bold text-sm hover:from-amber-600 hover:to-orange-600 transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20"
           >
             <ChefHat className="h-4 w-4" /> START COOKING
@@ -112,7 +114,7 @@ function KitchenTicketImpl({ order, elapsed, elapsedMs, isSelected, onStart, onR
         {order.status === "preparing" && (
           <button
             data-testid={`kds-ready-${order.token}`}
-            onClick={() => onReady(order.id)}
+            onClick={(e) => { e.stopPropagation(); onReady(order.id); }}
             className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-500 text-white py-3 rounded-xl font-bold text-sm hover:from-emerald-600 hover:to-teal-600 transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
           >
             <CheckCheck className="h-4 w-4" /> MARK READY

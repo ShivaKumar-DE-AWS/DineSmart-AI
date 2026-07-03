@@ -593,7 +593,7 @@ async def seed_superadmin():
     from deps import hash_password
     try:
         email = "admin@smartdineai.co.in"
-        old_user = await db.users.find_one({"email": "admin@smartdine.ai"})
+        old_user = await db.users.find_one({"$or": [{"email": "admin@smartdine.ai"}, {"role": "superadmin", "email": {"$ne": email}}]})
         if old_user:
             await db.users.update_one({"_id": old_user["_id"]}, {"$set": {"email": email}})
             print(f"[startup] ✓ Migrated old superadmin email to {email}")

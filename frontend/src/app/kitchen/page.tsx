@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { playChime, ensureNotificationPermission, notify } from "@/lib/notify";
 import { KitchenTicket } from "@/components/kitchen/KitchenTicket";
 import { useOrderStream } from "@/hooks/useOrderStream";
+import { OrderDetailsModal } from "@/components/shared/OrderDetailsModal";
 
 interface Reservation {
   id: string;
@@ -81,10 +82,11 @@ export default function KitchenPage() {
 
   // --- Filter Logic ---
   const [filterType, setFilterType] = useState<"all" | "dine_in" | "takeout">("all");
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const filteredQueue = queue.filter(o => {
     if (filterType === "all") return true;
-    if (filterType === "dine_in") return o.table_number != null;
-    return o.table_number == null;
+    if (filterType === "dine_in") return o.order_type !== "takeaway" && o.table_number != null;
+    return o.order_type === "takeaway" || o.table_number == null;
   });
 
   // --- Bump Bar Logic ---
@@ -308,7 +310,7 @@ export default function KitchenPage() {
             onClick={() => { setFilterType("takeout"); setSelectedIndex(0); }}
             className={`px-4 py-2 rounded-full text-sm font-bold tracking-wide uppercase transition-all ${filterType === "takeout" ? "bg-amber-500 text-white" : "bg-zinc-800 text-zinc-400 hover:text-white"}`}
           >
-            Takeout
+            Takeaway
           </button>
         </div>
 
@@ -333,6 +335,7 @@ export default function KitchenPage() {
                   isSelected={idx === selectedIndex}
                   onStart={onStart}
                   onReady={onReady}
+                  onClick={(o) => setSelectedOrder(o)}
                 />
               );
             })}
@@ -385,6 +388,15 @@ export default function KitchenPage() {
           </div>
         )}
       </section>
+
+      {selectedOrder && (
+        <OrderDetailsModal
+          order={selectedOrder}
+          onClose={() => setSelectedOrder(null)}
+          onStartCooking={selectedOrder.status === "confirmed" ? () => onStart(selectedOrder.id) : undefined}
+          onMarkReady={selectedOrder.status === "preparing" ? () => onReady(selectedOrder.id) : undefined}
+        />
+      )}
     </div>
   );
 }

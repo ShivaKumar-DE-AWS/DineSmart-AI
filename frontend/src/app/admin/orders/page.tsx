@@ -8,6 +8,7 @@ import type { Order } from "@/types";
 import { toast } from "sonner";
 import { useSession } from "@/stores/session";
 import { QrCode } from "lucide-react";
+import { OrderDetailsModal } from "@/components/shared/OrderDetailsModal";
 
 const STATUS_OPTIONS: Order["status"][] = ["confirmed", "preparing", "ready", "served", "cancelled"];
 const STATUS_COLOR: Record<string, "clay" | "warn" | "ready" | "sage" | "alert"> = {
@@ -18,6 +19,7 @@ export default function AdminOrders() {
   const qc = useQueryClient();
   const { user } = useSession();
   const [filter, setFilter] = useState<string>("");
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const { data } = useQuery({ queryKey: ["admin-orders", filter, user?.restaurant_id], queryFn: () => { const params = new URLSearchParams(); if (filter) params.set("status_filter", filter); return api<{ orders: Order[] }>(`/api/orders?${params.toString()}`); }, refetchInterval: 15000 });
   const mut = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) => api(`/api/orders/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
@@ -79,7 +81,7 @@ export default function AdminOrders() {
           </thead>
           <tbody>
             {(data?.orders ?? []).map((o) => (
-              <tr key={o.id} className={`border-b border-bone last:border-0 transition-colors ${o.payment_status === "paid" ? "bg-emerald-50/60 hover:bg-emerald-100/50" : ""}`} data-testid={`admin-order-row-${o.token}`}>
+              <tr key={o.id} onClick={() => setSelectedOrder(o)} className={`border-b border-bone last:border-0 transition-colors cursor-pointer ${o.payment_status === "paid" ? "bg-emerald-50/60 hover:bg-emerald-100/50" : "hover:bg-cream/50"}`} data-testid={`admin-order-row-${o.token}`}>
                 <td className="px-4 py-3 font-mono font-semibold text-clay">{o.token}</td>
                 <td className="px-4 py-3">
                   <span className={`inline-flex items-center text-[10px] tracking-wider uppercase font-bold px-2 py-0.5 rounded-full ${
@@ -104,7 +106,7 @@ export default function AdminOrders() {
                       </span>
                     ) : (
                       <button
-                        onClick={() => markPaidMut.mutate({ id: o.id })}
+                        onClick={(e) => { e.stopPropagation(); markPaidMut.mutate({ id: o.id }); }}
                         className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-800 hover:bg-red-200 border border-red-300 transition shadow-sm"
                         title="Click to mark order as paid"
                       >
@@ -116,7 +118,8 @@ export default function AdminOrders() {
                 <td className="px-4 py-3">
                   {o.order_type === "takeaway" ? (
                     <button
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         const slug = user?.restaurant_slug || "";
                         const trackUrl = `${window.location.origin}/r/${slug}/track/${o.id}`;
                         const w = window.open("", "_blank");
@@ -142,6 +145,7 @@ export default function AdminOrders() {
                   <select
                     data-testid={`status-select-${o.token}`}
                     defaultValue={o.status}
+                    onClick={(e) => e.stopPropagation()}
                     onChange={(e) => mut.mutate({ id: o.id, status: e.target.value })}
                     className="h-8 rounded-full border border-bone px-2 text-xs bg-white"
                   >
@@ -150,7 +154,7 @@ export default function AdminOrders() {
                 </td>
                 <td className="px-4 py-3">
                   <button
-                    onClick={() => downloadBill(o.id, o.token)}
+                    onClick={(e) => { e.stopPropagation(); downloadBill(o.id, o.token); }}
                     className="h-8 rounded-full border border-bone px-3 text-xs bg-white hover:bg-cream transition-colors"
                   >
                     PDF
@@ -164,6 +168,14 @@ export default function AdminOrders() {
           </tbody>
         </table>
       </div>
+      {selectedOrder && (
+        <OrderDetailsModal
+          order={selectedOrder}
+          onClose={() => setSelectedOrder(null)}
+          onMarkPaid={selectedOrder.payment_status !== "paid" ? () => markPaidMut.mutate({ id: selectedOrder.id }) : undefined}
+          onMarkServed={selectedOrder.status !== "served" ? () => mut.mutate({ id: selectedOrder.id, status: "served" }) : undefined}
+        />
+      )}
     </div>
   );
 }
