@@ -10,6 +10,7 @@ import { useRestaurantConfig } from "@/hooks/useRestaurantConfig";
 import { toast } from "sonner";
 import { Lock, CreditCard, ExternalLink, ArrowLeft, ScrollText, User2, ChefHat, Plus, Minus, Phone, Gift, Sparkles, MapPin, Scissors, Check, X, Share2, Users } from "lucide-react";
 import { sendAIWaiterEvent, showAIUpsellSheet } from "@/lib/ai_waiter_client";
+import { AICourseTrackerCard } from "@/components/customer/AICourseTrackerCard";
 
 interface CustomerProfile {
   id: string;
@@ -252,6 +253,8 @@ export default function CheckoutPage() {
         </h1>
         <p className="font-editorial italic text-sm text-[#1A1106]/70 mt-3">A name, your preferences, and the feast is yours.</p>
       </div>
+
+      <AICourseTrackerCard />
 
       <div className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-5">

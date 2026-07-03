@@ -33,6 +33,62 @@
 
 import { api } from "@/lib/api";
 import { toast } from "sonner";
+import { useCart } from "@/stores/cart";
+import { useTable } from "@/stores/table";
+
+// ── Course Progression & Meal Balance Helper ───────────────────────────────
+export function getMealBalanceStatus(cartItems: { category?: string; name: string }[]): {
+  statusText: string;
+  badgeText: string;
+  missingCategory: string | null;
+  suggestedAction: string;
+} {
+  const cats = cartItems.map(i => `${i.category || ""} ${i.name}`.toLowerCase());
+  const hasStarter = cats.some(c => /starter|kebab|appetizer|snack|tikka|roll|soup/i.test(c));
+  const hasMain = cats.some(c => /main|biryani|curry|thali|rice|dal|masala|paneer|chicken|mutton|fish/i.test(c));
+  const hasDrink = cats.some(c => /drink|beverage|lassi|shake|mocktail|soda|water|tea|coffee/i.test(c));
+  const hasBread = cats.some(c => /bread|naan|roti|paratha|kulcha/i.test(c));
+  const hasDessert = cats.some(c => /dessert|sweet|ice cream|gulab|rasmalai|kheer|halwa/i.test(c));
+
+  if (!hasStarter && !hasMain) {
+    return {
+      badgeText: "🤖 AI Waiter Course Guidance",
+      statusText: "You are just getting started! We recommend beginning with a sizzling Tandoori Kebab or signature Starter.",
+      missingCategory: "Starters",
+      suggestedAction: "Browse Starters",
+    };
+  }
+  if (hasStarter && !hasMain) {
+    return {
+      badgeText: "✨ Course 2 Recommendation",
+      statusText: "Appetizers selected! Ready for the main event? Our signature Biryanis & rich Curries are waiting.",
+      missingCategory: "Main Course",
+      suggestedAction: "Add Main Course",
+    };
+  }
+  if (hasMain && !hasDrink && !hasBread) {
+    return {
+      badgeText: "🍽️ Meal Balance Tip",
+      statusText: "Main course added! Enhance your feast with fresh Butter Naan or a refreshing cooling Lassi.",
+      missingCategory: "Breads & Beverages",
+      suggestedAction: "Complete the Meal",
+    };
+  }
+  if (hasMain && !hasDessert) {
+    return {
+      badgeText: "👑 Grand Finale Tip",
+      statusText: "Your feast looks incredible! Don't forget to crown your royal meal with a signature royal Dessert.",
+      missingCategory: "Desserts",
+      suggestedAction: "Add Dessert",
+    };
+  }
+  return {
+    badgeText: "🌟 Royal 5-Star Feast",
+    statusText: "Perfection! Your thali is beautifully balanced across courses for a truly memorable dining experience.",
+    missingCategory: null,
+    suggestedAction: "Proceed to Order",
+  };
+}
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -85,19 +141,57 @@ export async function sendAIWaiterEvent(
   proceedPayFn?: () => void
 ): Promise<AIWaiterEventResponse | null> {
   try {
-    // 1. Optimistic Instant UI for ITEM_ADDED (0ms delay!)
+    // 1. Optimistic Instant UI for ITEM_ADDED (0ms delay with Palate & Spice Balance + One-Tap Upsell!)
     if (payload.event_type === "ITEM_ADDED" && payload.added_item) {
       const item = payload.added_item;
       const cat = (item.category || "").toLowerCase();
       const name = item.name;
-      let instantMsg = `✨ Great taste! **${name}** is a wonderful choice.`;
+      const isSpicy = /spicy|guntur|vindaloo|masala|kebab|chilli|pepper|tikka|tandoori|peri|schezwan|curry|kolhapuri|mirch|fry/i.test(`${name} ${cat}`);
       
-      if (cat.includes("biryani") || cat.includes("main") || cat.includes("curry") || cat.includes("rice") || cat.includes("thali")) {
-        instantMsg = `✨ Added **${name}**! AI Waiter suggests pairing it with a cooling **Mint Raita**, **Butter Naan**, or a refreshing **Thums Up** for a royal feast!`;
+      let instantMsg = `✨ Great taste! **${name}** is a wonderful choice.`;
+      let suggestedAction: { label: string; onClick: () => void } | undefined = undefined;
+
+      if (isSpicy) {
+        const coolingOptions = [
+          { id: "cool-1", name: "Sweet Lassi", price: 90, category: "Beverages" },
+          { id: "cool-2", name: "Mint Raita", price: 80, category: "Sides" },
+          { id: "cool-3", name: "Fresh Buttermilk", price: 60, category: "Beverages" },
+        ];
+        const rec = coolingOptions[Math.floor(Math.random() * coolingOptions.length)];
+        instantMsg = `🌶️ **${name}** has a bold, spicy flavor profile! AI Waiter suggests pairing it with a cooling **${rec.name}** (₹${rec.price}) to balance your palate perfectly.`;
+        suggestedAction = {
+          label: `+ Add ${rec.name} (₹${rec.price})`,
+          onClick: () => {
+            useCart.getState().add({ id: rec.id, name: rec.name, price: rec.price, category: rec.category } as any, 1);
+          }
+        };
+      } else if (cat.includes("biryani") || cat.includes("main") || cat.includes("curry") || cat.includes("rice") || cat.includes("thali")) {
+        const rec = { id: "side-1", name: "Mint Raita", price: 80, category: "Sides" };
+        instantMsg = `✨ Added **${name}**! AI Waiter suggests pairing it with a cooling **${rec.name}** or **Butter Naan** for a royal feast!`;
+        suggestedAction = {
+          label: `+ Add ${rec.name} (₹${rec.price})`,
+          onClick: () => {
+            useCart.getState().add({ id: rec.id, name: rec.name, price: rec.price, category: rec.category } as any, 1);
+          }
+        };
       } else if (cat.includes("starter") || cat.includes("kebab") || cat.includes("appetizer") || cat.includes("snack") || cat.includes("tikka")) {
-        instantMsg = `✨ **${name}** is a crowd favorite starter! Ready for mains? Our signature **Biryani** or **Dal Makhani** would follow beautifully.`;
+        const rec = { id: "bread-1", name: "Butter Naan", price: 50, category: "Breads" };
+        instantMsg = `✨ **${name}** is a crowd favorite starter! Ready for mains? Pair it with fresh tandoori bread or Biryani.`;
+        suggestedAction = {
+          label: `+ Add ${rec.name} (₹${rec.price})`,
+          onClick: () => {
+            useCart.getState().add({ id: rec.id, name: rec.name, price: rec.price, category: rec.category } as any, 1);
+          }
+        };
       } else if (cat.includes("bread") || cat.includes("naan") || cat.includes("roti") || cat.includes("paratha") || cat.includes("kulcha")) {
-        instantMsg = `✨ Fresh tandoori bread! **${name}** dips wonderfully into our rich **Butter Chicken**, **Paneer Masala**, or **Dal Makhani**.`;
+        const rec = { id: "main-1", name: "Dal Makhani", price: 220, category: "Main Course" };
+        instantMsg = `✨ Fresh tandoori bread! **${name}** dips wonderfully into our signature **${rec.name}** or Butter Chicken.`;
+        suggestedAction = {
+          label: `+ Add ${rec.name} (₹${rec.price})`,
+          onClick: () => {
+            useCart.getState().add({ id: rec.id, name: rec.name, price: rec.price, category: rec.category } as any, 1);
+          }
+        };
       } else if (cat.includes("drink") || cat.includes("beverage") || cat.includes("lassi") || cat.includes("mocktail") || cat.includes("shake")) {
         instantMsg = `✨ So refreshing! Sip your **${name}** alongside our spicy tandoori grills or flavorful biryani!`;
       } else if (cat.includes("dessert") || cat.includes("sweet") || cat.includes("ice cream") || cat.includes("gulab") || cat.includes("rasmalai")) {
@@ -106,7 +200,34 @@ export async function sendAIWaiterEvent(
         instantMsg = `✨ **${name}** added to your thali! Check our Chef Specials for signature pairings!`;
       }
       
-      showAIToast(instantMsg, 20000);
+      showAIToast(instantMsg, 20000, suggestedAction);
+    }
+
+    // 2. Optimistic Instant UI for QR_SCAN Welcome (Time-of-Day + Table Size Sharing Recognition)
+    if (payload.event_type === "QR_SCAN") {
+      const hour = new Date().getHours();
+      let timeGreeting = "👨‍🍳 Welcome to our royal dining hall!";
+      if (hour >= 5 && hour < 11) {
+        timeGreeting = "🌅 Good morning! Start your day with our freshly prepared breakfast specials and aromatic hot beverages.";
+      } else if (hour >= 11 && hour < 16) {
+        timeGreeting = "☀️ Good afternoon! Perfect time for a fulfilling lunch feast or our signature Royal Thali & Biryanis.";
+      } else if (hour >= 16 && hour < 19) {
+        timeGreeting = "🌤️ Pleasant evening! Relax with our crispy evening snacks, tandoori kebabs, and refreshing beverages.";
+      } else {
+        timeGreeting = "🌙 Good evening! Unwind tonight with our signature royal dinner spread, slow-cooked curries, and fragrant biryanis.";
+      }
+
+      const tableSession = useTable.getState().session;
+      if (tableSession && tableSession.table_number) {
+        timeGreeting = `🤖 Welcome to Table ${tableSession.table_number}! ${timeGreeting} 👥 Table Dining Tip: Explore our Sharing Platters and Family Combos crafted specially for table groups!`;
+      } else {
+        const day = new Date().getDay();
+        if (day === 0 || day === 6) {
+          timeGreeting += " ✨ Weekend Chef Special: Check out our Sharing Platters crafted for weekend feasts!";
+        }
+      }
+
+      showAIWelcomeModal(timeGreeting, 20000);
     }
 
     const response = await api<AIWaiterEventResponse>("/api/ai-waiter/event", {
@@ -331,11 +452,22 @@ let _toastTimer: ReturnType<typeof setTimeout> | null = null;
  * Show a Top Toast notification that auto-dismisses after 20 seconds.
  * Position: slides down from top — keeps thumb-scrolling zone free.
  */
-export function showAIToast(message: string, durationMs = 20000): void {
+export function showAIToast(
+  message: string,
+  durationMs = 20000,
+  action?: { label: string; onClick: () => void }
+): void {
   toast("✨ AI Waiter Suggestion", {
     description: message,
     duration: durationMs,
     closeButton: true,
+    action: action ? {
+      label: action.label,
+      onClick: () => {
+        action.onClick();
+        toast.success(`${action.label.replace("++ ", "").replace("+ Add ", "")} added to order!`, { duration: 3000 });
+      },
+    } : undefined,
     style: {
       background: "#FAF5EC",
       color: "#1A1106",
@@ -346,6 +478,17 @@ export function showAIToast(message: string, durationMs = 20000): void {
       padding: "16px 20px",
       borderRadius: "16px",
       boxShadow: "0 10px 30px rgba(138, 106, 27, 0.22)",
+    },
+    actionButtonStyle: {
+      background: "#8A6A1B",
+      color: "#FFFFFF",
+      fontWeight: "600",
+      padding: "8px 16px",
+      borderRadius: "8px",
+      border: "none",
+      cursor: "pointer",
+      fontSize: "13px",
+      marginLeft: "auto",
     },
   });
 }
@@ -390,7 +533,13 @@ export function showAIUpsellSheet(
     btn.addEventListener("click", () => {
       const id = btn.dataset.itemId;
       const found = items.find((i) => i.item_id === id);
-      if (found && onAddToCart) onAddToCart(found);
+      if (found) {
+        if (onAddToCart) onAddToCart(found);
+        else {
+          useCart.getState().add({ id: found.item_id, name: found.name, price: found.price } as any, 1);
+          toast.success(`${found.name} added to order!`, { duration: 3000 });
+        }
+      }
       _closeSheet();
     });
   });

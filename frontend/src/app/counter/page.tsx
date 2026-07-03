@@ -19,6 +19,98 @@ function getRestaurantName(restaurantId?: string, restaurantSlug?: string): stri
   return restaurantId.replace("rest_", "").replace(/_001$/, "").replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase());
 }
 
+function OrderDetailsModal({ order, onClose, onMarkPaid, onMarkServed }: { order: Order; onClose: () => void; onMarkPaid?: () => void; onMarkServed?: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150" onClick={onClose}>
+      <div className="bg-zinc-900 border border-zinc-800 rounded-3xl max-w-md w-full p-6 text-white shadow-2xl relative flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between pb-4 border-b border-zinc-800">
+          <div>
+            <span className="text-xs font-bold px-2.5 py-1 rounded-full uppercase bg-amber-500/20 text-amber-400 tracking-wider">
+              {order.order_type === "takeaway" ? "TAKEAWAY" : "DINE-IN"}
+            </span>
+            <h2 className="text-3xl font-black mt-1">Token #{order.token}</h2>
+          </div>
+          <button onClick={onClose} className="h-10 w-10 rounded-full bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center text-zinc-400 hover:text-white font-bold text-lg transition">
+            ✕
+          </button>
+        </div>
+        
+        <div className="py-4 space-y-4 overflow-y-auto dashboard-scroll flex-1">
+          <div className="flex justify-between items-center text-sm bg-zinc-800/50 p-3.5 rounded-2xl border border-zinc-800">
+            <div>
+              <p className="text-zinc-400 text-xs uppercase font-bold">Customer</p>
+              <p className="font-bold text-lg text-white">{order.customer_name}</p>
+            </div>
+            {order.table_number != null && (
+              <div className="text-right">
+                <p className="text-zinc-400 text-xs uppercase font-bold">Table</p>
+                <p className="font-bold text-lg text-amber-400">#{order.table_number}</p>
+              </div>
+            )}
+          </div>
+
+          <div>
+            <h3 className="text-xs uppercase font-bold text-zinc-400 tracking-wider mb-2">Ordered Dishes ({order.items.reduce((a, b) => a + b.qty, 0)} items)</h3>
+            <div className="space-y-2">
+              {order.items.map((item, i) => (
+                <div key={`${item.item_id}-${i}`} className="bg-zinc-800/40 border border-zinc-800 rounded-2xl p-3 flex flex-col gap-1">
+                  <div className="flex justify-between items-center font-bold">
+                    <span className="text-base text-white">{item.qty}× {item.name}</span>
+                    <span className="text-sm text-zinc-300">₹{item.price * item.qty}</span>
+                  </div>
+                  {item.notes && (
+                    <div className="text-xs bg-amber-500/10 text-amber-300 px-2.5 py-1 rounded-xl border border-amber-500/20 inline-block w-fit mt-1 font-medium">
+                      Note: {item.notes}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {order.notes && (
+            <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-3 text-sm text-amber-300">
+              <span className="font-bold">General Order Note:</span> {order.notes}
+            </div>
+          )}
+
+          <div className="border-t border-zinc-800 pt-4 flex justify-between items-center">
+            <div>
+              <span className="text-xs uppercase font-bold text-zinc-400">Payment Status</span>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className={`text-xs px-2 py-0.5 rounded font-bold uppercase ${order.payment_status === "paid" ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-red-500/20 text-red-400 border border-red-500/30"}`}>
+                  {order.payment_status === "paid" ? "PAID" : "UNPAID"}
+                </span>
+                <span className="text-xs uppercase text-zinc-400 font-medium">({order.payment_method || "Cash"})</span>
+              </div>
+            </div>
+            <div className="text-right">
+              <span className="text-xs uppercase font-bold text-zinc-400">Total Amount</span>
+              <p className="text-2xl font-black text-white">₹{order.total}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-4 border-t border-zinc-800 flex gap-3">
+          {onMarkPaid && order.payment_status !== "paid" && (
+            <button onClick={() => { onMarkPaid(); onClose(); }} className="flex-1 bg-red-500/30 hover:bg-red-500/40 border border-red-400/50 text-white font-bold py-3 rounded-2xl transition shadow">
+              MARK PAID
+            </button>
+          )}
+          {onMarkServed && order.status !== "served" && (
+            <button onClick={() => { onMarkServed(); onClose(); }} className="flex-1 bg-white text-emerald-800 hover:bg-white/90 font-bold py-3 rounded-2xl transition shadow">
+              MARK SERVED
+            </button>
+          )}
+          <button onClick={onClose} className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-6 py-3 rounded-2xl font-bold transition">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function CounterPage() {
   const qc = useQueryClient();
   const { user } = useSession();
@@ -27,6 +119,7 @@ export default function CounterPage() {
   const slug = user?.restaurant_slug || "";
 
   useOrderStream(); // SSE real-time push
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
   const { data } = useQuery({
     queryKey: ["counter-orders", user?.restaurant_id],
@@ -212,7 +305,12 @@ export default function CounterPage() {
             data-testid="counter-preparing"
           >
             {preparing.map((o) => (
-              <div key={o.id} className="relative bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5 text-center hover:border-blue-500/30 transition-colors group" data-testid={`counter-prep-${o.token}`}>
+              <div
+                key={o.id}
+                onClick={() => setSelectedOrder(o)}
+                className="relative bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5 text-center hover:border-blue-500/30 transition-colors group cursor-pointer"
+                data-testid={`counter-prep-${o.token}`}
+              >
                 <div className="text-4xl font-bold text-white mb-1 group-hover:text-blue-400 transition-colors">{o.token}</div>
                 <div className={`text-[8px] tracking-wider uppercase font-bold px-1.5 py-0.5 rounded-full mt-1 inline-block ${
                   o.order_type === "takeaway"
@@ -227,9 +325,18 @@ export default function CounterPage() {
                     <Users className="h-3 w-3" /> T{o.table_number}
                   </div>
                 )}
-                <div className="mt-2 flex items-center justify-center gap-1 text-[10px] text-zinc-600">
-                  <Clock className="h-3 w-3" />
-                  {Math.floor((Date.now() - new Date(o.created_at).getTime()) / 60000)}m
+                <div className="mt-2.5 bg-zinc-950/60 border border-zinc-800/80 rounded-xl p-2.5 text-left text-xs space-y-1">
+                  {o.items.map((i, idx) => (
+                    <div key={`${i.item_id}-${idx}`} className="flex justify-between items-start gap-1.5 text-zinc-300">
+                      <span className="font-semibold text-white">{i.qty}× {i.name}</span>
+                      {i.notes && <span className="text-[10px] text-amber-400 italic bg-amber-500/10 px-1.5 py-0.5 rounded">{i.notes}</span>}
+                    </div>
+                  ))}
+                  {o.notes && <div className="text-[10px] text-amber-300 italic pt-1 border-t border-zinc-800">Note: {o.notes}</div>}
+                </div>
+                <div className="mt-2.5 flex items-center justify-between text-[10px] text-zinc-500 pt-2 border-t border-zinc-800/60">
+                  <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {Math.floor((Date.now() - new Date(o.created_at).getTime()) / 60000)}m ago</span>
+                  <span className="text-blue-400 font-bold group-hover:underline">👁️ View Details</span>
                 </div>
               </div>
             ))}
@@ -274,7 +381,7 @@ export default function CounterPage() {
                 ? "bg-gradient-to-br from-blue-900 to-indigo-950 border border-blue-500/40 shadow-lg shadow-blue-500/20"
                 : "bg-gradient-to-br from-emerald-500 to-teal-600 shadow-lg shadow-emerald-500/20";
               return (
-              <div key={o.id} className={`${cardBg} text-white rounded-2xl p-6 flex flex-col transition-shadow`} data-testid={`counter-ready-${o.token}`}>
+              <div key={o.id} onClick={() => setSelectedOrder(o)} className={`${cardBg} text-white rounded-2xl p-6 flex flex-col transition-shadow cursor-pointer`} data-testid={`counter-ready-${o.token}`}>
                 <div className="flex items-center justify-between mb-2">
                   <div className="text-5xl font-bold leading-none">{o.token}</div>
                   <div className={`text-[9px] tracking-wider uppercase font-bold px-2 py-0.5 rounded-full ${
@@ -311,18 +418,22 @@ export default function CounterPage() {
                     <span>🍽️ SERVED · EATING</span>
                   </div>
                 )}
-                {(o.items.some((i) => i.notes) || o.notes) && (
-                  <div className="mt-3 space-y-1 text-[11px]" data-testid={`counter-notes-${o.token}`}>
-                    {o.items.filter((i) => i.notes).map((i) => (
-                      <div key={i.item_id} className="bg-white/15 border border-white/20 rounded-lg px-2.5 py-1"><span className="font-bold">{i.qty}× {i.name}:</span> {i.notes}</div>
-                    ))}
-                    {o.notes && <div className="bg-white/15 border border-white/20 rounded-lg px-2.5 py-1"><span className="font-bold">Note:</span> {o.notes}</div>}
-                  </div>
-                )}
+                <div className="mt-3 bg-black/25 border border-white/10 rounded-xl p-2.5 text-left text-xs space-y-1" data-testid={`counter-dishes-${o.token}`}>
+                  {o.items.map((i, idx) => (
+                    <div key={`${i.item_id}-${idx}`} className="flex justify-between items-start gap-1 text-zinc-100">
+                      <span className="font-bold text-white">{i.qty}× {i.name}</span>
+                      {i.notes && <span className="text-[10px] text-amber-300 bg-black/40 px-1.5 py-0.5 rounded">{i.notes}</span>}
+                    </div>
+                  ))}
+                  {o.notes && <div className="text-[11px] text-amber-200 italic pt-1 border-t border-white/10 font-medium">Order Note: {o.notes}</div>}
+                </div>
+                <div className="mt-2 text-right">
+                  <span className="text-[11px] text-white/80 font-bold underline">👁️ View Full Details</span>
+                </div>
                 <div className="mt-auto pt-4 flex gap-2 flex-col sm:flex-row">
                   {o.payment_status !== "paid" && (
                     <button
-                      onClick={() => markPaidMut.mutate({ id: o.id })}
+                      onClick={(e) => { e.stopPropagation(); markPaidMut.mutate({ id: o.id }); }}
                       className="flex-1 bg-red-500/30 hover:bg-red-500/40 border border-red-300/60 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 text-sm shadow"
                     >
                       <CreditCard className="h-4 w-4" /> MARK PAID
@@ -331,7 +442,7 @@ export default function CounterPage() {
                   {o.status !== "served" && (
                     <button
                       data-testid={`counter-serve-${o.token}`}
-                      onClick={() => mut.mutate({ id: o.id })}
+                      onClick={(e) => { e.stopPropagation(); mut.mutate({ id: o.id }); }}
                       className="flex-1 font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 text-sm bg-white text-emerald-700 hover:bg-white/90 shadow"
                     >
                       <Check className="h-4 w-4" /> MARK SERVED
@@ -352,6 +463,14 @@ export default function CounterPage() {
         </section>
       </div>
 
+      {selectedOrder && (
+        <OrderDetailsModal
+          order={selectedOrder}
+          onClose={() => setSelectedOrder(null)}
+          onMarkPaid={selectedOrder.payment_status !== "paid" ? () => markPaidMut.mutate({ id: selectedOrder.id }) : undefined}
+          onMarkServed={selectedOrder.status !== "served" ? () => mut.mutate({ id: selectedOrder.id }) : undefined}
+        />
+      )}
     </div>
   );
 }

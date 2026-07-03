@@ -55,12 +55,20 @@ export function TableSessionGuard({ slug }: { slug?: string }) {
   });
   const [customAlias, setCustomAlias] = useState("");
   const [useCustom, setUseCustom] = useState(false);
+  const [isTakeawayQr, setIsTakeawayQr] = useState(false);
   const restaurantName = restaurantConfig?.name || slugFromPath.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || "Restaurant";
 
-  // Effect 1: capture table identifier from URL
+  // Effect 1: capture table identifier or takeaway from URL
   useEffect(() => {
     const tableId = search.get("table") || search.get("t");
-    if (tableId) setQrToken(tableId);
+    const isTk = search.get("type") === "takeaway" || search.get("takeaway") === "1" || search.get("order_type") === "takeaway";
+    if (tableId) {
+      setQrToken(tableId);
+      setIsTakeawayQr(false);
+    } else if (isTk) {
+      setQrToken("takeaway");
+      setIsTakeawayQr(true);
+    }
   }, [search]);
 
   // Regenerate alias
@@ -78,15 +86,15 @@ export function TableSessionGuard({ slug }: { slug?: string }) {
     return `${alias.prefix}${alias.suffix}-${deviceId.slice(0, 4)}`;
   }, [alias, useCustom, customAlias, deviceId]);
 
-  // Join table with alias
+  // Join table or takeaway with alias
   const handleJoin = async () => {
     if (!qrToken) return;
     
     const displayName = getDisplayName();
     setScanning(true);
     try {
-      // Step 1: Create guest JWT session if not already authenticated
-      if (!token) {
+      // Step 1: Create guest JWT session if not already authenticated or if name differs
+      if (!token || user?.name !== displayName) {
         const guestUrl = slugFromPath
           ? `/api/auth/guest?slug=${encodeURIComponent(slugFromPath)}`
           : "/api/auth/guest";
@@ -95,6 +103,17 @@ export function TableSessionGuard({ slug }: { slug?: string }) {
           { method: "POST", body: JSON.stringify({ name: displayName }) }
         );
         setAuthSession(guestRes.user, guestRes.token);
+      }
+
+      if (isTakeawayQr) {
+        if (typeof window !== "undefined") {
+          localStorage.setItem("sd-order-type", "takeaway");
+          localStorage.setItem("sd-takeaway-name", displayName);
+        }
+        toast.success(`Welcome to ${restaurantName}, ${displayName}! Takeaway ready.`);
+        setQrToken(null);
+        router.replace(`/r/${slugFromPath}/menu`, { scroll: false });
+        return;
       }
 
       // Step 2: Join table via QR scan or table number
@@ -128,49 +147,45 @@ export function TableSessionGuard({ slug }: { slug?: string }) {
 
   // Effect 2: countdown
   useEffect(() => {
-    if (!session) { setRemaining(""); return; }
-    const tick = () => {
-      const exp = new Date(session.expires_at).getTime();
-      const left = exp - Date.now();
-      if (left <= 0) {
-        setRemaining("");
-        clear();
-        toast.info("Your table hold expired — scan again to reserve.");
-        return;
+    if (!session || !session.expires_at) { setRemaining(""); return; }
+    const iv = setInterval(() => {
+      const ms = new Date(session.expires_at).getTime() - Date.now();
+      if (ms <= 0) { clear(); setRemaining(""); toast.info("Table session ended. Feel free to re-scan when ordering more."); }
+      else {
+        const m = Math.floor(ms / 60000);
+        const s = Math.floor((ms % 60000) / 1000);
+        setRemaining(`${m}:${s < 10 ? "0" : ""}${s}`);
       }
-      const min = Math.floor(left / 60000);
-      const sec = Math.floor((left % 60000) / 1000);
-      setRemaining(`${min}:${String(sec).padStart(2, "0")}`);
-    };
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
+    }, 1000);
+    return () => clearInterval(iv);
   }, [session, clear]);
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
+  if (!mounted) return null;
+
   return (
     <>
       <AnimatePresence>
-        {/* Active table banner — shows after joining */}
-        {mounted && session && remaining && (
+        {/* Active Session Top Banner */}
+        {session && remaining && (
           <motion.div
-            key="table-banner"
-            initial={{ y: -40, opacity: 0 }}
+            initial={{ y: -50, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            exit={{ y: -40, opacity: 0 }}
-            className="sticky top-0 z-30 mehfil-royal-bg text-[#FAF5EC] px-5 py-2.5 flex items-center justify-between gap-3 shadow-lg"
-            data-testid="table-banner"
+            exit={{ y: -50, opacity: 0 }}
+            className="fixed top-0 left-0 right-0 z-50 bg-[#1A1106] border-b border-brand-secondary/30 px-4 py-2 flex items-center justify-between shadow-lg"
+            data-testid="table-session-banner"
           >
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="h-8 w-8 rounded-full bg-brand-secondary/20 border border-brand-secondary/50 flex items-center justify-center shrink-0">
-                <MapPin className="h-4 w-4 text-brand-secondary" />
-              </div>
-              <div className="min-w-0">
-                <div className="font-royal tracking-[0.25em] uppercase text-[10px] text-brand-secondary">Seated at</div>
-                <div className="font-royal text-sm leading-tight">Table {session.table_number}</div>
-              </div>
+            <div className="flex items-center gap-2.5 overflow-hidden">
+              <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+              <span className="font-royal text-xs text-[#FAF5EC] tracking-wider uppercase truncate">
+                Table {session.table_number}
+              </span>
+              <span className="text-[#FAF5EC]/40 text-xs">·</span>
+              <span className="font-editorial italic text-xs text-brand-secondary truncate">
+                {session.customer_name}
+              </span>
             </div>
             <div className="flex items-center gap-3 shrink-0">
               <div className="flex items-center gap-1.5 bg-brand-secondary/10 border border-brand-secondary/40 rounded-full px-3 py-1" data-testid="table-countdown">
@@ -178,7 +193,6 @@ export function TableSessionGuard({ slug }: { slug?: string }) {
                 <span className="font-royal text-xs text-brand-secondary tabular-nums">{remaining}</span>
               </div>
               <button
-                data-testid="table-banner-close"
                 onClick={() => { clear(); toast.info("Table released."); }}
                 className="h-7 w-7 rounded-full hover:bg-brand-secondary/10 flex items-center justify-center"
                 title="Release table"
@@ -190,7 +204,7 @@ export function TableSessionGuard({ slug }: { slug?: string }) {
         )}
 
         {/* QR Scan Alias Experience — full page overlay */}
-        {mounted && qrToken && (
+        {qrToken && (
           <motion.div
             key="alias-overlay"
             initial={{ opacity: 0 }}
@@ -211,22 +225,24 @@ export function TableSessionGuard({ slug }: { slug?: string }) {
                   {restaurantConfig?.tagline || `Welcome to ${restaurantName}`}
                 </p>
 
-                {/* Table indicator */}
+                {/* Table or Takeaway indicator */}
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.3 }}
                   className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-brand-secondary/10 border border-brand-secondary/30"
                 >
-                  <Utensils className="h-4 w-4 text-brand-secondary" />
+                  <Utensils className="h-4 w-4 text-brand-primary" />
                   <span className="font-royal text-sm tracking-wider uppercase text-brand-primary font-bold">
-                    Table Detected
+                    {isTakeawayQr ? "Takeaway Ordering" : `Table ${qrToken}`}
                   </span>
                 </motion.div>
               </div>
 
-              {/* Main card */}
-              <div className="bg-[#FAF5EC] border border-brand-secondary/40 rounded-2xl p-7 shadow-2xl backdrop-blur">
+              {/* Alias Card */}
+              <div className="mehfil-card rounded-2xl p-6 relative overflow-hidden shadow-xl">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-brand-secondary/5 rounded-full blur-2xl pointer-events-none -mr-10 -mt-10" />
+                
                 {/* Alias section heading */}
                 <div className="mehfil-divider mb-5">
                   <span className="font-royal tracking-[0.3em] text-[10px] uppercase">Your Dining Identity</span>
@@ -318,7 +334,7 @@ export function TableSessionGuard({ slug }: { slug?: string }) {
                   className="w-full mehfil-btn-royal rounded-full py-3.5 font-royal tracking-[0.2em] uppercase text-xs disabled:opacity-50 inline-flex items-center justify-center gap-2"
                 >
                   {scanning ? (
-                    "Joining Table..."
+                    isTakeawayQr ? "Setting up Takeaway..." : "Joining Table..."
                   ) : (
                     <>Start Ordering <ArrowRight className="h-4 w-4" /></>
                   )}
@@ -332,7 +348,7 @@ export function TableSessionGuard({ slug }: { slug?: string }) {
               {/* Bottom hint */}
               <div className="mt-6 text-center">
                 <p className="font-editorial italic text-xs text-[#1A1106]/50">
-                  Your table number will appear at the top after joining.
+                  {isTakeawayQr ? "You are ordering Takeaway. Your name will be called when ready." : "Your table number will appear at the top after joining."}
                 </p>
               </div>
             </motion.div>

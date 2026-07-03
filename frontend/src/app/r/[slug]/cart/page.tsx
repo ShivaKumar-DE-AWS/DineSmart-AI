@@ -5,6 +5,7 @@ import { useCart } from "@/stores/cart";
 import { formatCurrency } from "@/lib/utils";
 import { ArrowRight, Trash2, Plus, Minus, ShoppingBag, BookOpen } from "lucide-react";
 import { motion } from "framer-motion";
+import { AICourseTrackerCard } from "@/components/customer/AICourseTrackerCard";
 
 export default function CartPage() {
   const params = useParams();
@@ -39,6 +40,8 @@ export default function CartPage() {
         </h1>
         <p className="font-editorial italic text-sm text-[#1A1106]/70 mt-3">Review your selections before we send them to our khansama&apos;s kitchen.</p>
       </div>
+
+      <AICourseTrackerCard />
 
       <div className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-3" data-testid="cart-items">
