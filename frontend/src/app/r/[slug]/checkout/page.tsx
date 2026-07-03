@@ -202,7 +202,8 @@ export default function CheckoutPage() {
   const submit = async () => {
     const finalName = table?.customer_name || profile?.name || name.trim() || "Guest";
     if (!finalName) { toast.error("Please share your name — every great meal starts with a name."); return; }
-    if (cart.items.length === 0) { toast.error("Your thali is empty"); return; }
+    const currentItems = useCart.getState().items;
+    if (currentItems.length === 0) { toast.error("Your thali is empty"); return; }
     setSubmitting(true);
     try {
       const restId = restaurantConfig?.id || "";
@@ -213,7 +214,7 @@ export default function CheckoutPage() {
         order_type: table?.id ? "dine_in" : "takeaway",
         customer_name: finalName,
         customer_phone: table?.customer_phone || profile?.phone || phone.trim() || undefined,
-        items: cart.items.map((i) => {
+        items: currentItems.map((i) => {
           const courseText = i.course && i.course !== "Auto (Natural pace)" ? `[Serve: ${i.course}] ` : "";
           const finalNotes = `${courseText}${i.notes?.trim() || ""}`.trim();
           return {

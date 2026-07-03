@@ -32,6 +32,7 @@
  */
 
 import { api } from "@/lib/api";
+import { toast } from "sonner";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -305,26 +306,21 @@ let _toastTimer: ReturnType<typeof setTimeout> | null = null;
  * Show a Top Toast notification that auto-dismisses after 3 seconds.
  * Position: slides down from top — keeps thumb-scrolling zone free.
  */
-export function showAIToast(message: string, durationMs = 3000): void {
-  _bootstrapUI();
-  const toast = document.getElementById("ai-waiter-toast");
-  const msg   = document.getElementById("ai-toast-msg");
-  if (!toast || !msg) return;
-
-  msg.textContent = message;
-
-  // Clear any running timer and reset position before triggering new show
-  if (_toastTimer) clearTimeout(_toastTimer);
-  toast.classList.remove("show");
-
-  // Force reflow so CSS transition restarts cleanly
-  void (toast as HTMLElement).offsetWidth;
-  toast.classList.add("show");
-
-  _toastTimer = setTimeout(() => {
-    toast.classList.remove("show");
-    _toastTimer = null;
-  }, durationMs);
+export function showAIToast(message: string, durationMs = 4000): void {
+  toast("✨ AI Waiter Suggestion", {
+    description: message,
+    duration: durationMs,
+    style: {
+      background: "#FAF5EC",
+      color: "#1A1106",
+      border: "1px solid #8A6A1B",
+      fontSize: "13px",
+      fontFamily: "var(--font-editorial, serif)",
+      padding: "12px 16px",
+      borderRadius: "12px",
+      boxShadow: "0 8px 24px rgba(138, 106, 27, 0.18)",
+    },
+  });
 }
 
 /**
@@ -396,7 +392,21 @@ function _closeSheet(): void {
  * Show a Welcome center modal when the customer first opens the menu.
  * Auto-closes after 5 seconds if user does not interact.
  */
-export function showAIWelcomeModal(message: string, autoDismissMs = 5000): void {
+export function showAIWelcomeModal(message: string, autoDismissMs = 6000): void {
+  toast("👨‍🍳 Welcome Greeting", {
+    description: message,
+    duration: autoDismissMs,
+    style: {
+      background: "#FAF5EC",
+      color: "#1A1106",
+      border: "1px solid #8A6A1B",
+      fontSize: "13px",
+      fontFamily: "var(--font-editorial, serif)",
+      padding: "14px 18px",
+      borderRadius: "14px",
+      boxShadow: "0 8px 24px rgba(138, 106, 27, 0.18)",
+    },
+  });
   _bootstrapUI();
   const welcome = document.getElementById("ai-waiter-welcome");
   const text    = document.getElementById("ai-welcome-text");

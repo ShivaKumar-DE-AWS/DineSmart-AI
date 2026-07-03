@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { sortCategories } from "@/utils/categoryOrder";
 import type { MenuItem } from "@/types";
+import { sendAIWaiterEvent } from "@/lib/ai_waiter_client";
 
 export default function NativeAppHomeMenu() {
   const params = useParams();
@@ -29,6 +30,43 @@ export default function NativeAppHomeMenu() {
   const [mounted, setMounted] = useState(false);
   
   useEffect(() => setMounted(true), []);
+
+  // AI Waiter: fire QR_SCAN welcome once restaurant config is loaded
+  const _aiWelcomeFired = useRef(false);
+  useEffect(() => {
+    if (!restaurantConfig?.id || _aiWelcomeFired.current) return;
+    _aiWelcomeFired.current = true;
+    sendAIWaiterEvent({
+      event_type: "QR_SCAN",
+      restaurant_id: restaurantConfig.id,
+    }).catch(() => {/* silent */});
+  }, [restaurantConfig?.id]);
+
+  // AI Waiter: fire ITEM_ADDED toast on every add-to-cart action
+  const handleAddToCart = useCallback((item: MenuItem) => {
+    cart.add(item);
+    toast.success(`${item.name} added`);
+    if (!restaurantConfig?.id) return;
+    const cartItems = useCart.getState().items;
+    sendAIWaiterEvent({
+      event_type: "ITEM_ADDED",
+      restaurant_id: restaurantConfig.id,
+      cart_state: cartItems.map(ci => ({
+        item_id: ci.item_id,
+        name: ci.name,
+        price: ci.price,
+        qty: ci.qty,
+        category: (ci as any).category ?? undefined,
+      })),
+      added_item: {
+        item_id: item.id ?? "",
+        name: item.name,
+        price: item.price,
+        qty: 1,
+        category: item.category ?? undefined,
+      },
+    }).catch(() => {/* silent */});
+  }, [restaurantConfig?.id, cart]);
 
   const items = useMemo(() => (data?.items ?? []).filter((i) => i.available !== false), [data]);
 
@@ -172,7 +210,7 @@ export default function NativeAppHomeMenu() {
                                </div>
                             ) : (
                                <button 
-                                 onClick={() => { cart.add(item); toast.success(`${item.name} added`); }} 
+                                 onClick={() => handleAddToCart(item)} 
                                  className="w-full bg-white border border-[#E7DFCB] text-brand-primary hover:bg-[#FAF5EC] hover:text-[#5C0E1B] hover:border-[#5C0E1B]/30 rounded-xl shadow-lg py-2.5 text-[11px] font-royal tracking-widest font-bold uppercase transition-all"
                                >
                                  ADD
