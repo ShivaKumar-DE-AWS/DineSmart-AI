@@ -514,7 +514,7 @@ export function Testimonials() {
             <p className="font-display text-xl sm:text-2xl text-cream leading-snug">"{TESTI[active].q}"</p>
             <div className="mt-5 flex items-center justify-between">
               <div><div className="font-display text-3xl text-gradient-gold">{TESTI[active].metric}</div><div className="text-[10px] text-cream/50 uppercase tracking-wider">{TESTI[active].ml}</div></div>
-              <a href="#demo" className="btn-primary">Book demo <ArrowRight className="w-4 h-4"/></a>
+              <a href="/auth/restaurant?tab=register" className="btn-primary">Start free trial <ArrowRight className="w-4 h-4"/></a>
             </div>
           </div>
         </div>
@@ -651,15 +651,15 @@ export function Footer() {
     { label: "Features", href: "#features" },
     { label: "How it works", href: "#how" },
     { label: "Results", href: "#results" },
-    { label: "Book demo", href: "#demo" },
-    { label: "👩‍🍳 SmartDine Staff", href: "/auth/restaurant" },
-    { label: "🏪 Restaurant Partners", href: "/auth/login" },
+    { label: "Start Free Trial", href: "/auth/restaurant?tab=register" },
+    { label: "👩‍🍳 SmartDine Staff", href: "/auth/login" },
+    { label: "🏪 Restaurant Partners", href: "/auth/restaurant?tab=login" },
     { label: "📱 Live Menu Demo", href: "/r/mehfil-hyderabad" },
   ];
   const contactLinks = [
     { label: "📧 admin@smartdineai.co.in", href: "mailto:admin@smartdineai.co.in" },
     { label: "💬 WhatsApp: 83338 71783", href: "https://wa.me/918333871783?text=Hi!%20I%20want%20to%20know%20more%20about%20SmartDine%20AI", external: true },
-    { label: "🎯 Book a free demo", href: "#demo" },
+    { label: "🎯 Book a free demo", href: "/auth/restaurant?tab=register" },
   ];
   return (
     <footer className="pt-12 pb-24 sm:pb-10 border-t border-white/5 bg-black/40">
@@ -834,7 +834,7 @@ export function RealStories() {
                 <div className="font-display text-4xl text-gradient-gold">{TESTI[activeTesti].metric}</div>
                 <div className="text-xs text-cream/50 uppercase tracking-wider">{TESTI[activeTesti].ml}</div>
               </div>
-              <a href="#demo" className="btn-primary">Book demo <ArrowRight className="w-4 h-4" /></a>
+              <a href="/auth/restaurant?tab=register" className="btn-primary">Start free trial <ArrowRight className="w-4 h-4" /></a>
             </div>
           </div>
         </div>
@@ -903,7 +903,7 @@ export function StickyCTA() {
   },[]);
   return (
     <div className={`hidden sm:flex fixed bottom-5 right-5 z-40 transition-all duration-500 ${show?"opacity-100 translate-y-0":"opacity-0 translate-y-4 pointer-events-none"}`}>
-      <a href="#demo" className="btn-primary shadow-2xl">
+      <a href="/auth/restaurant?tab=register" className="btn-primary shadow-2xl">
         <PlayIcon className="w-4 h-4"/> {t("sticky.cta")}
       </a>
     </div>
@@ -922,7 +922,7 @@ export function BottomNav() {
   const tabs=[
     {id:"home",icon:"🏠",label:"Home",href:"#top"},
     {id:"features",icon:"✨",label:"Features",href:"#how"},
-    {id:"demo",icon:"🎯",label:"Demo",href:"#demo",primary:true},
+    {id:"demo",icon:"🚀",label:"Free Trial",href:"/auth/restaurant?tab=register",primary:true},
     {id:"wa",icon:"💬",label:"Chat",href:"https://wa.me/918333871783?text=Hi!%20I%20want%20to%20know%20more%20about%20SmartDine%20AI"},
   ];
   return (
