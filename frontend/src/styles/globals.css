@@ -191,9 +191,20 @@ button, a, input, select, textarea {
 @keyframes quizIn { from { opacity:0; transform:translateX(30px); } to { opacity:1; transform:translateX(0); } }
 .quiz-slide { animation: quizIn .35s ease; }
 
-/* ── Landing Page Background Override ── */
+/* ── Landing Page Background & Font Override ── */
 body:has(#top) {
   background: radial-gradient(1100px 500px at 70% -5%, rgba(232,185,107,0.12), transparent 60%), radial-gradient(800px 500px at -5% 40%, rgba(176,107,255,0.10), transparent 60%), #07070a !important;
   color: #f6efe2 !important;
   overflow-x: hidden !important;
+  font-family: var(--font-inter), "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif !important;
+}
+
+body:has(#top) h1,
+body:has(#top) h2,
+body:has(#top) h3,
+body:has(#top) h4,
+body:has(#top) h5,
+body:has(#top) h6,
+body:has(#top) .font-display {
+  font-family: var(--font-display), "Cormorant Garamond", "Georgia", ui-serif, serif !important;
 }

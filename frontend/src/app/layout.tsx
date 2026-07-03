@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Manrope, Space_Grotesk, Anton, JetBrains_Mono, Cinzel, Cormorant_Garamond } from "next/font/google";
+import { Manrope, Space_Grotesk, Anton, JetBrains_Mono, Cinzel, Cormorant_Garamond, Inter } from "next/font/google";
 import "@/styles/globals.css";
 import "@/styles/mehfil.css";
 import { Providers } from "./providers";
@@ -7,8 +7,9 @@ import { Providers } from "./providers";
 // Original SmartDine fonts (used by /admin, /kitchen, /counter, landing)
 const heading = Space_Grotesk({ subsets: ["latin"], variable: "--font-heading", display: "swap" });
 const body = Manrope({ subsets: ["latin"], variable: "--font-body", display: "swap" });
-const display = Anton({ subsets: ["latin"], weight: "400", variable: "--font-display", display: "swap" });
+const display = Cormorant_Garamond({ subsets: ["latin"], weight: ["400", "500", "600", "700"], style: ["normal", "italic"], variable: "--font-display", display: "swap" });
 const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono", display: "swap" });
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
 
 // Mehfil royal serif pair (used by /customer routes)
 const royal = Cinzel({ subsets: ["latin"], weight: ["400", "600", "700"], variable: "--font-royal", display: "swap" });
@@ -49,7 +50,7 @@ import { Analytics } from "@vercel/analytics/next";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`overflow-x-clip ${heading.variable} ${body.variable} ${display.variable} ${mono.variable} ${royal.variable} ${editorial.variable}`}>
+    <html lang="en" className={`overflow-x-clip ${heading.variable} ${body.variable} ${display.variable} ${mono.variable} ${royal.variable} ${editorial.variable} ${inter.variable}`}>
       <body data-testid="app-root" className="overflow-x-clip max-w-full min-h-screen">
         <Providers>{children}</Providers>
         <Analytics />

@@ -8,8 +8,9 @@ const config: Config = {
     extend: {
       fontFamily: {
         heading: ["var(--font-heading)", "system-ui"],
-        body: ["var(--font-body)", "system-ui"],
-        display: ["var(--font-display)", "system-ui"],
+        body: ["var(--font-body)", "var(--font-inter)", "system-ui"],
+        display: ["var(--font-display)", "'Cormorant Garamond'", "Georgia", "serif"],
+        sans: ["var(--font-inter)", "Inter", "system-ui", "sans-serif"],
         mono: ["var(--font-mono)", "monospace"],
       },
       colors: {
