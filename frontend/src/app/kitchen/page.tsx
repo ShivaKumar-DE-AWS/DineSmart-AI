@@ -321,7 +321,7 @@ export default function KitchenPage() {
             <p className="text-zinc-500 text-sm">No active orders. Take a breather.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 dashboard-scroll">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 dashboard-scroll max-h-[75vh] overflow-y-auto pr-2">
             {filteredQueue.map((o, idx) => {
               const elapsedMs = Date.now() - new Date(o.created_at).getTime();
               return (
@@ -359,7 +359,7 @@ export default function KitchenPage() {
             <p className="text-zinc-600 text-sm">No reservations on the books for today.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 dashboard-scroll max-h-[60vh] overflow-y-auto pr-2">
             {reservations.map((r) => (
               <div key={r.id} className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5 hover:border-amber-500/30 transition-colors" data-testid={`kds-res-${r.id}`}>
                 <div className="flex items-center justify-between mb-3">

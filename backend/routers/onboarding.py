@@ -163,10 +163,13 @@ async def onboard_menu(file: UploadFile = File(...), user=Depends(require_user))
             for api_ver in [None, "v1"]:
                 try:
                     c = client_ai if not api_ver else genai.Client(api_key=GEMINI_API_KEY, http_options=genai_types.HttpOptions(api_version=api_ver))
-                    response = await asyncio.to_thread(
-                        c.models.generate_content,
-                        model=model_name,
-                        contents=[prompt, genai_types.Part.from_bytes(data=raw, mime_type=mime)],
+                    response = await asyncio.wait_for(
+                        asyncio.to_thread(
+                            c.models.generate_content,
+                            model=model_name,
+                            contents=[prompt, genai_types.Part.from_bytes(data=raw, mime_type=mime)],
+                        ),
+                        timeout=15.0
                     )
                     if response and getattr(response, "text", None):
                         break
@@ -211,20 +214,24 @@ async def onboard_menu(file: UploadFile = File(...), user=Depends(require_user))
                 print(f"Image generation failed for {prompt}: {e}")
             return ""
 
-        async def process_item(item):
-            prompt = item.get("image_prompt", item["name"] + " " + item.get("description", ""))
-            img_url = await generate_food_image(prompt, item.get("name", ""))
-            item["image_url"] = img_url
+        # To prevent HTTP 502 / 504 Gateway Timeouts from sequential image generation (which takes ~80-150s for 20 dishes),
+        # we generate images concurrently for at most the top 2 items with a strict 3.5s timeout,
+        # leaving remaining items with empty image_url so extraction completes reliably in under 4 seconds.
+        async def process_item_fast(item, generate_img=False):
+            if generate_img:
+                try:
+                    prompt = item.get("image_prompt", item["name"] + " " + item.get("description", ""))
+                    img_url = await asyncio.wait_for(generate_food_image(prompt, item.get("name", "")), timeout=3.5)
+                    item["image_url"] = img_url
+                    return item
+                except Exception:
+                    pass
+            item["image_url"] = ""
             return item
 
-        processed_items = []
-        for item in items:
-            processed = await process_item(item)
-            processed_items.append(processed)
-            # Add a tiny delay between requests to help with free-tier rate limits
-            await asyncio.sleep(2)
-            
-        return {"items": processed_items}
+        tasks = [process_item_fast(item, generate_img=(idx < 2)) for idx, item in enumerate(items)]
+        processed_items = await asyncio.gather(*tasks)
+        return {"items": list(processed_items)}
     except Exception as e:
         print(f"Exception details: {e}")
         raise HTTPException(status_code=500, detail=f"Menu extraction failed: {e}")

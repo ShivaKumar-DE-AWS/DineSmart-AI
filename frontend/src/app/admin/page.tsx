@@ -27,14 +27,16 @@ export default function AdminDashboard() {
   ];
 
   // ── Onboarding banner ──────────────────────────────────────────────────────
-  // All three checks come from the single dashboard query so they resolve
-  // together — no flash from mismatched loading states.
+  // All checks come from the single dashboard query so they resolve together.
   const dashLoaded = dash !== undefined;
-  const isSandbox    = !dashLoaded || dash?.sandbox_mode !== false;  // true while loading
-  const hasMenu      = dashLoaded && (dash?.menu_count ?? 0) > 0;
-  const hasTables    = dashLoaded && (dash?.tables_count ?? 0) > 0;
-  // Show banner until ALL three requirements are met
-  const showOnboarding = isSandbox || !hasMenu || !hasTables;
+  const isSandbox = dash?.sandbox_mode !== false;
+  const isVerified = dash?.is_verified === true;
+  const hasMenu = (dash?.menu_count ?? 0) > 0;
+  const hasTables = (dash?.tables_count ?? 0) > 0;
+
+  // Show banner ONLY after dashboard data is loaded (preventing flash on load).
+  // Disappears ONLY when restaurant is verified AND menu uploaded AND tables created AND sandbox removed!
+  const showOnboarding = dashLoaded && (isSandbox || !isVerified || !hasMenu || !hasTables);
 
   return (
     <div>
@@ -55,9 +57,14 @@ export default function AdminDashboard() {
                       🟡 Sandbox Mode Active
                     </span>
                   )}
+                  {!isVerified && (
+                    <span className="px-2.5 py-0.5 bg-red-500 text-white font-mono text-[10px] uppercase font-bold rounded-full tracking-wider animate-pulse">
+                      🔴 Unverified
+                    </span>
+                  )}
                 </div>
                 <p className="text-xs md:text-sm text-amber-900 mt-1 max-w-2xl">
-                  Complete all 3 steps below to go live. This guide will disappear automatically once your menu is ready, tables are created, and sandbox mode is removed.
+                  Complete all 3 steps below to go live. This guide will disappear automatically once your restaurant is verified, menu uploaded, tables created, and sandbox mode removed.
                 </p>
               </div>
             </div>
@@ -70,22 +77,24 @@ export default function AdminDashboard() {
           </div>
 
           {/* Progress tracker */}
-          {dashLoaded && (
-            <div className="flex gap-3 flex-wrap mb-5 relative z-10">
-              <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${hasMenu ? "bg-emerald-50 text-emerald-700 border-emerald-300" : "bg-amber-100 text-amber-800 border-amber-300"}`}>
-                {hasMenu ? <CheckCircle2 className="w-3.5 h-3.5" /> : <span>○</span>}
-                Menu {hasMenu ? "✓" : "Pending"}
-              </div>
-              <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${hasTables ? "bg-emerald-50 text-emerald-700 border-emerald-300" : "bg-amber-100 text-amber-800 border-amber-300"}`}>
-                {hasTables ? <CheckCircle2 className="w-3.5 h-3.5" /> : <span>○</span>}
-                Tables {hasTables ? "✓" : "Pending"}
-              </div>
-              <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${!isSandbox ? "bg-emerald-50 text-emerald-700 border-emerald-300" : "bg-amber-100 text-amber-800 border-amber-300"}`}>
-                {!isSandbox ? <CheckCircle2 className="w-3.5 h-3.5" /> : <span>○</span>}
-                Sandbox {!isSandbox ? "Removed ✓" : "Active"}
-              </div>
+          <div className="flex gap-3 flex-wrap mb-5 relative z-10">
+            <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${hasMenu ? "bg-emerald-50 text-emerald-700 border-emerald-300" : "bg-amber-100 text-amber-800 border-amber-300"}`}>
+              {hasMenu ? <CheckCircle2 className="w-3.5 h-3.5" /> : <span>○</span>}
+              Menu {hasMenu ? "✓" : "Pending"}
             </div>
-          )}
+            <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${hasTables ? "bg-emerald-50 text-emerald-700 border-emerald-300" : "bg-amber-100 text-amber-800 border-amber-300"}`}>
+              {hasTables ? <CheckCircle2 className="w-3.5 h-3.5" /> : <span>○</span>}
+              Tables {hasTables ? "✓" : "Pending"}
+            </div>
+            <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${isVerified ? "bg-emerald-50 text-emerald-700 border-emerald-300" : "bg-red-100 text-red-800 border-red-300"}`}>
+              {isVerified ? <CheckCircle2 className="w-3.5 h-3.5" /> : <span>○</span>}
+              Verification {isVerified ? "✓" : "Pending"}
+            </div>
+            <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${!isSandbox ? "bg-emerald-50 text-emerald-700 border-emerald-300" : "bg-amber-100 text-amber-800 border-amber-300"}`}>
+              {!isSandbox ? <CheckCircle2 className="w-3.5 h-3.5" /> : <span>○</span>}
+              Sandbox {!isSandbox ? "Removed ✓" : "Active"}
+            </div>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 relative z-10">
             {/* Step 1: Menu */}
@@ -101,7 +110,7 @@ export default function AdminDashboard() {
                 <p className="text-xs text-stone leading-relaxed mb-3">
                   {hasMenu
                     ? `✅ ${dash?.menu_count} menu items ready. You can add more or upload a new menu card anytime.`
-                    : "We seeded default dishes based on your cuisine! Want your real menu? Upload a photo or PDF of your menu card in Menu Manager for instant automatic AI extraction."}
+                    : "Upload a photo or PDF of your restaurant menu card in Menu Manager for instant automatic AI extraction, or add dishes manually."}
                 </p>
               </div>
               <Link href="/admin/menu" className={`text-xs font-bold flex items-center gap-1 group ${hasMenu ? "text-emerald-700 hover:text-emerald-900" : "text-amber-700 hover:text-amber-900"}`}>
@@ -131,23 +140,23 @@ export default function AdminDashboard() {
             </div>
 
             {/* Step 3: Exit Sandbox */}
-            <div className={`bg-white/80 backdrop-blur-sm border rounded-xl p-4 flex flex-col justify-between transition shadow-sm ${!isSandbox ? "border-emerald-300 bg-emerald-50/60" : "border-amber-200/80 hover:border-amber-400"}`}>
+            <div className={`bg-white/80 backdrop-blur-sm border rounded-xl p-4 flex flex-col justify-between transition shadow-sm ${!isSandbox && isVerified ? "border-emerald-300 bg-emerald-50/60" : "border-amber-200/80 hover:border-amber-400"}`}>
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${!isSandbox ? "text-emerald-800 bg-emerald-100" : "text-amber-800 bg-amber-100"}`}>
-                    Step 3 {!isSandbox ? "✓" : ""}
+                  <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${!isSandbox && isVerified ? "text-emerald-800 bg-emerald-100" : "text-amber-800 bg-amber-100"}`}>
+                    Step 3 {!isSandbox && isVerified ? "✓" : ""}
                   </span>
-                  <CheckCircle2 className={`w-4 h-4 ${!isSandbox ? "text-emerald-600" : "text-amber-600"}`} />
+                  <CheckCircle2 className={`w-4 h-4 ${!isSandbox && isVerified ? "text-emerald-600" : "text-amber-600"}`} />
                 </div>
-                <h4 className="font-heading font-bold text-sm text-ink mb-1">🚀 Go Live &amp; Exit Sandbox</h4>
+                <h4 className="font-heading font-bold text-sm text-ink mb-1">🚀 Verify &amp; Exit Sandbox</h4>
                 <p className="text-xs text-stone leading-relaxed mb-3">
-                  {!isSandbox
-                    ? "✅ You are live! Real customer orders and payments are active."
-                    : "Once your menu and tables are ready, exit Sandbox mode in the Setup Wizard. This turns off test mode so you can accept real customer orders and live payments!"}
+                  {!isSandbox && isVerified
+                    ? "✅ You are verified & live! Real customer orders and payments are active."
+                    : "To exit Sandbox and take real customer orders: 1) Go to Setup Wizard. 2) Click 'Request Verification Code' to get your OTP via email/phone. 3) Enter the code to verify your restaurant and exit Sandbox mode!"}
                 </p>
               </div>
-              <Link href="/admin/setup" className={`text-xs font-bold flex items-center gap-1 group ${!isSandbox ? "text-emerald-700 hover:text-emerald-900" : "text-emerald-700 hover:text-emerald-900"}`}>
-                🚀 {!isSandbox ? "Setup Complete" : "Go Live Now"} <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              <Link href="/admin/setup" className={`text-xs font-bold flex items-center gap-1 group ${!isSandbox && isVerified ? "text-emerald-700 hover:text-emerald-900" : "text-emerald-700 hover:text-emerald-900"}`}>
+                🚀 {!isSandbox && isVerified ? "Setup Complete" : "Go Live Now"} <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
               </Link>
             </div>
           </div>

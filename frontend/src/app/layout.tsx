@@ -49,8 +49,8 @@ import { Analytics } from "@vercel/analytics/next";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`overflow-x-hidden ${heading.variable} ${body.variable} ${display.variable} ${mono.variable} ${royal.variable} ${editorial.variable}`}>
-      <body data-testid="app-root" className="overflow-x-hidden max-w-full">
+    <html lang="en" className={`overflow-x-clip ${heading.variable} ${body.variable} ${display.variable} ${mono.variable} ${royal.variable} ${editorial.variable}`}>
+      <body data-testid="app-root" className="overflow-x-clip max-w-full min-h-screen">
         <Providers>{children}</Providers>
         <Analytics />
       </body>

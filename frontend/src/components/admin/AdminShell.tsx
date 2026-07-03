@@ -136,7 +136,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   return (
     <RoleGuard allow={["admin"]}>
-      <div className="min-h-screen bg-cream lg:flex">
+      <div className="min-h-screen bg-cream lg:flex lg:h-screen lg:overflow-hidden">
         <header className="lg:hidden sticky top-0 z-30 bg-white border-b border-bone flex items-center justify-between px-4 py-3">
           <Link href="/admin" className="flex items-center gap-2" data-testid="admin-brand-mobile">
             <div className="h-7 w-7 rounded-full bg-clay flex items-center justify-center"><Sparkles className="h-3.5 w-3.5 text-white" /></div>
@@ -150,7 +150,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           </button>
         </header>
 
-        <aside className="hidden lg:flex w-56 bg-white border-r border-bone flex-col shrink-0 min-h-screen">
+        <aside className="hidden lg:flex w-56 bg-white border-r border-bone flex-col shrink-0 lg:h-full lg:overflow-y-auto">
           <Sidebar />
         </aside>
 
@@ -166,7 +166,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           </div>
         )}
 
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 flex flex-col">
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 flex flex-col min-h-0">
           {annData?.announcement && annData.announcement.id !== dismissedAnn && (
             <div className={`relative mb-6 p-4 rounded-xl shadow-sm border flex items-start gap-3 pr-10 ${
               annData.announcement.type === 'warning' 

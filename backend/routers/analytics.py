@@ -80,9 +80,10 @@ async def dashboard(user=Depends(require_user)):
         low_stock_q["restaurant_id"] = user["restaurant_id"]
     rest = await db.restaurants.find_one({"id": user.get("restaurant_id")}) if user.get("restaurant_id") else None
     sandbox_mode = rest.get("sandbox_mode", True) if rest else True
+    is_verified = rest.get("is_verified", False) if rest else False
 
     # Onboarding checks — menu and table counts
-    menu_q: Dict[str, Any] = {"available": True}
+    menu_q: Dict[str, Any] = {}
     tables_q: Dict[str, Any] = {}
     if user.get("restaurant_id"):
         menu_q["restaurant_id"] = user["restaurant_id"]
@@ -96,6 +97,7 @@ async def dashboard(user=Depends(require_user)):
         "top_items": top_items, "low_stock_count": len(low_stock),
         "low_stock": low_stock, "status_counts": status_counts,
         "sandbox_mode": sandbox_mode,
+        "is_verified": is_verified,
         "menu_count": menu_count,
         "tables_count": tables_count,
     }
