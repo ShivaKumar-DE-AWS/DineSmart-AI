@@ -139,20 +139,22 @@ async def onboard_menu(file: UploadFile = File(...), user=Depends(require_user))
         import asyncio
         client_ai = genai.Client(api_key=GEMINI_API_KEY)
         prompt = """
-        You are an expert menu data extractor. I have provided an image or document of a restaurant menu.
-        Extract all the food items, their descriptions, prices, and categories into a structured JSON list.
-        Ensure prices are numbers (remove currency symbols).
-        Use this exact JSON schema:
+        You are an expert restaurant menu data extractor. I have provided a document or image containing a restaurant menu.
+        CRITICAL REQUIREMENT: This document may contain multiple pages and dozens or hundreds of food and beverage items.
+        You MUST extract EVERY SINGLE ITEM from ALL PAGES of the provided document.
+        Do NOT summarize, do NOT sample, and do NOT stop after the first page or first 10 items.
+        If there are 100 items across 11 pages, your JSON array MUST contain all 100 items. Every starter, soup, main course, bread, rice, biryani, dessert, beverage, and combo must be extracted.
+
+        Extract each item into a structured JSON list with the following schema:
         [
           {
-            "name": "string",
-            "description": "string",
-            "price": number,
-            "category": "string",
-            "image_prompt": "A highly detailed midjourney style prompt to generate an appetizing image of this food. Max 2 sentences."
+            "name": "string (the exact name of the dish)",
+            "description": "string (brief description or ingredients if mentioned, otherwise empty string)",
+            "price": number (numeric price without currency symbols; if both Veg and Non-Veg or Half/Full prices exist, pick the regular/standard price as a number),
+            "category": "string (the section header from the menu, e.g. 'Soups & Salads', 'Veg Starter', 'Main Course', 'Biryani', 'Desserts', 'Beverages')"
           }
         ]
-        Return ONLY valid JSON, nothing else. No markdown formatting like ```json.
+        Return ONLY valid JSON array, nothing else. No markdown formatting like ```json.
         """
         models_to_try = get_gemini_models(client_ai)
 
@@ -162,14 +164,30 @@ async def onboard_menu(file: UploadFile = File(...), user=Depends(require_user))
             for api_ver in [None, "v1"]:
                 try:
                     c = client_ai if not api_ver else genai.Client(api_key=GEMINI_API_KEY, http_options=genai_types.HttpOptions(api_version=api_ver))
-                    response = await asyncio.wait_for(
-                        asyncio.to_thread(
-                            c.models.generate_content,
-                            model=model_name,
-                            contents=[prompt, genai_types.Part.from_bytes(data=raw, mime_type=mime)],
-                        ),
-                        timeout=15.0
-                    )
+                    try:
+                        response = await asyncio.wait_for(
+                            asyncio.to_thread(
+                                c.models.generate_content,
+                                model=model_name,
+                                contents=[prompt, genai_types.Part.from_bytes(data=raw, mime_type=mime)],
+                                config=genai_types.GenerateContentConfig(
+                                    max_output_tokens=16384,
+                                    temperature=0.1,
+                                    response_mime_type="application/json",
+                                ),
+                            ),
+                            timeout=120.0
+                        )
+                    except Exception as cfg_err:
+                        print(f"[SmartDine AI] Config failed for {model_name} ({cfg_err}), retrying without config...")
+                        response = await asyncio.wait_for(
+                            asyncio.to_thread(
+                                c.models.generate_content,
+                                model=model_name,
+                                contents=[prompt, genai_types.Part.from_bytes(data=raw, mime_type=mime)],
+                            ),
+                            timeout=120.0
+                        )
                     if response and getattr(response, "text", None):
                         print(f"[SmartDine AI] Successfully extracted menu using model: {model_name} (api_ver: {api_ver})")
                         break

@@ -81,10 +81,14 @@ def get_gemini_models(client) -> list[str]:
         "gemini-1.5-pro-001",
         "gemini-1.5-pro-002",
     ]
+    # Prioritize preferred high-capacity models with 1M+ context windows for multi-page document OCR
+    result = []
     for f in fallbacks:
-        if f not in discovered:
-            discovered.append(f)
-    return discovered
+        result.append(f)
+    for d in discovered:
+        if d not in result:
+            result.append(d)
+    return result
 
 
 # MongoDB
