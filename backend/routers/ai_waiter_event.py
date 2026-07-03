@@ -370,6 +370,25 @@ async def ai_waiter_event(req: AIWaiterEventRequest):
             suggested_items=[],
         )
 
+    # Strategy 1: Semantic Caching (The Traffic Killer)
+    cache_key = None
+    if redis_client:
+        if req.event_type == "ITEM_ADDED" and req.added_item:
+            item_ident = req.added_item.item_id or req.added_item.name.lower()
+            cache_key = f"ai_cache:ITEM_ADDED:{req.user_language}:{item_ident}"
+        elif req.event_type == "QR_SCAN":
+            cache_key = f"ai_cache:QR_SCAN:{req.user_language}:{req.restaurant_id}:{fav_item}"
+
+        if cache_key:
+            try:
+                cached_data = await redis_client.get(cache_key)
+                if cached_data:
+                    logger.debug("[AI Waiter] Semantic Cache HIT: %s", cache_key)
+                    raw_str = cached_data.decode() if isinstance(cached_data, bytes) else str(cached_data)
+                    return AIWaiterEventResponse.model_validate_json(raw_str)
+            except Exception as cache_exc:
+                logger.debug("[AI Waiter] Redis semantic cache read error: %s", cache_exc)
+
     # Step 3: Build prompt + call Gemini
     prompt = _build_prompt(
         event_type=req.event_type,
@@ -381,6 +400,13 @@ async def ai_waiter_event(req: AIWaiterEventRequest):
     )
 
     ai_response = await _call_gemini(prompt, req.event_type, fav_item)
+
+    if cache_key and redis_client and ai_response and ai_response.dialogue_text:
+        try:
+            await redis_client.setex(cache_key, 86400, ai_response.model_dump_json())
+            logger.debug("[AI Waiter] Saved semantic cache for %s", cache_key)
+        except Exception as cache_exc:
+            logger.debug("[AI Waiter] Redis semantic cache write error: %s", cache_exc)
 
     logger.info(
         "[AI Waiter] event=%s restaurant=%s action=%s suggestions=%d",
