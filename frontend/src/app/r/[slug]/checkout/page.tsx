@@ -12,6 +12,7 @@ import { Lock, CreditCard, ExternalLink, ArrowLeft, ScrollText, User2, ChefHat, 
 import { sendAIWaiterEvent, showAIUpsellSheet } from "@/lib/ai_waiter_client";
 import { AICourseTrackerCard } from "@/components/customer/AICourseTrackerCard";
 import { getOrCreateAnonID, subscribeToOffers } from "@/lib/notify";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface CustomerProfile {
   id: string;
@@ -61,6 +62,7 @@ export default function CheckoutPage() {
   const { config: restaurantConfig } = useRestaurantConfig();
 
   const router = useRouter();
+  const queryClient = useQueryClient();
   const cart = useCart();
   const table = useTable((s) => s.session);
   const [name, setName] = useState("");
@@ -241,6 +243,13 @@ export default function CheckoutPage() {
       };
       const res = await api<{ order_id: string; token: string }>("/api/orders", { method: "POST", body: JSON.stringify(payload) });
       cart.clear();
+      try {
+        const ids = JSON.parse(localStorage.getItem("sd-my-order-ids") || "[]");
+        if (Array.isArray(ids) && !ids.includes(res.order_id)) {
+          localStorage.setItem("sd-my-order-ids", JSON.stringify([res.order_id, ...ids].slice(0, 20)));
+        }
+      } catch {}
+      queryClient.invalidateQueries({ queryKey: ["session-orders"] });
       toast.success("Your order is on its way to the kitchen");
       subscribeToOffers(restaurantConfig?.id || slug, res.order_id).catch(() => {});
       router.push(`/r/${slug}/token/${res.order_id}`);

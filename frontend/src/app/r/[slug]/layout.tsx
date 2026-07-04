@@ -13,6 +13,7 @@ import { Order } from "@/types";
 import { toast } from "sonner";
 import { useRestaurantConfig } from "@/hooks/useRestaurantConfig";
 import { useSession } from "@/stores/session";
+import { getOrCreateAnonID } from "@/lib/notify";
 
 const STAFF_CALL_REASONS = [
   { id: "Water / Refill", label: "Water / Refill", icon: "💧", desc: "Drinking water or ice" },
@@ -69,11 +70,28 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
   }
 
   const { session } = useTable();
+  const [deviceId, setDeviceId] = useState("");
+  const [localOrderIds, setLocalOrderIds] = useState("");
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setDeviceId(getOrCreateAnonID());
+      try {
+        const ids = JSON.parse(localStorage.getItem("sd-my-order-ids") || "[]");
+        if (Array.isArray(ids) && ids.length > 0) setLocalOrderIds(ids.join(","));
+      } catch {}
+    }
+  }, []);
 
   const { data: sessionOrdersData } = useQuery({
-    queryKey: ["session-orders", session?.id],
-    queryFn: () => api<{ orders: Order[] }>(`/api/orders?table_session_id=${session?.id}`),
-    enabled: !!session?.id,
+    queryKey: ["session-orders", session?.id, deviceId, localOrderIds],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (session?.id) params.set("table_session_id", session.id);
+      if (deviceId) params.set("device_id", deviceId);
+      if (localOrderIds) params.set("order_ids", localOrderIds);
+      return api<{ orders: Order[] }>(`/api/orders?${params.toString()}`);
+    },
+    enabled: !!(session?.id || deviceId || localOrderIds),
     refetchInterval: 15000,
   });
   const sessionOrders = sessionOrdersData?.orders ?? [];

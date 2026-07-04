@@ -268,14 +268,14 @@ async def list_orders(
     status_filter: Optional[str] = None,
     table_session_id: Optional[str] = None,
     restaurant_id: Optional[str] = None,
+    device_id: Optional[str] = None,
+    order_ids: Optional[str] = None,
     limit: int = 100,
     user=Depends(require_user),
 ):
     q: Dict[str, Any] = {}
     if status_filter:
         q["status"] = status_filter
-    if table_session_id:
-        q["table_session_id"] = table_session_id
     
     rid = user.get("restaurant_id")
     if not rid:
@@ -286,8 +286,30 @@ async def list_orders(
     q["restaurant_id"] = rid
     
     if user.get("role") == "customer":
-        if not table_session_id:
+        customer_conds = []
+        if table_session_id:
+            customer_conds.append({"table_session_id": table_session_id})
+        if device_id:
+            customer_conds.append({"device_id": device_id})
+        if order_ids:
+            oid_list = [o.strip() for o in order_ids.split(",") if o.strip()]
+            if oid_list:
+                customer_conds.append({"id": {"$in": oid_list}})
+        if not customer_conds:
             return {"orders": []}
+        if len(customer_conds) == 1:
+            q.update(customer_conds[0])
+        else:
+            q["$or"] = customer_conds
+    else:
+        if table_session_id:
+            q["table_session_id"] = table_session_id
+        if device_id:
+            q["device_id"] = device_id
+        if order_ids:
+            oid_list = [o.strip() for o in order_ids.split(",") if o.strip()]
+            if oid_list:
+                q["id"] = {"$in": oid_list}
             
     docs = await db.orders.find(q, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(limit)
     return {"orders": docs}

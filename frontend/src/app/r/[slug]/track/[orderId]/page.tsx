@@ -274,6 +274,52 @@ export default function TrackPage() {
         </div>
       </div>
 
+      {/* Order Summary & Bill Details */}
+      <div className="mehfil-card rounded-3xl p-7 md:p-9 mb-6 shadow-md border border-brand-secondary/30" data-testid="track-order-summary">
+        <div className="flex items-center justify-between pb-4 mb-4 border-b border-brand-secondary/20">
+          <div className="font-royal tracking-[0.2em] text-xs uppercase text-brand-primary font-bold flex items-center gap-2">
+            <ConciergeBell className="h-4 w-4 text-brand-secondary" /> Ordered Items Summary
+          </div>
+          <div className="font-editorial italic text-xs text-[#1A1106]/60">
+            {order.items?.reduce((acc, item) => acc + (item.qty || 1), 0) || 0} item(s)
+          </div>
+        </div>
+        <div className="space-y-3 mb-6">
+          {order.items?.map((item, idx) => (
+            <div key={idx} className="flex justify-between items-start text-sm">
+              <div className="flex items-start gap-2.5">
+                <span className="font-royal font-bold text-brand-primary bg-brand-secondary/10 px-2 py-0.5 rounded text-xs shrink-0">
+                  {item.qty}x
+                </span>
+                <div>
+                  <div className="font-royal text-[#1A1106]">{item.name}</div>
+                  {item.notes && <div className="font-editorial italic text-xs text-[#1A1106]/60">{item.notes}</div>}
+                </div>
+              </div>
+              <div className="font-mono font-medium text-[#1A1106] shrink-0">
+                {formatCurrency((item.price || 0) * item.qty)}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="pt-4 border-t border-brand-secondary/20 space-y-2 text-sm">
+          <div className="flex justify-between text-[#1A1106]/70">
+            <span className="font-editorial">Item Subtotal</span>
+            <span className="font-mono">{formatCurrency(order.subtotal || order.total)}</span>
+          </div>
+          {order.tax != null && order.tax > 0 && (
+            <div className="flex justify-between text-[#1A1106]/70">
+              <span className="font-editorial">Taxes & Charges</span>
+              <span className="font-mono">{formatCurrency(order.tax)}</span>
+            </div>
+          )}
+          <div className="flex justify-between items-center text-lg font-bold text-brand-primary pt-2 border-t border-brand-secondary/30">
+            <span className="font-royal tracking-wide">Total Bill Amount</span>
+            <span className="font-mono text-xl">{formatCurrency(order.total)}</span>
+          </div>
+        </div>
+      </div>
+
       {isCancelled ? (
         <div className="mehfil-card rounded-2xl p-6 flex items-center gap-4 border-brand-primary/40" data-testid="track-cancelled">
           <BellOff className="h-6 w-6 text-brand-primary" />

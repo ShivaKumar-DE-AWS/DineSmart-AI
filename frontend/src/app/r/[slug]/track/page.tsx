@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter , useParams} from "next/navigation";
 import { Search, ArrowRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -9,6 +9,7 @@ import { useRestaurantConfig } from "@/hooks/useRestaurantConfig";
 import { Order } from "@/types";
 import Link from "next/link";
 import { formatCurrency } from "@/lib/utils";
+import { getOrCreateAnonID } from "@/lib/notify";
 
 function SectionTag({ children }: { children: React.ReactNode }) {
   return (
@@ -35,23 +36,41 @@ export default function TrackLanding() {
   };
   
   const { session } = useTable();
+  const [deviceId, setDeviceId] = useState("");
+  const [localOrderIds, setLocalOrderIds] = useState("");
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setDeviceId(getOrCreateAnonID());
+      try {
+        const ids = JSON.parse(localStorage.getItem("sd-my-order-ids") || "[]");
+        if (Array.isArray(ids) && ids.length > 0) setLocalOrderIds(ids.join(","));
+      } catch {}
+    }
+  }, []);
+
   const { data: sessionOrdersData } = useQuery({
-    queryKey: ["session-orders", session?.id],
-    queryFn: () => api<{ orders: Order[] }>(`/api/orders?table_session_id=${session?.id}`),
-    enabled: !!session?.id,
+    queryKey: ["session-orders", session?.id, deviceId, localOrderIds],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (session?.id) params.set("table_session_id", session.id);
+      if (deviceId) params.set("device_id", deviceId);
+      if (localOrderIds) params.set("order_ids", localOrderIds);
+      return api<{ orders: Order[] }>(`/api/orders?${params.toString()}`);
+    },
+    enabled: !!(session?.id || deviceId || localOrderIds),
     refetchInterval: 15000,
   });
   const sessionOrders = sessionOrdersData?.orders ?? [];
 
   return (
     <div className="max-w-5xl mx-auto px-5 md:px-10 py-10" data-testid="track-landing">
-      {session && sessionOrders.length > 0 && (
+      {sessionOrders.length > 0 && (
         <section className="mb-16">
           <div className="text-center">
             <SectionTag>Live Tracking</SectionTag>
             <div className="flex items-center justify-center gap-3 mb-6">
               <h2 className="font-royal text-3xl md:text-4xl text-brand-primary tracking-wide">
-                Your <span className="font-editorial italic font-normal mehfil-gold-gradient">Table Orders</span>
+                Your <span className="font-editorial italic font-normal mehfil-gold-gradient">Active Orders</span>
               </h2>
               <div className="h-2.5 w-2.5 rounded-full bg-green-500 animate-pulse" />
             </div>
@@ -97,7 +116,7 @@ export default function TrackLanding() {
       )}
 
       <div className="max-w-xl mx-auto text-center">
-        {!session || sessionOrders.length === 0 ? (
+        {sessionOrders.length === 0 ? (
           <div className="mehfil-divider mb-4 max-w-xs mx-auto"><span className="font-royal tracking-[0.4em] text-[10px] uppercase">Manual Tracking</span></div>
         ) : (
           <div className="font-royal tracking-[0.4em] text-[10px] uppercase text-[#1A1106]/50 mb-6">Or track another order manually</div>
