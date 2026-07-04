@@ -61,10 +61,13 @@ export default function TrackLanding() {
     refetchInterval: 15000,
   });
   const sessionOrders = sessionOrdersData?.orders ?? [];
+  
+  const activeOrders = sessionOrders.filter(o => o.status !== "completed" && o.status !== "cancelled" && o.payment_status !== "paid");
+  const pastOrders = sessionOrders.filter(o => o.status === "completed" || o.status === "cancelled" || o.payment_status === "paid");
 
   return (
     <div className="max-w-5xl mx-auto px-5 md:px-10 py-10" data-testid="track-landing">
-      {sessionOrders.length > 0 && (
+      {activeOrders.length > 0 && (
         <section className="mb-16">
           <div className="text-center">
             <SectionTag>Live Tracking</SectionTag>
@@ -77,8 +80,8 @@ export default function TrackLanding() {
           </div>
           
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-8">
-            {sessionOrders.map((order) => {
-              const isActive = !["delivered", "cancelled"].includes(order.status);
+            {activeOrders.map((order) => {
+              const isActive = true;
               return (
                 <Link
                   key={order.id}
@@ -93,11 +96,57 @@ export default function TrackLanding() {
                       </div>
                       <div className="font-royal text-3xl text-brand-primary tracking-tight">{order.token}</div>
                     </div>
-                    <div className={`px-3 py-1.5 rounded-full text-[10px] font-royal tracking-wider uppercase border ${isActive ? 'bg-brand-secondary/10 border-brand-secondary/50 text-[#8A6A1B]' : 'bg-gray-100 border-gray-200 text-gray-500'}`}>
+                    <div className="px-3 py-1.5 rounded-full text-[10px] font-royal tracking-wider uppercase border bg-brand-secondary/10 border-brand-secondary/50 text-[#8A6A1B]">
                       {order.status}
                     </div>
                   </div>
                   <div className="font-editorial text-sm text-[#1A1106]/70 mb-5 line-clamp-1 italic">
+                    {order.items?.map(i => `${i.qty}x ${i.name}`).join(", ")}
+                  </div>
+                  <div className="flex items-center justify-between mt-auto pt-4 border-t border-brand-secondary/20">
+                    <div className="font-royal text-xl text-[#1A1106]">{formatCurrency(order.total)}</div>
+                    <div className="w-8 h-8 rounded-full bg-[#FAF5EC] flex items-center justify-center group-hover:bg-brand-primary group-hover:text-white transition-colors text-[#8A6A1B]">
+                      <ArrowRight size={16} />
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {pastOrders.length > 0 && (
+        <section className="mb-16">
+          <div className="text-center">
+            <SectionTag>History</SectionTag>
+            <div className="flex items-center justify-center gap-3 mb-6">
+              <h2 className="font-royal text-3xl md:text-4xl text-gray-500 tracking-wide">
+                Your <span className="font-editorial italic font-normal text-gray-400">Past Orders</span>
+              </h2>
+            </div>
+          </div>
+          
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-8 opacity-70">
+            {pastOrders.map((order) => {
+              return (
+                <Link
+                  key={order.id}
+                  href={`/r/${slug}/track/${order.id}`}
+                  className="block rounded-2xl p-6 border border-gray-200 transition-colors relative overflow-hidden group bg-gray-50 hover:bg-gray-100"
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <div className="font-royal tracking-widest text-[10px] uppercase text-gray-500 mb-1">
+                        Token {order.table_number ? `· Table ${order.table_number}` : ''}
+                      </div>
+                      <div className="font-royal text-3xl text-gray-600 tracking-tight">{order.token}</div>
+                    </div>
+                    <div className="px-3 py-1.5 rounded-full text-[10px] font-royal tracking-wider uppercase border bg-gray-200 border-gray-300 text-gray-600">
+                      {order.status === "cancelled" ? "Cancelled" : "Settled"}
+                    </div>
+                  </div>
+                  <div className="font-editorial text-sm text-gray-500 mb-5 line-clamp-1 italic">
                     {order.items.map(i => `${i.qty}x ${i.name}`).join(', ')}
                   </div>
                   <div className="flex items-center justify-between border-t border-brand-secondary/20 pt-4">
