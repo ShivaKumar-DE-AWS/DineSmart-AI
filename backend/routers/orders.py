@@ -213,24 +213,68 @@ async def create_order(req: OrderCreateReq):
             if active_unpaid:
                 raise HTTPException(status_code=429, detail="You already have an active unpaid Pay-Code. Please pay at counter or cancel it before placing another order.")
 
-    # 4. State Machine & Token Generation
+    # 4. State Machine & Table Session Appending
     token = None
     pay_code = None
     status = "confirmed"
+    eta = (datetime.now(timezone.utc) + timedelta(minutes=max(max_prep, 8))).isoformat()
+    high_val_thresh = rest_doc.get("high_value_threshold", 2500.0) if rest_doc else 2500.0
+    max_item_qty = max([i["qty"] for i in validated_items], default=0)
     
     if service_type == "self_service" and req.payment_method in {"cash", "upi", "card_machine"}:
         status = "awaiting_cash_verification"
         pay_code = f"C-{random.randint(100, 999)}"
         token = f"PAY-{pay_code}"
     else:
-        high_val_thresh = rest_doc.get("high_value_threshold", 2500.0) if rest_doc else 2500.0
-        max_item_qty = max([i["qty"] for i in validated_items], default=0)
         if total >= high_val_thresh or max_item_qty > 8:
             status = "high_value_verification"
+            
+        if service_type != "self_service" and req.table_number:
+            # Check for an active table session to append items
+            active_session = await db.orders.find_one({
+                "restaurant_id": restaurant_id, 
+                "table_number": req.table_number, 
+                "payment_status": "unpaid",
+                "status": {"$nin": ["cancelled"]}
+            })
+            if active_session:
+                # Merge items and totals
+                existing_items = active_session.get("items", [])
+                total_items_count = sum(i.get("qty", 1) for i in existing_items) + sum(i["qty"] for i in validated_items)
+                
+                if total_items_count > 15:
+                    raise HTTPException(status_code=403, detail="Maximum of 15 total items allowed per table session. Please request bill and start a new session.")
+                    
+                new_subtotal = round(active_session.get("subtotal", 0.0) + subtotal, 2)
+                new_tax = round(active_session.get("tax", 0.0) + tax, 2)
+                new_total = round(active_session.get("total", 0.0) + total, 2)
+                
+                if new_total >= high_val_thresh:
+                    status = "high_value_verification"
+                    
+                merged_items = existing_items + validated_items
+                token = active_session["token"]
+                
+                await db.orders.update_one(
+                    {"id": active_session["id"]},
+                    {"$set": {
+                        "items": merged_items,
+                        "subtotal": new_subtotal,
+                        "tax": new_tax,
+                        "total": new_total,
+                        "status": status if active_session["status"] != "high_value_verification" else active_session["status"],
+                        "updated_at": now_iso(),
+                        "estimated_ready_at": eta
+                    }}
+                )
+                
+                # Broadcast append to waiter
+                broadcast_order_update(restaurant_id, {"type": "new_order", "order_id": active_session["id"]})
+                
+                return {"ok": True, "order_id": active_session["id"], "token": token, "total": new_total}
+                
         token = await next_token(restaurant_id or "", req.order_type)
 
-    eta = (datetime.now(timezone.utc) + timedelta(minutes=max(max_prep, 8))).isoformat()
-    
     order = {
         "id": str(uuid.uuid4()),
         "token": token,
