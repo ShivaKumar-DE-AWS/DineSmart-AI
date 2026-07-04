@@ -95,7 +95,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
     refetchInterval: 15000,
   });
   const sessionOrders = sessionOrdersData?.orders ?? [];
-  const activeOrders = sessionOrders.filter((o) => !["delivered", "cancelled"].includes(o.status));
+  const activeOrders = sessionOrders.filter((o) => !["delivered", "cancelled", "completed"].includes(o.status) && o.payment_status !== "paid");
 
   // Global order stage notifications
   const prevStatuses = useRef<Record<string, string>>({});
