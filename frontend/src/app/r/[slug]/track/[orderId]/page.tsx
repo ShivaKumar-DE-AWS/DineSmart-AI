@@ -173,14 +173,46 @@ export default function TrackPage() {
         </div>
       )}
 
-      {/* Self-Service Payment Verification Notice */}
-      {(restaurantConfig?.service_type === "self_service" || order.order_type === "takeaway" || order.order_type === "quick_order") && !isCancelled && order.payment_status !== "paid" && (
+      {/* Self-Service Payment Verification & Pay-Code Notice */}
+      {order.status === "awaiting_cash_verification" ? (
+        <div className="bg-amber-500/10 border-2 border-amber-500 rounded-3xl p-5 mb-6 text-center shadow-lg animate-pulse">
+          <div className="font-royal text-sm font-bold uppercase tracking-widest text-amber-700">
+            ⏳ Temporary Pay-Code Generated
+          </div>
+          <div className="font-royal text-4xl text-amber-900 my-2 tracking-wider">
+            #{order.pay_code || order.token}
+          </div>
+          <p className="font-editorial italic text-xs text-amber-800 mt-1 leading-relaxed">
+            Show this code at the cashier counter to complete your cash payment. Once verified, your kitchen preparation token will be automatically generated!
+          </p>
+          {restaurantConfig?.upi_id && (
+            <a
+              href={`upi://pay?pa=${encodeURIComponent(restaurantConfig.upi_id)}&pn=${encodeURIComponent(restaurantConfig.name)}&am=${order.total}&cu=INR&tn=Order-${order.id}`}
+              className="mt-3 inline-flex items-center justify-center gap-2 bg-emerald-600 text-white font-royal text-xs uppercase px-5 py-2.5 rounded-xl shadow-md hover:bg-emerald-700 transition-all"
+            >
+              ⚡ UPI Tap & Pay Instantly
+            </a>
+          )}
+        </div>
+      ) : (restaurantConfig?.service_type === "self_service" || order.order_type === "takeaway" || order.order_type === "quick_order") && !isCancelled && order.payment_status !== "paid" && (
         <div className="bg-[#FAF5EC] border-2 border-brand-primary/40 rounded-3xl p-5 mb-6 text-center shadow-md">
           <div className="font-royal text-xs font-bold uppercase tracking-widest text-brand-primary flex items-center justify-center gap-2">
             <Clock className="h-4 w-4 text-brand-secondary" /> Payment Verification Required Before Pickup
           </div>
           <p className="font-editorial italic text-xs text-[#1A1106]/80 mt-1.5 leading-relaxed">
-            Please settle your bill at the counter (or via mobile tap-to-pay below) and present your <span className="font-bold font-royal text-brand-primary">Token #{order.token}</span> to collect your order when ready.
+            Please settle your bill at the counter and present your <span className="font-bold font-royal text-brand-primary">Token #{order.token}</span> to collect your order when ready.
+          </p>
+        </div>
+      )}
+
+      {/* Locked Digital Exit Pass Warning for Unpaid Dine-In */}
+      {order.payment_status !== "paid" && order.order_type === "dine_in" && !isCancelled && (
+        <div className="bg-red-500/10 border-2 border-red-500/40 rounded-3xl p-5 mb-6 text-center shadow-md">
+          <div className="font-royal text-xs font-bold uppercase tracking-widest text-red-600 flex items-center justify-center gap-2">
+            🔒 Digital Exit Pass Locked
+          </div>
+          <p className="font-editorial italic text-xs text-red-900/80 mt-1.5 leading-relaxed">
+            Your Digital Exit Pass will automatically generate here once payment is verified by your cashier or waiter. No departure is permitted without an active Exit Pass.
           </p>
         </div>
       )}

@@ -101,10 +101,14 @@ def get_sample_menu_for_restaurant(cuisine: str, name: str) -> list[dict]:
         return SAMPLE_MENU_INDIAN
     return SAMPLE_MENU_GENERIC
 
-def generate_frontend_config(name: str, slug: str, rest_id: str, phone: str, email: str, cuisine: str) -> dict:
+def generate_frontend_config(name: str, slug: str, rest_id: str, phone: str, email: str, cuisine: str, service_type: str = "fine_dining") -> dict:
     short_slug = slug.split('-')[0]
     return {
         "id": rest_id, "name": name, "slug": slug,
+        "service_type": service_type,
+        "session_duration_minutes": 20,
+        "high_value_threshold": 2500.0,
+        "geo_fencing_enabled": False,
         "tagline": f"Welcome to {name}",
         "description": f"A wonderful dining experience at {name}. Serving delicious {cuisine} cuisine with love and passion.",
         "logo_url": "", "primary_color": "#8A1A2A", "secondary_color": "#C9A348", "accent_color": "#E8A317",
@@ -331,6 +335,9 @@ async def request_restaurant_access(
         "owner_email": email,
         "phone": phone,
         "service_type": service_type or "fine_dining",
+        "session_duration_minutes": 20,
+        "high_value_threshold": 2500.0,
+        "geo_fencing_enabled": False,
         "plan_tier": "pro", 
         "subscription_status": "trial", 
         "trial_ends_at": trial_ends,
@@ -349,7 +356,7 @@ async def request_restaurant_access(
         logo_url = f"/api/{logo_path}"
         
     # 2. Create frontend config
-    config = generate_frontend_config(name, slug, rest_id, phone, email, cuisine or "global")
+    config = generate_frontend_config(name, slug, rest_id, phone, email, cuisine or "global", service_type or "fine_dining")
     config["service_type"] = service_type or "fine_dining"
     if primary_color: config["primary_color"] = primary_color
     if secondary_color: config["secondary_color"] = secondary_color
@@ -430,10 +437,11 @@ async def onboard_restaurant(name: str, email: str, phone: str, tables_count: in
     # 1. Create restaurant
     await db.restaurants.insert_one({
         "id": rest_id, "name": name, "slug": slug, "owner_email": email,
+        "service_type": "fine_dining", "session_duration_minutes": 20, "high_value_threshold": 2500.0, "geo_fencing_enabled": False,
         "plan": "trial", "subscription_status": "active", "created_at": now_iso(),
     })
     # 2. Create frontend config
-    config = generate_frontend_config(name, slug, rest_id, phone, email, cuisine or "global")
+    config = generate_frontend_config(name, slug, rest_id, phone, email, cuisine or "global", "fine_dining")
     await db.restaurant_configs.insert_one({
         "slug": slug, "config": config, "created_at": now_iso()
     })

@@ -153,9 +153,9 @@ async def check_db_connection():
         from cache_service import menu_cache, config_cache
         await menu_cache.connect()
         await config_cache.connect()
-        print("[startup] ✅ CacheService connected (menu_cache, config_cache)")
+        print("[startup] [OK] CacheService connected (menu_cache, config_cache)")
     except Exception as e:
-        print(f"[startup] ⚠️  CacheService Redis connect failed (non-fatal): {e}")
+        print(f"[startup] [WARN] CacheService Redis connect failed (non-fatal): {e}")
 
 @app.get("/api/health")
 async def public_health():
@@ -577,11 +577,11 @@ async def create_indexes():
             try:
                 await collection.create_index(keys, **options)
             except Exception as e:
-                print(f"[startup] WARNING: Failed to create index {options.get('name')} on {collection.name}: {e}")
+                print(f"[startup] [WARN] Failed to create index {options.get('name')} on {collection.name}: {e}")
                 
         print("[startup] MongoDB indexes creation finished")
     except Exception as e:
-        print(f"[startup] WARNING: Index setup failed: {e}")
+        print(f"[startup] [WARN] Index setup failed: {e}")
 
 
 @app.on_event("startup")

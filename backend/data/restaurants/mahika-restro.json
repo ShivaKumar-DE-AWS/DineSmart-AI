@@ -1,0 +1,66 @@
+{
+  "id": "rest_mahika",
+  "name": "Mahika Restro",
+  "slug": "mahika-restro",
+  "service_type": "fine_dining",
+  "tagline": "Exquisite Fine Dining & Table Service",
+  "description": "Experience luxury dine-in table ordering with AI waiter recommendations and instant digital billing.",
+  "primary_color": "#8A1A2A",
+  "secondary_color": "#D4AF37",
+  "hero_images": [
+    "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&q=80&w=1200"
+  ],
+  "history": [],
+  "specialties": [
+    "Royal Biryani",
+    "Butter Garlic Prawns",
+    "Truffle Naan",
+    "Saffron Kheer"
+  ],
+  "famous_dishes": [
+    {
+      "name": "Royal Hyderabadi Dum Biryani",
+      "description": "Slow-cooked aromatic basmati rice with tender spiced mutton and saffron.",
+      "price": "\u20b9450",
+      "image": "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&q=80&w=600"
+    },
+    {
+      "name": "Paneer Tikka Masala",
+      "description": "Charcoal-grilled cottage cheese cubes simmered in rich creamy tomato gravy.",
+      "price": "\u20b9340",
+      "image": "https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&q=80&w=600"
+    }
+  ],
+  "why_us": [
+    "Table-side AI Waiter Assistance",
+    "Zero-Waiting UPI Settlement",
+    "Fresh Organic Ingredients"
+  ],
+  "contact": {
+    "phone": "+91 98765 43210",
+    "email": "dine@mahikarestro.com",
+    "address": "Banjara Hills, Hyderabad"
+  },
+  "social_links": {
+    "instagram": "https://instagram.com/mahikarestro"
+  },
+  "hours": {
+    "lunch": "12:00 PM - 3:30 PM",
+    "dinner": "7:00 PM - 11:30 PM",
+    "open_days": "Mon - Sun"
+  },
+  "reviews": [],
+  "offers": [],
+  "menu_config": {
+    "category_order": [
+      "Starters",
+      "Main Course",
+      "Breads",
+      "Desserts",
+      "Beverages"
+    ],
+    "show_best_sellers": true,
+    "show_chef_specials": true,
+    "show_recommendations": true
+  }
+}

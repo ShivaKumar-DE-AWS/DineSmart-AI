@@ -7,6 +7,7 @@ import { useTable } from "@/stores/table";
 import { formatCurrency } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { useRestaurantConfig } from "@/hooks/useRestaurantConfig";
+import { getServiceWording } from "@/hooks/useServiceWording";
 import { toast } from "sonner";
 import { Lock, CreditCard, ExternalLink, ArrowLeft, ScrollText, User2, ChefHat, Plus, Minus, Phone, Gift, Sparkles, MapPin, Scissors, Check, X, Share2, Users } from "lucide-react";
 import { sendAIWaiterEvent, showAIUpsellSheet } from "@/lib/ai_waiter_client";
@@ -72,7 +73,16 @@ export default function CheckoutPage() {
   const _isProcessingRef = useRef(false);
   const [stripeEnabled, setStripeEnabled] = useState<boolean | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "upi" | "card_machine">("cash");
+  const [tablePin, setTablePin] = useState("");
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
+  const wording = getServiceWording(restaurantConfig?.service_type, table?.id ? "dine_in" : "takeaway");
+
+  useEffect(() => {
+    if (restaurantConfig?.service_type === "self_service") {
+      setPaymentMethod("upi");
+    }
+  }, [restaurantConfig?.service_type]);
+
   const subtotal = cart.subtotal();
   const tax = Math.round(subtotal * 0.05);
   const total = subtotal + tax;
@@ -221,6 +231,20 @@ export default function CheckoutPage() {
       const restId = restaurantConfig?.id || "";
       if (!restId) { toast.error("Restaurant not found. Please try again."); _isProcessingRef.current = false; setSubmitting(false); return; }
 
+      let latitude: number | undefined;
+      let longitude: number | undefined;
+      if (typeof window !== "undefined" && "geolocation" in navigator && !wording.isSelfService) {
+        try {
+          const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 3000 });
+          });
+          latitude = pos.coords.latitude;
+          longitude = pos.coords.longitude;
+        } catch (err) {
+          console.warn("Geolocation skipped/error:", err);
+        }
+      }
+
       const payload = {
         restaurant_id: restId,
         order_type: table?.id ? "dine_in" : "takeaway",
@@ -238,6 +262,9 @@ export default function CheckoutPage() {
         notes: generalNotes.trim() || undefined,
         table_session_id: table?.id || undefined,
         table_number: table?.table_number || undefined,
+        table_pin: tablePin.trim() || undefined,
+        latitude,
+        longitude,
         is_ai: cart.isAi,
         device_id: getOrCreateAnonID(),
       };
@@ -365,6 +392,13 @@ export default function CheckoutPage() {
               How would you like to settle the bill?
             </p>
 
+            {wording.isSelfService && (
+              <div className="mb-3 rounded-xl bg-amber-500/10 border border-amber-500/30 p-2.5 flex items-center gap-2 text-amber-800 text-xs font-medium">
+                <Sparkles className="h-4 w-4 text-amber-600 shrink-0" />
+                <span>{wording.paymentPreferenceText}</span>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <button
                 type="button"
@@ -382,14 +416,19 @@ export default function CheckoutPage() {
               <button
                 type="button"
                 onClick={() => setPaymentMethod("upi")}
-                className={`flex flex-col items-center justify-center gap-2 p-3 rounded-xl border transition-all ${
+                className={`flex flex-col items-center justify-center gap-2 p-3 rounded-xl border transition-all relative ${
                   paymentMethod === "upi" 
-                  ? "bg-brand-primary/5 border-brand-primary text-brand-primary shadow-sm" 
+                  ? "bg-brand-primary/5 border-brand-primary text-brand-primary shadow-sm ring-2 ring-brand-primary/20" 
                   : "bg-white border-brand-secondary/30 text-[#1A1106]/70 hover:border-brand-primary/50"
                 }`}
               >
-                <div className="font-royal text-sm uppercase tracking-widest">UPI QR</div>
-                <div className="font-editorial italic text-[10px] opacity-80 text-center">Scan & pay</div>
+                {wording.isSelfService && (
+                  <span className="absolute -top-2 right-2 bg-emerald-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase">
+                    Preferred
+                  </span>
+                )}
+                <div className="font-royal text-sm uppercase tracking-widest">UPI Tap & Pay</div>
+                <div className="font-editorial italic text-[10px] opacity-80 text-center">GPay / PhonePe / Paytm</div>
               </button>
 
               <button
@@ -411,9 +450,21 @@ export default function CheckoutPage() {
         <aside className="mehfil-card rounded-2xl p-6 h-fit lg:sticky lg:top-24" data-testid="checkout-summary">
           <div className="mehfil-divider mb-4"><span className="font-royal tracking-[0.3em] text-[10px] uppercase flex items-center gap-1.5"><ScrollText className="h-3 w-3" /> The bill</span></div>
           {table && (
-            <div className="mb-4 flex items-center gap-2 bg-brand-primary/10 border border-brand-primary/30 rounded-xl px-3 py-2" data-testid="checkout-table-badge">
-              <MapPin className="h-4 w-4 text-brand-primary" />
-              <div className="font-royal tracking-wider uppercase text-[11px] text-brand-primary">Dining at Table {table.table_number}</div>
+            <div className="mb-4 flex flex-col gap-2 bg-brand-primary/10 border border-brand-primary/30 rounded-xl p-3" data-testid="checkout-table-badge">
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-brand-primary" />
+                <div className="font-royal tracking-wider uppercase text-[11px] text-brand-primary">Dining at Table {table.table_number}</div>
+              </div>
+              {!wording.isSelfService && (
+                <input
+                  type="text"
+                  placeholder="Table PIN (4 digits from waiter)"
+                  maxLength={4}
+                  value={tablePin}
+                  onChange={(e) => setTablePin(e.target.value)}
+                  className="bg-white/90 border border-brand-primary/20 rounded-lg px-2.5 py-1 text-xs text-[#1A1106] placeholder-[#1A1106]/40 focus:outline-none focus:border-brand-primary font-mono"
+                />
+              )}
             </div>
           )}
           <div className="space-y-2.5 text-sm mb-4 max-h-72 overflow-y-auto pr-1">

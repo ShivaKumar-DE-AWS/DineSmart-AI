@@ -45,6 +45,47 @@ export default function CounterPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["counter-orders", user?.restaurant_id] }),
   });
 
+  const [overrideOrder, setOverrideOrder] = useState<Order | null>(null);
+  const [utrInput, setUtrInput] = useState("");
+  const [overrideNotes, setOverrideNotes] = useState("");
+
+  const verifyCashMut = useMutation({
+    mutationFn: (id: string) => api(`/api/orders/${id}/verify-cash`, { method: "POST" }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["counter-orders", user?.restaurant_id] });
+      toast.success("Cash verified & KOT sent to kitchen!");
+      playChime("ready");
+    },
+  });
+
+  const discardSpamMut = useMutation({
+    mutationFn: (id: string) => api(`/api/orders/${id}/discard-spam`, { method: "DELETE" }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["counter-orders", user?.restaurant_id] });
+      toast.success("Spam order discarded.");
+    },
+  });
+
+  const verifyHighValueMut = useMutation({
+    mutationFn: (id: string) => api(`/api/orders/${id}/verify-high-value`, { method: "POST" }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["counter-orders", user?.restaurant_id] });
+      toast.success("High-value order approved & sent to kitchen!");
+    },
+  });
+
+  const manualOverrideMut = useMutation({
+    mutationFn: ({ id, utr_number, notes }: { id: string; utr_number: string; notes?: string }) =>
+      api(`/api/orders/${id}/manual-override-exit`, { method: "POST", body: JSON.stringify({ utr_number, notes }) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["counter-orders", user?.restaurant_id] });
+      toast.success("Exit Pass manually unlocked!");
+      setOverrideOrder(null);
+      setUtrInput("");
+      setOverrideNotes("");
+    },
+  });
+
   const rawOrders = data?.orders || [];
   const [orderTypeFilter, setOrderTypeFilter] = useState<"all" | "dine_in" | "takeaway">("all");
   const allOrders = rawOrders.filter((o) => {
@@ -56,6 +97,8 @@ export default function CounterPage() {
   const ready = allOrders.filter((o) => o.status === "ready" || (o.status === "served" && o.payment_status !== "paid"));
   const servedToday = rawOrders.filter((o) => o.status === "served" && o.payment_status === "paid").length;
   const unpaidPreOrders = allOrders.filter((o) => o.payment_status !== "paid" && ["pending", "confirmed", "preparing"].includes(o.status));
+  const pendingCashPayCodes = allOrders.filter((o) => o.status === "awaiting_cash_verification");
+  const highValueAlerts = allOrders.filter((o) => o.status === "high_value_verification");
 
   const readyIdsRef = useRef<Set<string> | null>(null);
   useEffect(() => {
@@ -224,6 +267,92 @@ export default function CounterPage() {
         </button>
       </div>
 
+      {/* Pending Cash Pay-Codes Panel */}
+      {pendingCashPayCodes.length > 0 && (
+        <div className="mx-6 mb-6 bg-amber-950/40 border-2 border-amber-500/60 rounded-2xl p-5 shadow-lg">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2 text-amber-400 font-bold text-base uppercase tracking-wider">
+              <span className="text-xl">💰</span> Pending Cash Pay-Codes (Self-Service Verification)
+            </div>
+            <span className="bg-amber-500 text-black font-extrabold px-2.5 py-0.5 rounded-full text-xs">
+              {pendingCashPayCodes.length} Awaiting
+            </span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {pendingCashPayCodes.map((o) => (
+              <div key={o.id} className="bg-zinc-900/90 border border-amber-500/40 rounded-xl p-4 flex flex-col justify-between">
+                <div>
+                  <div className="flex justify-between items-start">
+                    <span className="text-2xl font-black text-amber-400 tracking-wider">#{o.pay_code || o.token}</span>
+                    <span className="text-sm font-bold text-emerald-400">₹{o.total}</span>
+                  </div>
+                  <div className="text-xs text-zinc-400 mt-1">{o.customer_name} • {o.items.length} items</div>
+                  <div className="text-[11px] text-zinc-500 mt-2 line-clamp-2">
+                    {o.items.map(i => `${i.qty}x ${i.name}`).join(", ")}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 mt-4 pt-3 border-t border-zinc-800">
+                  <button
+                    onClick={() => verifyCashMut.mutate(o.id)}
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-lg text-xs flex items-center justify-center gap-1 shadow transition"
+                  >
+                    ✔ Verify Cash & Print KOT
+                  </button>
+                  <button
+                    onClick={() => discardSpamMut.mutate(o.id)}
+                    className="bg-red-500/20 hover:bg-red-500/30 text-red-400 font-bold px-3 py-2 rounded-lg text-xs flex items-center justify-center transition"
+                    title="Discard Spam Order"
+                  >
+                    🗑️ Discard
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* High-Value Dine-In Alerts Panel */}
+      {highValueAlerts.length > 0 && (
+        <div className="mx-6 mb-6 bg-red-950/40 border-2 border-red-500/60 rounded-2xl p-5 shadow-lg animate-pulse">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2 text-red-400 font-bold text-base uppercase tracking-wider">
+              <span className="text-xl">🚨</span> High-Value Order Alert (&gt; ₹2,500 Circuit Breaker)
+            </div>
+            <span className="bg-red-500 text-white font-extrabold px-2.5 py-0.5 rounded-full text-xs">
+              {highValueAlerts.length} Requires Waiter OK
+            </span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {highValueAlerts.map((o) => (
+              <div key={o.id} className="bg-zinc-900/90 border border-red-500/40 rounded-xl p-4 flex flex-col justify-between">
+                <div>
+                  <div className="flex justify-between items-start">
+                    <span className="text-xl font-bold text-white">Table {o.table_number || o.token}</span>
+                    <span className="text-base font-black text-red-400">₹{o.total}</span>
+                  </div>
+                  <div className="text-xs text-zinc-300 mt-1">{o.customer_name} • {o.items.length} items</div>
+                </div>
+                <div className="flex items-center gap-2 mt-4 pt-3 border-t border-zinc-800">
+                  <button
+                    onClick={() => verifyHighValueMut.mutate(o.id)}
+                    className="flex-1 bg-red-600 hover:bg-red-500 text-white font-bold py-2 rounded-lg text-xs flex items-center justify-center gap-1 shadow transition"
+                  >
+                    ✔ Approve Order
+                  </button>
+                  <button
+                    onClick={() => discardSpamMut.mutate(o.id)}
+                    className="bg-zinc-800 hover:bg-zinc-700 text-zinc-400 font-bold px-3 py-2 rounded-lg text-xs transition"
+                  >
+                    Reject
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Main Content - Split View */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-0 border-t border-zinc-800/50">
         {/* Preparing Column */}
@@ -375,12 +504,21 @@ export default function CounterPage() {
                 </div>
                 <div className="mt-auto pt-4 flex gap-2 flex-col sm:flex-row">
                   {o.payment_status !== "paid" && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); markPaidMut.mutate({ id: o.id }); }}
-                      className="flex-1 bg-red-500/30 hover:bg-red-500/40 border border-red-300/60 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 text-sm shadow"
-                    >
-                      <CreditCard className="h-4 w-4" /> MARK PAID
-                    </button>
+                    <>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); markPaidMut.mutate({ id: o.id }); }}
+                        className="flex-1 bg-red-500/30 hover:bg-red-500/40 border border-red-300/60 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 text-sm shadow"
+                      >
+                        <CreditCard className="h-4 w-4" /> MARK PAID
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setOverrideOrder(o); }}
+                        className="bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 font-bold px-3 py-3 rounded-xl transition flex items-center justify-center text-xs shadow"
+                        title="UTR Manual Override"
+                      >
+                        ⚡ UTR
+                      </button>
+                    </>
                   )}
                   {o.status !== "served" && (
                     <button
@@ -413,6 +551,56 @@ export default function CounterPage() {
           onMarkPaid={selectedOrder.payment_status !== "paid" ? () => markPaidMut.mutate({ id: selectedOrder.id }) : undefined}
           onMarkServed={selectedOrder.status !== "served" ? () => mut.mutate({ id: selectedOrder.id }) : undefined}
         />
+      )}
+
+      {overrideOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 max-w-md w-full text-white shadow-2xl">
+            <h3 className="text-lg font-bold mb-1 flex items-center gap-2 text-amber-400">
+              ⚡ UTR Manual Override & Exit Pass
+            </h3>
+            <p className="text-xs text-zinc-400 mb-4">
+              Enter the UPI Transaction Reference (UTR) or override authorization notes for Order #{overrideOrder.token} ({overrideOrder.customer_name}).
+            </p>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-bold uppercase text-zinc-400 mb-1">UTR Number (12 Digits) *</label>
+                <input
+                  type="text"
+                  placeholder="e.g. 319283746501"
+                  value={utrInput}
+                  onChange={(e) => setUtrInput(e.target.value)}
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500 font-mono"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold uppercase text-zinc-400 mb-1">Override Notes (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Verified via GPay merchant SMS"
+                  value={overrideNotes}
+                  onChange={(e) => setOverrideNotes(e.target.value)}
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => { setOverrideOrder(null); setUtrInput(""); setOverrideNotes(""); }}
+                className="px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-bold transition"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={!utrInput.trim()}
+                onClick={() => manualOverrideMut.mutate({ id: overrideOrder.id, utr_number: utrInput.trim(), notes: overrideNotes.trim() })}
+                className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs transition disabled:opacity-50"
+              >
+                Unlock Exit Pass
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -11,7 +11,19 @@ from deps import (
 
 router = APIRouter(tags=["tables"])
 
-TABLE_SESSION_TTL_SECONDS = 10 * 60
+TABLE_SESSION_TTL_SECONDS = 20 * 60
+
+async def purge_idle_sessions(restaurant_id: Optional[str] = None):
+    now = datetime.now(timezone.utc)
+    cutoff = (now - timedelta(minutes=3)).isoformat()
+    q: Dict[str, Any] = {"status": "live", "started_at": {"$lte": cutoff}}
+    if restaurant_id:
+        q["restaurant_id"] = restaurant_id
+    idle_sessions = await db.table_sessions.find(q).to_list(200)
+    for sess in idle_sessions:
+        order_count = await db.orders.count_documents({"table_session_id": sess["id"], "status": {"$ne": "cancelled"}})
+        if order_count == 0:
+            await db.table_sessions.update_one({"id": sess["id"]}, {"$set": {"status": "purged_idle", "purged_at": now_iso()}})
 
 
 # =========================================================
@@ -54,6 +66,7 @@ async def lookup_customer(req: CustomerLookupReq, restaurant_id: Optional[str] =
 @router.get("/api/tables", dependencies=[Depends(require_roles("admin"))])
 async def list_tables(user=Depends(require_user)):
     """List tables for the admin's restaurant."""
+    await purge_idle_sessions(user.get("restaurant_id"))
     q: Dict[str, Any] = {}
     if user.get("restaurant_id"):
         q["restaurant_id"] = user["restaurant_id"]
@@ -71,6 +84,49 @@ async def list_tables(user=Depends(require_user)):
                 await db.table_sessions.update_one({"id": sess["id"]}, {"$set": {"status": "expired"}})
         out.append({**t, "live_session": live})
     return {"tables": out}
+
+
+@router.get("/api/tables/live-floor-map", dependencies=[Depends(require_user)])
+async def get_live_floor_map(user=Depends(require_user)):
+    """Returns all tables with live color-coded status: green (active), yellow (bill requested), red (overtime/unpaid)."""
+    rid = user.get("restaurant_id")
+    await purge_idle_sessions(rid)
+    q: Dict[str, Any] = {}
+    if rid:
+        q["restaurant_id"] = rid
+    tables = await db.tables.find(q, {"_id": 0}).sort("number", 1).to_list(500)
+    
+    now = datetime.now(timezone.utc)
+    res_tables = []
+    for t in tables:
+        sess = await db.table_sessions.find_one({"table_id": t["id"], "status": "live"}, {"_id": 0})
+        t_status = "empty"
+        color_code = "gray"
+        active_order = None
+        if sess:
+            orders = await db.orders.find({"table_session_id": sess["id"], "status": {"$nin": ["cancelled", "completed", "paid"]}}).sort("created_at", -1).to_list(10)
+            if orders:
+                active_order = orders[0]
+                active_order.pop("_id", None)
+                if any(o.get("bill_requested") for o in orders):
+                    t_status = "bill_requested"
+                    color_code = "yellow"
+                else:
+                    t_status = "active"
+                    color_code = "green"
+                    try:
+                        start_dt = datetime.fromisoformat(sess["started_at"].replace("Z", "+00:00"))
+                        if (now - start_dt).total_seconds() > 20 * 60:
+                            t_status = "overtime_warning"
+                            color_code = "red"
+                    except Exception:
+                        pass
+        t["live_status"] = t_status
+        t["color_code"] = color_code
+        t["active_session"] = sess
+        t["active_order"] = active_order
+        res_tables.append(t)
+    return {"tables": res_tables}
 
 
 @router.post("/api/tables", dependencies=[Depends(require_roles("admin"))])
@@ -186,6 +242,19 @@ async def get_table_session(session_id: str):
     if not sess:
         raise HTTPException(status_code=404, detail="Session not found")
     now = datetime.now(timezone.utc)
+    
+    if sess.get("status") == "live" and sess.get("started_at"):
+        try:
+            start_dt = datetime.fromisoformat(sess["started_at"].replace("Z", "+00:00"))
+            if (now - start_dt).total_seconds() > 180:
+                order_count = await db.orders.count_documents({"table_session_id": session_id, "status": {"$ne": "cancelled"}})
+                if order_count == 0:
+                    await db.table_sessions.update_one({"id": session_id}, {"$set": {"status": "purged_idle", "purged_at": now_iso()}})
+                    sess["status"] = "purged_idle"
+                    return {"session": sess, "purged": True, "message": "Table session auto-purged due to 3 minutes of inactivity."}
+        except Exception:
+            pass
+            
     try:
         exp = datetime.fromisoformat(sess["expires_at"].replace("Z", "+00:00"))
     except Exception:

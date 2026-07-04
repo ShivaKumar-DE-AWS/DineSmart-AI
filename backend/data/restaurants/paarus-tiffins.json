@@ -1,0 +1,65 @@
+{
+  "id": "rest_paaru",
+  "name": "Paaru's Tiffins",
+  "slug": "paarus-tiffins",
+  "service_type": "self_service",
+  "tagline": "Quick Self-Service Authentic South Indian Tiffins",
+  "description": "Scan, order, pay instantly via UPI or Cash Pay-Codes, and grab your delicious hot tiffins from the counter!",
+  "primary_color": "#D97706",
+  "secondary_color": "#10B981",
+  "hero_images": [
+    "https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&q=80&w=1200"
+  ],
+  "history": [],
+  "specialties": [
+    "Ghee Roast Dosa",
+    "Fluffy Idli",
+    "Mysore Bajji",
+    "Filter Coffee"
+  ],
+  "famous_dishes": [
+    {
+      "name": "Ghee Roast Masala Dosa",
+      "description": "Crispy fermented crepe roasted in pure cow ghee, served with 3 chutneys and sambar.",
+      "price": "\u20b9120",
+      "image": "https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&q=80&w=600"
+    },
+    {
+      "name": "Steamed Idli (4 pcs)",
+      "description": "Soft and fluffy rice cakes served with piping hot sambar and coconut chutney.",
+      "price": "\u20b960",
+      "image": "https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&q=80&w=600"
+    }
+  ],
+  "why_us": [
+    "Lightning Quick Counter Checkout",
+    "Instant UPI Tap & Pay",
+    "Fresh Chutneys Made Hourly"
+  ],
+  "contact": {
+    "phone": "+91 91234 56789",
+    "email": "orders@paarustiffins.com",
+    "address": "Indiranagar, Bangalore"
+  },
+  "social_links": {
+    "instagram": "https://instagram.com/paarustiffins"
+  },
+  "hours": {
+    "lunch": "7:00 AM - 1:00 PM",
+    "dinner": "4:30 PM - 10:00 PM",
+    "open_days": "Mon - Sun"
+  },
+  "reviews": [],
+  "offers": [],
+  "menu_config": {
+    "category_order": [
+      "Tiffins",
+      "Dosas",
+      "Vadas & Bajjis",
+      "Beverages"
+    ],
+    "show_best_sellers": true,
+    "show_chef_specials": true,
+    "show_recommendations": true
+  }
+}

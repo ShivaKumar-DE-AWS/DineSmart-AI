@@ -42,11 +42,15 @@ export type OrderStatus =
   | "preparing"
   | "ready"
   | "served"
-  | "cancelled";
+  | "cancelled"
+  | "awaiting_cash_verification"
+  | "high_value_verification"
+  | "manual_override_exit";
 
 export interface Order {
   id: string;
   token: string; // e.g. "A-042"
+  pay_code?: string; // e.g. "C-401"
   customer_name: string;
   customer_phone?: string | null;
   customer_id?: string | null;

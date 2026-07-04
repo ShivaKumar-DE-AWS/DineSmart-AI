@@ -97,6 +97,12 @@ export default function AdminTables() {
     queryFn: () => api<{ tables: TableDoc[] }>("/api/tables"),
     refetchInterval: 10000,
   });
+  const { data: floorMapData } = useQuery({
+    queryKey: ["admin-floor-map", user?.restaurant_id],
+    queryFn: () => api<{ tables: any[] }>("/api/tables/live-floor-map"),
+    refetchInterval: 5000,
+  });
+  const liveFloorTables = floorMapData?.tables || [];
   const [newNumber, setNewNumber] = useState("");
   const [newCapacity, setNewCapacity] = useState("4");
   const [adding, setAdding] = useState(false);
@@ -162,6 +168,66 @@ export default function AdminTables() {
       </div>
 
       {isLoading && <div className="text-stone">Loading tables…</div>}
+
+      {/* Live Floor Map Section */}
+      <div className="bg-zinc-900 border-2 border-zinc-800 rounded-3xl p-6 mb-8 text-white shadow-xl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div>
+            <h3 className="text-lg font-bold text-amber-400 flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-amber-500" /> Live Floor Management Map
+            </h3>
+            <p className="text-xs text-zinc-400 mt-0.5">
+              Real-time monitoring of active table sessions, bill requests, and overtime warnings (&gt; 20 mins).
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-4 text-xs font-semibold">
+            <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-emerald-500"></span> Active (🟢)</span>
+            <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-yellow-500"></span> Bill Req (🟡)</span>
+            <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-red-500 animate-ping"></span> Overtime (🔴)</span>
+            <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-zinc-600"></span> Empty</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
+          {liveFloorTables.map((lt) => {
+            let bgStyle = "bg-zinc-800/80 border-zinc-700 text-zinc-400";
+            let statusText = "Empty";
+            if (lt.color_code === "green") {
+              bgStyle = "bg-emerald-950/80 border-emerald-500/60 text-emerald-300 shadow-lg shadow-emerald-500/10";
+              statusText = "🟢 Active";
+            } else if (lt.color_code === "yellow") {
+              bgStyle = "bg-yellow-950/80 border-yellow-500/80 text-yellow-300 shadow-lg shadow-yellow-500/10";
+              statusText = "🟡 Bill Req";
+            } else if (lt.color_code === "red") {
+              bgStyle = "bg-red-950/90 border-red-500 text-red-200 shadow-lg shadow-red-500/20 animate-pulse";
+              statusText = "🔴 OVERTIME";
+            }
+            return (
+              <div key={lt.id} className={`border rounded-2xl p-3 flex flex-col justify-between transition-all ${bgStyle}`}>
+                <div className="flex justify-between items-start">
+                  <span className="font-black text-lg text-white">T{lt.number}</span>
+                  <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-black/30">
+                    {statusText}
+                  </span>
+                </div>
+                <div className="mt-2 text-xs opacity-80 truncate">
+                  {lt.active_session?.customer_name || `${lt.capacity} seats`}
+                </div>
+                {lt.active_order && (
+                  <div className="mt-1 font-mono font-bold text-xs">
+                    ₹{lt.active_order.total}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {liveFloorTables.length === 0 && (
+            <div className="col-span-full py-8 text-center text-zinc-500 text-xs">
+              No floor tables found. Add tables below to view the live map.
+            </div>
+          )}
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {/* Takeaway QR card — always shown */}

@@ -4,6 +4,8 @@ import uuid
 import asyncio
 import json
 import re
+import math
+import random
 import logging
 from datetime import datetime, timezone, timedelta
 from typing import Optional, Dict, Any, List
@@ -18,6 +20,16 @@ from deps import (
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["orders"])
+
+def haversine_meters(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    R = 6371000.0
+    phi1 = math.radians(lat1)
+    phi2 = math.radians(lat2)
+    delta_phi = math.radians(lat2 - lat1)
+    delta_lambda = math.radians(lon2 - lon1)
+    a = math.sin(delta_phi / 2.0)**2 + math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda / 2.0)**2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return R * c
 
 
 # =========================================================
@@ -172,13 +184,58 @@ async def create_order(req: OrderCreateReq):
     
     tax = round(subtotal * TAX_RATE, 2)
     total = round(subtotal + tax, 2)
-    token = await next_token(req.restaurant_id or "", req.order_type)
-    eta = (datetime.now(timezone.utc) + timedelta(minutes=max(max_prep, 8))).isoformat()
     restaurant_id = req.restaurant_id
+    
+    # --- DUAL SERVICE MODEL & SECURITY CHECKS ---
+    rest_doc = await db.restaurants.find_one({"id": restaurant_id}) if restaurant_id else {}
+    service_type = rest_doc.get("service_type", "fine_dining") if rest_doc else "fine_dining"
+    
+    # 1. GPS Geo-Fencing Check (Dine-In)
+    if service_type != "self_service" and rest_doc and rest_doc.get("geo_fencing_enabled"):
+        rlat = rest_doc.get("latitude")
+        rlon = rest_doc.get("longitude")
+        if rlat is not None and rlon is not None and req.latitude is not None and req.longitude is not None:
+            dist = haversine_meters(float(rlat), float(rlon), float(req.latitude), float(req.longitude))
+            if dist > 50.0:
+                raise HTTPException(status_code=403, detail="You must be within 50 meters of the restaurant to place a dine-in order.")
+    
+    # 2. Table PIN Check (Dine-In)
+    if service_type != "self_service" and req.table_number:
+        table_doc = await db.tables.find_one({"restaurant_id": restaurant_id, "table_number": req.table_number})
+        if table_doc and table_doc.get("table_pin"):
+            if not req.table_pin or req.table_pin != table_doc["table_pin"]:
+                raise HTTPException(status_code=403, detail=f"Invalid Table PIN for Table {req.table_number}. Please ask your waiter for the 4-digit PIN.")
+
+    # 3. Rate Limiting / Spam Protection (Self-Service)
+    if service_type == "self_service" and req.payment_method in {"cash", "upi", "card_machine"}:
+        if req.device_id:
+            active_unpaid = await db.orders.find_one({"restaurant_id": restaurant_id, "device_id": req.device_id, "status": "awaiting_cash_verification"})
+            if active_unpaid:
+                raise HTTPException(status_code=429, detail="You already have an active unpaid Pay-Code. Please pay at counter or cancel it before placing another order.")
+
+    # 4. State Machine & Token Generation
+    token = None
+    pay_code = None
+    status = "confirmed"
+    
+    if service_type == "self_service" and req.payment_method in {"cash", "upi", "card_machine"}:
+        status = "awaiting_cash_verification"
+        pay_code = f"C-{random.randint(100, 999)}"
+        token = f"PAY-{pay_code}"
+    else:
+        high_val_thresh = rest_doc.get("high_value_threshold", 2500.0) if rest_doc else 2500.0
+        max_item_qty = max([i["qty"] for i in validated_items], default=0)
+        if total >= high_val_thresh or max_item_qty > 8:
+            status = "high_value_verification"
+        token = await next_token(restaurant_id or "", req.order_type)
+
+    eta = (datetime.now(timezone.utc) + timedelta(minutes=max(max_prep, 8))).isoformat()
     
     order = {
         "id": str(uuid.uuid4()),
         "token": token,
+        "pay_code": pay_code,
+        "service_type": service_type,
         "customer_name": customer_name,
         "customer_phone": customer_phone,
         "restaurant_id": restaurant_id,
@@ -186,7 +243,7 @@ async def create_order(req: OrderCreateReq):
         "subtotal": subtotal,
         "tax": tax,
         "total": total,
-        "status": "confirmed",
+        "status": status,
         "created_at": now_iso(),
         "updated_at": now_iso(),
         "estimated_ready_at": eta,
@@ -259,7 +316,12 @@ async def create_order(req: OrderCreateReq):
             logger.debug("[AI Memory] Aggregation failed: %s", e)
     
     # Broadcast to SSE subscribers (kitchen/counter real-time)
-    broadcast_order_update(restaurant_id, {"type": "new_order", "order": {k: v for k, v in order.items() if k != "_id"}})
+    if order["status"] == "confirmed":
+        broadcast_order_update(restaurant_id, {"type": "new_order", "order": {k: v for k, v in order.items() if k != "_id"}})
+    elif order["status"] == "awaiting_cash_verification":
+        broadcast_order_update(restaurant_id, {"type": "pending_paycode", "order": {k: v for k, v in order.items() if k != "_id"}})
+    elif order["status"] == "high_value_verification":
+        broadcast_order_update(restaurant_id, {"type": "high_value_alert", "order": {k: v for k, v in order.items() if k != "_id"}})
     return {"ok": True, "order_id": order["id"], "token": token, "total": total}
 
 
@@ -633,3 +695,79 @@ async def payment_intent(req: PaymentReq):
 @router.get("/api/payment/config")
 async def payment_config():
     return {"stripe_enabled": False, "provider": "upi_qr"}
+
+
+@router.post("/api/orders/{order_id}/verify-cash", dependencies=[Depends(require_user)])
+async def verify_cash_paycode(order_id: str, user=Depends(require_user)):
+    order = await db.orders.find_one({"id": order_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    if order.get("status") != "awaiting_cash_verification":
+        return {"ok": True, "message": "Order already verified or processed"}
+    
+    restaurant_id = order["restaurant_id"]
+    new_token = await next_token(restaurant_id, order.get("order_type", "self_service"))
+    
+    await db.orders.update_one(
+        {"id": order_id},
+        {"$set": {
+            "status": "confirmed",
+            "payment_status": "paid",
+            "token": new_token,
+            "pay_code": None,
+            "paid_at": now_iso(),
+            "updated_at": now_iso()
+        }}
+    )
+    
+    updated_order = await db.orders.find_one({"id": order_id}, {"_id": 0})
+    broadcast_order_update(restaurant_id, {"type": "new_order", "order": updated_order})
+    broadcast_order_update(restaurant_id, {"type": "status_update", "order_id": order_id, "token": new_token, "status": "confirmed", "payment_status": "paid"})
+    return {"ok": True, "order": updated_order}
+
+
+@router.post("/api/orders/{order_id}/discard-spam", dependencies=[Depends(require_user)])
+async def discard_spam_order(order_id: str, user=Depends(require_user)):
+    order = await db.orders.find_one({"id": order_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    await db.orders.update_one({"id": order_id}, {"$set": {"status": "cancelled", "updated_at": now_iso()}})
+    broadcast_order_update(order["restaurant_id"], {"type": "order_removed", "order_id": order_id})
+    return {"ok": True}
+
+
+@router.post("/api/orders/{order_id}/verify-high-value", dependencies=[Depends(require_user)])
+async def verify_high_value_order(order_id: str, user=Depends(require_user)):
+    order = await db.orders.find_one({"id": order_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    await db.orders.update_one({"id": order_id}, {"$set": {"status": "confirmed", "updated_at": now_iso()}})
+    updated_order = await db.orders.find_one({"id": order_id}, {"_id": 0})
+    broadcast_order_update(order["restaurant_id"], {"type": "new_order", "order": updated_order})
+    return {"ok": True, "order": updated_order}
+
+
+@router.post("/api/orders/{order_id}/manual-override-exit", dependencies=[Depends(require_user)])
+async def manual_override_exit(order_id: str, body: OrderStatusUpdate, user=Depends(require_user)):
+    order = await db.orders.find_one({"id": order_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    emp_name = user.get("name") or user.get("email") or "Cashier"
+    override_note = body.override_reason or f"Manual UTR override by {emp_name}. UTR: {body.utr_number or 'N/A'}"
+    
+    await db.orders.update_one(
+        {"id": order_id},
+        {"$set": {
+            "payment_status": "paid",
+            "exit_code": f"OVR-{order_id[-6:].upper()}",
+            "override_reason": override_note,
+            "utr_number": body.utr_number,
+            "paid_at": now_iso(),
+            "updated_at": now_iso()
+        }}
+    )
+    
+    updated_order = await db.orders.find_one({"id": order_id}, {"_id": 0})
+    broadcast_order_update(order["restaurant_id"], {"type": "status_update", "order_id": order_id, "token": order["token"], "payment_status": "paid"})
+    return {"ok": True, "order": updated_order}

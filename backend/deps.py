@@ -233,6 +233,12 @@ class RestaurantModel(BaseModel):
     sandbox_mode: bool = True
     stripe_customer_id: Optional[str] = None
     stripe_subscription_id: Optional[str] = None
+    service_type: str = "fine_dining"
+    session_duration_minutes: int = 20
+    high_value_threshold: float = 2500.0
+    geo_fencing_enabled: bool = False
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 def check_pro_access(restaurant: dict) -> bool:
@@ -315,11 +321,18 @@ class OrderCreateReq(BaseModel):
     order_type: str = "dine_in"
     idempotency_key: Optional[str] = None
     device_id: Optional[str] = None
+    table_pin: Optional[str] = None
+    pay_code: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
 class OrderStatusUpdate(BaseModel):
     status: Optional[str] = None
     payment_status: Optional[str] = None
     bill_requested: Optional[bool] = None
+    pay_code: Optional[str] = None
+    override_reason: Optional[str] = None
+    utr_number: Optional[str] = None
 
 class InventoryItemModel(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -412,6 +425,12 @@ class SettingsUpdateReq(BaseModel):
     logo_url: Optional[str] = None
     upi_id: Optional[str] = None
     payment_qr_url: Optional[str] = None
+    service_type: Optional[str] = None
+    session_duration_minutes: Optional[int] = None
+    high_value_threshold: Optional[float] = None
+    geo_fencing_enabled: Optional[bool] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
 class StaffUpdateReq(BaseModel):
     id: Optional[str] = None
