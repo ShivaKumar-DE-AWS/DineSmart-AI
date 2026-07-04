@@ -213,7 +213,7 @@ export async function sendAIWaiterEvent(
 
       if (isSpicy) {
         const rec = { id: "cool-1", name: "Sweet Lassi", price: 90, category: "Beverages" };
-        instantMsg = `🌶️ ${name} has a bold, spicy flavor profile! AI Waiter suggests pairing it with a cooling ${rec.name} (₹${rec.price}) to balance your palate perfectly.`;
+        instantMsg = `🌶️ Excellent choice! ${name} has a bold, spiced flavor profile. AI Waiter suggests pairing it with a cooling ${rec.name} to balance your palate perfectly!`;
         suggestedAction = {
           label: `+ Add ${rec.name} (₹${rec.price})`,
           onClick: () => {
@@ -222,7 +222,7 @@ export async function sendAIWaiterEvent(
         };
       } else if (cat.includes("biryani") || cat.includes("main") || cat.includes("curry") || cat.includes("rice") || cat.includes("thali")) {
         const rec = { id: "side-1", name: "Mint Raita", price: 80, category: "Sides" };
-        instantMsg = `✨ Added ${name}! AI Waiter suggests pairing it with a cooling ${rec.name} or Butter Naan for a royal feast!`;
+        instantMsg = `✨ Excellent choice! ${name} is a royal crowd-pleaser with aromatic rich flavors. AI Waiter suggests pairing it with a cooling ${rec.name} or Butter Naan!`;
         suggestedAction = {
           label: `+ Add ${rec.name} (₹${rec.price})`,
           onClick: () => {
@@ -231,7 +231,7 @@ export async function sendAIWaiterEvent(
         };
       } else if (cat.includes("starter") || cat.includes("kebab") || cat.includes("appetizer") || cat.includes("snack") || cat.includes("tikka")) {
         const rec = { id: "bread-1", name: "Butter Naan", price: 50, category: "Breads" };
-        instantMsg = `✨ ${name} is a crowd favorite starter! Ready for mains? Pair it with fresh tandoori bread or Biryani.`;
+        instantMsg = `✨ Great choice! ${name} is a crowd favorite starter. Ready for mains? AI Waiter suggests pairing it with fresh tandoori ${rec.name} or Biryani!`;
         suggestedAction = {
           label: `+ Add ${rec.name} (₹${rec.price})`,
           onClick: () => {
@@ -240,7 +240,7 @@ export async function sendAIWaiterEvent(
         };
       } else if (cat.includes("bread") || cat.includes("naan") || cat.includes("roti") || cat.includes("paratha") || cat.includes("kulcha")) {
         const rec = { id: "main-1", name: "Dal Makhani", price: 220, category: "Main Course" };
-        instantMsg = `✨ Fresh tandoori bread! ${name} dips wonderfully into our signature ${rec.name} or Butter Chicken.`;
+        instantMsg = `✨ Excellent choice! Fresh tandoori ${name} dips wonderfully into our signature ${rec.name} or Butter Chicken for a royal feast!`;
         suggestedAction = {
           label: `+ Add ${rec.name} (₹${rec.price})`,
           onClick: () => {
@@ -248,7 +248,7 @@ export async function sendAIWaiterEvent(
           }
         };
       } else {
-        instantMsg = `✨ ${name} added to your thali! Check our Chef Specials for signature pairings!`;
+        instantMsg = `✨ Excellent choice! ${name} is a wonderful addition to your thali. Check our Chef Specials for signature pairings!`;
       }
       
       if (suggestedAction) {
@@ -297,8 +297,6 @@ export async function sendAIWaiterEvent(
             if (response) {
               if (response.action_type === "UPSELL_OFFER" && response.suggested_items.length > 0) {
                 showAIUpsellSheet(response.dialogue_text, response.suggested_items, addToCartFn, proceedPayFn);
-              } else if (response.action_type === "ITEM_VALIDATION" && response.dialogue_text) {
-                showAIToast(response.dialogue_text, 4000);
               }
             }
             if (_pendingItemAddedResolve) _pendingItemAddedResolve(response);
@@ -328,8 +326,6 @@ export async function sendAIWaiterEvent(
     // Route to the correct UI handler
     if (response.action_type === "WELCOME") {
       showAIWelcomeModal(response.dialogue_text, 20000);
-    } else if (response.action_type === "ITEM_VALIDATION") {
-      showAIToast(response.dialogue_text, 20000);
     } else if (response.action_type === "UPSELL_OFFER") {
       showAIUpsellSheet(response.dialogue_text, response.suggested_items, addToCartFn, proceedPayFn);
     }
@@ -679,6 +675,10 @@ function _closeSheet(): void {
  * Auto-closes after 5 seconds if user does not interact.
  */
 export function showAIWelcomeModal(message: string, autoDismissMs = 20000): void {
+  if (typeof window !== "undefined") {
+    if (sessionStorage.getItem("sd_ai_welcome_shown") === "true") return;
+    sessionStorage.setItem("sd_ai_welcome_shown", "true");
+  }
   _bootstrapUI();
   const welcome = document.getElementById("ai-waiter-welcome");
   const text    = document.getElementById("ai-welcome-text");

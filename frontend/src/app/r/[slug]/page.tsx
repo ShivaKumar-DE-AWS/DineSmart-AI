@@ -12,7 +12,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { sortCategories } from "@/utils/categoryOrder";
 import type { MenuItem } from "@/types";
 import { sendAIWaiterEvent } from "@/lib/ai_waiter_client";
-import { useTable } from "@/stores/table";
 
 export default function NativeAppHomeMenu() {
   const params = useParams();
@@ -31,23 +30,6 @@ export default function NativeAppHomeMenu() {
   const [mounted, setMounted] = useState(false);
   
   useEffect(() => setMounted(true), []);
-
-  // AI Waiter: fire QR_SCAN welcome ONLY if customer is in an active table session or takeaway session
-  useEffect(() => {
-    if (!restaurantConfig?.id || !mounted) return;
-    const session = useTable.getState().session;
-    const isTakeaway = typeof window !== "undefined" && localStorage.getItem("sd-order-type") === "takeaway";
-    const isTableJoin = typeof window !== "undefined" && (window.location.search.includes("t=") || window.location.search.includes("table="));
-    // Do not pop up if they are still on the QR scan alias joining screen or without a session
-    if (!session && !isTakeaway) return;
-    if (isTableJoin && !session) return;
-
-    sendAIWaiterEvent({
-      event_type: "QR_SCAN",
-      restaurant_id: restaurantConfig.id,
-      cart_state: [],
-    }).catch(() => {/* silent */});
-  }, [restaurantConfig?.id, mounted]);
 
   // AI Waiter: fire ITEM_ADDED toast on every add-to-cart action
   const handleAddToCart = useCallback((item: MenuItem) => {

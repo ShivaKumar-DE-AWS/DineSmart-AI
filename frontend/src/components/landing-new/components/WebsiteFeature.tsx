@@ -110,18 +110,18 @@ export default function WebsiteFeature() {
             </div>
 
             {/* Floating badges - repositioned for mobile */}
-            <div className="absolute -bottom-3 -left-2 sm:-bottom-6 sm:-left-6 card-solid rounded-xl sm:rounded-2xl px-3 py-2 sm:px-4 sm:py-3 border border-emerald-400/40 shadow-xl flex items-center gap-2">
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-emerald-400/20 flex items-center justify-center text-sm">⚡</div>
+            <div className="absolute -bottom-3 left-2 sm:-bottom-6 sm:-left-6 card-solid rounded-xl sm:rounded-2xl px-2.5 py-1.5 sm:px-4 sm:py-3 border border-emerald-400/40 shadow-xl flex items-center gap-1.5 sm:gap-2 max-w-[160px] sm:max-w-none">
+              <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-emerald-400/20 flex items-center justify-center text-xs sm:text-sm shrink-0">⚡</div>
               <div className="min-w-0">
-                <div className="text-[10px] sm:text-[12px] text-cream font-medium leading-tight">Live in minutes</div>
-                <div className="text-[9px] sm:text-[10px] text-cream/50 leading-tight">We set it up</div>
+                <div className="text-[10px] sm:text-[12px] text-cream font-medium leading-tight truncate">Live in minutes</div>
+                <div className="text-[8px] sm:text-[10px] text-cream/50 leading-tight truncate">We set it up</div>
               </div>
             </div>
-            <div className="absolute -top-3 -right-2 sm:-top-6 sm:-right-6 card-solid rounded-xl sm:rounded-2xl px-3 py-2 sm:px-4 sm:py-3 border border-gold/40 shadow-xl flex items-center gap-2">
-              <QrIcon className="w-5 h-5 sm:w-6 sm:h-6 text-gold" />
+            <div className="absolute -top-3 right-2 sm:-top-6 sm:-right-6 card-solid rounded-xl sm:rounded-2xl px-2.5 py-1.5 sm:px-4 sm:py-3 border border-gold/40 shadow-xl flex items-center gap-1.5 sm:gap-2 max-w-[160px] sm:max-w-none">
+              <QrIcon className="w-4 h-4 sm:w-6 sm:h-6 text-gold shrink-0" />
               <div className="min-w-0">
-                <div className="text-[10px] sm:text-[12px] text-cream font-medium leading-tight">QR menu linked</div>
-                <div className="text-[9px] sm:text-[10px] text-cream/50 leading-tight">One presence</div>
+                <div className="text-[10px] sm:text-[12px] text-cream font-medium leading-tight truncate">QR menu linked</div>
+                <div className="text-[8px] sm:text-[10px] text-cream/50 leading-tight truncate">One presence</div>
               </div>
             </div>
           </div>

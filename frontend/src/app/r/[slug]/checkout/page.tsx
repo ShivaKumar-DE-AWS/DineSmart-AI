@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter , useParams} from "next/navigation";
 import Link from "next/link";
 import { useCart } from "@/stores/cart";
@@ -67,6 +67,7 @@ export default function CheckoutPage() {
   const [phone, setPhone] = useState("");
   const [generalNotes, setGeneralNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const _isProcessingRef = useRef(false);
   const [stripeEnabled, setStripeEnabled] = useState<boolean | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "upi" | "card_machine">("cash");
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
@@ -150,9 +151,11 @@ export default function CheckoutPage() {
    * If AI Waiter fails or times out, falls through directly to submit().
    */
   const handleCheckout = async () => {
+    if (_isProcessingRef.current || submitting) return;
     const restId = restaurantConfig?.id;
     if (!restId || cart.items.length === 0) { submit(); return; }
 
+    _isProcessingRef.current = true;
     setSubmitting(true);
     try {
       const aiRes = await sendAIWaiterEvent(
@@ -190,26 +193,31 @@ export default function CheckoutPage() {
       );
       // If AI returned no suggestions or a non-UPSELL response, proceed immediately
       if (!aiRes || aiRes.action_type !== "UPSELL_OFFER" || aiRes.suggested_items.length === 0) {
+        _isProcessingRef.current = false;
         submit();
       } else {
-        // Bottom Sheet is now open; stop button spinner while user decides
+        // Bottom Sheet is now open; allow user to decide inside modal
+        _isProcessingRef.current = false;
         setSubmitting(false);
       }
     } catch {
       // AI Waiter failure → fall through to order placement without interruption
+      _isProcessingRef.current = false;
       submit();
     }
   };
 
   const submit = async () => {
+    if (_isProcessingRef.current) return;
     const finalName = table?.customer_name || profile?.name || name.trim() || "Guest";
     if (!finalName) { toast.error("Please share your name — every great meal starts with a name."); return; }
     const currentItems = useCart.getState().items;
     if (currentItems.length === 0) { toast.error("Your thali is empty"); return; }
+    _isProcessingRef.current = true;
     setSubmitting(true);
     try {
       const restId = restaurantConfig?.id || "";
-      if (!restId) { toast.error("Restaurant not found. Please try again."); setSubmitting(false); return; }
+      if (!restId) { toast.error("Restaurant not found. Please try again."); _isProcessingRef.current = false; setSubmitting(false); return; }
 
       const payload = {
         restaurant_id: restId,
@@ -237,6 +245,7 @@ export default function CheckoutPage() {
       subscribeToOffers(restaurantConfig?.id || slug, res.order_id).catch(() => {});
       router.push(`/r/${slug}/token/${res.order_id}`);
     } catch (e) {
+      _isProcessingRef.current = false;
       const err = e as Error;
       toast.error(err.message || "Checkout failed");
     } finally {

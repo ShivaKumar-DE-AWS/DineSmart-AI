@@ -17,7 +17,6 @@ import React from "react";
 import { sortCategories } from "@/utils/categoryOrder";
 
 import type { MenuItem } from "@/types";
-import { useTable } from "@/stores/table";
 
 type DietFilter = "all" | "veg" | "non-veg";
 
@@ -94,23 +93,6 @@ export default function MenuPage() {
       setTimeGreeting("Our");
     }
   }, []);
-
-  // AI Waiter: fire QR_SCAN welcome once restaurant config is loaded and session is active
-  const _aiWelcomeFired = useRef(false);
-  useEffect(() => {
-    if (!restaurantConfig?.id || _aiWelcomeFired.current) return;
-    const session = useTable.getState().session;
-    const isTakeaway = typeof window !== "undefined" && localStorage.getItem("sd-order-type") === "takeaway";
-    const isTableJoin = typeof window !== "undefined" && (window.location.search.includes("t=") || window.location.search.includes("table="));
-    if (!session && !isTakeaway) return;
-    if (isTableJoin && !session) return;
-
-    _aiWelcomeFired.current = true;
-    sendAIWaiterEvent({
-      event_type: "QR_SCAN",
-      restaurant_id: restaurantConfig.id,
-    }).catch(() => {/* silent — AI Waiter must never block menu */});
-  }, [restaurantConfig?.id]);
 
   // AI Waiter: fire ITEM_ADDED toast on every add-to-cart action
   const handleAddToCart = useCallback((item: MenuItem) => {

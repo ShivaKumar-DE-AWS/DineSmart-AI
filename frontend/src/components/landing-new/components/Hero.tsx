@@ -87,22 +87,22 @@ function MobileHeroVisual() {
       </div>
 
       {/* Floating chips */}
-      <div className="absolute -left-16 top-10 glass-strong rounded-2xl px-2.5 py-2 animate-floaty">
+      <div className="absolute -left-2 sm:-left-16 top-10 glass-strong rounded-2xl px-2 py-1.5 sm:px-2.5 sm:py-2 animate-floaty">
         <div className="flex items-center gap-1.5">
           <BellIcon className="w-3.5 h-3.5 text-gold" />
-          <span className="text-[10px] text-cream">T12 needs refill</span>
+          <span className="text-[9px] sm:text-[10px] text-cream">T12 needs refill</span>
         </div>
       </div>
-      <div className="absolute -right-14 top-20 glass-strong rounded-2xl px-2.5 py-2 animate-floaty-slow">
-        <div className="text-[9px] text-cream/60">Revenue today</div>
+      <div className="absolute -right-2 sm:-right-14 top-20 glass-strong rounded-2xl px-2 py-1.5 sm:px-2.5 sm:py-2 animate-floaty-slow">
+        <div className="text-[8px] sm:text-[9px] text-cream/60">Revenue today</div>
         <div className="text-xs text-gradient-gold font-display">₹1.42L</div>
         <div className="text-[8px] text-emerald-300">▲ 28%</div>
       </div>
-      <div className="absolute -right-12 bottom-24 glass-strong rounded-xl px-2 py-1.5 animate-floaty">
-        <div className="flex items-center gap-1 text-[9px] text-cream/70"><ChartIcon className="w-3 h-3 text-gold" /> 312 orders</div>
+      <div className="absolute -right-2 sm:-right-12 bottom-24 glass-strong rounded-xl px-2 py-1 sm:py-1.5 animate-floaty">
+        <div className="flex items-center gap-1 text-[8px] sm:text-[9px] text-cream/70"><ChartIcon className="w-3 h-3 text-gold" /> 312 orders</div>
       </div>
-      <div className="absolute -left-10 bottom-28 glass-strong rounded-xl p-1.5 animate-floaty-slow">
-        <div className="w-10 h-10 bg-white rounded-lg p-1"><MiniQR /></div>
+      <div className="absolute -left-2 sm:-left-10 bottom-28 glass-strong rounded-xl p-1.5 animate-floaty-slow">
+        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-lg p-1"><MiniQR /></div>
       </div>
     </div>
   );

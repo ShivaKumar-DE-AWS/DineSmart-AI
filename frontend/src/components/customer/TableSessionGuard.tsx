@@ -112,6 +112,7 @@ export function TableSessionGuard({ slug }: { slug?: string }) {
           localStorage.setItem("sd-takeaway-name", displayName);
         }
         toast.success(`Welcome to ${restaurantName}, ${displayName}! Takeaway ready.`);
+        if (typeof window !== "undefined") sessionStorage.removeItem("sd_ai_welcome_shown");
         sendAIWaiterEvent({ event_type: "QR_SCAN", restaurant_id: restaurantConfig?.id || slugFromPath || "", cart_state: [] }).catch(() => {/* silent */});
         setQrToken(null);
         router.replace(`/r/${slugFromPath}`, { scroll: false });
@@ -135,6 +136,7 @@ export function TableSessionGuard({ slug }: { slug?: string }) {
 
       setSession(res.session);
       toast.success(`Welcome to Table ${res.table.number}, ${displayName}!`);
+      if (typeof window !== "undefined") sessionStorage.removeItem("sd_ai_welcome_shown");
       sendAIWaiterEvent({ event_type: "QR_SCAN", restaurant_id: restaurantConfig?.id || res.table.restaurant_id || slugFromPath || "", cart_state: [] }).catch(() => {/* silent */});
       setQrToken(null);
       router.replace(`/r/${slugFromPath}`, { scroll: false });
