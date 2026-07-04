@@ -244,11 +244,11 @@ INSTRUCTIONS:
 # Step 3: Gemini SDK Call
 # =========================================================
 
-async def _call_gemini(prompt: str, event_type: str = "WELCOME", fav_item: str = "") -> AIWaiterEventResponse:
+async def _call_gemini(prompt: str, event_type: str = "WELCOME", fav_item: str = "", menu_snapshot: Optional[List[dict]] = None) -> AIWaiterEventResponse:
     """Call Gemini with automatic model switching and graceful fallback on exhaustion."""
     if not GEMINI_API_KEY:
         logger.warning("[AI Waiter] GEMINI_API_KEY not set. Returning graceful fallback.")
-        return _fallback_response(event_type, fav_item)
+        return _fallback_response(event_type, fav_item, menu_snapshot)
 
     try:
         from google import genai
@@ -295,14 +295,14 @@ async def _call_gemini(prompt: str, event_type: str = "WELCOME", fav_item: str =
                 continue
 
         logger.error("[AI Waiter] All Gemini models failed or exhausted. Using fallback response.")
-        return _fallback_response(event_type, fav_item)
+        return _fallback_response(event_type, fav_item, menu_snapshot)
 
     except Exception as exc:
         logger.error("[AI Waiter] Unexpected error calling Gemini: %s. Using fallback response.", exc)
-        return _fallback_response(event_type, fav_item)
+        return _fallback_response(event_type, fav_item, menu_snapshot)
 
 
-def _fallback_response(event_type: str, fav_item: str = "") -> AIWaiterEventResponse:
+def _fallback_response(event_type: str, fav_item: str = "", menu_snapshot: Optional[List[dict]] = None) -> AIWaiterEventResponse:
     """Return a polite, non-blocking fallback response if models fail or time out."""
     if event_type == "QR_SCAN":
         msg = f"Welcome back! Would you like to start with your usual {fav_item}? We are delighted to host you today." if fav_item else "Welcome! We are delighted to host you today. Please explore our curated menu and let us know if we can craft anything special for your table."
@@ -319,14 +319,23 @@ def _fallback_response(event_type: str, fav_item: str = "") -> AIWaiterEventResp
             suggested_items=[],
         )
     else:
-        # Strategy 3: Circuit Breaker fallback during CHECKOUT -> return classic signature pairings
+        # Strategy 3: Circuit Breaker fallback during CHECKOUT -> return real menu items from snapshot
+        fallback_sugs = []
+        if menu_snapshot:
+            for item in menu_snapshot:
+                if item.get("available", True) is not False:
+                    fallback_sugs.append(AISuggestedItem(
+                        item_id=str(item.get("id", "")),
+                        name=str(item.get("name", "")),
+                        price=float(item.get("price", 0.0)),
+                        reason=str(item.get("description", "Chef signature recommendation."))
+                    ))
+                if len(fallback_sugs) >= 2:
+                    break
         return AIWaiterEventResponse(
-            dialogue_text="To complete your feast, our Chef recommends these signature pairings:",
+            dialogue_text="To complete your feast, our Chef recommends these signature pairings from our menu:",
             action_type="UPSELL_OFFER",
-            suggested_items=[
-                AISuggestedItem(item_id="bread-naan", name="Butter Naan", price=50.0, reason="Fresh tandoori bread baked to perfection."),
-                AISuggestedItem(item_id="bev-lassi", name="Sweet Lassi", price=90.0, reason="Traditional chilled yogurt drink to refresh your palate.")
-            ],
+            suggested_items=fallback_sugs,
         )
 
 
@@ -403,7 +412,24 @@ async def ai_waiter_event(req: AIWaiterEventRequest):
         fav_item=fav_item,
     )
 
-    ai_response = await _call_gemini(prompt, req.event_type, fav_item)
+    ai_response = await _call_gemini(prompt, req.event_type, fav_item, menu_snapshot)
+
+    # Step 4: Strict Menu Validation - strip out any suggestion not in menu_snapshot
+    if ai_response and ai_response.suggested_items and menu_snapshot:
+        valid_suggestions = []
+        for sug in ai_response.suggested_items:
+            matched = next(
+                (m for m in menu_snapshot if str(m.get("id")) == str(sug.item_id) or str(m.get("name", "")).lower().strip() == str(sug.name).lower().strip()),
+                None
+            )
+            if matched and matched.get("available", True) is not False:
+                sug.item_id = str(matched.get("id", sug.item_id))
+                sug.name = str(matched.get("name", sug.name))
+                sug.price = float(matched.get("price", sug.price))
+                valid_suggestions.append(sug)
+            else:
+                logger.warning("[AI Waiter] Dropped non-menu or unavailable suggestion: %s (%s)", sug.name, sug.item_id)
+        ai_response.suggested_items = valid_suggestions
 
     if cache_key and redis_client and ai_response and ai_response.dialogue_text:
         try:

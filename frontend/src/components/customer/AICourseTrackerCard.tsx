@@ -4,6 +4,7 @@ import React from "react";
 import { useParams } from "next/navigation";
 import { useCart } from "@/stores/cart";
 import { getMealBalanceStatus, showAIUpsellSheet } from "@/lib/ai_waiter_client";
+import { useMenuStore } from "@/stores/menu";
 import { Sparkles, ArrowRight, CheckCircle2 } from "lucide-react";
 
 export function AICourseTrackerCard() {
@@ -17,43 +18,42 @@ export function AICourseTrackerCard() {
   const isComplete = !status.missingCategory;
 
   const handleCompleteMeal = () => {
-    let suggestedItems = [
-      { item_id: "cool-1", name: "Sweet Lassi", price: 90, reason: "Refreshing royal drink to balance rich flavors" },
-      { item_id: "cool-2", name: "Mint Raita", price: 80, reason: "Cooling spiced yogurt accompaniment" },
-      { item_id: "bread-1", name: "Butter Naan", price: 50, reason: "Fresh tandoori bread baked to perfection" },
-    ];
-
+    const menuStore = useMenuStore.getState();
+    const currentCart = items || [];
+    let keywords = ["beverage", "drink", "bread", "naan", "roti", "raita", "side", "dessert"];
+    
     if (status.missingCategory === "Breads & Beverages") {
-      suggestedItems = [
-        { item_id: "bread-1", name: "Butter Naan", price: 50, reason: "Fresh tandoori bread baked to perfection" },
-        { item_id: "bread-2", name: "Garlic Naan", price: 65, reason: "Aromatic garlic butter naan" },
-        { item_id: "bev-1", name: "Sweet Lassi", price: 90, reason: "Traditional chilled yogurt drink" },
-        { item_id: "bev-2", name: "Mint Raita", price: 80, reason: "Cooling spiced mint yogurt" },
-      ];
+      keywords = ["bread", "naan", "roti", "beverage", "drink", "lassi", "raita", "side", "kulcha", "paratha"];
     } else if (status.missingCategory === "Dessert" || status.missingCategory === "Desserts") {
-      suggestedItems = [
-        { item_id: "des-1", name: "Gulab Jamun (2 pcs)", price: 90, reason: "Warm royal sweet dumplings" },
-        { item_id: "des-2", name: "Rasmalai", price: 110, reason: "Rich saffron milk sweet delicacies" },
-        { item_id: "des-3", name: "Royal Kulfi", price: 120, reason: "Traditional dense Indian ice cream" },
-      ];
+      keywords = ["dessert", "sweet", "kulfi", "jamun", "rasmalai", "ice cream", "halwa", "brownie"];
     } else if (status.missingCategory === "Main Course") {
-      suggestedItems = [
-        { item_id: "main-1", name: "Dal Makhani", price: 220, reason: "24-hour slow cooked black lentils" },
-        { item_id: "main-2", name: "Paneer Butter Masala", price: 260, reason: "Rich tomato cashew gravy with soft paneer" },
-        { item_id: "main-3", name: "Butter Chicken", price: 310, reason: "Signature royal chicken delicacy" },
-        { item_id: "main-4", name: "Pista House Keema Biryani", price: 350, reason: "Fragrant dum biryani with spiced minced meat" },
-      ];
+      keywords = ["main course", "biryani", "curry", "dal", "paneer", "chicken", "mutton", "rice", "thali", "gravy"];
     } else if (status.missingCategory === "Starters") {
-      suggestedItems = [
-        { item_id: "start-1", name: "Reshmi Kebab", price: 290, reason: "Silky smooth chicken tandoori kebab" },
-        { item_id: "start-2", name: "Paneer Tikka", price: 240, reason: "Charcoal grilled marinated cottage cheese" },
-        { item_id: "start-3", name: "Murgh Pudina Kebab", price: 280, reason: "Refreshing mint spiced chicken tandoori" },
-      ];
+      keywords = ["starter", "kebab", "tikka", "snack", "appetizer", "papad", "fry", "manchurian", "tandoori"];
+    }
+
+    const realRecs = menuStore.getRecommendations(keywords, 6)
+      .filter(r => !currentCart.some(ci => ci.item_id === r.id || ci.name === r.name));
+
+    if (realRecs.length === 0) {
+      const anyRecs = menuStore.getRecommendations([], 4)
+        .filter(r => !currentCart.some(ci => ci.item_id === r.id || ci.name === r.name));
+      if (anyRecs.length === 0) {
+        import("sonner").then(({ toast }) => {
+          toast.info("✨ You already have a wonderful royal selection in your cart!");
+        });
+        return;
+      }
+      showAIUpsellSheet(
+        `Here are chef-recommended **Signature Additions** from our menu to complete your feast:`,
+        anyRecs.map(r => ({ item_id: r.id, name: r.name, price: r.price, reason: r.description || "Chef signature recommendation" }))
+      );
+      return;
     }
 
     showAIUpsellSheet(
-      `Here are signature **${status.missingCategory || "Royal"} Pairings** recommended by AI Waiter to complete your feast:`,
-      suggestedItems
+      `Here are signature **${status.missingCategory || "Royal"} Pairings** from our restaurant menu recommended by AI Waiter:`,
+      realRecs.map(r => ({ item_id: r.id, name: r.name, price: r.price, reason: r.description || `Perfect pairing for your ${status.missingCategory || "feast"}` }))
     );
   };
 

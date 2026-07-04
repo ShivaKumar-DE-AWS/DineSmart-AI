@@ -2,6 +2,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { CartItem, MenuItem } from "@/types";
+import { useMenuStore } from "@/stores/menu";
 
 interface CartState {
   items: CartItem[];
@@ -21,6 +22,9 @@ interface CartState {
   count: () => number;
 }
 
+const strEq = (a: any, b: any) =>
+  String(a || "").toLowerCase().trim() === String(b || "").toLowerCase().trim();
+
 export const useCart = create<CartState>()(
   persist(
     (set, get) => ({
@@ -29,6 +33,22 @@ export const useCart = create<CartState>()(
       restaurantSlug: null,
       lastUpdatedBy: "local",
       add: (item, qty = 1) => set((s) => {
+        const menuItems = useMenuStore.getState().items || [];
+        if (menuItems.length > 0) {
+          const exists = menuItems.some(
+            (mi) =>
+              (mi.id && item.id && strEq(mi.id, item.id)) ||
+              (mi.name && item.name && strEq(mi.name, item.name))
+          );
+          if (!exists) {
+            if (typeof window !== "undefined") {
+              import("sonner").then(({ toast }) => {
+                toast.error(`⚠️ The item "${item.name}" is not available on this restaurant's menu!`, { duration: 4000 });
+              });
+            }
+            return s;
+          }
+        }
         const existing = s.items.find((i) => (i.item_id === item.id || i.cart_item_id === item.id) && !i.notes && !i.course);
         if (existing) {
           return { items: s.items.map((i) => (i.cart_item_id === existing.cart_item_id && i.item_id === existing.item_id) ? { ...i, qty: i.qty + qty } : i), lastUpdatedBy: "local" };

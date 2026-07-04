@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { sortCategories } from "@/utils/categoryOrder";
 import type { MenuItem } from "@/types";
 import { sendAIWaiterEvent } from "@/lib/ai_waiter_client";
+import { useMenuStore } from "@/stores/menu";
 
 export default function NativeAppHomeMenu() {
   const params = useParams();
@@ -30,6 +31,12 @@ export default function NativeAppHomeMenu() {
   const [mounted, setMounted] = useState(false);
   
   useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    if (data?.items) {
+      useMenuStore.getState().setMenu(data.items, restaurantConfig?.id);
+    }
+  }, [data?.items, restaurantConfig?.id]);
 
   // AI Waiter: fire ITEM_ADDED toast on every add-to-cart action
   const handleAddToCart = useCallback((item: MenuItem) => {

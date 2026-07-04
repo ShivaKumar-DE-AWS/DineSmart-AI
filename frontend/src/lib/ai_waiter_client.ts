@@ -36,6 +36,7 @@ import { toast } from "sonner";
 import { useCart } from "@/stores/cart";
 import { useTable } from "@/stores/table";
 import { getOrCreateAnonID } from "@/lib/notify";
+import { useMenuStore } from "@/stores/menu";
 
 // ── Course Progression & Meal Balance Helper ───────────────────────────────
 export function getMealBalanceStatus(cartItems: { category?: string; name: string }[]): {
@@ -211,44 +212,78 @@ export async function sendAIWaiterEvent(
       let instantMsg = `✨ Great taste! ${name} is a wonderful choice.`;
       let suggestedAction: { label: string; onClick: () => void } | undefined = undefined;
 
+      const menuStore = useMenuStore.getState();
+      const currentCart = useCart.getState().items || [];
+      const getRealRec = (keywords: string[]) => {
+        const recs = menuStore.getRecommendations(keywords, 5);
+        return recs.find(r => !currentCart.some(ci => ci.item_id === r.id || ci.name === r.name));
+      };
+
       if (isSpicy) {
-        const rec = { id: "cool-1", name: "Sweet Lassi", price: 90, category: "Beverages" };
-        instantMsg = `🌶️ Excellent choice! ${name} has a bold, spiced flavor profile. AI Waiter suggests pairing it with a cooling ${rec.name} to balance your palate perfectly!`;
-        suggestedAction = {
-          label: `+ Add ${rec.name} (₹${rec.price})`,
-          onClick: () => {
-            useCart.getState().add({ id: rec.id, name: rec.name, price: rec.price, category: rec.category } as any, 1);
-          }
-        };
+        const rec = getRealRec(["beverage", "drink", "lassi", "cooler", "mojito", "lemon", "soda", "water", "chaas", "shake", "sherbet", "chai"]);
+        if (rec) {
+          instantMsg = `🌶️ Excellent choice! ${name} has a bold, spiced flavor profile. AI Waiter suggests pairing it with a cooling ${rec.name} to balance your palate perfectly!`;
+          suggestedAction = {
+            label: `+ Add ${rec.name} (₹${rec.price})`,
+            onClick: () => {
+              useCart.getState().add(rec, 1);
+            }
+          };
+        } else {
+          instantMsg = `🌶️ Excellent choice! ${name} has a bold, spiced flavor profile crafted by our master chefs!`;
+        }
       } else if (cat.includes("biryani") || cat.includes("main") || cat.includes("curry") || cat.includes("rice") || cat.includes("thali")) {
-        const rec = { id: "side-1", name: "Mint Raita", price: 80, category: "Sides" };
-        instantMsg = `✨ Excellent choice! ${name} is a royal crowd-pleaser with aromatic rich flavors. AI Waiter suggests pairing it with a cooling ${rec.name} or Butter Naan!`;
-        suggestedAction = {
-          label: `+ Add ${rec.name} (₹${rec.price})`,
-          onClick: () => {
-            useCart.getState().add({ id: rec.id, name: rec.name, price: rec.price, category: rec.category } as any, 1);
-          }
-        };
+        const rec = getRealRec(["side", "raita", "salad", "papad", "naan", "roti", "bread", "kulcha"]);
+        if (rec) {
+          instantMsg = `✨ Excellent choice! ${name} is a royal crowd-pleaser with aromatic rich flavors. AI Waiter suggests pairing it with ${rec.name}!`;
+          suggestedAction = {
+            label: `+ Add ${rec.name} (₹${rec.price})`,
+            onClick: () => {
+              useCart.getState().add(rec, 1);
+            }
+          };
+        } else {
+          instantMsg = `✨ Excellent choice! ${name} is a royal crowd-pleaser with aromatic rich flavors.`;
+        }
       } else if (cat.includes("starter") || cat.includes("kebab") || cat.includes("appetizer") || cat.includes("snack") || cat.includes("tikka")) {
-        const rec = { id: "bread-1", name: "Butter Naan", price: 50, category: "Breads" };
-        instantMsg = `✨ Great choice! ${name} is a crowd favorite starter. Ready for mains? AI Waiter suggests pairing it with fresh tandoori ${rec.name} or Biryani!`;
-        suggestedAction = {
-          label: `+ Add ${rec.name} (₹${rec.price})`,
-          onClick: () => {
-            useCart.getState().add({ id: rec.id, name: rec.name, price: rec.price, category: rec.category } as any, 1);
-          }
-        };
+        const rec = getRealRec(["main course", "biryani", "curry", "bread", "roti", "naan", "dal", "masala"]);
+        if (rec) {
+          instantMsg = `✨ Great choice! ${name} is a crowd favorite starter. Ready for mains? AI Waiter suggests pairing it with ${rec.name}!`;
+          suggestedAction = {
+            label: `+ Add ${rec.name} (₹${rec.price})`,
+            onClick: () => {
+              useCart.getState().add(rec, 1);
+            }
+          };
+        } else {
+          instantMsg = `✨ Great choice! ${name} is a crowd favorite starter.`;
+        }
       } else if (cat.includes("bread") || cat.includes("naan") || cat.includes("roti") || cat.includes("paratha") || cat.includes("kulcha")) {
-        const rec = { id: "main-1", name: "Dal Makhani", price: 220, category: "Main Course" };
-        instantMsg = `✨ Excellent choice! Fresh tandoori ${name} dips wonderfully into our signature ${rec.name} or Butter Chicken for a royal feast!`;
-        suggestedAction = {
-          label: `+ Add ${rec.name} (₹${rec.price})`,
-          onClick: () => {
-            useCart.getState().add({ id: rec.id, name: rec.name, price: rec.price, category: rec.category } as any, 1);
-          }
-        };
+        const rec = getRealRec(["main course", "curry", "dal", "paneer", "chicken", "mutton", "gravy", "masala"]);
+        if (rec) {
+          instantMsg = `✨ Excellent choice! Fresh tandoori ${name} pairs wonderfully with our signature ${rec.name} for a royal feast!`;
+          suggestedAction = {
+            label: `+ Add ${rec.name} (₹${rec.price})`,
+            onClick: () => {
+              useCart.getState().add(rec, 1);
+            }
+          };
+        } else {
+          instantMsg = `✨ Excellent choice! Fresh tandoori ${name} baked to perfection.`;
+        }
       } else {
-        instantMsg = `✨ Excellent choice! ${name} is a wonderful addition to your thali. Check our Chef Specials for signature pairings!`;
+        const rec = getRealRec(["dessert", "sweet", "ice cream", "special", "beverage", "drink"]);
+        if (rec) {
+          instantMsg = `✨ Excellent choice! ${name} is a wonderful addition to your feast. AI Waiter suggests ${rec.name} to complete your meal!`;
+          suggestedAction = {
+            label: `+ Add ${rec.name} (₹${rec.price})`,
+            onClick: () => {
+              useCart.getState().add(rec, 1);
+            }
+          };
+        } else {
+          instantMsg = `✨ Excellent choice! ${name} is a wonderful addition to your feast.`;
+        }
       }
       
       if (suggestedAction) {

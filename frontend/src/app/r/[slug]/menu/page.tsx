@@ -10,6 +10,7 @@ import { Plus, Minus, BookOpen, Search, ShoppingBag, Sparkles, Flame, Leaf, X, C
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { sendAIWaiterEvent } from "@/lib/ai_waiter_client";
+import { useMenuStore } from "@/stores/menu";
 
 import dynamic from "next/dynamic";
 const HTMLFlipBook = dynamic(() => import("react-pageflip") as any, { ssr: false }) as any;
@@ -82,6 +83,12 @@ export default function MenuPage() {
       setViewMode("quick");
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    if (data?.items) {
+      useMenuStore.getState().setMenu(data.items, restaurantConfig?.id);
+    }
+  }, [data?.items, restaurantConfig?.id]);
 
   useEffect(() => {
     const hour = new Date().getHours();
