@@ -42,6 +42,8 @@ export type OrderStatus =
   | "preparing"
   | "ready"
   | "served"
+  | "delivered"
+  | "completed"
   | "cancelled"
   | "awaiting_cash_verification"
   | "high_value_verification"
