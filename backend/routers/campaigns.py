@@ -31,15 +31,30 @@ async def create_campaign(req: CreateCampaignReq, user=Depends(require_roles("ad
     rid = req.restaurant_id or user.get("restaurant_id")
     subs = []
     if rid:
-        # Find orders for this restaurant, then their push subscriptions
-        order_cursor = db.orders.find({"restaurant_id": rid}, {"id": 1}).limit(500)
-        order_ids = [o["id"] async for o in order_cursor]
+        # Find orders and customers for this restaurant, then gather order_ids and device_ids
+        order_cursor = db.orders.find({"restaurant_id": rid}, {"id": 1, "device_id": 1}).limit(1000)
+        order_ids = []
+        device_ids = []
+        async for o in order_cursor:
+            if o.get("id"): order_ids.append(o["id"])
+            if o.get("device_id") and o["device_id"] not in device_ids: device_ids.append(o["device_id"])
+            
+        cust_cursor = db.customers.find({"restaurant_id": rid}, {"device_id": 1}).limit(1000)
+        async for c in cust_cursor:
+            if c.get("device_id") and c["device_id"] not in device_ids:
+                device_ids.append(c["device_id"])
+
+        query_conditions = [{"restaurant_id": rid}]
+        if order_ids:
+            query_conditions.append({"order_id": {"$in": order_ids}})
+        if device_ids:
+            query_conditions.append({"device_id": {"$in": device_ids}})
+            
         subs = await db.push_subscriptions.find(
-            {"$or": [
-                {"order_id": {"$in": order_ids}},
-                {"restaurant_id": rid},
-            ]}, {"_id": 0}
-        ).to_list(500)
+            {"$or": query_conditions}, {"_id": 0}
+        ).to_list(1000)
+    else:
+        subs = await db.push_subscriptions.find({}, {"_id": 0}).to_list(1000)
 
     payload = json.dumps({"title": req.title, "body": req.body, "data": {"campaign": True}})
     sent = 0

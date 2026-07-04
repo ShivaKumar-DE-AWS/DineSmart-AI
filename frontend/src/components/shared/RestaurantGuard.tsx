@@ -29,6 +29,21 @@ export function RestaurantGuard({ allow, children }: { allow: Role[]; children: 
     const normalizedUserSlug = user?.restaurant_slug === "mehfil-hyderabad" ? "mehfil" : user?.restaurant_slug;
 
     if (!user) {
+      if (typeof window !== "undefined") {
+        try {
+          const stored = localStorage.getItem("sd-session");
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (parsed?.state?.user && parsed?.state?.token) {
+              useSession.getState().setSession(parsed.state.user, parsed.state.token);
+              if (parsed.state.restaurantSlug) {
+                useSession.getState().setRestaurantSlug(parsed.state.restaurantSlug);
+              }
+              return;
+            }
+          }
+        } catch {}
+      }
       router.replace(`/r/${urlSlug}/login`);
     } else if (!allow.includes(user.role)) {
       router.replace("/");

@@ -21,17 +21,32 @@ async def push_vapid_public_key():
 async def push_subscribe(sub: PushSubscription):
     if not sub.endpoint or "auth" not in sub.keys or "p256dh" not in sub.keys:
         raise HTTPException(status_code=400, detail="Invalid subscription")
-    doc = {
-        "id": str(uuid.uuid4()),
+    
+    rid = sub.restaurant_id
+    if not rid and sub.order_id:
+        order = await db.orders.find_one({"id": sub.order_id}, {"restaurant_id": 1})
+        if order and order.get("restaurant_id"):
+            rid = order["restaurant_id"]
+
+    update_fields: Dict[str, Any] = {
         "endpoint": sub.endpoint,
         "keys": sub.keys,
-        "order_id": sub.order_id,
-        "restaurant_id": sub.restaurant_id,
-        "device_id": sub.device_id,
-        "created_at": now_iso()
+        "updated_at": now_iso()
     }
+    if sub.order_id:
+        update_fields["order_id"] = sub.order_id
+    if rid:
+        update_fields["restaurant_id"] = rid
+    if sub.device_id:
+        update_fields["device_id"] = sub.device_id
+
     match: Dict[str, Any] = {"endpoint": sub.endpoint}
-    await db.push_subscriptions.update_one(match, {"$set": doc}, upsert=True)
+    existing = await db.push_subscriptions.find_one(match, {"id": 1, "created_at": 1})
+    if not existing:
+        update_fields["id"] = str(uuid.uuid4())
+        update_fields["created_at"] = now_iso()
+
+    await db.push_subscriptions.update_one(match, {"$set": update_fields}, upsert=True)
     return {"ok": True}
 
 @router.post("/api/push/broadcast")

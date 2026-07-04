@@ -18,10 +18,21 @@ import { useSession } from "@/stores/session";
 function getToken(): string | null {
   if (typeof window === "undefined") return null;
   try {
-    return useSession.getState().token || null;
-  } catch {
-    return null;
-  }
+    const memToken = useSession.getState().token;
+    if (memToken) return memToken;
+    const stored = localStorage.getItem("sd-session");
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (parsed?.state?.token && parsed?.state?.user) {
+        useSession.getState().setSession(parsed.state.user, parsed.state.token);
+        if (parsed.state.restaurantSlug) {
+          useSession.getState().setRestaurantSlug(parsed.state.restaurantSlug);
+        }
+        return parsed.state.token;
+      }
+    }
+  } catch {}
+  return null;
 }
 
 export async function api<T = any>(path: string, init: RequestInit = {}): Promise<T> {
@@ -58,7 +69,7 @@ export async function api<T = any>(path: string, init: RequestInit = {}): Promis
         err.status = res.status;
         
         // ponytail: Auto-logout if session is invalid or restaurant was deleted/revoked
-        if (res.status === 401 || (res.status === 403 && (msg.includes("revoked") || msg.includes("deleted")))) {
+        if (token && (res.status === 401 || (res.status === 403 && (msg.includes("revoked") || msg.includes("deleted"))))) {
           useSession.getState().clear();
           if (typeof window !== "undefined") {
             const hostname = window.location.hostname;
