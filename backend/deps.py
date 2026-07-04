@@ -307,6 +307,8 @@ class CartItemModel(BaseModel):
     price: float
     qty: int = Field(ge=1, le=99)
     notes: Optional[str] = None
+    round_number: Optional[int] = None
+    item_status: Optional[str] = None
 
 class OrderCreateReq(BaseModel):
     restaurant_id: Optional[str] = None
@@ -330,6 +332,9 @@ class OrderStatusUpdate(BaseModel):
     status: Optional[str] = None
     payment_status: Optional[str] = None
     bill_requested: Optional[bool] = None
+
+class ItemStatusUpdate(BaseModel):
+    item_status: str
     pay_code: Optional[str] = None
     override_reason: Optional[str] = None
     utr_number: Optional[str] = None

@@ -399,9 +399,21 @@ export default function CounterPage() {
                 )}
                 <div className="mt-2.5 bg-zinc-950/60 border border-zinc-800/80 rounded-xl p-2.5 text-left text-xs space-y-1">
                   {o.items.map((i, idx) => (
-                    <div key={`${i.item_id}-${idx}`} className="flex justify-between items-start gap-1.5 text-zinc-300">
-                      <span className="font-semibold text-white">{i.qty}× {i.name}</span>
-                      {i.notes && <span className="text-[10px] text-amber-400 italic bg-amber-500/10 px-1.5 py-0.5 rounded">{i.notes}</span>}
+                    <div key={`${i.item_id}-${idx}`} className="flex flex-col gap-1 text-zinc-300 border-b border-zinc-800/40 pb-1.5 last:border-0">
+                      <div className="flex justify-between items-start gap-1.5">
+                        <span className={`font-semibold ${i.item_status === 'served' ? 'line-through text-zinc-500' : 'text-white'}`}>{i.qty}× {i.name}</span>
+                        {i.notes && <span className="text-[10px] text-amber-400 italic bg-amber-500/10 px-1.5 py-0.5 rounded">{i.notes}</span>}
+                      </div>
+                      {i.item_status && (
+                        <span className={`self-start text-[8px] uppercase tracking-widest font-bold px-1.5 py-0.5 rounded ${
+                          i.item_status === "served" ? "bg-emerald-500/10 text-emerald-400" :
+                          i.item_status === "ready" ? "bg-emerald-500/30 text-emerald-300" :
+                          i.item_status === "preparing" ? "bg-amber-500/10 text-amber-400" :
+                          "bg-zinc-800 text-zinc-400"
+                        }`}>
+                          {i.item_status}
+                        </span>
+                      )}
                     </div>
                   ))}
                   {o.notes && <div className="text-[10px] text-amber-300 italic pt-1 border-t border-zinc-800">Note: {o.notes}</div>}
@@ -492,9 +504,21 @@ export default function CounterPage() {
                 )}
                 <div className="mt-3 bg-black/25 border border-white/10 rounded-xl p-2.5 text-left text-xs space-y-1" data-testid={`counter-dishes-${o.token}`}>
                   {o.items.map((i, idx) => (
-                    <div key={`${i.item_id}-${idx}`} className="flex justify-between items-start gap-1 text-zinc-100">
-                      <span className="font-bold text-white">{i.qty}× {i.name}</span>
-                      {i.notes && <span className="text-[10px] text-amber-300 bg-black/40 px-1.5 py-0.5 rounded">{i.notes}</span>}
+                    <div key={`${i.item_id}-${idx}`} className="flex flex-col gap-1 text-zinc-100 border-b border-white/10 pb-1.5 last:border-0">
+                      <div className="flex justify-between items-start gap-1">
+                        <span className={`font-bold ${i.item_status === 'served' ? 'line-through text-white/50' : 'text-white'}`}>{i.qty}× {i.name}</span>
+                        {i.notes && <span className="text-[10px] text-amber-300 bg-black/40 px-1.5 py-0.5 rounded">{i.notes}</span>}
+                      </div>
+                      {i.item_status && (
+                        <span className={`self-start text-[8px] uppercase tracking-widest font-bold px-1.5 py-0.5 rounded ${
+                          i.item_status === "served" ? "bg-emerald-500/20 text-emerald-100" :
+                          i.item_status === "ready" ? "bg-emerald-500/40 text-emerald-50" :
+                          i.item_status === "preparing" ? "bg-amber-500/20 text-amber-200" :
+                          "bg-black/30 text-white/70"
+                        }`}>
+                          {i.item_status}
+                        </span>
+                      )}
                     </div>
                   ))}
                   {o.notes && <div className="text-[11px] text-amber-200 italic pt-1 border-t border-white/10 font-medium">Order Note: {o.notes}</div>}

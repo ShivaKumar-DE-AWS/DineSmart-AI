@@ -14,7 +14,7 @@ from fastapi.responses import StreamingResponse, Response, JSONResponse
 from fpdf import FPDF
 from deps import (
     db, now_iso, TAX_RATE, require_user, require_roles, current_user, jwt_verify,
-    client, next_token, OrderCreateReq, OrderStatusUpdate,
+    client, next_token, OrderCreateReq, OrderStatusUpdate, ItemStatusUpdate,
     PaymentReq, CheckoutSessionReq, SplitBillReq, redis_client,
 )
 
@@ -175,11 +175,14 @@ async def create_order(req: OrderCreateReq):
         subtotal += price * qty
         max_prep = max(max_prep, m.get("prep_time_min", 10))
         validated_items.append({
+            "cart_item_id": uuid.uuid4().hex[:8],
             "item_id": i.item_id,
             "name": m["name"],
             "price": price,
             "qty": qty,
-            "notes": (i.notes or "").strip()[:300]
+            "notes": (i.notes or "").strip()[:300],
+            "round_number": 1,
+            "item_status": "pending"
         })
     
     tax = round(subtotal * TAX_RATE, 2)
@@ -251,9 +254,27 @@ async def create_order(req: OrderCreateReq):
                 
                 if new_total >= high_val_thresh:
                     status = "high_value_verification"
+                
+                # Round logic: find max round in existing items
+                max_round = 1
+                for item in existing_items:
+                    if item.get("round_number") and item["round_number"] > max_round:
+                        max_round = item["round_number"]
+                
+                # Assign max_round + 1 to new items
+                for v_item in validated_items:
+                    v_item["round_number"] = max_round + 1
                     
                 merged_items = existing_items + validated_items
                 token = active_session["token"]
+                
+                # If the order was already ready or served, appending new items should push it back to "confirmed" so the kitchen sees it.
+                current_status = active_session.get("status", "confirmed")
+                if status != "high_value_verification":
+                    if current_status in ["served", "ready", "completed"]:
+                        status = "confirmed"
+                    else:
+                        status = current_status
                 
                 await db.orders.update_one(
                     {"id": active_session["id"]},
@@ -492,6 +513,59 @@ async def update_status(order_id: str, body: OrderStatusUpdate, user=Depends(req
         
     broadcast_order_update(order.get("restaurant_id"), broadcast_data)
     return {"ok": True, **update_data}
+
+
+@router.patch("/api/orders/{order_id}/items/{cart_item_id}/status")
+async def update_item_status(order_id: str, cart_item_id: str, body: ItemStatusUpdate, user=Depends(require_roles("admin", "kitchen", "counter"))):
+    if body.item_status not in {"pending", "preparing", "ready", "served"}:
+        raise HTTPException(status_code=400, detail="Invalid item status")
+
+    q: Dict[str, Any] = {"id": order_id}
+    if user.get("restaurant_id"):
+        q["restaurant_id"] = user["restaurant_id"]
+
+    order = await db.orders.find_one(q)
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    items = order.get("items", [])
+    item_updated = False
+    all_served = True
+
+    for item in items:
+        if item.get("cart_item_id") == cart_item_id:
+            item["item_status"] = body.item_status
+            item_updated = True
+        
+        # Check if all items are served
+        if item.get("item_status") != "served":
+            all_served = False
+
+    if not item_updated:
+        raise HTTPException(status_code=404, detail="Item not found in order")
+
+    # If all items are served, also update the main order status
+    update_fields = {"items": items, "updated_at": now_iso()}
+    new_order_status = None
+    if all_served:
+        update_fields["status"] = "served"
+        new_order_status = "served"
+
+    await db.orders.update_one(q, {"$set": update_fields})
+
+    # Broadcast update
+    broadcast_data = {
+        "type": "item_status_update", 
+        "order_id": order_id, 
+        "token": order["token"], 
+        "cart_item_id": cart_item_id, 
+        "item_status": body.item_status
+    }
+    if new_order_status:
+        broadcast_data["status"] = new_order_status
+
+    broadcast_order_update(order.get("restaurant_id"), broadcast_data)
+    return {"ok": True, "item_status": body.item_status, "order_status": new_order_status or order.get("status")}
 
 
 

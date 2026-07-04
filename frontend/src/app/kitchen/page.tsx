@@ -61,12 +61,22 @@ export default function KitchenPage() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["kds-orders", user?.restaurant_id] }); },
   });
 
+  const itemMut = useMutation({
+    mutationFn: ({ orderId, cartItemId, item_status }: { orderId: string; cartItemId: string; item_status: string }) =>
+      api(`/api/orders/${orderId}/items/${cartItemId}/status`, { method: "PATCH", body: JSON.stringify({ item_status }) }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["kds-orders", user?.restaurant_id] }); },
+  });
+
   const onStart = useCallback((id: string) => mut.mutate({ id, status: "preparing" }), [mut]);
   const onReady = useCallback((id: string) => {
     mut.mutate({ id, status: "ready" });
     const order = (data?.orders || []).find((o) => o.id === id);
     if (order) toast.success(`${order.token} ready!`);
   }, [mut, data]);
+
+  const onItemStatusUpdate = useCallback((orderId: string, cartItemId: string, status: string) => {
+    itemMut.mutate({ orderId, cartItemId, item_status: status });
+  }, [itemMut]);
 
   const allOrders = data?.orders || [];
   const queue = allOrders.filter((o) => ["confirmed", "preparing"].includes(o.status));
@@ -335,6 +345,7 @@ export default function KitchenPage() {
                   isSelected={idx === selectedIndex}
                   onStart={onStart}
                   onReady={onReady}
+                  onItemStatusUpdate={onItemStatusUpdate}
                   onClick={(o) => setSelectedOrder(o)}
                 />
               );

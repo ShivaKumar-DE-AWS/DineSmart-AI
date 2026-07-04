@@ -324,7 +324,19 @@ export default function TrackPage() {
                   {item.qty}x
                 </span>
                 <div>
-                  <div className="font-royal text-[#1A1106]">{item.name}</div>
+                  <div className="font-royal text-[#1A1106] flex flex-wrap items-center gap-2">
+                    <span className={item.item_status === 'served' ? 'line-through opacity-60' : ''}>{item.name}</span>
+                    {item.item_status && (
+                      <span className={`text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded ${
+                        item.item_status === "served" ? "bg-emerald-100 text-emerald-700" :
+                        item.item_status === "ready" ? "bg-emerald-500 text-white" :
+                        item.item_status === "preparing" ? "bg-amber-400 text-amber-950" :
+                        "bg-zinc-200 text-zinc-600"
+                      }`}>
+                        {item.item_status}
+                      </span>
+                    )}
+                  </div>
                   {item.notes && <div className="font-editorial italic text-xs text-[#1A1106]/60">{item.notes}</div>}
                 </div>
               </div>

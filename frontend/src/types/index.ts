@@ -34,6 +34,8 @@ export interface CartItem {
   category?: string;
   course?: string;
   modifiers?: string[];
+  round_number?: number;
+  item_status?: string;
 }
 
 export type OrderStatus =
