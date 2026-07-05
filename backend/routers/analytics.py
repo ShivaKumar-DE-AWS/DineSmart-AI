@@ -154,3 +154,93 @@ async def customer_analytics(user=Depends(require_user)):
         "repeat_rate": round((repeat / total_customers) * 100, 1) if total_customers else 0,
         "top_customers": top,
     }
+
+
+@router.get("/api/analytics/insights", dependencies=[Depends(require_roles("admin"))])
+async def generate_insights(user=Depends(require_user)):
+    rid = user.get("restaurant_id")
+    # Cache check
+    cache_key = f"insights_{rid or 'all'}"
+    import json
+    import asyncio
+    from cache_service import menu_cache
+    cached = await menu_cache.get(cache_key)
+    if cached:
+        return {"insights": cached}
+
+    # Fetch data for LLM
+    q = {"status": {"$nin": ["cancelled"]}}
+    if rid: q["restaurant_id"] = rid
+    
+    # 1. Orders last 7 days
+    start = datetime.now(timezone.utc) - timedelta(days=7)
+    start_str = start.strftime("%Y-%m-%d")
+    q["created_at"] = {"$gte": start_str}
+    
+    orders = await db.orders.find(q).to_list(100)
+    total_rev = sum(o.get("total", 0) for o in orders)
+    
+    # 2. Low stock
+    low_stock_q = {"$expr": {"$lte": ["$qty", "$reorder_level"]}}
+    if rid: low_stock_q["restaurant_id"] = rid
+    low_stock = await db.inventory.find(low_stock_q, {"name": 1, "_id": 0}).to_list(10)
+    
+    data_summary = f"""
+    Restaurant Data (Last 7 Days):
+    - Total Orders: {len(orders)}
+    - Total Revenue: INR {total_rev}
+    - Low Stock Items: {[i['name'] for i in low_stock]}
+    """
+    
+    from deps import GEMINI_API_KEY
+    if not GEMINI_API_KEY:
+        default_insights = [
+            {"title": "Weekend Promo", "description": "Run a promo this weekend to boost sales.", "type": "sales", "action_text": "Create Campaign", "action_link": "/admin/campaigns"}
+        ]
+        return {"insights": default_insights}
+
+    prompt = f"""You are an expert restaurant consultant. Analyze the following 7-day data and provide 3 actionable business insights.
+    
+    {data_summary}
+    
+    Output strictly valid JSON with this schema:
+    {{
+        "insights": [
+            {{
+                "title": "String",
+                "description": "String (1-2 sentences)",
+                "type": "sales|inventory|menu|customers",
+                "action_text": "String (short button text)",
+                "action_link": "String (e.g. /admin/campaigns, /admin/inventory)"
+            }}
+        ]
+    }}
+    Do not use markdown blocks. Only JSON.
+    """
+    
+    try:
+        from google import genai
+        from google.genai import types as genai_types
+        client_ai = genai.Client(api_key=GEMINI_API_KEY)
+        response = await asyncio.to_thread(
+            client_ai.models.generate_content,
+            model='gemini-2.5-flash',
+            contents=prompt,
+        )
+        text = response.text.strip()
+        if text.startswith("```json"): text = text[7:]
+        if text.startswith("```"): text = text[3:]
+        if text.endswith("```"): text = text[:-3]
+        
+        parsed = json.loads(text.strip())
+        insights = parsed.get("insights", [])
+        
+        await menu_cache.set(cache_key, insights, ttl=3600) # Cache for 1 hr
+        return {"insights": insights}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        default_insights = [
+            {"title": "Low Stock Warning", "description": "You have items running low on stock. Please review inventory.", "type": "inventory", "action_text": "View Inventory", "action_link": "/admin/inventory"}
+        ]
+        return {"insights": default_insights}
