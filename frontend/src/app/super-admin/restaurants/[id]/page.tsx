@@ -67,9 +67,16 @@ export default function RestaurantProfilePage() {
   const impersonateMut = useMutation({
     mutationFn: () => api<{ token: string; user: any }>(`/api/super-admin/restaurants/${id}/impersonate`, { method: "POST" }),
     onSuccess: (data) => {
-      setSession(data.user, data.token);
       toast.success(`Impersonating ${data.user.restaurant_slug}`);
-      router.push(`/admin`);
+      const host = window.location.host;
+      const isLocal = host.includes("localhost");
+      const baseDomain = isLocal ? "localhost:3000" : "smartdineai.co.in";
+      const protocol = isLocal ? "http" : "https";
+      
+      const userStr = encodeURIComponent(JSON.stringify(data.user));
+      const url = `${protocol}://${data.user.restaurant_slug}.${baseDomain}/auth/impersonate?token=${data.token}&user=${userStr}`;
+      
+      window.location.href = url;
     },
     onError: (err: Error) => toast.error(err.message),
   });
