@@ -730,25 +730,42 @@ async def download_bill(order_id: str, user=Depends(current_user)):
         pdf.set_fill_color(250, 245, 236) # Cream background
         pdf.rect(0, 0, 210, 297, "F")
         
+        # Header Box (Dark Theme)
+        pdf.set_fill_color(26, 17, 6) # Dark bg
+        pdf.rect(0, 0, 210, 48, "F")
+        pdf.set_fill_color(181, 138, 67) # Gold underline
+        pdf.rect(0, 48, 210, 1.5, "F")
+        
         # Header - Restaurant Name
-        pdf.set_text_color(181, 138, 67) # Gold
+        pdf.set_text_color(221, 184, 92) # Gold Text
         pdf.set_font("Helvetica", "B", 24)
-        pdf.cell(text=rest_name.upper(), w=100, align="L")
+        pdf.set_y(12)
+        pdf.set_x(12)
+        pdf.cell(text=rest_name.upper(), w=120, align="L")
         
-        # Header - SmartDine AI
-        pdf.set_font("Helvetica", "B", 20)
-        pdf.set_text_color(255, 255, 255)
-        pdf.set_fill_color(26, 17, 6)
-        pdf.cell(text=" SmartDine AI ", w=90, align="R", fill=True, new_x="LMARGIN", new_y="NEXT")
-        
-        pdf.set_text_color(26, 17, 6)
+        pdf.set_text_color(250, 245, 236)
         pdf.set_font("Helvetica", "", 10)
-        pdf.cell(text="MULTI CUISINE RESTAURANT", w=100, align="L", new_x="LMARGIN", new_y="NEXT")
-        pdf.ln(10)
+        pdf.set_y(22)
+        pdf.set_x(12)
+        pdf.cell(text="MULTI CUISINE RESTAURANT", w=120, align="L")
+        
+        # Header - SmartDine AI Right Side
+        pdf.set_y(15)
+        pdf.set_x(120)
+        pdf.set_font("Helvetica", "B", 18)
+        pdf.set_text_color(250, 245, 236)
+        pdf.cell(text="SmartDine AI", w=80, align="R")
+        pdf.set_y(24)
+        pdf.set_x(120)
+        pdf.set_font("Helvetica", "", 9)
+        pdf.set_text_color(181, 138, 67)
+        pdf.cell(text="AI-POWERED DINING EXPERIENCE", w=80, align="R")
+        
+        pdf.ln(30)
         
         # Section Titles
-        pdf.set_fill_color(181, 138, 67)
-        pdf.set_text_color(26, 17, 6)
+        pdf.set_fill_color(243, 235, 216)
+        pdf.set_text_color(138, 106, 27)
         pdf.set_font("Helvetica", "B", 10)
         pdf.cell(text="  BILL DETAILS", w=90, h=8, fill=True)
         pdf.cell(text="", w=10) # Gap
@@ -769,6 +786,7 @@ async def download_bill(order_id: str, user=Depends(current_user)):
 
         # Details Content
         pdf.set_font("Helvetica", "B", 9)
+        pdf.set_text_color(26, 17, 6)
         pdf.cell(text="Bill No.", w=30)
         pdf.set_font("Helvetica", "", 9)
         pdf.cell(text=f": SDM/{order.get('token', '000')}", w=60)
@@ -799,7 +817,8 @@ async def download_bill(order_id: str, user=Depends(current_user)):
         pdf.set_font("Helvetica", "B", 9)
         pdf.cell(text="Website", w=20)
         pdf.set_font("Helvetica", "", 9)
-        pdf.cell(text=": www.smartdineai.co.in", w=70, new_x="LMARGIN", new_y="NEXT")
+        domain = rest_name.lower().replace(" ", "")
+        pdf.cell(text=f": www.{domain}.com", w=70, new_x="LMARGIN", new_y="NEXT")
         
         pdf.set_font("Helvetica", "B", 9)
         pdf.cell(text="Time", w=30)
@@ -810,7 +829,7 @@ async def download_bill(order_id: str, user=Depends(current_user)):
         pdf.set_font("Helvetica", "B", 9)
         pdf.cell(text="Email", w=20)
         pdf.set_font("Helvetica", "", 9)
-        pdf.cell(text=": contact@smartdineai.co.in", w=70, new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(text=f": contact@{domain}.com", w=70, new_x="LMARGIN", new_y="NEXT")
 
         pdf.set_font("Helvetica", "B", 9)
         pdf.cell(text="Table No.", w=30)
@@ -818,7 +837,7 @@ async def download_bill(order_id: str, user=Depends(current_user)):
         pdf.cell(text=f": {order.get('table_number', 'Takeaway')}", w=60)
         
         pdf.cell(text="", w=10)
-        pdf.set_font("Helvetica", "I", 10)
+        pdf.set_font("Helvetica", "I", 11)
         pdf.set_text_color(181, 138, 67)
         pdf.cell(text=" Thank you for dining with us!", w=90, new_x="LMARGIN", new_y="NEXT")
         
@@ -841,41 +860,50 @@ async def download_bill(order_id: str, user=Depends(current_user)):
         pdf.ln(8)
         
         # Table Header
-        pdf.set_fill_color(181, 138, 67)
-        pdf.set_text_color(26, 17, 6)
+        pdf.set_fill_color(26, 17, 6) # Dark
+        pdf.set_text_color(221, 184, 92) # Gold
         pdf.set_font("Helvetica", "B", 9)
         col_w = [15, 85, 20, 35, 35]
         headers = ["S.NO.", "ITEM NAME", "QTY.", "RATE (INR)", "AMOUNT (INR)"]
         for h, w in zip(headers, col_w):
-            pdf.cell(text=h, w=w, h=8, align="C" if h != "ITEM NAME" else "L", fill=True)
-        pdf.ln(10)
+            pdf.cell(text=h, w=w, h=9, align="C" if h != "ITEM NAME" else "L", fill=True)
+        pdf.ln(9)
         
         # Table Rows
         pdf.set_font("Helvetica", "", 9)
+        pdf.set_text_color(26, 17, 6)
+        
+        alt_bg = False
         for idx, item in enumerate(order.get("items", []), 1):
             name = item.get("name", "Unknown")[:50]
             qty = item.get("qty", 1)
             price = float(item.get("price", 0))
-            pdf.cell(text=str(idx), w=col_w[0], align="C")
-            pdf.cell(text=name, w=col_w[1], align="L")
-            pdf.cell(text=str(qty), w=col_w[2], align="C")
-            pdf.cell(text=f"{price:.2f}", w=col_w[3], align="C")
-            pdf.cell(text=f"{price*qty:.2f}", w=col_w[4], align="C")
+            if alt_bg:
+                pdf.set_fill_color(245, 240, 228)
+            else:
+                pdf.set_fill_color(250, 245, 236)
+            alt_bg = not alt_bg
+            
+            pdf.cell(text=str(idx), w=col_w[0], align="C", fill=True)
+            pdf.cell(text=name, w=col_w[1], align="L", fill=True)
+            pdf.cell(text=str(qty), w=col_w[2], align="C", fill=True)
+            pdf.cell(text=f"{price:.2f}", w=col_w[3], align="C", fill=True)
+            pdf.cell(text=f"{price*qty:.2f}", w=col_w[4], align="C", fill=True)
             pdf.ln(7)
             notes = item.get("notes", "")
             if notes:
                 pdf.set_font("Helvetica", "I", 8)
-                pdf.set_text_color(100, 100, 100)
-                pdf.cell(text="", w=col_w[0])
-                pdf.cell(text="* " + str(notes)[:80], w=col_w[1], new_x="LMARGIN", new_y="NEXT")
+                pdf.set_text_color(138, 106, 27)
+                pdf.cell(text="", w=col_w[0], fill=True)
+                pdf.cell(text="* " + str(notes)[:80], w=col_w[1], new_x="LMARGIN", new_y="NEXT", fill=True)
                 pdf.set_font("Helvetica", "", 9)
                 pdf.set_text_color(26, 17, 6)
-                pdf.ln(2)
+                pdf.ln(1)
         
-        pdf.ln(5)
+        pdf.ln(2)
         pdf.set_draw_color(181, 138, 67)
         pdf.line(10, pdf.get_y(), 200, pdf.get_y())
-        pdf.ln(5)
+        pdf.ln(4)
         
         # Payment Summary & Mode
         subtotal = float(order.get("subtotal", 0))
@@ -887,25 +915,27 @@ async def download_bill(order_id: str, user=Depends(current_user)):
         y_before = pdf.get_y()
         
         # Left Box (Summary)
-        pdf.set_fill_color(181, 138, 67)
+        pdf.set_fill_color(243, 235, 216)
+        pdf.set_text_color(138, 106, 27)
         pdf.set_font("Helvetica", "B", 10)
         pdf.cell(text="  PAYMENT SUMMARY", w=90, h=8, fill=True, new_x="LMARGIN", new_y="NEXT")
         pdf.ln(3)
+        pdf.set_text_color(26, 17, 6)
         pdf.set_font("Helvetica", "", 9)
         pdf.cell(text="Subtotal", w=60)
-        pdf.cell(text=f"{subtotal:.2f}", w=30, align="R", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(text=f"INR {subtotal:.2f}", w=30, align="R", new_x="LMARGIN", new_y="NEXT")
         pdf.ln(1)
         pdf.cell(text="Discount", w=60)
-        pdf.cell(text="0.00", w=30, align="R", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(text="INR 0.00", w=30, align="R", new_x="LMARGIN", new_y="NEXT")
         pdf.ln(1)
         pdf.cell(text="Taxable Amount", w=60)
-        pdf.cell(text=f"{subtotal:.2f}", w=30, align="R", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(text=f"INR {subtotal:.2f}", w=30, align="R", new_x="LMARGIN", new_y="NEXT")
         pdf.ln(1)
         pdf.cell(text="CGST (2.5%)", w=60)
-        pdf.cell(text=f"{tax/2:.2f}", w=30, align="R", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(text=f"INR {tax/2:.2f}", w=30, align="R", new_x="LMARGIN", new_y="NEXT")
         pdf.ln(1)
         pdf.cell(text="SGST (2.5%)", w=60)
-        pdf.cell(text=f"{tax/2:.2f}", w=30, align="R", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(text=f"INR {tax/2:.2f}", w=30, align="R", new_x="LMARGIN", new_y="NEXT")
         pdf.ln(3)
         pdf.line(10, pdf.get_y(), 100, pdf.get_y())
         pdf.ln(3)
@@ -917,13 +947,14 @@ async def download_bill(order_id: str, user=Depends(current_user)):
         # Right Box (Mode)
         pdf.set_y(y_before)
         pdf.set_x(110)
-        pdf.set_text_color(26, 17, 6)
+        pdf.set_text_color(138, 106, 27)
         pdf.set_font("Helvetica", "B", 10)
         pdf.cell(text="  PAYMENT MODE", w=90, h=8, fill=True)
         pdf.set_y(y_before + 13)
         pdf.set_x(110)
         pdf.set_font("Helvetica", "B", 9)
-        pdf.cell(text=f"[{str(pay_method).upper()}]", w=90)
+        pdf.set_text_color(26, 17, 6)
+        pdf.cell(text=f"[Paid via {str(pay_method).upper()}]" if pay_status == "paid" else f"[{str(pay_method).upper()}]", w=90)
         pdf.set_y(y_before + 23)
         pdf.set_x(110)
         pdf.set_font("Helvetica", "", 9)
@@ -938,27 +969,42 @@ async def download_bill(order_id: str, user=Depends(current_user)):
         pdf.cell(text="Payment Date", w=35)
         pdf.cell(text=f": {dt_str} {tm_str}")
         
-        pdf.set_y(y_before + 40)
+        pdf.set_y(y_before + 45)
         pdf.set_x(110)
-        pdf.set_font("Helvetica", "B", 14)
+        pdf.set_font("Helvetica", "B", 16)
         pdf.set_text_color(181, 138, 67)
         pdf.cell(text="Thank You! <3", w=90, align="C")
-        pdf.set_y(y_before + 48)
+        pdf.set_y(y_before + 53)
         pdf.set_x(110)
-        pdf.set_font("Helvetica", "", 9)
+        pdf.set_font("Helvetica", "I", 10)
         pdf.set_text_color(26, 17, 6)
-        pdf.cell(text="We appreciate your visit.", w=90, align="C")
+        pdf.cell(text="We appreciate your visit. Please visit again!", w=90, align="C")
         
-        pdf.set_y(y_before + 70)
-        
-        # Footer
+        # Footer Box (Dark Theme)
         pdf.set_fill_color(26, 17, 6)
-        pdf.rect(0, 275, 210, 22, "F")
-        pdf.set_y(278)
-        pdf.set_font("Helvetica", "B", 9)
+        pdf.rect(0, 260, 210, 37, "F")
+        pdf.set_fill_color(221, 184, 92) # Gold underline
+        pdf.rect(0, 260, 210, 1.5, "F")
+        
+        pdf.set_y(266)
+        pdf.set_x(15)
+        pdf.set_font("Helvetica", "B", 10)
+        pdf.set_text_color(250, 245, 236)
+        pdf.cell(text="Loved your experience?", w=60, align="L", new_x="LMARGIN", new_y="NEXT")
+        pdf.set_x(15)
+        pdf.set_font("Helvetica", "", 9)
         pdf.set_text_color(181, 138, 67)
-        pdf.cell(text=" Loved your experience? Scan to rate us", w=100, align="L")
-        pdf.cell(text="Go Green. Save Paper.  |  @smartdine.ai  ", w=100, align="R")
+        pdf.cell(text="Scan to rate us on Google", w=60, align="L")
+
+        pdf.set_y(266)
+        pdf.set_x(100)
+        pdf.set_font("Helvetica", "B", 12)
+        pdf.set_text_color(250, 245, 236)
+        pdf.cell(text="SmartDine AI", w=95, align="R", new_x="LMARGIN", new_y="NEXT")
+        pdf.set_x(100)
+        pdf.set_font("Helvetica", "", 9)
+        pdf.set_text_color(181, 138, 67)
+        pdf.cell(text="Go Green. Save Paper. | www.smartdineai.co.in", w=95, align="R")
         
         pdf_bytes = bytes(pdf.output())
         return Response(content=pdf_bytes, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=bill_{order['token']}.pdf"})

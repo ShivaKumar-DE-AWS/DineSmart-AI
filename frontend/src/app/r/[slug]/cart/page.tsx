@@ -1,7 +1,10 @@
 "use client";
+import { useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useCart } from "@/stores/cart";
+import { useMenuStore } from "@/stores/menu";
+import { api } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
 import { ArrowRight, Trash2, Plus, Minus, ShoppingBag, BookOpen } from "lucide-react";
 import { motion } from "framer-motion";
@@ -10,6 +13,16 @@ import { AICourseTrackerCard } from "@/components/customer/AICourseTrackerCard";
 export default function CartPage() {
   const params = useParams();
   const slug = params?.slug as string;
+
+  useEffect(() => {
+    if (useMenuStore.getState().items.length === 0 && slug) {
+      api<any>(`/api/customer/restaurants/${slug}/menu`).then((data) => {
+        if (data && data.items) {
+          useMenuStore.getState().setMenu(data.items, slug);
+        }
+      }).catch(console.error);
+    }
+  }, [slug]);
 
   const cart = useCart();
   const subtotal = cart.subtotal();
