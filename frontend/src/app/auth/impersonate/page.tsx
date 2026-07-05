@@ -4,7 +4,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "@/stores/session";
 import { Loader2 } from "lucide-react";
 
-export default function ImpersonatePage() {
+import { Suspense } from "react";
+
+function ImpersonateLogic() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const setSession = useSession(s => s.setSession);
@@ -33,5 +35,13 @@ export default function ImpersonatePage() {
       <Loader2 className="h-8 w-8 animate-spin text-brand mb-4" />
       <p className="text-stone-500 font-medium">Starting impersonation session...</p>
     </div>
+  );
+}
+
+export default function ImpersonatePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex flex-col items-center justify-center bg-stone-50"><Loader2 className="h-8 w-8 animate-spin text-brand mb-4" /></div>}>
+      <ImpersonateLogic />
+    </Suspense>
   );
 }
