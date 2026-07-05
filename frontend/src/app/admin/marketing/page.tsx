@@ -115,7 +115,7 @@ export default function MarketingPage() {
                       )}
                     </div>
                     <button 
-                      onClick={() => generateLogo.mutate()}
+                      onClick={() => generateLogo.mutate(undefined)}
                       disabled={generateLogo.isPending}
                       className="flex-1 bg-accent/10 text-accent font-medium text-sm py-2 px-3 rounded-lg flex justify-center items-center gap-2 hover:bg-accent/20 transition disabled:opacity-50"
                     >
@@ -125,7 +125,7 @@ export default function MarketingPage() {
                 </div>
 
                 <button 
-                  onClick={() => saveConfig.mutate()}
+                  onClick={() => saveConfig.mutate(undefined)}
                   disabled={saveConfig.isPending}
                   className="w-full bg-ink text-white py-2.5 rounded-lg text-sm font-medium hover:bg-black transition"
                 >
