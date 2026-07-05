@@ -202,94 +202,311 @@ export async function sendAIWaiterEvent(
       showAIWelcomeModal(timeGreeting, 20000);
     }
 
-    // 2. Optimistic Instant UI for ITEM_ADDED (0ms delay with Palate & Spice Balance + One-Tap Upsell!)
+    // 2. Optimistic Instant UI for ITEM_ADDED — Deep Dish-Aware Pairing Intelligence
     if (payload.event_type === "ITEM_ADDED" && payload.added_item) {
       const item = payload.added_item;
-      const cat = (item.category || "").toLowerCase();
-      const name = item.name;
-      const isSpicy = /spicy|guntur|vindaloo|masala|kebab|chilli|pepper|tikka|tandoori|peri|schezwan|curry|kolhapuri|mirch|fry/i.test(`${name} ${cat}`);
-      
-      let instantMsg = `✨ Great taste! ${name} is a wonderful choice.`;
-      let suggestedAction: { label: string; onClick: () => void } | undefined = undefined;
+      const cat  = (item.category || "").toLowerCase();
+      const nm   = item.name.toLowerCase();
+
+      let instantMsg = `✨ Excellent choice! ${item.name} is a wonderful addition to your feast.`;
+      let suggestedAction: { label: string; onClick: () => void } | undefined;
 
       const menuStore = useMenuStore.getState();
       const currentCart = useCart.getState().items || [];
-      const getRealRec = (keywords: string[]) => {
-        const recs = menuStore.getRecommendations(keywords, 5);
+      /** Pick the best match from the live menu not already in cart */
+      const getRec = (keywords: string[]) => {
+        const recs = menuStore.getRecommendations(keywords, 8);
         return recs.find(r => !currentCart.some(ci => ci.item_id === r.id || ci.name === r.name));
       };
 
-      if (isSpicy) {
-        const rec = getRealRec(["beverage", "drink", "lassi", "cooler", "mojito", "lemon", "soda", "water", "chaas", "shake", "sherbet", "chai"]);
-        if (rec) {
-          instantMsg = `🌶️ Excellent choice! ${name} has a bold, spiced flavor profile. AI Waiter suggests pairing it with a cooling ${rec.name} to balance your palate perfectly!`;
-          suggestedAction = {
-            label: `+ Add ${rec.name} (₹${rec.price})`,
-            onClick: () => {
-              useCart.getState().add(rec, 1);
+      // ─── PAIRING RULES (most-specific first) ────────────────────────────
+
+      // ── 1. BIRYANI → pair with raita / salan / starter if no starter yet ──
+      const isBiryani = /biryani|biriyani|dum rice|pulao|pulav/.test(nm + " " + cat);
+      // ── 2. SOUTH INDIAN TIFFIN ──
+      const isIdli    = /idli|idly/.test(nm);
+      const isDosa    = /dosa|dosai/.test(nm);
+      const isVada    = /vada|medu|vadai/.test(nm);
+      const isUpma    = /upma|rava|semolina/.test(nm);
+      const isPongal  = /pongal/.test(nm);
+      const isUttapam = /uttapam|uthappam/.test(nm);
+      const isSouthIndian = isIdli || isDosa || isVada || isUpma || isPongal || isUttapam
+                          || /south|sambar|chutney|appam|puttu|pesarattu/.test(nm + " " + cat);
+      // ── 3. NORTH INDIAN BREADS ──
+      const isNaan    = /naan|nan/.test(nm);
+      const isRoti    = /roti|chapati|chapathi|phulka/.test(nm);
+      const isParatha = /paratha|parantha/.test(nm);
+      const isBread   = isNaan || isRoti || isParatha || /kulcha|puri|bhatura/.test(nm) || cat.includes("bread");
+      // ── 4. CURRIES / GRAVIES ──
+      const isCurry   = /curry|masala|gravy|korma|butter chicken|dal makhani|paneer|palak|kadai|rogan|chettinad|vindaloo|kofta/.test(nm + " " + cat)
+                      || cat.includes("main") || cat.includes("curry") || cat.includes("gravie");
+      // ── 5. STARTERS / KEBABS ──
+      const isStarter = cat.includes("starter") || cat.includes("kebab") || cat.includes("appetizer")
+                      || cat.includes("snack") || /tikka|kebab|lollipop|wings|nugget|roll|chaat|pani puri|bhel|seekh|galouti|reshmi|boti|chop/.test(nm);
+      // ── 6. CHINESE / INDO-CHINESE ──
+      const isChinese = /chinese|manchurian|noodle|fried rice|chowmein|chow mein|schezwan|hakka|wonton|dim sum|spring roll|momos|dumpling|indo.?chinese/.test(nm + " " + cat);
+      // ── 7. FAST FOOD / WESTERN ──
+      const isBurger  = /burger|sandwich|wrap|sub|pita/.test(nm);
+      const isPizza   = /pizza|pasta/.test(nm);
+      const isFastFood= isBurger || isPizza || /fries|loaded|waffle|hot dog|taco|quesadilla/.test(nm);
+      // ── 8. DESSERTS ──
+      const isDessert = cat.includes("dessert") || cat.includes("sweet")
+                      || /gulab|rasmalai|halwa|kheer|ice cream|kulfi|brownie|cake|pastry|ladoo|barfi|jalebi|rasgulla|peda|malpua/.test(nm);
+      // ── 9. BEVERAGES ──
+      const isBeverage= cat.includes("beverage") || cat.includes("drink")
+                      || /lassi|chai|tea|coffee|juice|mocktail|soda|shake|smoothie|nimbu|sherbet|cooler/.test(nm);
+      // ── 10. RICE / THALI ──
+      const isRice    = /plain rice|steamed rice|jeera rice|ghee rice|curd rice|lemon rice|coconut rice/.test(nm) || cat.includes("rice");
+      const isThali   = /thali|combo|platter|meal|set/.test(nm + " " + cat);
+
+      // ─── APPLY PAIRING RULES (most-specific wins) ───────────────────────
+
+      if (isBiryani) {
+        // If no starter in cart yet → suggest a starter
+        const hasStarter = currentCart.some(ci => /starter|kebab|appetizer|tikka|snack/.test((ci.category||"").toLowerCase() + " " + ci.name.toLowerCase()));
+        if (!hasStarter) {
+          const rec = getRec(["starter", "kebab", "tikka", "appetizer", "snack", "tandoori", "chop"]);
+          if (rec) {
+            instantMsg = `🍗 A wonderful Biryani pick! AI Waiter suggests starting with a sizzling ${rec.name} as a perfect appetizer before your Biryani feast!`;
+            suggestedAction = { label: `+ Add ${rec.name} (₹${rec.price})`, onClick: () => useCart.getState().add(rec, 1) };
+          } else {
+            // fallback → suggest raita/salan
+            const recR = getRec(["raita", "salan", "mirchi", "salad", "papad", "pickle"]);
+            if (recR) {
+              instantMsg = `🍛 Excellent Biryani choice! AI Waiter recommends pairing it with ${recR.name} to bring out the rich aromatic flavors!`;
+              suggestedAction = { label: `+ Add ${recR.name} (₹${recR.price})`, onClick: () => useCart.getState().add(recR, 1) };
+            } else {
+              instantMsg = `🍛 Excellent Biryani choice! Pair it with a creamy Raita or Mirchi Salan for an authentic royal feast experience!`;
             }
-          };
+          }
         } else {
-          instantMsg = `🌶️ Excellent choice! ${name} has a bold, spiced flavor profile crafted by our master chefs!`;
+          // Starter already in cart → suggest raita or beverage
+          const rec = getRec(["raita", "salan", "mirchi", "salad", "lassi", "chaas", "drink"]);
+          if (rec) {
+            instantMsg = `🍛 Perfect Biryani! AI Waiter suggests adding ${rec.name} to cool down and complement all those amazing aromatic spices!`;
+            suggestedAction = { label: `+ Add ${rec.name} (₹${rec.price})`, onClick: () => useCart.getState().add(rec, 1) };
+          } else {
+            instantMsg = `🍛 Royal Biryani! Your starter + Biryani combination is a classic feast. Don't forget a cooling Raita or Lassi!`;
+          }
         }
-      } else if (cat.includes("biryani") || cat.includes("main") || cat.includes("curry") || cat.includes("rice") || cat.includes("thali")) {
-        const rec = getRealRec(["side", "raita", "salad", "papad", "naan", "roti", "bread", "kulcha"]);
+
+      } else if (isIdli) {
+        // Idli → suggest dosa (classic combo) or vada + sambar
+        const rec = getRec(["dosa", "dosai", "vada", "vadai", "medu", "uttapam"]);
         if (rec) {
-          instantMsg = `✨ Excellent choice! ${name} is a royal crowd-pleaser with aromatic rich flavors. AI Waiter suggests pairing it with ${rec.name}!`;
-          suggestedAction = {
-            label: `+ Add ${rec.name} (₹${rec.price})`,
-            onClick: () => {
-              useCart.getState().add(rec, 1);
-            }
-          };
+          instantMsg = `🌅 Classic South Indian! AI Waiter suggests adding ${rec.name} — the Idli + ${rec.name} combo is a timeless South Indian breakfast pairing loved by all!`;
+          suggestedAction = { label: `+ Add ${rec.name} (₹${rec.price})`, onClick: () => useCart.getState().add(rec, 1) };
         } else {
-          instantMsg = `✨ Excellent choice! ${name} is a royal crowd-pleaser with aromatic rich flavors.`;
+          instantMsg = `🌅 Fresh soft Idli — a South Indian classic! Pair it with fresh Sambar and a variety of Chutneys for an authentic breakfast experience.`;
         }
-      } else if (cat.includes("starter") || cat.includes("kebab") || cat.includes("appetizer") || cat.includes("snack") || cat.includes("tikka")) {
-        const rec = getRealRec(["main course", "biryani", "curry", "bread", "roti", "naan", "dal", "masala"]);
+
+      } else if (isDosa) {
+        // Dosa → suggest idli or vada or filter coffee
+        const rec = getRec(["idli", "vada", "vadai", "coffee", "chai", "filter coffee"]);
         if (rec) {
-          instantMsg = `✨ Great choice! ${name} is a crowd favorite starter. Ready for mains? AI Waiter suggests pairing it with ${rec.name}!`;
-          suggestedAction = {
-            label: `+ Add ${rec.name} (₹${rec.price})`,
-            onClick: () => {
-              useCart.getState().add(rec, 1);
-            }
-          };
+          instantMsg = `🥞 Crispy golden Dosa — a South Indian legend! AI Waiter suggests adding ${rec.name} to complete a traditional South Indian breakfast combo!`;
+          suggestedAction = { label: `+ Add ${rec.name} (₹${rec.price})`, onClick: () => useCart.getState().add(rec, 1) };
         } else {
-          instantMsg = `✨ Great choice! ${name} is a crowd favorite starter.`;
+          instantMsg = `🥞 Crispy golden Dosa! Pair it with fresh Coconut Chutney, Sambar, and a filter Coffee for the ultimate South Indian experience!`;
         }
-      } else if (cat.includes("bread") || cat.includes("naan") || cat.includes("roti") || cat.includes("paratha") || cat.includes("kulcha")) {
-        const rec = getRealRec(["main course", "curry", "dal", "paneer", "chicken", "mutton", "gravy", "masala"]);
+
+      } else if (isVada) {
+        // Vada → suggest sambar, idli, coffee
+        const rec = getRec(["idli", "dosa", "dosai", "coffee", "chai", "filter", "sambar"]);
         if (rec) {
-          instantMsg = `✨ Excellent choice! Fresh tandoori ${name} pairs wonderfully with our signature ${rec.name} for a royal feast!`;
-          suggestedAction = {
-            label: `+ Add ${rec.name} (₹${rec.price})`,
-            onClick: () => {
-              useCart.getState().add(rec, 1);
-            }
-          };
+          instantMsg = `🍩 Crispy Medu Vada — a South Indian delight! AI Waiter suggests pairing it with ${rec.name} for the quintessential South Indian combination!`;
+          suggestedAction = { label: `+ Add ${rec.name} (₹${rec.price})`, onClick: () => useCart.getState().add(rec, 1) };
         } else {
-          instantMsg = `✨ Excellent choice! Fresh tandoori ${name} baked to perfection.`;
+          instantMsg = `🍩 Crispy Medu Vada dipped in hot Sambar! Absolutely divine. Pair with Idli or a filter Coffee to complete your South Indian experience!`;
         }
+
+      } else if (isUpma || isPongal) {
+        const rec = getRec(["coffee", "chai", "vada", "vadai", "dosa", "idli", "chutney"]);
+        if (rec) {
+          instantMsg = `☀️ Wholesome South Indian classic! AI Waiter suggests ${rec.name} to complement your ${item.name} perfectly!`;
+          suggestedAction = { label: `+ Add ${rec.name} (₹${rec.price})`, onClick: () => useCart.getState().add(rec, 1) };
+        } else {
+          instantMsg = `☀️ Wholesome ${item.name}! A perfect South Indian comfort dish — best enjoyed with fresh coconut chutney and hot filter coffee!`;
+        }
+
+      } else if (isUttapam) {
+        const rec = getRec(["sambar", "chutney", "coffee", "chai", "dosa", "idli"]);
+        if (rec) {
+          instantMsg = `🥞 Thick fluffy Uttapam! AI Waiter suggests pairing it with ${rec.name} for a complete South Indian tiffin experience!`;
+          suggestedAction = { label: `+ Add ${rec.name} (₹${rec.price})`, onClick: () => useCart.getState().add(rec, 1) };
+        } else {
+          instantMsg = `🥞 Fluffy Uttapam loaded with fresh toppings — perfect with fresh Sambar and Chutneys!`;
+        }
+
+      } else if (isChinese) {
+        // Chinese/Indo-Chinese → suggest complementary dish
+        const hasFriedRice = /fried rice|egg rice|veg rice/.test(nm);
+        const hasNoodles   = /noodle|chowmein|chow mein|hakka/.test(nm);
+        if (hasFriedRice) {
+          const rec = getRec(["manchurian", "chilli", "noodle", "hakka", "schezwan", "chowmein"]);
+          if (rec) {
+            instantMsg = `🍜 Excellent Indo-Chinese choice! AI Waiter suggests ${rec.name} — Fried Rice + ${rec.name} is the ultimate Indo-Chinese combo!`;
+            suggestedAction = { label: `+ Add ${rec.name} (₹${rec.price})`, onClick: () => useCart.getState().add(rec, 1) };
+          } else {
+            instantMsg = `🍜 Classic Fried Rice! Pair it with Gobi/Veg Manchurian or a Chilli dish for the perfect Indo-Chinese feast!`;
+          }
+        } else if (hasNoodles) {
+          const rec = getRec(["fried rice", "manchurian", "chilli", "spring roll", "schezwan"]);
+          if (rec) {
+            instantMsg = `🍜 Slurpy noodles! AI Waiter suggests ${rec.name} alongside — the classic Noodles + Fried Rice combo is always a hit!`;
+            suggestedAction = { label: `+ Add ${rec.name} (₹${rec.price})`, onClick: () => useCart.getState().add(rec, 1) };
+          } else {
+            instantMsg = `🍜 Delicious noodles! Pair with Fried Rice and Manchurian for the ultimate Indo-Chinese trio!`;
+          }
+        } else {
+          // Manchurian or chilli or spring roll etc.
+          const rec = getRec(["fried rice", "noodle", "chowmein", "hakka"]);
+          if (rec) {
+            instantMsg = `🥢 Perfect Indo-Chinese snack! AI Waiter suggests ${rec.name} to create the classic Indo-Chinese combo!`;
+            suggestedAction = { label: `+ Add ${rec.name} (₹${rec.price})`, onClick: () => useCart.getState().add(rec, 1) };
+          } else {
+            instantMsg = `🥢 Excellent Chinese pick! Pair with Fried Rice or Hakka Noodles for a complete Indo-Chinese experience!`;
+          }
+        }
+
+      } else if (isBurger) {
+        const rec = getRec(["fries", "loaded", "wedge", "shake", "soda", "cold drink", "juice"]);
+        if (rec) {
+          instantMsg = `🍔 Juicy burger! AI Waiter suggests adding ${rec.name} — a classic Burger + ${rec.name} combo for the ultimate fast food experience!`;
+          suggestedAction = { label: `+ Add ${rec.name} (₹${rec.price})`, onClick: () => useCart.getState().add(rec, 1) };
+        } else {
+          instantMsg = `🍔 Juicy burger loaded with flavors! Pair it with crispy Fries and a chilled shake for the perfect fast food combo!`;
+        }
+
+      } else if (isPizza) {
+        const rec = getRec(["garlic bread", "garlic", "wings", "fries", "soda", "cold drink", "juice", "pasta"]);
+        if (rec) {
+          instantMsg = `🍕 Great pizza pick! AI Waiter suggests adding ${rec.name} — Garlic Bread or Pasta makes a great pizza combo!`;
+          suggestedAction = { label: `+ Add ${rec.name} (₹${rec.price})`, onClick: () => useCart.getState().add(rec, 1) };
+        } else {
+          instantMsg = `🍕 Perfect pizza choice! Pair with Garlic Bread and a chilled drink for the complete Italian-style experience!`;
+        }
+
+      } else if (isNaan || (isBread && isNaan)) {
+        // Naan → suggest curry/gravy
+        const rec = getRec(["butter chicken", "paneer", "dal makhani", "curry", "gravy", "masala", "korma", "tikka masala", "palak"]);
+        if (rec) {
+          instantMsg = `🫓 Fresh tandoori ${item.name} straight from the clay oven! AI Waiter suggests dunking it into our rich ${rec.name} for a royal North Indian experience!`;
+          suggestedAction = { label: `+ Add ${rec.name} (₹${rec.price})`, onClick: () => useCart.getState().add(rec, 1) };
+        } else {
+          instantMsg = `🫓 Fresh tandoori ${item.name}! Best enjoyed dipped in Dal Makhani, Butter Chicken, or any rich curry — the perfect North Indian pairing!`;
+        }
+
+      } else if (isRoti || isParatha) {
+        const rec = getRec(["dal", "curry", "sabzi", "paneer", "masala", "gravy", "chicken", "mutton", "aloo"]);
+        if (rec) {
+          instantMsg = `🫓 Fresh ${item.name} hot off the tawa! AI Waiter suggests pairing it with ${rec.name} for a hearty, wholesome North Indian meal!`;
+          suggestedAction = { label: `+ Add ${rec.name} (₹${rec.price})`, onClick: () => useCart.getState().add(rec, 1) };
+        } else {
+          instantMsg = `🫓 Fresh ${item.name}! Best paired with a rich Dal or your favourite Sabzi — a classic home-style Indian combination!`;
+        }
+
+      } else if (isCurry) {
+        // Curry → suggest bread if no bread in cart, else suggest rice/biryani
+        const hasBreadInCart = currentCart.some(ci => /naan|roti|bread|paratha|kulcha|puri/.test((ci.category||"").toLowerCase() + " " + ci.name.toLowerCase()));
+        if (!hasBreadInCart) {
+          const rec = getRec(["naan", "roti", "bread", "paratha", "kulcha", "rice", "biryani"]);
+          if (rec) {
+            instantMsg = `🍛 Rich and aromatic ${item.name}! AI Waiter suggests pairing it with ${rec.name} — a match made in culinary heaven!`;
+            suggestedAction = { label: `+ Add ${rec.name} (₹${rec.price})`, onClick: () => useCart.getState().add(rec, 1) };
+          } else {
+            instantMsg = `🍛 Rich ${item.name}! Best enjoyed with fresh Butter Naan or Jeera Rice to soak up all that gorgeous gravy!`;
+          }
+        } else {
+          // Already has bread → suggest raita/salad/beverage to balance
+          const rec = getRec(["raita", "salad", "lassi", "chaas", "drink", "papad", "pickle"]);
+          if (rec) {
+            instantMsg = `🍛 Perfect ${item.name} selection! AI Waiter suggests ${rec.name} to refresh your palate and balance the flavors!`;
+            suggestedAction = { label: `+ Add ${rec.name} (₹${rec.price})`, onClick: () => useCart.getState().add(rec, 1) };
+          } else {
+            instantMsg = `🍛 Excellent ${item.name}! Your bread + curry combo is perfect. A cooling Raita or Lassi would make it absolutely divine!`;
+          }
+        }
+
+      } else if (isStarter) {
+        // Starter → suggest main course as logical next step
+        const rec = getRec(["biryani", "main course", "curry", "masala", "dal", "paneer", "chicken curry", "naan", "bread"]);
+        if (rec) {
+          instantMsg = `🌟 Sizzling ${item.name} to kick off your feast! AI Waiter suggests following it with ${rec.name} for a complete dining experience!`;
+          suggestedAction = { label: `+ Add ${rec.name} (₹${rec.price})`, onClick: () => useCart.getState().add(rec, 1) };
+        } else {
+          instantMsg = `🌟 Sizzling ${item.name} to ignite your appetite! Ready for the main event? Our signature Biryanis & rich Curries are waiting to impress!`;
+        }
+
+      } else if (isRice && !isBiryani) {
+        // Plain rice → suggest dal/curry/rasam/sambhar
+        const rec = getRec(["dal", "sambar", "rasam", "curry", "sabzi", "chicken", "mutton", "fish curry", "egg curry", "papad"]);
+        if (rec) {
+          instantMsg = `🍚 Comfort rice! AI Waiter suggests pairing it with ${rec.name} — rice + ${rec.name} is pure comfort food bliss!`;
+          suggestedAction = { label: `+ Add ${rec.name} (₹${rec.price})`, onClick: () => useCart.getState().add(rec, 1) };
+        } else {
+          instantMsg = `🍚 Comfort rice! Best enjoyed with Dal, Sambar, or a rich Curry for a balanced and satisfying meal!`;
+        }
+
+      } else if (isThali) {
+        // Thali / combo → already balanced, suggest dessert
+        const rec = getRec(["dessert", "sweet", "ice cream", "kulfi", "gulab", "rasmalai", "halwa", "kheer"]);
+        if (rec) {
+          instantMsg = `🎉 Royal Thali — a complete feast! AI Waiter suggests finishing with ${rec.name} to crown your royal dining experience!`;
+          suggestedAction = { label: `+ Add ${rec.name} (₹${rec.price})`, onClick: () => useCart.getState().add(rec, 1) };
+        } else {
+          instantMsg = `🎉 Royal Thali selected — a perfectly balanced feast across all courses! Don't forget to end with a sweet dessert!`;
+        }
+
+      } else if (isDessert) {
+        // Dessert → suggest chai/coffee as perfect ending
+        const rec = getRec(["chai", "tea", "coffee", "filter coffee", "masala chai", "cardamom", "kulhad"]);
+        if (rec) {
+          instantMsg = `🍮 Sweet indulgence! AI Waiter suggests a warm ${rec.name} alongside — the perfect dessert + ${rec.name} ending to a royal meal!`;
+          suggestedAction = { label: `+ Add ${rec.name} (₹${rec.price})`, onClick: () => useCart.getState().add(rec, 1) };
+        } else {
+          instantMsg = `🍮 Delightful ${item.name}! A perfect dessert to crown your dining experience. Pair it with a warm Masala Chai or Coffee!`;
+        }
+
+      } else if (isBeverage) {
+        // Beverage → suggest pairing with the right food
+        const isHotDrink = /chai|tea|coffee|hot chocolate/.test(nm);
+        if (isHotDrink) {
+          const rec = getRec(["snack", "biscuit", "cookie", "cake", "paratha", "toast", "sandwich"]);
+          if (rec) {
+            instantMsg = `☕ A perfect warm brew! AI Waiter suggests ${rec.name} alongside — a classic pairing that never disappoints!`;
+            suggestedAction = { label: `+ Add ${rec.name} (₹${rec.price})`, onClick: () => useCart.getState().add(rec, 1) };
+          } else {
+            instantMsg = `☕ Perfect warm ${item.name}! Best enjoyed with a light snack or crispy toast on the side!`;
+          }
+        } else {
+          const rec = getRec(["starter", "kebab", "tikka", "snack", "appetizer", "chaat"]);
+          if (rec) {
+            instantMsg = `🥤 Refreshing ${item.name}! AI Waiter suggests ${rec.name} alongside — a perfect snack + beverage combo!`;
+            suggestedAction = { label: `+ Add ${rec.name} (₹${rec.price})`, onClick: () => useCart.getState().add(rec, 1) };
+          } else {
+            instantMsg = `🥤 Refreshing ${item.name}! Pair it with a crispy starter or kebab for a delightful snacking experience!`;
+          }
+        }
+
       } else {
-        const rec = getRealRec(["dessert", "sweet", "ice cream", "special", "beverage", "drink"]);
+        // Generic fallback — smart: look at what's missing from the cart
+        const hasMainInCart  = currentCart.some(ci => /main|biryani|curry|masala|dal/.test((ci.category||"").toLowerCase() + " " + ci.name.toLowerCase()));
+        const hasDessertInCart = currentCart.some(ci => /dessert|sweet|ice cream/.test((ci.category||"").toLowerCase() + " " + ci.name.toLowerCase()));
+        let recKeywords = hasDessertInCart ? ["beverage", "drink", "tea", "coffee"] : hasMainInCart ? ["dessert", "sweet", "ice cream"] : ["biryani", "main", "curry", "starter", "snack"];
+        const rec = getRec(recKeywords);
         if (rec) {
-          instantMsg = `✨ Excellent choice! ${name} is a wonderful addition to your feast. AI Waiter suggests ${rec.name} to complete your meal!`;
-          suggestedAction = {
-            label: `+ Add ${rec.name} (₹${rec.price})`,
-            onClick: () => {
-              useCart.getState().add(rec, 1);
-            }
-          };
+          instantMsg = `✨ Excellent choice! ${item.name} is a wonderful addition. AI Waiter also recommends ${rec.name} to elevate your dining experience!`;
+          suggestedAction = { label: `+ Add ${rec.name} (₹${rec.price})`, onClick: () => useCart.getState().add(rec, 1) };
         } else {
-          instantMsg = `✨ Excellent choice! ${name} is a wonderful addition to your feast.`;
+          instantMsg = `✨ Excellent choice! ${item.name} is a wonderful addition to your feast. Explore our menu for the perfect pairing!`;
         }
       }
-      
+
       if (suggestedAction) {
-        showAIToast(instantMsg, 4000, suggestedAction);
+        showAIToast(instantMsg, 5000, suggestedAction);
       } else {
-        showAIToast(instantMsg, 3000);
+        showAIToast(instantMsg, 3500);
       }
     }
 
