@@ -1070,3 +1070,164 @@ async def download_bill(order_id: str, user=Depends(current_user)):
         pdf.set_font("Helvetica", "", 9)
         pdf.set_text_color(221, 184, 92)
         pdf.cell(text="Go Green. Save Paper. | www.smartdineai.co.in", w=95, align="R")
+        
+        pdf_bytes = bytes(pdf.output())
+        return Response(content=pdf_bytes, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=bill_{order['token']}.pdf"})
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Bill error: {type(e).__name__}: {str(e)}")
+
+
+# =========================================================
+# Payment helpers (shared with orders) — simplified for UPI/QR only
+# =========================================================
+async def _find_or_create_customer(name: str, phone: Optional[str], restaurant_id: Optional[str] = None) -> Dict[str, Any]:
+    import secrets as _secrets, html
+    name_clean = html.escape((name or "").strip())
+    phone_clean = (phone or "").strip() or None
+    query: Optional[Dict[str, Any]] = None
+    if phone_clean:
+        query = {"phone": phone_clean}
+        if restaurant_id:
+            query["restaurant_id"] = restaurant_id
+    elif name_clean:
+        query = {"name": name_clean, "phone": None}
+        if restaurant_id:
+            query["restaurant_id"] = restaurant_id
+    if query:
+        existing = await db.customers.find_one(query, {"_id": 0})
+        if existing:
+            return existing
+    alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+    code = "M-" + "".join(_secrets.choice(alphabet) for _ in range(6))
+    while await db.customers.find_one({"code": code}):
+        code = "M-" + "".join(_secrets.choice(alphabet) for _ in range(6))
+    doc = {
+        "id": str(uuid.uuid4()), "code": code, "name": name_clean or "Guest",
+        "phone": phone_clean, "restaurant_id": restaurant_id,
+        "points": 0, "lifetime_spend": 0.0, "orders_count": 0,
+        "created_at": now_iso(), "last_order_at": None,
+    }
+    await db.customers.insert_one(doc)
+    return doc
+
+
+async def _on_order_paid(order: Dict[str, Any]) -> None:
+    customer_id = order.get("customer_id")
+    if not customer_id:
+        return
+    points_earned = int(order["total"] // 100)
+    await db.customers.update_one(
+        {"id": customer_id},
+        {"$inc": {"points": points_earned, "orders_count": 1, "lifetime_spend": float(order["total"])},
+         "$set": {"last_order_at": now_iso()}},
+    )
+
+
+async def _deduct_inventory(order: Dict[str, Any]) -> None:
+    for item in order.get("items", []):
+        qty = item.get("qty", 1)
+        m = await db.menu.find_one({"id": item.get("item_id")}, {"recipe": 1})
+        if m and m.get("recipe"):
+            for ing in m["recipe"]:
+                ing_id = ing.get("ingredient_id")
+                req_qty = ing.get("qty_required", 0) * qty
+                if ing_id and req_qty > 0:
+                    await db.inventory.update_one({"id": ing_id}, {"$inc": {"qty": -req_qty}})
+
+
+# =========================================================
+# Simple UPI/QR payment endpoints (no Stripe)
+# =========================================================
+@router.post("/api/payment/intent")
+async def payment_intent(req: PaymentReq):
+    """Mock payment intent for UPI/QR - immediately succeeds."""
+    import asyncio
+    await asyncio.sleep(0.1)  # Simulate quick processing
+    return {
+        "intent_id": f"upi_{uuid.uuid4().hex[:16]}",
+        "status": "succeeded", "amount": req.amount, "method": req.method,
+        "captured_at": now_iso(),
+    }
+
+
+@router.get("/api/payment/config")
+async def payment_config():
+    return {"stripe_enabled": False, "provider": "upi_qr"}
+
+
+@router.post("/api/orders/{order_id}/verify-cash", dependencies=[Depends(require_user)])
+async def verify_cash_paycode(order_id: str, user=Depends(require_user)):
+    order = await db.orders.find_one({"id": order_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    if order.get("status") != "awaiting_cash_verification":
+        return {"ok": True, "message": "Order already verified or processed"}
+    
+    restaurant_id = order["restaurant_id"]
+    new_token = await next_token(restaurant_id, order.get("order_type", "self_service"))
+    
+    await db.orders.update_one(
+        {"id": order_id},
+        {"$set": {
+            "status": "confirmed",
+            "payment_status": "paid",
+            "token": new_token,
+            "pay_code": None,
+            "paid_at": now_iso(),
+            "updated_at": now_iso()
+        }}
+    )
+    
+    updated_order = await db.orders.find_one({"id": order_id}, {"_id": 0})
+    broadcast_order_update(restaurant_id, {"type": "new_order", "order": updated_order})
+    broadcast_order_update(restaurant_id, {"type": "status_update", "order_id": order_id, "token": new_token, "status": "confirmed", "payment_status": "paid"})
+    return {"ok": True, "order": updated_order}
+
+
+@router.post("/api/orders/{order_id}/discard-spam", dependencies=[Depends(require_user)])
+async def discard_spam_order(order_id: str, user=Depends(require_user)):
+    order = await db.orders.find_one({"id": order_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    await db.orders.update_one({"id": order_id}, {"$set": {"status": "cancelled", "updated_at": now_iso()}})
+    broadcast_order_update(order["restaurant_id"], {"type": "order_removed", "order_id": order_id})
+    return {"ok": True}
+
+
+@router.post("/api/orders/{order_id}/verify-high-value", dependencies=[Depends(require_user)])
+async def verify_high_value_order(order_id: str, user=Depends(require_user)):
+    order = await db.orders.find_one({"id": order_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    await db.orders.update_one({"id": order_id}, {"$set": {"status": "confirmed", "updated_at": now_iso()}})
+    updated_order = await db.orders.find_one({"id": order_id}, {"_id": 0})
+    broadcast_order_update(order["restaurant_id"], {"type": "new_order", "order": updated_order})
+    return {"ok": True, "order": updated_order}
+
+
+@router.post("/api/orders/{order_id}/manual-override-exit", dependencies=[Depends(require_user)])
+async def manual_override_exit(order_id: str, body: OrderStatusUpdate, user=Depends(require_user)):
+    order = await db.orders.find_one({"id": order_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    emp_name = user.get("name") or user.get("email") or "Cashier"
+    override_note = body.override_reason or f"Manual UTR override by {emp_name}. UTR: {body.utr_number or 'N/A'}"
+    
+    await db.orders.update_one(
+        {"id": order_id},
+        {"$set": {
+            "payment_status": "paid",
+            "exit_code": f"OVR-{order_id[-6:].upper()}",
+            "override_reason": override_note,
+            "utr_number": body.utr_number,
+            "paid_at": now_iso(),
+            "updated_at": now_iso()
+        }}
+    )
+    
+    updated_order = await db.orders.find_one({"id": order_id}, {"_id": 0})
+    broadcast_order_update(order["restaurant_id"], {"type": "status_update", "order_id": order_id, "token": order["token"], "payment_status": "paid"})
+    return {"ok": True, "order": updated_order}

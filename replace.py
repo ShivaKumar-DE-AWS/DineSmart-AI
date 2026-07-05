@@ -1,4 +1,6 @@
-with open('backend/routers/orders.py', 'r') as f:
+import ast
+
+with open('backend/routers/orders.py', 'r', encoding='utf-8') as f:
     lines = f.readlines()
 
 new_code = """        pdf = FPDF()
@@ -344,9 +346,12 @@ new_code = """        pdf = FPDF()
         pdf.set_font("Helvetica", "", 9)
         pdf.set_text_color(221, 184, 92)
         pdf.cell(text="Go Green. Save Paper. | www.smartdineai.co.in", w=95, align="R")
+        
+        pdf_bytes = bytes(pdf.output())
+        return Response(content=pdf_bytes, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=bill_{order['token']}.pdf"})
 """
 
-lines = lines[:729] + [new_code] + lines[1010:]
+lines = lines[:729] + [new_code] + lines[1012:]
 
-with open('backend/routers/orders.py', 'w') as f:
+with open('backend/routers/orders.py', 'w', encoding='utf-8') as f:
     f.writelines(lines)
