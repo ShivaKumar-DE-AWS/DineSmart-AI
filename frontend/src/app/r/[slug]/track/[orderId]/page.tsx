@@ -19,7 +19,7 @@ const STAGES: Array<{ key: Order["status"]; label: string; line: string; icon: R
 ];
 
 export default function TrackPage() {
-  const { orderId } = useParams<{ orderId: string }>();
+  const { orderId, slug } = useParams<{ orderId: string; slug: string }>();
   const { config: restaurantConfig } = useRestaurantConfig();
   const { data: order, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["order-track", orderId],
@@ -142,6 +142,13 @@ export default function TrackPage() {
           </div>
         )}
         <p className="font-editorial italic text-sm text-[#1A1106]/70 mt-1">Updates every three heartbeats.</p>
+        {/* Back to Menu button */}
+        <a
+          href={`/r/${slug}/menu`}
+          className="mt-4 inline-flex items-center gap-2 bg-brand-primary text-[#FAF5EC] rounded-full px-5 py-2.5 font-royal text-xs tracking-widest uppercase hover:bg-brand-primary/90 transition shadow-md active:scale-95"
+        >
+          ← Back to Menu
+        </a>
       </div>
 
       {!isCancelled && pushState !== "subscribed" && pushState !== "unsupported" && (

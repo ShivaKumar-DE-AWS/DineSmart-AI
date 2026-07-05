@@ -439,6 +439,26 @@ async def list_orders(
                 q["id"] = {"$in": oid_list}
             
     docs = await db.orders.find(q, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(limit)
+    # Backfill cart_item_id and round_number for legacy orders (items created before item-tracking)
+    for doc in docs:
+        needs_save = False
+        for item in doc.get("items", []):
+            if not item.get("cart_item_id"):
+                item["cart_item_id"] = str(uuid.uuid4())
+                needs_save = True
+            if not item.get("round_number"):
+                item["round_number"] = 1
+                needs_save = True
+            if not item.get("item_status"):
+                # Derive from order status for legacy orders
+                order_status = doc.get("status", "confirmed")
+                if order_status in {"ready", "served"}:
+                    item["item_status"] = order_status
+                else:
+                    item["item_status"] = "pending"
+                needs_save = True
+        if needs_save:
+            await db.orders.update_one({"id": doc["id"]}, {"$set": {"items": doc["items"]}})
     return {"orders": docs}
 
 
@@ -450,6 +470,21 @@ async def get_order(order_id: str, user=Depends(current_user)):
     o = await db.orders.find_one(q, {"_id": 0})
     if not o:
         raise HTTPException(status_code=404, detail="Order not found")
+    # Backfill item fields for legacy orders
+    needs_save = False
+    for item in o.get("items", []):
+        if not item.get("cart_item_id"):
+            item["cart_item_id"] = str(uuid.uuid4())
+            needs_save = True
+        if not item.get("round_number"):
+            item["round_number"] = 1
+            needs_save = True
+        if not item.get("item_status"):
+            order_status = o.get("status", "confirmed")
+            item["item_status"] = order_status if order_status in {"ready", "served"} else "pending"
+            needs_save = True
+    if needs_save:
+        await db.orders.update_one({"id": o["id"]}, {"$set": {"items": o["items"]}})
     return o
 
 
@@ -481,6 +516,34 @@ async def update_status(order_id: str, body: OrderStatusUpdate, user=Depends(req
     q: Dict[str, Any] = {"id": order_id}
     if user.get("restaurant_id"):
         q["restaurant_id"] = user["restaurant_id"]
+
+    # Fetch the order first so we can sync item statuses
+    order = await db.orders.find_one(q)
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    # When order-level status changes, sync all item statuses accordingly
+    if body.status in {"ready", "served", "preparing"}:
+        status_map = {"preparing": "preparing", "ready": "ready", "served": "served"}
+        target_item_status = status_map[body.status]
+        items = order.get("items", [])
+        updated_items = []
+        for idx, item in enumerate(items):
+            # Backfill cart_item_id and round_number if missing
+            if not item.get("cart_item_id"):
+                item["cart_item_id"] = str(uuid.uuid4())
+            if not item.get("round_number"):
+                item["round_number"] = 1
+            # Only move forward — don't downgrade served items back to preparing
+            current = item.get("item_status", "pending")
+            status_order = ["pending", "preparing", "ready", "served"]
+            current_rank = status_order.index(current) if current in status_order else 0
+            target_rank = status_order.index(target_item_status)
+            if target_rank > current_rank:
+                item["item_status"] = target_item_status
+            updated_items.append(item)
+        update_data["items"] = updated_items
+
     res = await db.orders.update_one(q, {"$set": update_data})
     if res.matched_count == 0:
         raise HTTPException(status_code=404, detail="Order not found")
