@@ -16,7 +16,7 @@ import { getRestaurantConfig } from "@/hooks/useRestaurantConfig";
 import { toast } from "sonner";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
-type Tab = "live" | "history" | "shift" | "refunds" | "new-order" | "floor-map";
+type Tab = "live" | "history" | "shift" | "refunds" | "new-order";
 
 interface ShiftSummary {
   cash_collected: number;
@@ -546,10 +546,9 @@ export default function CashierPage() {
     enabled: tab === "refunds",
   });
 
-  const { data: floorMapData } = useQuery<{ id: string; number: number; capacity: number; status: string; is_active: boolean; color_code?: string; active_order_id?: string; active_order_token?: string; active_order_status?: string }[]>({
+  const { data: floorMapData } = useQuery<{ tables: { id: string; number: number; capacity: number; status: string; is_active: boolean; color_code?: string; active_order_id?: string; active_order_token?: string; active_order_status?: string }[] }>({
     queryKey: ["cashier-floor-map"],
     queryFn: () => api("/api/tables/live-floor-map"),
-    enabled: tab === "floor-map",
     refetchInterval: 10000,
   });
 
@@ -596,7 +595,6 @@ export default function CashierPage() {
 
   const tabs: { id: Tab; label: string; icon: any }[] = [
     { id: "live", label: "Live Bills", icon: Receipt },
-    { id: "floor-map", label: "Floor Map", icon: Map },
     { id: "history", label: "Bill History", icon: History },
     { id: "shift", label: "Shift Summary", icon: BarChart3 },
     { id: "refunds", label: "Refunds", icon: ArrowDownLeft },
@@ -672,6 +670,70 @@ export default function CashierPage() {
           ))}
         </div>
 
+        {/* Live Floor Map Section */}
+        <div className="space-y-4 mb-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold text-white">Live Floor Map</h2>
+            <button
+              onClick={() => qc.invalidateQueries({ queryKey: ["cashier-floor-map"] })}
+              className="p-2.5 bg-white/5 border border-white/10 rounded-xl text-gray-400 hover:text-white hover:bg-white/10 transition"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {(floorMapData?.tables || []).map((t) => {
+              const bg = t.color_code === "green" ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" :
+                         t.color_code === "yellow" ? "bg-amber-500/20 border-amber-500/50 text-amber-400" :
+                         t.color_code === "red" ? "bg-red-500/10 border-red-500/30 text-red-400" :
+                         "bg-white/5 border-white/10 text-gray-400";
+              
+              const activeOrder = liveOrders.find(o => o.id === t.active_order_id);
+
+              return (
+                <div key={t.id} className={`border rounded-2xl p-4 flex flex-col gap-2 relative overflow-hidden transition-all ${bg}`}>
+                  {t.color_code === "yellow" && <div className="absolute inset-0 bg-amber-500/10 animate-pulse" />}
+                  <div className="flex items-center justify-between relative z-10">
+                    <div className="font-bold text-lg">Table {t.number}</div>
+                    <Users className="h-4 w-4 opacity-50" />
+                  </div>
+                  
+                  <div className="mt-2 text-xs relative z-10 space-y-1">
+                    {t.status === "bill_requested" ? (
+                      <div className="font-bold text-amber-300 flex items-center gap-1">
+                        <Bell className="h-3.5 w-3.5" /> Bill Requested
+                      </div>
+                    ) : t.status === "live" ? (
+                      <div className="text-emerald-300/70">Occupied</div>
+                    ) : (
+                      <div className="text-gray-500">Empty</div>
+                    )}
+                    
+                    {t.active_order_token && (
+                      <div className="font-mono bg-black/20 px-1.5 py-0.5 rounded w-fit mt-1">
+                        #{t.active_order_token}
+                      </div>
+                    )}
+                  </div>
+
+                  {activeOrder && (t.status === "bill_requested" || t.status === "live") && (
+                    <button 
+                      onClick={() => {
+                        setTab("live");
+                        setSearch(t.active_order_token || "");
+                      }}
+                      className="mt-3 relative z-10 w-full py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-semibold transition"
+                    >
+                      View Bill
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Tabs */}
         <div className="flex items-center gap-1 bg-white/5 border border-white/10 rounded-2xl p-1 mb-6 overflow-x-auto">
           {tabs.map((t) => (
@@ -724,71 +786,6 @@ export default function CashierPage() {
                 ))}
               </div>
             )}
-          </div>
-        )}
-
-        {tab === "floor-map" && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-white">Live Floor Map</h2>
-              <button
-                onClick={() => qc.invalidateQueries({ queryKey: ["cashier-floor-map"] })}
-                className="p-2.5 bg-white/5 border border-white/10 rounded-xl text-gray-400 hover:text-white hover:bg-white/10 transition"
-              >
-                <RefreshCw className="h-4 w-4" />
-              </button>
-            </div>
-            
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {(floorMapData || []).map((t) => {
-                const bg = t.color_code === "green" ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" :
-                           t.color_code === "yellow" ? "bg-amber-500/20 border-amber-500/50 text-amber-400" :
-                           t.color_code === "red" ? "bg-red-500/10 border-red-500/30 text-red-400" :
-                           "bg-white/5 border-white/10 text-gray-400";
-                
-                const activeOrder = liveOrders.find(o => o.id === t.active_order_id);
-
-                return (
-                  <div key={t.id} className={`border rounded-2xl p-4 flex flex-col gap-2 relative overflow-hidden transition-all ${bg}`}>
-                    {t.color_code === "yellow" && <div className="absolute inset-0 bg-amber-500/10 animate-pulse" />}
-                    <div className="flex items-center justify-between relative z-10">
-                      <div className="font-bold text-lg">Table {t.number}</div>
-                      <Users className="h-4 w-4 opacity-50" />
-                    </div>
-                    
-                    <div className="mt-2 text-xs relative z-10 space-y-1">
-                      {t.status === "bill_requested" ? (
-                        <div className="font-bold text-amber-300 flex items-center gap-1">
-                          <Bell className="h-3.5 w-3.5" /> Bill Requested
-                        </div>
-                      ) : t.status === "live" ? (
-                        <div className="text-emerald-300/70">Occupied</div>
-                      ) : (
-                        <div className="text-gray-500">Empty</div>
-                      )}
-                      
-                      {t.active_order_token && (
-                        <div className="font-mono bg-black/20 px-1.5 py-0.5 rounded w-fit mt-1">
-                          #{t.active_order_token}
-                        </div>
-                      )}
-                    </div>
-
-                    {activeOrder && (t.status === "bill_requested" || t.status === "live") && (
-                      <button 
-                        onClick={() => {
-                          setTab("live");
-                          setSearch(t.active_order_token || "");
-                        }}
-                        className="mt-3 relative z-10 w-full py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-semibold transition"
-                      >
-                        View Bill
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
           </div>
         )}
 
