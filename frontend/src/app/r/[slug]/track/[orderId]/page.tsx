@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api, apiUrl } from "@/lib/api";
 import { useParams } from "next/navigation";
 import { fmtTime, formatCurrency } from "@/lib/utils";
-import { CheckCircle2, ChefHat, ConciergeBell, ClipboardCheck, Clock, Bell, BellRing, BellOff, MapPin, Sparkles, Scissors, X, CreditCard } from "lucide-react";
+import { CheckCircle2, ChefHat, ConciergeBell, ClipboardCheck, Clock, Bell, BellRing, BellOff, MapPin, Sparkles, Scissors, X, CreditCard, Banknote } from "lucide-react";
 import type { Order } from "@/types";
 import { useEffect, useRef, useState } from "react";
 import { playChime, ensureNotificationPermission, notify, isPushSupported, subscribeToOrderPush } from "@/lib/notify";
@@ -225,6 +225,14 @@ export default function TrackPage() {
           <p className="font-editorial italic text-xs text-red-900/80 mt-1.5 leading-relaxed">
             Your Digital Exit Pass will automatically generate here once payment is verified by your cashier or waiter. No departure is permitted without an active Exit Pass.
           </p>
+          <button
+            onClick={handleRequestBill}
+            disabled={order.bill_requested || requestingBill}
+            className="mt-4 w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg uppercase tracking-wider text-sm transition disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            <Banknote className="h-5 w-5" />
+            {order.bill_requested ? "Bill Requested" : "Request Bill / Settle Bill"}
+          </button>
         </div>
       )}
 

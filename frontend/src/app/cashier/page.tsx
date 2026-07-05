@@ -6,16 +6,17 @@ import {
   Receipt, IndianRupee, ShieldCheck, Clock, RefreshCw, LogOut,
   CheckCircle2, XCircle, Tag, Printer, History, TrendingUp, 
   Banknote, Smartphone, CreditCard, PlusCircle, Search, Filter,
-  AlertTriangle, ChevronDown, ChevronUp, X, User, Table2, Loader2,
-  BarChart3, ArrowDownLeft, Utensils, Calendar, Package
+  AlertTriangle, ChevronDown, ChevronUp, X, User, Users, Table2, Loader2,
+  BarChart3, ArrowDownLeft, Utensils, Calendar, Package, Map, Bell, PhoneCall
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useSession } from "@/stores/session";
 import { useOrderStream } from "@/hooks/useOrderStream";
+import { getRestaurantConfig } from "@/hooks/useRestaurantConfig";
 import { toast } from "sonner";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
-type Tab = "live" | "history" | "shift" | "refunds" | "new-order";
+type Tab = "live" | "history" | "shift" | "refunds" | "new-order" | "floor-map";
 
 interface ShiftSummary {
   cash_collected: number;
@@ -64,7 +65,7 @@ function payStatusColor(ps: string) {
 }
 
 // ─── Bill Card ────────────────────────────────────────────────────────────────
-function BillCard({ order, onDiscount, onRefund }: { order: Order; onDiscount: (o: Order) => void; onRefund: (o: Order) => void }) {
+function BillCard({ order, onDiscount, onRefund, onVerifyCash }: { order: Order; onDiscount: (o: Order) => void; onRefund: (o: Order) => void; onVerifyCash?: (o: Order) => void }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -140,6 +141,14 @@ function BillCard({ order, onDiscount, onRefund }: { order: Order; onDiscount: (
 
           {/* Actions */}
           <div className="flex gap-2 flex-wrap">
+            {order.status === "awaiting_cash_verification" && onVerifyCash && (
+              <button
+                onClick={() => onVerifyCash(order)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-lg text-sm hover:bg-blue-500/20 transition"
+              >
+                <ShieldCheck className="h-3.5 w-3.5" /> Verify & Accept Cash
+              </button>
+            )}
             {order.payment_status !== "paid" && (
               <button
                 onClick={() => onDiscount(order)}
@@ -511,6 +520,7 @@ function ShiftSummaryPanel() {
 export default function CashierPage() {
   const { user, clear: clearSession } = useSession();
   const qc = useQueryClient();
+  const config = getRestaurantConfig(user?.restaurant_slug || "");
   const [tab, setTab] = useState<Tab>("live");
   const [search, setSearch] = useState("");
   const [discountOrder, setDiscountOrder] = useState<Order | null>(null);
@@ -536,6 +546,33 @@ export default function CashierPage() {
     enabled: tab === "refunds",
   });
 
+  const { data: floorMapData } = useQuery<{ id: string; number: number; capacity: number; status: string; is_active: boolean; color_code?: string; active_order_id?: string; active_order_token?: string; active_order_status?: string }[]>({
+    queryKey: ["cashier-floor-map"],
+    queryFn: () => api("/api/tables/live-floor-map"),
+    enabled: tab === "floor-map",
+    refetchInterval: 10000,
+  });
+
+  const { data: notifsData } = useQuery({
+    queryKey: ["notifications", "cashier"],
+    queryFn: () => api("/api/notifications?role=cashier"),
+    refetchInterval: 10000
+  });
+
+  const markReadMut = useMutation({
+    mutationFn: (id: string) => api(`/api/notifications/${id}/read`, { method: "POST" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications", "cashier"] })
+  });
+
+  const verifyCashMut = useMutation({
+    mutationFn: (orderId: string) => api(`/api/orders/${orderId}/verify-cash-paycode`, { method: "POST" }),
+    onSuccess: () => {
+      toast.success("Cash verified! Kitchen token generated.");
+      qc.invalidateQueries({ queryKey: ["cashier-live"] });
+    },
+    onError: (e: any) => toast.error(e.message || "Failed to verify cash"),
+  });
+
   const liveOrders = useMemo(() => {
     const orders = liveData?.orders ?? [];
     if (!search) return orders;
@@ -559,6 +596,7 @@ export default function CashierPage() {
 
   const tabs: { id: Tab; label: string; icon: any }[] = [
     { id: "live", label: "Live Bills", icon: Receipt },
+    { id: "floor-map", label: "Floor Map", icon: Map },
     { id: "history", label: "Bill History", icon: History },
     { id: "shift", label: "Shift Summary", icon: BarChart3 },
     { id: "refunds", label: "Refunds", icon: ArrowDownLeft },
@@ -576,7 +614,7 @@ export default function CashierPage() {
             </div>
             <div>
               <div className="text-white font-bold text-lg leading-none">Cashier Dashboard</div>
-              <div className="text-gray-500 text-xs mt-0.5">SmartDine AI</div>
+              <div className="text-gray-500 text-xs mt-0.5">{config?.name || "SmartDine AI"}</div>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -595,6 +633,27 @@ export default function CashierPage() {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 py-6">
+        {/* Notifications */}
+        {(notifsData?.notifications ?? []).filter((n: any) => !n.read && n.type === "staff_call").map((n: any) => (
+          <div key={n.id} className="bg-amber-500 text-amber-950 px-4 py-3 rounded-2xl mb-6 shadow-lg flex items-center justify-between border-2 border-amber-400">
+            <div className="flex items-center gap-3">
+              <div className="bg-amber-400/50 p-2 rounded-full animate-bounce">
+                <PhoneCall className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="font-bold">{n.title}</div>
+                <div className="text-sm font-medium opacity-90">{n.message}</div>
+              </div>
+            </div>
+            <button
+              onClick={() => markReadMut.mutate(n.id)}
+              className="bg-amber-950/10 hover:bg-amber-950/20 transition px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-2"
+            >
+              <CheckCircle2 className="h-4 w-4" /> Acknowledge
+            </button>
+          </div>
+        ))}
+
         {/* Live Stats Strip */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           {[
@@ -661,10 +720,75 @@ export default function CashierPage() {
             ) : (
               <div className="space-y-3">
                 {liveOrders.map((o) => (
-                  <BillCard key={o.id} order={o} onDiscount={setDiscountOrder} onRefund={setRefundOrder} />
+                  <BillCard key={o.id} order={o} onDiscount={setDiscountOrder} onRefund={setRefundOrder} onVerifyCash={(o) => verifyCashMut.mutate(o.id)} />
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {tab === "floor-map" && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-white">Live Floor Map</h2>
+              <button
+                onClick={() => qc.invalidateQueries({ queryKey: ["cashier-floor-map"] })}
+                className="p-2.5 bg-white/5 border border-white/10 rounded-xl text-gray-400 hover:text-white hover:bg-white/10 transition"
+              >
+                <RefreshCw className="h-4 w-4" />
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              {(floorMapData || []).map((t) => {
+                const bg = t.color_code === "green" ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" :
+                           t.color_code === "yellow" ? "bg-amber-500/20 border-amber-500/50 text-amber-400" :
+                           t.color_code === "red" ? "bg-red-500/10 border-red-500/30 text-red-400" :
+                           "bg-white/5 border-white/10 text-gray-400";
+                
+                const activeOrder = liveOrders.find(o => o.id === t.active_order_id);
+
+                return (
+                  <div key={t.id} className={`border rounded-2xl p-4 flex flex-col gap-2 relative overflow-hidden transition-all ${bg}`}>
+                    {t.color_code === "yellow" && <div className="absolute inset-0 bg-amber-500/10 animate-pulse" />}
+                    <div className="flex items-center justify-between relative z-10">
+                      <div className="font-bold text-lg">Table {t.number}</div>
+                      <Users className="h-4 w-4 opacity-50" />
+                    </div>
+                    
+                    <div className="mt-2 text-xs relative z-10 space-y-1">
+                      {t.status === "bill_requested" ? (
+                        <div className="font-bold text-amber-300 flex items-center gap-1">
+                          <Bell className="h-3.5 w-3.5" /> Bill Requested
+                        </div>
+                      ) : t.status === "live" ? (
+                        <div className="text-emerald-300/70">Occupied</div>
+                      ) : (
+                        <div className="text-gray-500">Empty</div>
+                      )}
+                      
+                      {t.active_order_token && (
+                        <div className="font-mono bg-black/20 px-1.5 py-0.5 rounded w-fit mt-1">
+                          #{t.active_order_token}
+                        </div>
+                      )}
+                    </div>
+
+                    {activeOrder && (t.status === "bill_requested" || t.status === "live") && (
+                      <button 
+                        onClick={() => {
+                          setTab("live");
+                          setSearch(t.active_order_token || "");
+                        }}
+                        className="mt-3 relative z-10 w-full py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-semibold transition"
+                      >
+                        View Bill
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 
