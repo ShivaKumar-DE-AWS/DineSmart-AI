@@ -52,38 +52,105 @@ function takeawayMenuUrl(slug: string): string {
   return `${customerOrigin()}/r/${finalSlug}?type=takeaway`;
 }
 
-function printTakeawayMenuQr(slug: string, restaurantName: string) {
-  const finalSlug = slug === "mehfil-hyderabad" ? "mehfil" : slug;
-  let menuUrl = `${customerOrigin()}/r/${finalSlug}?type=takeaway`;
-  if (typeof window !== "undefined" && window.location.hostname.includes("smartdineai.co.in")) {
-    menuUrl = `https://${finalSlug}.smartdineai.co.in?type=takeaway`;
-  }
-  
-  const w = window.open("", "_blank");
-  if (!w) { toast.error("Popup blocked — allow popups to print"); return; }
-  w.document.write(`<!doctype html><html><head><title>${restaurantName} — Takeaway QR</title>
+function generateQrHtml(titleText: string, subtitleText: string, qrUrl: string, restaurantName: string, isTakeaway: boolean): string {
+  return `<!doctype html><html><head><title>${restaurantName} — QR</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=Playfair+Display:ital,wght@0,700;1,600&display=swap" rel="stylesheet">
     <style>
-      @page { margin: 0; size: 1200px 1600px; }
-      body { margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #FAF5EC; font-family: Georgia, serif; }
-      .card { width: 1200px; height: 1600px; background: #FAF5EC; border: 8px solid #5C0E1B; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px; }
-      .badge { font-size: 28px; background: #5C0E1B; color: #FAF5EC; padding: 10px 40px; border-radius: 40px; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 20px; }
-      .name { font-size: 56px; font-weight: bold; color: #5C0E1B; margin-bottom: 10px; }
-      .divider { width: 300px; height: 3px; background: #5C0E1B; margin: 20px auto; }
-      .subtitle { font-size: 32px; color: #8A6A1B; margin-bottom: 20px; }
-      .qr-wrap { margin: 40px 0; }
-      .qr-wrap img { width: 500px; height: 500px; }
-      .footer { font-size: 18px; color: #8A6A1B; margin-top: auto; }
+      @page { margin: 0; size: 1200px 1800px; }
+      body { margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #000; font-family: 'Inter', sans-serif; color: #fff; }
+      .card { width: 1100px; height: 1700px; background: #080808; border: 4px solid #B58A43; box-sizing: border-box; display: flex; flex-direction: column; padding: 60px; position: relative; border-radius: 40px; box-shadow: inset 0 0 40px rgba(181, 138, 67, 0.1); }
+      .table-badge { position: absolute; top: 0; left: 50%; transform: translate(-50%, -50%); background: #B58A43; color: #000; font-size: 42px; font-weight: 900; padding: 15px 50px; border-radius: 50px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+      .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; }
+      .logo-left { font-family: 'Playfair Display', serif; font-size: 52px; font-weight: 700; color: #B58A43; text-align: center; line-height: 1.1; }
+      .logo-left span { font-size: 18px; font-family: 'Inter', sans-serif; font-weight: 400; color: #aaa; letter-spacing: 6px; display: block; margin-top: 10px; text-transform: uppercase; }
+      .logo-right { font-size: 44px; font-weight: 900; color: #fff; display: flex; align-items: center; gap: 15px; }
+      .logo-right span { color: #6BAF36; }
+      .title { text-align: center; margin-bottom: 50px; position: relative; }
+      .title::before, .title::after { content: ''; position: absolute; top: 50%; width: 250px; height: 2px; background: rgba(181, 138, 67, 0.3); }
+      .title::before { left: 0; } .title::after { right: 0; }
+      .title h1 { color: #6BAF36; font-size: 64px; margin: 0; font-weight: 900; letter-spacing: 2px; text-shadow: 0 0 20px rgba(107, 175, 54, 0.3); }
+      .title p { color: #ccc; font-size: 28px; margin: 10px 0 0 0; }
+      .main-content { display: flex; justify-content: space-between; flex: 1; }
+      .col { width: 260px; }
+      .col-title { background: #B58A43; color: #000; font-weight: 700; font-size: 18px; padding: 8px 16px; text-align: center; border-radius: 8px; margin-bottom: 40px; display: inline-block; }
+      .step { margin-bottom: 35px; }
+      .step-icon { width: 50px; height: 50px; border: 2px solid #6BAF36; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #6BAF36; font-size: 24px; margin-bottom: 12px; }
+      .step h3 { font-size: 16px; color: #B58A43; margin: 0 0 6px 0; text-transform: uppercase; letter-spacing: 1px; }
+      .step p { font-size: 14px; color: #aaa; margin: 0; line-height: 1.5; }
+      .qr-center { display: flex; flex-direction: column; align-items: center; width: 420px; }
+      .qr-box { background: #fff; padding: 25px; border-radius: 30px; box-shadow: 0 0 50px rgba(107, 175, 54, 0.2); margin-bottom: 40px; position: relative; border: 6px solid #6BAF36; }
+      .icons-row { display: flex; justify-content: space-between; width: 100%; margin-bottom: 40px; color: #6BAF36; font-size: 14px; text-align: center; font-weight: 600; }
+      .icon-item { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+      .icon-item span { font-size: 28px; }
+      .slogan { font-family: 'Playfair Display', serif; font-style: italic; font-size: 42px; color: #fff; text-align: center; line-height: 1.3; }
+      .slogan span { color: #6BAF36; }
+      .caution { background: #FAF5EC; border-radius: 12px; padding: 15px 25px; display: flex; align-items: center; gap: 20px; width: 100%; box-sizing: border-box; margin-bottom: 30px; margin-top: auto; border: 2px solid #B58A43; }
+      .caution-icon { background: #D32F2F; color: #fff; width: 70px; height: 70px; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; flex-shrink: 0; }
+      .caution-icon span { font-size: 32px; line-height: 1; margin-bottom: -2px; }
+      .caution-text { color: #000; font-size: 18px; flex: 1; font-weight: 500; }
+      .caution-text strong { color: #D32F2F; font-weight: 900; }
+      .caution-domain { border: 2px dashed #000; border-radius: 8px; padding: 10px 15px; color: #000; font-weight: 800; font-size: 16px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+      .caution-domain .url { color: #6BAF36; }
+      .footer { display: flex; justify-content: space-between; align-items: center; font-size: 20px; color: #B58A43; font-weight: 600; letter-spacing: 1px; }
     </style></head><body>
     <div class="card">
-      <div class="badge">Takeaway Menu</div>
-      <div class="name">${restaurantName}</div>
-      <div class="divider"></div>
-      <div class="subtitle">Scan to order takeaway</div>
-      <div class="qr-wrap"><img src="https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(menuUrl)}" alt="QR" /></div>
-      <div class="footer">Powered by SmartDine AI</div>
+      <div class="table-badge">${titleText}</div>
+      <div class="header">
+        <div class="logo-left">${restaurantName.toUpperCase()}<br><span>Exclusive</span></div>
+        <div class="logo-right">🍽️ SmartDine <span>AI</span></div>
+      </div>
+      <div class="title">
+        <h1>SCAN TO ORDER</h1>
+        <p>${subtitleText}</p>
+      </div>
+      <div class="main-content">
+        <div class="col" style="text-align: left;">
+          <div class="col-title">HOW TO ORDER</div>
+          <div class="step"><div class="step-icon">📱</div><h3>1. Scan</h3><p>Scan the QR code from your table.</p></div>
+          <div class="step"><div class="step-icon">💬</div><h3>2. Chat or Talk</h3><p>Chat or talk with our AI Waiter.</p></div>
+          <div class="step"><div class="step-icon">📖</div><h3>3. Explore & Order</h3><p>Explore the menu, get recommendations and add to cart.</p></div>
+          <div class="step"><div class="step-icon">💳</div><h3>4. Pay Securely</h3><p>Make secure payment and place your order.</p></div>
+        </div>
+        <div class="qr-center">
+          <div class="qr-box">
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=380x380&data=${encodeURIComponent(qrUrl)}&color=000000&bgcolor=ffffff&qzone=1" alt="QR" style="display:block;" />
+          </div>
+          <div class="icons-row">
+            <div class="icon-item"><span>📱</span>SCAN</div>
+            <div class="icon-item"><span>🛎️</span>ORDER</div>
+            <div class="icon-item"><span>💳</span>PAY</div>
+            <div class="icon-item"><span>✨</span>ENJOY</div>
+          </div>
+          <div class="slogan">We serve,<br><span>you enjoy! ♥</span></div>
+        </div>
+        <div class="col" style="text-align: right; display: flex; flex-direction: column; align-items: flex-end;">
+          <div class="col-title">WHY CHOOSE US?</div>
+          <div class="step" style="display:flex; flex-direction:column; align-items:flex-end;"><div class="step-icon">⭐</div><p>Personalized<br>Recommendations</p></div>
+          <div class="step" style="display:flex; flex-direction:column; align-items:flex-end;"><div class="step-icon">⚡</div><p>Faster<br>Service</p></div>
+          <div class="step" style="display:flex; flex-direction:column; align-items:flex-end;"><div class="step-icon">🛡️</div><p>Hygienic &<br>Contactless</p></div>
+          <div class="step" style="display:flex; flex-direction:column; align-items:flex-end;"><div class="step-icon">😊</div><p>Better Dining<br>Experience</p></div>
+        </div>
+      </div>
+      <div class="caution">
+        <div class="caution-icon"><span>!</span>CAUTION</div>
+        <div class="caution-text">Preview the QR Link Generator before clicking the link to <strong>avoid QR scams.</strong></div>
+        <div class="caution-domain"><span>✅ Verify Link</span><span class="url">smartdineai.co.in</span></div>
+      </div>
+      <div class="footer">
+        <div>🌐 www.smartdineai.co.in</div>
+        <div>Thank you for dining with us!</div>
+        <div>📸 @smartdine.ai</div>
+      </div>
     </div>
-    <script>window.onload=()=>{setTimeout(()=>window.print(),500)};</script>
-    </body></html>`);
+    <script>window.onload=()=>{setTimeout(()=>window.print(),800)};</script>
+    </body></html>`;
+}
+
+function printTakeawayMenuQr(slug: string, restaurantName: string) {
+  let menuUrl = takeawayMenuUrl(slug);
+  const w = window.open("", "_blank");
+  if (!w) { toast.error("Popup blocked — allow popups to print"); return; }
+  w.document.write(generateQrHtml("TAKEAWAY MENU", "Order from anywhere.", menuUrl, restaurantName, true));
   w.document.close();
 }
 
@@ -288,39 +355,42 @@ function TableCard({ t, onRegen, onDelete, slug, restaurantName }: { t: TableDoc
       canvas.width = w; canvas.height = h;
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
-      // Cream background
-      ctx.fillStyle = "#FAF5EC"; ctx.fillRect(0, 0, w, h);
-      // Brand border
-      ctx.strokeStyle = "#5C0E1B"; ctx.lineWidth = 8;
+      // Black background
+      ctx.fillStyle = "#080808"; ctx.fillRect(0, 0, w, h);
+      // Gold brand border
+      ctx.strokeStyle = "#B58A43"; ctx.lineWidth = 12;
       ctx.strokeRect(40, 40, w - 80, h - 80);
       // Restaurant name
-      ctx.fillStyle = "#5C0E1B"; ctx.textAlign = "center";
-      ctx.font = "bold 48px Georgia, serif";
-      ctx.fillText(restaurantName || "RESTAURANT", w / 2, 160);
+      ctx.fillStyle = "#B58A43"; ctx.textAlign = "center";
+      ctx.font = "bold 64px sans-serif";
+      ctx.fillText((restaurantName || "RESTAURANT").toUpperCase(), w / 2, 160);
       // Decorative divider
-      ctx.strokeStyle = "#5C0E1B"; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(w / 2 - 120, 190); ctx.lineTo(w / 2 + 120, 190); ctx.stroke();
-      // Table number
-      ctx.font = "bold 96px Georgia, serif";
-      ctx.fillStyle = "#5C0E1B";
-      ctx.fillText(`Table ${t.number}`, w / 2, 310);
-      // QR (center area 480-1080)
-      const qrSize = 540, qrX = (w - qrSize) / 2, qrY = 400;
+      ctx.strokeStyle = "rgba(181, 138, 67, 0.3)"; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.moveTo(w / 2 - 150, 200); ctx.lineTo(w / 2 + 150, 200); ctx.stroke();
+      // Table badge
+      ctx.fillStyle = "#B58A43";
+      ctx.beginPath(); ctx.roundRect(w / 2 - 180, 250, 360, 100, 50); ctx.fill();
+      ctx.fillStyle = "#000"; ctx.font = "900 64px sans-serif";
+      ctx.fillText(`TABLE ${t.number}`, w / 2, 320);
+      // QR background and border
+      const qrSize = 600, qrX = (w - qrSize) / 2, qrY = 450;
+      ctx.fillStyle = "#FFF";
+      ctx.beginPath(); ctx.roundRect(qrX - 30, qrY - 30, qrSize + 60, qrSize + 60, 40); ctx.fill();
+      ctx.strokeStyle = "#6BAF36"; ctx.lineWidth = 10;
+      ctx.strokeRect(qrX - 30, qrY - 30, qrSize + 60, qrSize + 60);
+      // QR image
       ctx.drawImage(img, qrX, qrY, qrSize, qrSize);
-      // White border around QR
-      ctx.strokeStyle = "#5C0E1B"; ctx.lineWidth = 3;
-      ctx.strokeRect(qrX - 8, qrY - 8, qrSize + 16, qrSize + 16);
       // Instructions
-      ctx.fillStyle = "#5C0E1B";
-      ctx.font = "italic 28px Georgia, serif";
-      ctx.fillText("Scan to order from your seat", w / 2, 1040);
-      ctx.font = "22px Georgia, serif";
-      ctx.fillStyle = "#8A6A1B";
-      ctx.fillText("No app. No signup. Just scan and enjoy.", w / 2, 1090);
+      ctx.fillStyle = "#6BAF36";
+      ctx.font = "900 72px sans-serif";
+      ctx.fillText("SCAN TO ORDER", w / 2, 1220);
+      ctx.font = "32px sans-serif";
+      ctx.fillStyle = "#ccc";
+      ctx.fillText("Talk. Order. Enjoy.", w / 2, 1280);
       // Footer branding
-      ctx.font = "18px Georgia, serif";
-      ctx.fillStyle = "#8A6A1B";
-      ctx.fillText("Powered by SmartDine AI", w / 2, h - 100);
+      ctx.font = "24px sans-serif";
+      ctx.fillStyle = "#B58A43";
+      ctx.fillText("Powered by SmartDine AI | smartdineai.co.in", w / 2, h - 100);
       const link = document.createElement("a");
       link.download = `${slug}-table-${t.number}.png`;
       link.href = canvas.toDataURL("image/png");
@@ -332,32 +402,7 @@ function TableCard({ t, onRegen, onDelete, slug, restaurantName }: { t: TableDoc
   const printQr = () => {
     const w = window.open("", "_blank");
     if (!w) { toast.error("Popup blocked — allow popups to print"); return; }
-    const svgEl = svgRef.current?.querySelector("svg");
-    if (!svgEl) return;
-    const xml = new XMLSerializer().serializeToString(svgEl);
-    w.document.write(`<!doctype html><html><head><title>${restaurantName} — Table ${t.number}</title>
-      <style>
-        @page { margin: 18mm; }
-        body { font-family: Georgia, serif; text-align: center; padding: 40px; color: #1A1106; }
-        .frame { border: 2px solid var(--brand-secondary); padding: 28px 36px; max-width: 460px; margin: 0 auto; background: #FAF5EC; }
-        .brand { letter-spacing: 0.4em; text-transform: uppercase; color: var(--brand-primary); font-size: 12px; }
-        h1 { font-size: 48px; margin: 6px 0 0; color: var(--brand-primary); }
-        .sub { font-style: italic; color: #8A6A1B; margin-top: 10px; font-size: 14px; }
-        .qr { margin: 26px auto 12px; }
-        .qr svg { width: 320px; height: 320px; }
-        .url { font-size: 11px; color: #8A6A1B; word-break: break-all; margin-top: 6px; }
-        .footer { font-size: 11px; color: #8A6A1B; margin-top: 16px; letter-spacing: 0.2em; text-transform: uppercase; }
-      </style></head><body>
-      <div class="frame">
-        <div class="brand">${restaurantName}</div>
-        <h1>Table ${t.number}</h1>
-        <div class="sub">Scan to order from your seat</div>
-        <div class="qr">${xml}</div>
-        <div class="url">${url}</div>
-        <div class="footer">Held for 10 minutes per scan</div>
-      </div>
-      <script>window.onload=()=>{setTimeout(()=>window.print(),300)};</script>
-      </body></html>`);
+    w.document.write(generateQrHtml(`TABLE ${t.number}`, "Talk. Order. Enjoy.", url, restaurantName, false));
     w.document.close();
   };
 
