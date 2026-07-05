@@ -162,3 +162,55 @@ async def delete_admin_staff(staff_id: str, user=Depends(require_user)):
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Staff not found")
     return {"status": "success"}
+
+class GenerateLogoReq(BaseModel):
+    restaurant_name: str
+    theme: str
+    tagline: str
+
+@router.post("/api/admin/marketing/generate-logo", dependencies=[Depends(require_roles("admin"))])
+async def generate_marketing_logo(req: GenerateLogoReq, user=Depends(require_user)):
+    import os
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+    if not GEMINI_API_KEY:
+        raise HTTPException(status_code=500, detail="Gemini API Key missing")
+        
+    try:
+        from google import genai
+        client_ai = genai.Client(api_key=GEMINI_API_KEY)
+        
+        prompt = f"""
+You are an expert brand identity designer. Generate a beautiful, premium, minimalist SVG logo for a restaurant.
+Restaurant Name: {req.restaurant_name}
+Theme: {req.theme}
+Tagline: {req.tagline}
+
+Requirements:
+- Output ONLY the raw SVG code.
+- No markdown wrapping, no HTML, no explanation.
+- Must be a scalable vector graphic (viewBox="0 0 500 500").
+- Use clean paths, modern typography style (using paths or standard fonts).
+- Use premium colors matching the theme (e.g. gold #B58A43 and dark/white elements if Luxury).
+- Keep it professional and centered.
+"""
+        response = client_ai.models.generate_content(
+            model="gemini-2.5-pro",
+            contents=prompt,
+        )
+        svg_content = response.text.strip()
+        if svg_content.startswith("```xml"):
+            svg_content = svg_content[6:]
+        if svg_content.startswith("```svg"):
+            svg_content = svg_content[6:]
+        if svg_content.startswith("```"):
+            svg_content = svg_content[3:]
+        if svg_content.endswith("```"):
+            svg_content = svg_content[:-3]
+        svg_content = svg_content.strip()
+        
+        if not svg_content.startswith("<svg"):
+            raise Exception("AI did not return a valid SVG")
+            
+        return {"status": "success", "svg": svg_content}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
