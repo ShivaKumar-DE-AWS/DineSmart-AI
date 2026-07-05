@@ -120,7 +120,7 @@ export default function RestaurantAuthPage() {
     e.preventDefault();
     setBusy(true);
     try {
-      const res = await api<{ token: string; user: { id: string; email: string; name: string; role: "admin" | "kitchen" | "counter" | "customer" | "superadmin"; restaurant_id?: string } }>("/api/auth/login", {
+      const res = await api<{ token: string; user: { id: string; email: string; name: string; role: "admin" | "kitchen" | "counter" | "cashier" | "customer" | "superadmin"; restaurant_id?: string } }>("/api/auth/login", {
         method: "POST",
         body: JSON.stringify({ email, password }),
       });
@@ -137,6 +137,7 @@ export default function RestaurantAuthPage() {
       const dest = slug
         ? res.user.role === "kitchen" ? `/kitchen`
         : res.user.role === "counter" ? `/counter`
+        : res.user.role === "cashier" ? `/cashier`
         : res.user.role === "admin" ? `/admin`
         : `/r/${slug}`
         : "/";

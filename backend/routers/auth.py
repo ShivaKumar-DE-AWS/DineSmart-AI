@@ -95,10 +95,10 @@ async def forgot_password(req: ForgotPasswordReq, background_tasks: BackgroundTa
     role = user.get("role")
     
     # 1. Reject kitchen and counter accounts explicitly
-    if role in ("kitchen", "counter") or role not in ("superadmin", "admin"):
+    if role in ("kitchen", "counter", "cashier") or role not in ("superadmin", "admin"):
         raise HTTPException(
             status_code=403,
-            detail="Kitchen and Counter account passwords cannot be reset via email. Please ask your Restaurant Admin to reset your password from the dashboard settings."
+            detail="Kitchen, Counter, and Cashier account passwords cannot be reset via email. Please ask your Restaurant Admin to reset your password from the dashboard settings."
         )
 
     # 2. Verify registered email for superadmin
@@ -171,7 +171,7 @@ async def reset_password(req: ResetPasswordReq):
         }
     )
     rest_id = user.get("restaurant_id")
-    if rest_id and user.get("role") in ("admin", "kitchen", "counter"):
+    if rest_id and user.get("role") in ("admin", "kitchen", "counter", "cashier"):
         role = user.get("role")
         await db.restaurants.update_one(
             {"id": rest_id},

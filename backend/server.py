@@ -308,6 +308,7 @@ from routers.campaigns import router as campaigns_router
 from routers.pricing import router as pricing_router
 from routers.otp import router as otp_router
 from routers.ai_waiter_event import router as ai_waiter_router
+from routers.cashier import router as cashier_router
 
 app.include_router(auth_router)
 app.include_router(menu_router)
@@ -329,6 +330,7 @@ app.include_router(campaigns_router)
 app.include_router(pricing_router)
 app.include_router(otp_router)
 app.include_router(ai_waiter_router)
+app.include_router(cashier_router)
 
 
 # =========================================================

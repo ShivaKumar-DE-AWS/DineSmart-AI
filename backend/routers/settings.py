@@ -115,7 +115,7 @@ async def verify_restaurant(req: VerifyReq, background_tasks: BackgroundTasks, u
 async def get_admin_staff(user=Depends(require_user)):
     # ponytail: returns ALL kitchen/counter — shifts need multiple per role
     staff = await db.users.find(
-        {"restaurant_id": user["restaurant_id"], "role": {"$in": ["kitchen", "counter"]}},
+        {"restaurant_id": user["restaurant_id"], "role": {"$in": ["kitchen", "counter", "cashier"]}},
         {"_id": 0, "password_hash": 0}
     ).to_list(100)
     return {"staff": staff}
@@ -123,7 +123,7 @@ async def get_admin_staff(user=Depends(require_user)):
 @router.post("/api/admin/staff", dependencies=[Depends(require_roles("admin"))])
 async def update_admin_staff(req: StaffUpdateReq, user=Depends(require_user)):
     import uuid
-    if req.role not in {"kitchen", "counter"}:
+    if req.role not in {"kitchen", "counter", "cashier"}:
         raise HTTPException(status_code=400, detail="Invalid role")
 
     if req.id:

@@ -111,7 +111,7 @@ export default function LoginPage() {
     e.preventDefault();
     setBusy(true);
     try {
-      const res = await api<{ token: string; user: { id: string; email: string; name: string; role: "admin" | "kitchen" | "counter" | "customer" } }>("/api/auth/login", {
+      const res = await api<{ token: string; user: { id: string; email: string; name: string; role: "admin" | "kitchen" | "counter" | "cashier" | "customer" } }>("/api/auth/login", {
         method: "POST",
         body: JSON.stringify({ email, password }),
       });
@@ -120,6 +120,7 @@ export default function LoginPage() {
       const dest = res.user.role === "admin" ? `/admin`
         : res.user.role === "kitchen" ? `/kitchen`
         : res.user.role === "counter" ? `/counter`
+        : res.user.role === "cashier" ? `/cashier`
         : `/r/${slug}/menu`;
       window.location.href = dest;
     } catch (e) {

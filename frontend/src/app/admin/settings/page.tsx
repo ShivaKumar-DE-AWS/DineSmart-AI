@@ -31,7 +31,7 @@ export default function AdminSettings() {
 
   // Add Staff form state
   const [showAddStaff, setShowAddStaff] = useState(false);
-  const [newStaffRole, setNewStaffRole] = useState<"kitchen" | "counter">("kitchen");
+  const [newStaffRole, setNewStaffRole] = useState<"kitchen" | "counter" | "cashier">("kitchen");
   const [newStaffName, setNewStaffName] = useState("");
   const [newStaffPassword, setNewStaffPassword] = useState("");
 
@@ -263,11 +263,12 @@ export default function AdminSettings() {
             <div className="mt-3 p-4 bg-cream border border-bone rounded-xl space-y-3">
               <select
                 value={newStaffRole}
-                onChange={(e) => setNewStaffRole(e.target.value as "kitchen" | "counter")}
+                onChange={(e) => setNewStaffRole(e.target.value as "kitchen" | "counter" | "cashier")}
                 className="w-full bg-white border border-bone rounded-lg px-3 py-2 text-sm outline-none text-ink"
               >
                 <option value="kitchen">Kitchen</option>
                 <option value="counter">Counter</option>
+                <option value="cashier">Cashier</option>
               </select>
               <input
                 value={newStaffName}
