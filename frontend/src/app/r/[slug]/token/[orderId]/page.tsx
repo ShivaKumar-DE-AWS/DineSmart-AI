@@ -97,13 +97,17 @@ export default function TokenPage() {
       {order.status === "awaiting_cash_verification" ? (
         <div className="bg-amber-500/10 border-2 border-amber-500 rounded-3xl p-5 mb-6 text-center shadow-lg animate-pulse">
           <div className="font-royal text-sm font-bold uppercase tracking-widest text-amber-700">
-            ⏳ Temporary Pay-Code Generated
+            {order.payment_method === 'upi' ? '⏳ UPI Payment Verification' :
+             order.payment_method === 'card_machine' ? '⏳ Card Payment Verification' :
+             '⏳ Temporary Pay-Code Generated'}
           </div>
           <div className="font-royal text-4xl text-amber-900 my-2 tracking-wider">
             #{order.pay_code || order.token}
           </div>
           <p className="font-editorial italic text-xs text-amber-800 mt-1 leading-relaxed">
-            Show this code at the cashier counter to complete your cash payment. Once verified, your kitchen preparation token will be automatically generated!
+            {order.payment_method === 'upi' ? 'Complete your UPI payment and show this code at the counter. Once verified, your kitchen preparation token will be generated!' :
+             order.payment_method === 'card_machine' ? 'Please complete your card payment at the counter and show this code. Once verified, your kitchen preparation token will be generated!' :
+             'Show this code at the cashier counter to complete your cash payment. Once verified, your kitchen preparation token will be automatically generated!'}
           </p>
           {restaurantConfig?.upi_id && (
             <a

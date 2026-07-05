@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
-import { Search, Sparkles, Phone, Users, TrendingUp } from "lucide-react";
+import { Search, Sparkles, Phone, Users, TrendingUp, Check, Minus } from "lucide-react";
 
 interface Customer {
   id: string;
@@ -76,6 +76,7 @@ export default function AdminCustomers() {
                 <th className="text-right px-4 py-3">Orders</th>
                 <th className="text-right px-4 py-3">Lifetime ₹</th>
                 <th className="text-right px-4 py-3">Points</th>
+                <th className="text-center px-4 py-3">Campaigns</th>
                 <th className="text-left px-4 py-3">Last visit</th>
               </tr>
             </thead>
@@ -99,6 +100,17 @@ export default function AdminCustomers() {
                     <span className="inline-flex items-center gap-1 bg-warn/10 text-clay border border-warn/30 rounded-full px-2 py-0.5 text-xs font-medium">
                       <Sparkles className="h-3 w-3" /> {c.points}
                     </span>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    {c.phone ? (
+                      <span className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-700 border border-emerald-500/30 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider">
+                        <Check className="h-3 w-3" /> Subscribed
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 bg-stone/10 text-stone border border-stone/20 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider">
+                        <Minus className="h-3 w-3" /> Unsubscribed
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-stone text-xs">{c.last_order_at ? new Date(c.last_order_at).toLocaleDateString() : "—"}</td>
                 </tr>

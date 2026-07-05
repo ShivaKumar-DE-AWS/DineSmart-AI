@@ -184,13 +184,17 @@ export default function TrackPage() {
       {order.status === "awaiting_cash_verification" ? (
         <div className="bg-amber-500/10 border-2 border-amber-500 rounded-3xl p-5 mb-6 text-center shadow-lg animate-pulse">
           <div className="font-royal text-sm font-bold uppercase tracking-widest text-amber-700">
-            ⏳ Temporary Pay-Code Generated
+            {order.payment_method === 'upi' ? '⏳ UPI Payment Verification' :
+             order.payment_method === 'card_machine' ? '⏳ Card Payment Verification' :
+             '⏳ Temporary Pay-Code Generated'}
           </div>
           <div className="font-royal text-4xl text-amber-900 my-2 tracking-wider">
             #{order.pay_code || order.token}
           </div>
           <p className="font-editorial italic text-xs text-amber-800 mt-1 leading-relaxed">
-            Show this code at the cashier counter to complete your cash payment. Once verified, your kitchen preparation token will be automatically generated!
+            {order.payment_method === 'upi' ? 'Complete your UPI payment and show this code at the counter. Once verified, your kitchen preparation token will be generated!' :
+             order.payment_method === 'card_machine' ? 'Please complete your card payment at the counter and show this code. Once verified, your kitchen preparation token will be generated!' :
+             'Show this code at the cashier counter to complete your cash payment. Once verified, your kitchen preparation token will be automatically generated!'}
           </p>
           {restaurantConfig?.upi_id && (
             <a
@@ -258,6 +262,16 @@ export default function TrackPage() {
               <span>Paid Amount</span>
               <span className="font-bold text-emerald-300 text-base">₹{order.total}</span>
             </div>
+            
+            <div className="flex justify-between items-center text-emerald-200/80 text-xs mt-1">
+              <span>Payment Method</span>
+              <span className="font-medium text-white/90 capitalize">{order.payment_method?.replace('_', ' ') || 'Cash'}</span>
+            </div>
+            <div className="flex justify-between items-center text-emerald-200/80 text-xs">
+              <span>Payment Gateway</span>
+              <span className="font-medium text-white/90 capitalize">{["stripe", "razorpay"].includes(order.payment_method || "") ? order.payment_method : "Counter"}</span>
+            </div>
+
             <div className="flex justify-between items-center text-emerald-200/80 text-xs border-t border-white/10 pt-2 mt-2">
               <span>Exit Gate Verification</span>
               <span className="font-black tracking-widest text-amber-300 text-sm bg-amber-500/20 px-2 py-0.5 rounded">
@@ -265,9 +279,9 @@ export default function TrackPage() {
               </span>
             </div>
             <div className="flex justify-between items-center text-emerald-200/80 text-xs">
-              <span>Settled Timestamp</span>
+              <span>Settled Date & Time</span>
               <span className="text-white/90 text-xs">
-                {order.paid_at ? new Date(order.paid_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : new Date().toLocaleTimeString()}
+                {order.paid_at ? new Date(order.paid_at).toLocaleString('en-IN', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleString('en-IN', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
               </span>
             </div>
           </div>
