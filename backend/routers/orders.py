@@ -729,49 +729,61 @@ async def download_bill(order_id: str, user=Depends(current_user)):
 
         pdf = FPDF()
         pdf.add_page()
-        pdf.set_fill_color(250, 245, 236) # Cream background
+        
+        # Main Background (Dark)
+        pdf.set_fill_color(10, 10, 10)
         pdf.rect(0, 0, 210, 297, "F")
         
+        # Gold Outer Border
+        pdf.set_draw_color(221, 184, 92)
+        pdf.set_line_width(2.0)
+        pdf.rect(6, 6, 198, 285, "D")
+        
+        # Inner thin gold border
+        pdf.set_line_width(0.5)
+        pdf.rect(9, 9, 192, 279, "D")
+        
         # Header Box (Dark Theme)
-        pdf.set_fill_color(26, 17, 6) # Dark bg
-        pdf.rect(0, 0, 210, 48, "F")
-        pdf.set_fill_color(181, 138, 67) # Gold underline
-        pdf.rect(0, 48, 210, 1.5, "F")
+        pdf.set_fill_color(10, 10, 10)
+        pdf.rect(10, 10, 190, 40, "F")
+        pdf.set_fill_color(221, 184, 92) # Gold underline
+        pdf.rect(10, 50, 190, 1.0, "F")
         
         # Header - Restaurant Name
         pdf.set_text_color(221, 184, 92) # Gold Text
-        pdf.set_font("Helvetica", "B", 24)
-        pdf.set_y(12)
-        pdf.set_x(12)
+        pdf.set_font("Helvetica", "B", 26)
+        pdf.set_y(20)
+        pdf.set_x(15)
         pdf.cell(text=rest_name.upper(), w=120, align="L")
         
         pdf.set_text_color(250, 245, 236)
-        pdf.set_font("Helvetica", "", 10)
-        pdf.set_y(22)
-        pdf.set_x(12)
+        pdf.set_font("Helvetica", "I", 10)
+        pdf.set_y(32)
+        pdf.set_x(15)
         pdf.cell(text="MULTI CUISINE RESTAURANT", w=120, align="L")
         
         # Header - SmartDine AI Right Side
-        pdf.set_y(15)
-        pdf.set_x(120)
+        pdf.set_y(22)
+        pdf.set_x(115)
         pdf.set_font("Helvetica", "B", 18)
         pdf.set_text_color(250, 245, 236)
         pdf.cell(text="SmartDine AI", w=80, align="R")
-        pdf.set_y(24)
-        pdf.set_x(120)
-        pdf.set_font("Helvetica", "", 9)
-        pdf.set_text_color(181, 138, 67)
+        pdf.set_y(32)
+        pdf.set_x(115)
+        pdf.set_font("Helvetica", "", 8)
+        pdf.set_text_color(221, 184, 92)
         pdf.cell(text="AI-POWERED DINING EXPERIENCE", w=80, align="R")
         
         pdf.ln(30)
         
         # Section Titles
-        pdf.set_fill_color(243, 235, 216)
-        pdf.set_text_color(138, 106, 27)
+        pdf.set_fill_color(221, 184, 92)
+        pdf.set_text_color(10, 10, 10)
         pdf.set_font("Helvetica", "B", 10)
-        pdf.cell(text="  BILL DETAILS", w=90, h=8, fill=True)
+        pdf.set_x(15)
+        pdf.cell(text="  BILL DETAILS", w=85, h=8, fill=True)
         pdf.cell(text="", w=10) # Gap
-        pdf.cell(text="  RESTAURANT DETAILS", w=90, h=8, fill=True, new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(text="  RESTAURANT DETAILS", w=85, h=8, fill=True, new_x="LMARGIN", new_y="NEXT")
         pdf.ln(4)
         
         # Date & Time formatting
@@ -787,85 +799,116 @@ async def download_bill(order_id: str, user=Depends(current_user)):
                 pass
 
         # Details Content
+        pdf.set_x(15)
         pdf.set_font("Helvetica", "B", 9)
-        pdf.set_text_color(26, 17, 6)
-        pdf.cell(text="Bill No.", w=30)
+        pdf.set_text_color(221, 184, 92)
+        pdf.cell(text="Bill No.", w=25)
         pdf.set_font("Helvetica", "", 9)
+        pdf.set_text_color(250, 245, 236)
         pdf.cell(text=f": SDM/{order.get('token', '000')}", w=60)
         
         pdf.cell(text="", w=10)
         pdf.set_font("Helvetica", "B", 9)
+        pdf.set_text_color(221, 184, 92)
         pdf.cell(text="Address", w=20)
         pdf.set_font("Helvetica", "", 9)
-        pdf.cell(text=f": {rest.get('address', 'Katedan, Hyderabad - 500077')}"[:40], w=70, new_x="LMARGIN", new_y="NEXT")
+        pdf.set_text_color(250, 245, 236)
+        pdf.cell(text=f": {rest.get('address', 'Katedan, Hyderabad - 500077')}"[:40], w=65, new_x="LMARGIN", new_y="NEXT")
         
+        pdf.set_x(15)
         pdf.set_font("Helvetica", "B", 9)
-        pdf.cell(text="Order No.", w=30)
+        pdf.set_text_color(221, 184, 92)
+        pdf.cell(text="Order No.", w=25)
         pdf.set_font("Helvetica", "", 9)
+        pdf.set_text_color(250, 245, 236)
         pdf.cell(text=f": ORD/{order_id[:8].upper()}", w=60)
         
         pdf.cell(text="", w=10)
         pdf.set_font("Helvetica", "B", 9)
+        pdf.set_text_color(221, 184, 92)
         pdf.cell(text="Phone", w=20)
         pdf.set_font("Helvetica", "", 9)
-        pdf.cell(text=f": {rest.get('phone', '+91 88888 88888')}", w=70, new_x="LMARGIN", new_y="NEXT")
+        pdf.set_text_color(250, 245, 236)
+        pdf.cell(text=f": {rest.get('phone', '+91 88888 88888')}", w=65, new_x="LMARGIN", new_y="NEXT")
         
+        pdf.set_x(15)
         pdf.set_font("Helvetica", "B", 9)
-        pdf.cell(text="Date", w=30)
+        pdf.set_text_color(221, 184, 92)
+        pdf.cell(text="Date", w=25)
         pdf.set_font("Helvetica", "", 9)
+        pdf.set_text_color(250, 245, 236)
         pdf.cell(text=f": {dt_str}", w=60)
         
         pdf.cell(text="", w=10)
         pdf.set_font("Helvetica", "B", 9)
+        pdf.set_text_color(221, 184, 92)
         pdf.cell(text="Website", w=20)
         pdf.set_font("Helvetica", "", 9)
+        pdf.set_text_color(250, 245, 236)
         domain = rest_name.lower().replace(" ", "")
-        pdf.cell(text=f": www.{domain}.com", w=70, new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(text=f": www.{domain}.com", w=65, new_x="LMARGIN", new_y="NEXT")
         
+        pdf.set_x(15)
         pdf.set_font("Helvetica", "B", 9)
-        pdf.cell(text="Time", w=30)
+        pdf.set_text_color(221, 184, 92)
+        pdf.cell(text="Time", w=25)
         pdf.set_font("Helvetica", "", 9)
+        pdf.set_text_color(250, 245, 236)
         pdf.cell(text=f": {tm_str}", w=60)
         
         pdf.cell(text="", w=10)
         pdf.set_font("Helvetica", "B", 9)
+        pdf.set_text_color(221, 184, 92)
         pdf.cell(text="Email", w=20)
         pdf.set_font("Helvetica", "", 9)
-        pdf.cell(text=f": contact@{domain}.com", w=70, new_x="LMARGIN", new_y="NEXT")
+        pdf.set_text_color(250, 245, 236)
+        pdf.cell(text=f": contact@{domain}.com", w=65, new_x="LMARGIN", new_y="NEXT")
 
+        pdf.set_x(15)
         pdf.set_font("Helvetica", "B", 9)
-        pdf.cell(text="Table No.", w=30)
-        pdf.set_font("Helvetica", "", 9)
+        pdf.set_text_color(221, 184, 92)
+        pdf.cell(text="Table No.", w=25)
+        pdf.set_font("Helvetica", "B", 10)
+        pdf.set_text_color(96, 182, 52) # Green for table
         pdf.cell(text=f": {order.get('table_number', 'Takeaway')}", w=60)
         
         pdf.cell(text="", w=10)
         pdf.set_font("Helvetica", "I", 11)
-        pdf.set_text_color(181, 138, 67)
-        pdf.cell(text=" Thank you for dining with us!", w=90, new_x="LMARGIN", new_y="NEXT")
+        pdf.set_text_color(221, 184, 92)
+        pdf.cell(text=" Thank you for dining with us!", w=85, new_x="LMARGIN", new_y="NEXT")
         
-        pdf.set_text_color(26, 17, 6)
+        pdf.set_x(15)
         pdf.set_font("Helvetica", "B", 9)
-        pdf.cell(text="Token No.", w=30)
+        pdf.set_text_color(221, 184, 92)
+        pdf.cell(text="Token No.", w=25)
         pdf.set_font("Helvetica", "", 9)
+        pdf.set_text_color(250, 245, 236)
         pdf.cell(text=f": #{order.get('token', '0')}", w=60, new_x="LMARGIN", new_y="NEXT")
         
+        pdf.set_x(15)
         pdf.set_font("Helvetica", "B", 9)
-        pdf.cell(text="Waiter", w=30)
+        pdf.set_text_color(221, 184, 92)
+        pdf.cell(text="Waiter", w=25)
         pdf.set_font("Helvetica", "", 9)
+        pdf.set_text_color(250, 245, 236)
         pdf.cell(text=": AI Waiter (SmartDine AI)", w=60, new_x="LMARGIN", new_y="NEXT")
         
+        pdf.set_x(15)
         pdf.set_font("Helvetica", "B", 9)
-        pdf.cell(text="Guests", w=30)
+        pdf.set_text_color(221, 184, 92)
+        pdf.cell(text="Guests", w=25)
         pdf.set_font("Helvetica", "", 9)
+        pdf.set_text_color(250, 245, 236)
         pdf.cell(text=f": {order.get('customer_name', 'Guest')}", w=60, new_x="LMARGIN", new_y="NEXT")
         
         pdf.ln(8)
         
         # Table Header
-        pdf.set_fill_color(26, 17, 6) # Dark
-        pdf.set_text_color(221, 184, 92) # Gold
+        pdf.set_x(15)
+        pdf.set_fill_color(221, 184, 92) # Gold background for header
+        pdf.set_text_color(10, 10, 10) # Dark text
         pdf.set_font("Helvetica", "B", 9)
-        col_w = [15, 85, 20, 35, 35]
+        col_w = [15, 80, 20, 30, 35]
         headers = ["S.NO.", "ITEM NAME", "QTY.", "RATE (INR)", "AMOUNT (INR)"]
         for h, w in zip(headers, col_w):
             pdf.cell(text=h, w=w, h=9, align="C" if h != "ITEM NAME" else "L", fill=True)
@@ -873,19 +916,20 @@ async def download_bill(order_id: str, user=Depends(current_user)):
         
         # Table Rows
         pdf.set_font("Helvetica", "", 9)
-        pdf.set_text_color(26, 17, 6)
         
         alt_bg = False
         for idx, item in enumerate(order.get("items", []), 1):
-            name = item.get("name", "Unknown")[:50]
+            name = item.get("name", "Unknown")[:45]
             qty = item.get("qty", 1)
             price = float(item.get("price", 0))
             if alt_bg:
-                pdf.set_fill_color(245, 240, 228)
+                pdf.set_fill_color(30, 30, 30)
             else:
-                pdf.set_fill_color(250, 245, 236)
+                pdf.set_fill_color(20, 20, 20)
             alt_bg = not alt_bg
             
+            pdf.set_x(15)
+            pdf.set_text_color(250, 245, 236)
             pdf.cell(text=str(idx), w=col_w[0], align="C", fill=True)
             pdf.cell(text=name, w=col_w[1], align="L", fill=True)
             pdf.cell(text=str(qty), w=col_w[2], align="C", fill=True)
@@ -894,17 +938,19 @@ async def download_bill(order_id: str, user=Depends(current_user)):
             pdf.ln(7)
             notes = item.get("notes", "")
             if notes:
+                pdf.set_x(15)
                 pdf.set_font("Helvetica", "I", 8)
-                pdf.set_text_color(138, 106, 27)
+                pdf.set_text_color(150, 150, 150)
                 pdf.cell(text="", w=col_w[0], fill=True)
                 pdf.cell(text="* " + str(notes)[:80], w=col_w[1], new_x="LMARGIN", new_y="NEXT", fill=True)
                 pdf.set_font("Helvetica", "", 9)
-                pdf.set_text_color(26, 17, 6)
+                pdf.set_text_color(250, 245, 236)
                 pdf.ln(1)
         
         pdf.ln(2)
-        pdf.set_draw_color(181, 138, 67)
-        pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+        pdf.set_x(15)
+        pdf.set_draw_color(221, 184, 92)
+        pdf.line(15, pdf.get_y(), 195, pdf.get_y())
         pdf.ln(4)
         
         # Payment Summary & Mode
@@ -917,76 +963,93 @@ async def download_bill(order_id: str, user=Depends(current_user)):
         y_before = pdf.get_y()
         
         # Left Box (Summary)
-        pdf.set_fill_color(243, 235, 216)
-        pdf.set_text_color(138, 106, 27)
+        pdf.set_x(15)
+        pdf.set_fill_color(221, 184, 92)
+        pdf.set_text_color(10, 10, 10)
         pdf.set_font("Helvetica", "B", 10)
-        pdf.cell(text="  PAYMENT SUMMARY", w=90, h=8, fill=True, new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(text="  PAYMENT SUMMARY", w=85, h=8, fill=True, new_x="LMARGIN", new_y="NEXT")
         pdf.ln(3)
-        pdf.set_text_color(26, 17, 6)
+        pdf.set_text_color(250, 245, 236)
         pdf.set_font("Helvetica", "", 9)
-        pdf.cell(text="Subtotal", w=60)
+        pdf.set_x(15)
+        pdf.cell(text="Subtotal", w=55)
         pdf.cell(text=f"INR {subtotal:.2f}", w=30, align="R", new_x="LMARGIN", new_y="NEXT")
         pdf.ln(1)
-        pdf.cell(text="Discount", w=60)
+        pdf.set_x(15)
+        pdf.cell(text="Discount", w=55)
         pdf.cell(text="INR 0.00", w=30, align="R", new_x="LMARGIN", new_y="NEXT")
         pdf.ln(1)
-        pdf.cell(text="Taxable Amount", w=60)
+        pdf.set_x(15)
+        pdf.cell(text="Taxable Amount", w=55)
         pdf.cell(text=f"INR {subtotal:.2f}", w=30, align="R", new_x="LMARGIN", new_y="NEXT")
         pdf.ln(1)
-        pdf.cell(text="CGST (2.5%)", w=60)
+        pdf.set_x(15)
+        pdf.cell(text="CGST (2.5%)", w=55)
         pdf.cell(text=f"INR {tax/2:.2f}", w=30, align="R", new_x="LMARGIN", new_y="NEXT")
         pdf.ln(1)
-        pdf.cell(text="SGST (2.5%)", w=60)
+        pdf.set_x(15)
+        pdf.cell(text="SGST (2.5%)", w=55)
         pdf.cell(text=f"INR {tax/2:.2f}", w=30, align="R", new_x="LMARGIN", new_y="NEXT")
         pdf.ln(3)
-        pdf.line(10, pdf.get_y(), 100, pdf.get_y())
+        pdf.set_draw_color(221, 184, 92)
+        pdf.line(15, pdf.get_y(), 100, pdf.get_y())
         pdf.ln(3)
+        pdf.set_x(15)
         pdf.set_font("Helvetica", "B", 11)
-        pdf.cell(text="GRAND TOTAL", w=60)
-        pdf.set_text_color(181, 138, 67)
+        pdf.set_text_color(96, 182, 52) # Green Total
+        pdf.cell(text="GRAND TOTAL", w=55)
+        pdf.set_text_color(221, 184, 92)
         pdf.cell(text=f"INR {total:.2f}", w=30, align="R", new_x="LMARGIN", new_y="NEXT")
         
         # Right Box (Mode)
         pdf.set_y(y_before)
         pdf.set_x(110)
-        pdf.set_text_color(138, 106, 27)
+        pdf.set_fill_color(221, 184, 92)
+        pdf.set_text_color(10, 10, 10)
         pdf.set_font("Helvetica", "B", 10)
-        pdf.cell(text="  PAYMENT MODE", w=90, h=8, fill=True)
+        pdf.cell(text="  PAYMENT MODE", w=85, h=8, fill=True)
         pdf.set_y(y_before + 13)
         pdf.set_x(110)
         pdf.set_font("Helvetica", "B", 9)
-        pdf.set_text_color(26, 17, 6)
-        pdf.cell(text=f"[Paid via {str(pay_method).upper()}]" if pay_status == "paid" else f"[{str(pay_method).upper()}]", w=90)
+        if pay_status == "paid":
+            pdf.set_text_color(96, 182, 52)
+        else:
+            pdf.set_text_color(250, 245, 236)
+        pdf.cell(text=f"[Paid via {str(pay_method).upper()}]" if pay_status == "paid" else f"[{str(pay_method).upper()}]", w=85)
         pdf.set_y(y_before + 23)
         pdf.set_x(110)
+        pdf.set_text_color(221, 184, 92)
         pdf.set_font("Helvetica", "", 9)
         pdf.cell(text="Transaction ID", w=35)
+        pdf.set_text_color(250, 245, 236)
         pdf.cell(text=f": {order_id[:12].upper()}")
         pdf.set_y(y_before + 28)
         pdf.set_x(110)
+        pdf.set_text_color(221, 184, 92)
         pdf.cell(text="Payment Status", w=35)
+        if pay_status == "paid":
+            pdf.set_text_color(96, 182, 52)
+        else:
+            pdf.set_text_color(250, 245, 236)
         pdf.cell(text=f": {str(pay_status).upper()}")
         pdf.set_y(y_before + 33)
         pdf.set_x(110)
+        pdf.set_text_color(221, 184, 92)
         pdf.cell(text="Payment Date", w=35)
+        pdf.set_text_color(250, 245, 236)
         pdf.cell(text=f": {dt_str} {tm_str}")
         
         pdf.set_y(y_before + 45)
         pdf.set_x(110)
-        pdf.set_font("Helvetica", "B", 16)
-        pdf.set_text_color(181, 138, 67)
-        pdf.cell(text="Thank You! <3", w=90, align="C")
-        pdf.set_y(y_before + 53)
-        pdf.set_x(110)
-        pdf.set_font("Helvetica", "I", 10)
-        pdf.set_text_color(26, 17, 6)
-        pdf.cell(text="We appreciate your visit. Please visit again!", w=90, align="C")
+        pdf.set_font("Helvetica", "I", 24)
+        pdf.set_text_color(96, 182, 52) # Green Enjoy text
+        pdf.cell(text="We serve, you enjoy! ♥", w=85, align="C")
         
-        # Footer Box (Dark Theme)
-        pdf.set_fill_color(26, 17, 6)
-        pdf.rect(0, 260, 210, 37, "F")
+        # Footer Box (Dark Theme with Gold Outline)
+        pdf.set_fill_color(10, 10, 10)
+        pdf.rect(10, 260, 190, 27, "F")
         pdf.set_fill_color(221, 184, 92) # Gold underline
-        pdf.rect(0, 260, 210, 1.5, "F")
+        pdf.rect(10, 259, 190, 1.0, "F")
         
         pdf.set_y(266)
         pdf.set_x(15)
@@ -995,9 +1058,9 @@ async def download_bill(order_id: str, user=Depends(current_user)):
         pdf.cell(text="Loved your experience?", w=60, align="L", new_x="LMARGIN", new_y="NEXT")
         pdf.set_x(15)
         pdf.set_font("Helvetica", "", 9)
-        pdf.set_text_color(181, 138, 67)
+        pdf.set_text_color(221, 184, 92)
         pdf.cell(text="Scan to rate us on Google", w=60, align="L")
-
+        
         pdf.set_y(266)
         pdf.set_x(100)
         pdf.set_font("Helvetica", "B", 12)
@@ -1005,166 +1068,5 @@ async def download_bill(order_id: str, user=Depends(current_user)):
         pdf.cell(text="SmartDine AI", w=95, align="R", new_x="LMARGIN", new_y="NEXT")
         pdf.set_x(100)
         pdf.set_font("Helvetica", "", 9)
-        pdf.set_text_color(181, 138, 67)
+        pdf.set_text_color(221, 184, 92)
         pdf.cell(text="Go Green. Save Paper. | www.smartdineai.co.in", w=95, align="R")
-        
-        pdf_bytes = bytes(pdf.output())
-        return Response(content=pdf_bytes, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=bill_{order['token']}.pdf"})
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Bill error: {type(e).__name__}: {str(e)}")
-
-
-# =========================================================
-# Payment helpers (shared with orders) — simplified for UPI/QR only
-# =========================================================
-async def _find_or_create_customer(name: str, phone: Optional[str], restaurant_id: Optional[str] = None) -> Dict[str, Any]:
-    import secrets as _secrets, html
-    name_clean = html.escape((name or "").strip())
-    phone_clean = (phone or "").strip() or None
-    query: Optional[Dict[str, Any]] = None
-    if phone_clean:
-        query = {"phone": phone_clean}
-        if restaurant_id:
-            query["restaurant_id"] = restaurant_id
-    elif name_clean:
-        query = {"name": name_clean, "phone": None}
-        if restaurant_id:
-            query["restaurant_id"] = restaurant_id
-    if query:
-        existing = await db.customers.find_one(query, {"_id": 0})
-        if existing:
-            return existing
-    alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-    code = "M-" + "".join(_secrets.choice(alphabet) for _ in range(6))
-    while await db.customers.find_one({"code": code}):
-        code = "M-" + "".join(_secrets.choice(alphabet) for _ in range(6))
-    doc = {
-        "id": str(uuid.uuid4()), "code": code, "name": name_clean or "Guest",
-        "phone": phone_clean, "restaurant_id": restaurant_id,
-        "points": 0, "lifetime_spend": 0.0, "orders_count": 0,
-        "created_at": now_iso(), "last_order_at": None,
-    }
-    await db.customers.insert_one(doc)
-    return doc
-
-
-async def _on_order_paid(order: Dict[str, Any]) -> None:
-    customer_id = order.get("customer_id")
-    if not customer_id:
-        return
-    points_earned = int(order["total"] // 100)
-    await db.customers.update_one(
-        {"id": customer_id},
-        {"$inc": {"points": points_earned, "orders_count": 1, "lifetime_spend": float(order["total"])},
-         "$set": {"last_order_at": now_iso()}},
-    )
-
-
-async def _deduct_inventory(order: Dict[str, Any]) -> None:
-    for item in order.get("items", []):
-        qty = item.get("qty", 1)
-        m = await db.menu.find_one({"id": item.get("item_id")}, {"recipe": 1})
-        if m and m.get("recipe"):
-            for ing in m["recipe"]:
-                ing_id = ing.get("ingredient_id")
-                req_qty = ing.get("qty_required", 0) * qty
-                if ing_id and req_qty > 0:
-                    await db.inventory.update_one({"id": ing_id}, {"$inc": {"qty": -req_qty}})
-
-
-# =========================================================
-# Simple UPI/QR payment endpoints (no Stripe)
-# =========================================================
-@router.post("/api/payment/intent")
-async def payment_intent(req: PaymentReq):
-    """Mock payment intent for UPI/QR - immediately succeeds."""
-    import asyncio
-    await asyncio.sleep(0.1)  # Simulate quick processing
-    return {
-        "intent_id": f"upi_{uuid.uuid4().hex[:16]}",
-        "status": "succeeded", "amount": req.amount, "method": req.method,
-        "captured_at": now_iso(),
-    }
-
-
-@router.get("/api/payment/config")
-async def payment_config():
-    return {"stripe_enabled": False, "provider": "upi_qr"}
-
-
-@router.post("/api/orders/{order_id}/verify-cash", dependencies=[Depends(require_user)])
-async def verify_cash_paycode(order_id: str, user=Depends(require_user)):
-    order = await db.orders.find_one({"id": order_id})
-    if not order:
-        raise HTTPException(status_code=404, detail="Order not found")
-    if order.get("status") != "awaiting_cash_verification":
-        return {"ok": True, "message": "Order already verified or processed"}
-    
-    restaurant_id = order["restaurant_id"]
-    new_token = await next_token(restaurant_id, order.get("order_type", "self_service"))
-    
-    await db.orders.update_one(
-        {"id": order_id},
-        {"$set": {
-            "status": "confirmed",
-            "payment_status": "paid",
-            "token": new_token,
-            "pay_code": None,
-            "paid_at": now_iso(),
-            "updated_at": now_iso()
-        }}
-    )
-    
-    updated_order = await db.orders.find_one({"id": order_id}, {"_id": 0})
-    broadcast_order_update(restaurant_id, {"type": "new_order", "order": updated_order})
-    broadcast_order_update(restaurant_id, {"type": "status_update", "order_id": order_id, "token": new_token, "status": "confirmed", "payment_status": "paid"})
-    return {"ok": True, "order": updated_order}
-
-
-@router.post("/api/orders/{order_id}/discard-spam", dependencies=[Depends(require_user)])
-async def discard_spam_order(order_id: str, user=Depends(require_user)):
-    order = await db.orders.find_one({"id": order_id})
-    if not order:
-        raise HTTPException(status_code=404, detail="Order not found")
-    await db.orders.update_one({"id": order_id}, {"$set": {"status": "cancelled", "updated_at": now_iso()}})
-    broadcast_order_update(order["restaurant_id"], {"type": "order_removed", "order_id": order_id})
-    return {"ok": True}
-
-
-@router.post("/api/orders/{order_id}/verify-high-value", dependencies=[Depends(require_user)])
-async def verify_high_value_order(order_id: str, user=Depends(require_user)):
-    order = await db.orders.find_one({"id": order_id})
-    if not order:
-        raise HTTPException(status_code=404, detail="Order not found")
-    await db.orders.update_one({"id": order_id}, {"$set": {"status": "confirmed", "updated_at": now_iso()}})
-    updated_order = await db.orders.find_one({"id": order_id}, {"_id": 0})
-    broadcast_order_update(order["restaurant_id"], {"type": "new_order", "order": updated_order})
-    return {"ok": True, "order": updated_order}
-
-
-@router.post("/api/orders/{order_id}/manual-override-exit", dependencies=[Depends(require_user)])
-async def manual_override_exit(order_id: str, body: OrderStatusUpdate, user=Depends(require_user)):
-    order = await db.orders.find_one({"id": order_id})
-    if not order:
-        raise HTTPException(status_code=404, detail="Order not found")
-    
-    emp_name = user.get("name") or user.get("email") or "Cashier"
-    override_note = body.override_reason or f"Manual UTR override by {emp_name}. UTR: {body.utr_number or 'N/A'}"
-    
-    await db.orders.update_one(
-        {"id": order_id},
-        {"$set": {
-            "payment_status": "paid",
-            "exit_code": f"OVR-{order_id[-6:].upper()}",
-            "override_reason": override_note,
-            "utr_number": body.utr_number,
-            "paid_at": now_iso(),
-            "updated_at": now_iso()
-        }}
-    )
-    
-    updated_order = await db.orders.find_one({"id": order_id}, {"_id": 0})
-    broadcast_order_update(order["restaurant_id"], {"type": "status_update", "order_id": order_id, "token": order["token"], "payment_status": "paid"})
-    return {"ok": True, "order": updated_order}
