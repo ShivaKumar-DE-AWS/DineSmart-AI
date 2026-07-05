@@ -1,23 +1,20 @@
 """Support ticketing system for restaurants to contact SmartDine HQ."""
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from typing import Optional, List
-from deps import db, require_user, require_restaurant_id, now_iso
+from deps import db, require_user, require_restaurant_id, now_iso, require_superadmin
 import uuid
 
 router = APIRouter(tags=["tickets"])
-
-
-async def require_superadmin(user=Depends(require_user)):
-    if user.get("role") != "superadmin":
-        raise HTTPException(status_code=403, detail="Superadmin access required")
-    return user
 
 
 class TicketCreateReq(BaseModel):
     title: str
     description: str
     priority: str = "normal"  # low, normal, high, critical
+
+class TicketReplyReq(BaseModel):
+    message: str
 
 
 @router.post("/api/tickets")
@@ -38,7 +35,8 @@ async def create_ticket(req: TicketCreateReq, user=Depends(require_user)):
         "status": "open",
         "created_at": now_iso(),
         "resolved_at": None,
-        "resolved_by": None
+        "resolved_by": None,
+        "replies": []
     }
     
     await db.support_tickets.insert_one(doc)
@@ -96,9 +94,19 @@ async def delete_ticket(ticket_id: str, user=Depends(require_user)):
 
 
 @router.get("/api/super-admin/tickets")
-async def get_all_tickets(user=Depends(require_superadmin)):
+async def get_all_tickets(
+    status: Optional[str] = None,
+    priority: Optional[str] = None,
+    user=Depends(require_superadmin)
+):
     """HQ endpoint to view all tickets across the platform."""
-    tickets = await db.support_tickets.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
+    query = {}
+    if status:
+        query["status"] = status
+    if priority:
+        query["priority"] = priority
+        
+    tickets = await db.support_tickets.find(query, {"_id": 0}).sort("created_at", -1).to_list(500)
     return {"tickets": tickets}
 
 
@@ -128,3 +136,64 @@ async def resolve_ticket(ticket_id: str, user=Depends(require_superadmin)):
     )
     
     return {"message": "Ticket resolved"}
+
+
+@router.post("/api/super-admin/tickets/{ticket_id}/reopen")
+async def reopen_ticket(ticket_id: str, user=Depends(require_superadmin)):
+    """HQ endpoint to re-open a resolved ticket."""
+    ticket = await db.support_tickets.find_one({"id": ticket_id})
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+        
+    await db.support_tickets.update_one(
+        {"id": ticket_id},
+        {"$set": {
+            "status": "open",
+        }, "$unset": {
+            "resolved_at": "",
+            "resolved_by": ""
+        }}
+    )
+    
+    from routers.audit import log_audit_event
+    await log_audit_event(
+        user_id=user.get("sub"),
+        user_email=user["email"],
+        action="ticket_reopened",
+        target=ticket_id,
+        details={"restaurant_id": ticket.get("restaurant_id")}
+    )
+    
+    return {"message": "Ticket reopened"}
+
+
+@router.post("/api/super-admin/tickets/{ticket_id}/reply")
+async def reply_ticket(ticket_id: str, req: TicketReplyReq, user=Depends(require_superadmin)):
+    """HQ endpoint to add a reply to a ticket."""
+    ticket = await db.support_tickets.find_one({"id": ticket_id})
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+        
+    reply = {
+        "id": str(uuid.uuid4()),
+        "message": req.message,
+        "created_by": user.get("email"),
+        "created_at": now_iso(),
+        "is_hq": True
+    }
+        
+    await db.support_tickets.update_one(
+        {"id": ticket_id},
+        {"$push": {"replies": reply}}
+    )
+    
+    from routers.audit import log_audit_event
+    await log_audit_event(
+        user_id=user.get("sub"),
+        user_email=user["email"],
+        action="ticket_reply_added",
+        target=ticket_id,
+        details={"restaurant_id": ticket.get("restaurant_id")}
+    )
+    
+    return {"message": "Reply added", "reply": reply}

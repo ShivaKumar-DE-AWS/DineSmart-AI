@@ -1,16 +1,10 @@
 """Audit log tracking for platform actions."""
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import Optional, Dict, Any
-from deps import db, require_user, now_iso
+from deps import db, require_user, now_iso, require_superadmin
 import uuid
 
 router = APIRouter(prefix="/api/super-admin/audit", tags=["audit"])
-
-
-async def require_superadmin(user=Depends(require_user)):
-    if user.get("role") != "superadmin":
-        raise HTTPException(status_code=403, detail="Superadmin access required")
-    return user
 
 
 async def log_audit_event(
@@ -34,7 +28,18 @@ async def log_audit_event(
 
 
 @router.get("")
-async def get_audit_logs(user=Depends(require_superadmin), limit: int = 100):
+async def get_audit_logs(
+    action: Optional[str] = None,
+    target: Optional[str] = None,
+    limit: int = Query(100, le=1000),
+    user=Depends(require_superadmin)
+):
     """Fetch recent audit logs."""
-    logs = await db.audit_logs.find({}, {"_id": 0}).sort("timestamp", -1).limit(limit).to_list(limit)
+    query = {}
+    if action:
+        query["action"] = action
+    if target:
+        query["target"] = target
+        
+    logs = await db.audit_logs.find(query, {"_id": 0}).sort("timestamp", -1).limit(limit).to_list(limit)
     return {"logs": logs}

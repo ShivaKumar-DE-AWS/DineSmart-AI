@@ -1,7 +1,7 @@
 "use client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { Store, Search, UserCircle2, Ban, Play, Trash2, Plus, Clock, X } from "lucide-react";
+import { Store, Search, UserCircle2, Ban, Play, Trash2, Plus, Clock, X, Eye } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -25,6 +25,10 @@ export default function SuperAdminRestaurantsPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [addForm, setAddForm] = useState({ name: "", slug: "", owner_email: "" });
   
+  const [showTrialModal, setShowTrialModal] = useState(false);
+  const [trialDays, setTrialDays] = useState(7);
+  const [selectedRest, setSelectedRest] = useState<Restaurant | null>(null);
+
   const qc = useQueryClient();
   const router = useRouter();
   const setSession = useSession((s) => s.setSession);
@@ -53,9 +57,12 @@ export default function SuperAdminRestaurantsPage() {
   });
 
   const extendTrialMut = useMutation({
-    mutationFn: (id: string) => api<{ message: string }>(`/api/super-admin/restaurants/${id}/extend-trial`, { method: "POST", body: JSON.stringify({ days: 7 }) }),
+    mutationFn: ({ id, days }: { id: string, days: number }) => api<{ message: string }>(`/api/super-admin/restaurants/${id}/extend-trial`, { method: "POST", body: JSON.stringify({ days }) }),
     onSuccess: (data) => {
       toast.success(data.message);
+      setShowTrialModal(false);
+      setSelectedRest(null);
+      setTrialDays(7);
       qc.invalidateQueries({ queryKey: ["super-admin-restaurants"] });
     },
     onError: (err: Error) => toast.error(err.message),
@@ -83,7 +90,10 @@ export default function SuperAdminRestaurantsPage() {
   });
 
   const restaurants = (data?.restaurants ?? []).filter((r) =>
-    !search || r.name?.toLowerCase().includes(search.toLowerCase()) || r.slug?.toLowerCase().includes(search.toLowerCase())
+    !search || 
+    r.name?.toLowerCase().includes(search.toLowerCase()) || 
+    r.slug?.toLowerCase().includes(search.toLowerCase()) ||
+    r.owner_email?.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -111,7 +121,7 @@ export default function SuperAdminRestaurantsPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-full bg-white border border-bone rounded-lg py-2 pl-9 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
-          placeholder="Search restaurants..."
+          placeholder="Search name, slug or email..."
         />
       </div>
 
@@ -120,7 +130,8 @@ export default function SuperAdminRestaurantsPage() {
           <thead>
             <tr className="border-b border-bone bg-sand">
               <th className="text-left py-3 px-4 font-medium text-stone">Name</th>
-              <th className="text-left py-3 px-4 font-medium text-stone">Slug</th>
+              <th className="text-left py-3 px-4 font-medium text-stone hidden md:table-cell">Slug</th>
+              <th className="text-left py-3 px-4 font-medium text-stone">Owner Email</th>
               <th className="text-left py-3 px-4 font-medium text-stone hidden md:table-cell">Plan</th>
               <th className="text-left py-3 px-4 font-medium text-stone hidden md:table-cell">Status</th>
               <th className="text-left py-3 px-4 font-medium text-stone">Orders</th>
@@ -130,43 +141,60 @@ export default function SuperAdminRestaurantsPage() {
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan={6} className="text-center py-8 text-stone">Loading...</td></tr>
+              <tr><td colSpan={8} className="text-center py-8 text-stone">Loading...</td></tr>
             ) : restaurants.length === 0 ? (
-              <tr><td colSpan={6} className="text-center py-8 text-stone">No restaurants found.</td></tr>
+              <tr><td colSpan={8} className="text-center py-8 text-stone">No restaurants found.</td></tr>
             ) : (
               restaurants.map((r) => (
-                <tr key={r.id || r.slug} className="border-b border-bone last:border-0 hover:bg-sand/50 transition">
-                  <td className="py-3 px-4 font-medium text-ink">{r.name}</td>
-                  <td className="py-3 px-4 text-stone font-mono text-xs">{r.slug}</td>
+                <tr 
+                  key={r.id || r.slug} 
+                  className="border-b border-bone last:border-0 hover:bg-sand/50 transition cursor-pointer"
+                  onClick={() => router.push(`/super-admin/restaurants/${r.id}`)}
+                >
+                  <td className="py-3 px-4 font-medium text-ink flex items-center gap-2">
+                    {r.name}
+                  </td>
+                  <td className="py-3 px-4 text-stone font-mono text-xs hidden md:table-cell">{r.slug}</td>
+                  <td className="py-3 px-4 text-ink text-xs">{r.owner_email || "—"}</td>
                   <td className="py-3 px-4 hidden md:table-cell">
                     <span className="inline-block px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-200 text-xs font-medium capitalize">
                       {r.plan_tier || r.plan || "starter"}
                     </span>
                   </td>
                   <td className="py-3 px-4 hidden md:table-cell">
-                    <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
-                      r.subscription_status === "active" ? "bg-emerald-100 text-emerald-700" :
-                      r.subscription_status === "trial" ? "bg-amber-100 text-amber-700" :
-                      "bg-stone/10 text-stone"
+                    <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium border ${
+                      r.subscription_status === "active" ? "bg-emerald-100 text-emerald-800 border-emerald-200" :
+                      r.subscription_status === "trial" ? "bg-amber-100 text-amber-800 border-amber-200" :
+                      r.subscription_status === "suspended" ? "bg-red-100 text-red-800 border-red-200" :
+                      "bg-zinc-100 text-zinc-800 border-zinc-200"
                     }`}>
-                      {r.subscription_status || "unknown"}
+                      {(r.subscription_status || "unknown").toUpperCase()}
                     </span>
                   </td>
-                  <td className="py-3 px-4 text-ink">{r.order_count}</td>
+                  <td className="py-3 px-4 text-ink font-bold">{r.order_count.toLocaleString()}</td>
                   <td className="py-3 px-4 text-stone text-xs hidden md:table-cell">
                     {r.subscription_status === "trial" && r.trial_ends_at 
                       ? new Date(r.trial_ends_at).toLocaleDateString() 
                       : (r.subscription_status === "trial" ? "No Date Set" : "—")}
                   </td>
                   <td className="py-3 px-4 text-right space-x-2 whitespace-nowrap">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        router.push(`/super-admin/restaurants/${r.id}`);
+                      }}
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-stone/10 text-stone hover:bg-stone/20 transition text-xs font-medium"
+                      title="View Profile"
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                    </button>
                     {r.subscription_status === "trial" && (
                       <button 
-                        onClick={() => {
-                          if (confirm(`Extend trial by 7 days for ${r.name}?`)) {
-                            extendTrialMut.mutate(r.id);
-                          }
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedRest(r);
+                          setShowTrialModal(true);
                         }}
-                        disabled={extendTrialMut.isPending}
                         className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 transition text-xs font-medium"
                         title="Extend Trial"
                       >
@@ -174,7 +202,10 @@ export default function SuperAdminRestaurantsPage() {
                       </button>
                     )}
                     <button 
-                      onClick={() => impersonateMut.mutate(r.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        impersonateMut.mutate(r.id);
+                      }}
                       disabled={impersonateMut.isPending}
                       className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition text-xs font-medium"
                       title="Impersonate Admin"
@@ -182,7 +213,8 @@ export default function SuperAdminRestaurantsPage() {
                       <UserCircle2 className="h-3.5 w-3.5" />
                     </button>
                     <button 
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         if (confirm(`Are you sure you want to ${r.subscription_status === 'suspended' ? 'activate' : 'suspend'} ${r.name}?`)) {
                           suspendMut.mutate(r.id);
                         }
@@ -194,7 +226,8 @@ export default function SuperAdminRestaurantsPage() {
                       {r.subscription_status === 'suspended' ? <Play className="h-3.5 w-3.5" /> : <Ban className="h-3.5 w-3.5" />}
                     </button>
                     <button 
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         if (confirm(`Are you sure you want to PERMANENTLY DELETE ${r.name}? This action cannot be undone.`)) {
                           deleteMut.mutate(r.id);
                         }
@@ -285,6 +318,47 @@ export default function SuperAdminRestaurantsPage() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showTrialModal && selectedRest && (
+        <div className="fixed inset-0 bg-ink/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-6">
+              <h2 className="text-lg font-heading font-bold text-ink mb-2">Extend Trial</h2>
+              <p className="text-sm text-stone mb-4">Extend trial period for <span className="font-bold text-brand">{selectedRest.name}</span></p>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-ink mb-1">Days to Extend</label>
+                  <input 
+                    type="number" 
+                    min="1"
+                    max="365"
+                    value={trialDays}
+                    onChange={(e) => setTrialDays(parseInt(e.target.value) || 0)}
+                    className="w-full border border-bone rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
+                  />
+                </div>
+                
+                <div className="pt-2 flex gap-3">
+                  <button 
+                    onClick={() => setShowTrialModal(false)}
+                    className="flex-1 px-4 py-2 bg-sand text-ink rounded-lg text-sm font-medium hover:bg-bone transition"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={() => extendTrialMut.mutate({ id: selectedRest.id, days: trialDays })}
+                    disabled={extendTrialMut.isPending || trialDays < 1}
+                    className="flex-1 px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand/90 transition"
+                  >
+                    {extendTrialMut.isPending ? "Extending..." : "Confirm"}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>

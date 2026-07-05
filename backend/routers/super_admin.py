@@ -1,32 +1,91 @@
 """Super Admin routes: platform-wide stats and restaurant management."""
 from fastapi import APIRouter, Depends, HTTPException
-from deps import db, require_user
+from deps import db, require_user, require_superadmin, RestaurantUpdateReq
+from datetime import datetime, timezone, timedelta
+import asyncio
 
 router = APIRouter(prefix="/api/super-admin", tags=["super-admin"])
 
 
-async def require_superadmin(user=Depends(require_user)):
-    """Dependency that ensures the caller has the superadmin role."""
-    if user.get("role") != "superadmin":
-        raise HTTPException(status_code=403, detail="Superadmin access required")
-    return user
-
-
 @router.get("/stats")
 async def get_platform_stats(user=Depends(require_superadmin)):
-    """Global platform stats: total restaurants, orders, GMV."""
+    """Global platform stats: total restaurants, orders, GMV, and trends."""
+    now = datetime.now(timezone.utc)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    week_start = now - timedelta(days=7)
+
     total_restaurants = await db.restaurants.count_documents({})
     total_orders = await db.orders.count_documents({})
 
-    # Sum GMV from all orders
-    pipeline = [{"$group": {"_id": None, "total": {"$sum": "$total"}}}]
-    gmv_result = await db.orders.aggregate(pipeline).to_list(1)
-    total_gmv = gmv_result[0]["total"] if gmv_result else 0
+    # 1. Active today (restaurants with orders today)
+    active_today_list = await db.orders.distinct("restaurant_id", {"created_at": {"$gte": today_start.isoformat()}})
+    active_today = len(active_today_list)
+
+    # 2. New this week
+    new_this_week = await db.restaurants.count_documents({"created_at": {"$gte": week_start.isoformat()}})
+
+    # 3. Sum GMV from all orders + 7-day trend + top restaurants
+    # Fetch all orders to compute stats in memory (simplified for now, ideally aggregation pipeline)
+    pipeline = [
+        {"$group": {
+            "_id": "$restaurant_id",
+            "total_revenue": {"$sum": "$total"},
+            "order_count": {"$sum": 1}
+        }},
+        {"$sort": {"total_revenue": -1}}
+    ]
+    rest_stats = await db.orders.aggregate(pipeline).to_list(None)
+    
+    total_gmv = sum(r["total_revenue"] for r in rest_stats) if rest_stats else 0
+    top_restaurants_ids = [r["_id"] for r in rest_stats[:5]]
+    top_restaurants_info = await db.restaurants.find({"id": {"$in": top_restaurants_ids}}, {"_id": 0, "id": 1, "name": 1, "slug": 1}).to_list(5)
+    
+    # Map info back to stats
+    top_restaurants = []
+    info_map = {r["id"]: r for r in top_restaurants_info}
+    for r in rest_stats[:5]:
+        if r["_id"] in info_map:
+            top_restaurants.append({
+                "id": r["_id"],
+                "name": info_map[r["_id"]]["name"],
+                "slug": info_map[r["_id"]]["slug"],
+                "revenue": round(r["total_revenue"], 2),
+                "orders": r["order_count"]
+            })
+
+    # 7-day GMV trend (group orders from last 7 days by day)
+    trend_pipeline = [
+        {"$match": {"created_at": {"$gte": week_start.isoformat()}}},
+        {"$project": {
+            "date": {"$substr": ["$created_at", 0, 10]},
+            "total": 1
+        }},
+        {"$group": {
+            "_id": "$date",
+            "daily_revenue": {"$sum": "$total"}
+        }},
+        {"$sort": {"_id": 1}}
+    ]
+    trend_data = await db.orders.aggregate(trend_pipeline).to_list(None)
+    
+    # Fill missing days
+    gmv_7d = []
+    for i in range(7):
+        d = (week_start + timedelta(days=i)).strftime("%Y-%m-%d")
+        matched = next((t for t in trend_data if t["_id"] == d), None)
+        gmv_7d.append({
+            "date": d,
+            "revenue": round(matched["daily_revenue"], 2) if matched else 0
+        })
 
     return {
         "total_restaurants": total_restaurants,
         "total_orders": total_orders,
         "total_gmv": round(total_gmv, 2),
+        "active_today": active_today,
+        "new_this_week": new_this_week,
+        "gmv_7d": gmv_7d,
+        "top_restaurants": top_restaurants
     }
 
 
@@ -38,13 +97,90 @@ async def list_restaurants(user=Depends(require_superadmin)):
              "subscription_status": 1, "trial_ends_at": 1, "created_at": 1, "plan_tier": 1}
     ).to_list(500)
 
-    # Enrich with order counts per restaurant
+    # Use $group aggregation for order counts (fixes N+1 query issue)
+    order_counts_cursor = db.orders.aggregate([
+        {"$group": {"_id": "$restaurant_id", "count": {"$sum": 1}}}
+    ])
+    order_counts = {doc["_id"]: doc["count"] for doc in await order_counts_cursor.to_list(None)}
+
     for r in restaurants:
-        rid = r.get("id", "")
-        order_count = await db.orders.count_documents({"restaurant_id": rid})
-        r["order_count"] = order_count
+        r["order_count"] = order_counts.get(r.get("id"), 0)
 
     return {"restaurants": restaurants}
+
+@router.get("/restaurants/{restaurant_id}")
+async def get_restaurant(restaurant_id: str, user=Depends(require_superadmin)):
+    """Get full profile of a specific restaurant."""
+    restaurant = await db.restaurants.find_one({"id": restaurant_id}, {"_id": 0})
+    if not restaurant:
+        raise HTTPException(status_code=404, detail="Restaurant not found")
+        
+    # Get computed stats
+    now = datetime.now(timezone.utc)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    # Orders today + revenue today
+    today_orders = await db.orders.find({"restaurant_id": restaurant_id, "created_at": {"$gte": today_start.isoformat()}}).to_list(None)
+    orders_today = len(today_orders)
+    revenue_today = sum(o.get("total", 0) for o in today_orders)
+    
+    # Overall stats
+    pipeline = [{"$match": {"restaurant_id": restaurant_id}}, {"$group": {"_id": None, "total": {"$sum": "$total"}, "count": {"$sum": 1}}}]
+    stats = await db.orders.aggregate(pipeline).to_list(1)
+    total_orders = stats[0]["count"] if stats else 0
+    total_gmv = stats[0]["total"] if stats else 0
+    avg_order_value = total_gmv / total_orders if total_orders > 0 else 0
+    
+    # Other counts
+    menu_items = await db.menu.count_documents({"restaurant_id": restaurant_id})
+    tables = await db.tables.count_documents({"restaurant_id": restaurant_id})
+    
+    # Last seen
+    last_order = await db.orders.find_one({"restaurant_id": restaurant_id}, sort=[("created_at", -1)])
+    last_seen = last_order.get("created_at") if last_order else restaurant.get("created_at")
+    
+    # Recent orders
+    recent_orders = await db.orders.find(
+        {"restaurant_id": restaurant_id}, 
+        {"_id": 0, "id": 1, "token": 1, "status": 1, "total": 1, "created_at": 1}
+    ).sort("created_at", -1).limit(10).to_list(10)
+    
+    return {
+        "restaurant": restaurant,
+        "stats": {
+            "total_orders": total_orders,
+            "total_gmv": round(total_gmv, 2),
+            "avg_order_value": round(avg_order_value, 2),
+            "menu_items": menu_items,
+            "tables": tables,
+            "orders_today": orders_today,
+            "revenue_today": round(revenue_today, 2),
+            "last_seen": last_seen
+        },
+        "recent_orders": recent_orders
+    }
+
+@router.patch("/restaurants/{restaurant_id}")
+async def update_restaurant(restaurant_id: str, req: RestaurantUpdateReq, user=Depends(require_superadmin)):
+    """Update contact info and admin notes for a restaurant."""
+    restaurant = await db.restaurants.find_one({"id": restaurant_id})
+    if not restaurant:
+        raise HTTPException(status_code=404, detail="Restaurant not found")
+        
+    update_data = req.model_dump(exclude_unset=True)
+    if update_data:
+        await db.restaurants.update_one({"id": restaurant_id}, {"$set": update_data})
+        
+        from routers.audit import log_audit_event
+        await log_audit_event(
+            user_id=user["sub"],
+            user_email=user["email"],
+            action="restaurant_updated",
+            target=restaurant_id,
+            details={"restaurant_name": restaurant.get("name"), "updated_fields": list(update_data.keys())}
+        )
+        
+    return {"message": "Restaurant updated successfully"}
 
 
 @router.post("/restaurants/{restaurant_id}/suspend")
@@ -54,8 +190,14 @@ async def toggle_suspend_restaurant(restaurant_id: str, user=Depends(require_sup
     if not restaurant:
         raise HTTPException(status_code=404, detail="Restaurant not found")
 
-    new_status = "suspended" if restaurant.get("subscription_status") != "suspended" else "active"
-    await db.restaurants.update_one({"id": restaurant_id}, {"$set": {"subscription_status": new_status}})
+    current_status = restaurant.get("subscription_status")
+    if current_status != "suspended":
+        new_status = "suspended"
+        # Store previous status so we can restore it properly (e.g. trial -> suspended -> trial)
+        await db.restaurants.update_one({"id": restaurant_id}, {"$set": {"subscription_status": new_status, "pre_suspend_status": current_status}})
+    else:
+        new_status = restaurant.get("pre_suspend_status", "active")
+        await db.restaurants.update_one({"id": restaurant_id}, {"$set": {"subscription_status": new_status}, "$unset": {"pre_suspend_status": ""}})
 
     from routers.audit import log_audit_event
     await log_audit_event(
@@ -78,7 +220,7 @@ async def impersonate_restaurant(restaurant_id: str, user=Depends(require_supera
     if not restaurant:
         raise HTTPException(status_code=404, detail="Restaurant not found")
 
-    # Generate token masquerading as the restaurant admin
+    # Generate token masquerading as the restaurant admin (30 min TTL)
     token = jwt_sign({
         "sub": user.get("sub"),
         "email": user["email"],
@@ -86,7 +228,7 @@ async def impersonate_restaurant(restaurant_id: str, user=Depends(require_supera
         "name": f"SmartDine HQ ({user['name']})",
         "restaurant_id": restaurant_id,
         "restaurant_slug": restaurant.get("slug"),
-    })
+    }, ttl_hours=0.5)
 
     from routers.audit import log_audit_event
     await log_audit_event(
@@ -155,16 +297,15 @@ async def delete_restaurant(restaurant_id: str, user=Depends(require_superadmin)
     if restaurant.get("owner_email"):
         await db.users.delete_many({"email": restaurant.get("owner_email")})
         await db.otps.delete_many({"target": restaurant.get("owner_email")})
-    await db.menu.delete_many({"restaurant_id": restaurant_id})
-    await db.inventory.delete_many({"restaurant_id": restaurant_id})
-    await db.tables.delete_many({"restaurant_id": restaurant_id})
-    await db.table_sessions.delete_many({"restaurant_id": restaurant_id})
-    await db.orders.delete_many({"restaurant_id": restaurant_id})
-    await db.customers.delete_many({"restaurant_id": restaurant_id})
-    await db.reservations.delete_many({"restaurant_id": restaurant_id})
-    await db.notifications.delete_many({"restaurant_id": restaurant_id})
-    await db.support_tickets.delete_many({"restaurant_id": restaurant_id})
-    await db.verifications.delete_many({"restaurant_id": restaurant_id})
+    
+    # Phase 1: Complete cascade delete of all tenant data collections
+    collections = [
+        "menu", "inventory", "tables", "table_sessions", "orders", 
+        "customers", "reservations", "notifications", "support_tickets", 
+        "verifications", "campaigns", "analytics", "ai_usage_logs", "audit_logs"
+    ]
+    for coll in collections:
+        await db[coll].delete_many({"restaurant_id": restaurant_id})
     
     if slug:
         import os
@@ -193,7 +334,7 @@ async def delete_restaurant(restaurant_id: str, user=Depends(require_superadmin)
         user_email=user["email"],
         action="restaurant_deleted",
         target=restaurant_id,
-        details={}
+        details={"restaurant_name": restaurant.get("name"), "slug": restaurant.get("slug")}
     )
     return {"message": "Restaurant deleted"}
 

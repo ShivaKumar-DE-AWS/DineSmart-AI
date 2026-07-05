@@ -218,14 +218,30 @@ def require_restaurant_id(user=Depends(require_user)) -> str:
         raise HTTPException(status_code=403, detail="No restaurant assigned to this account")
     return rid
 
+async def require_superadmin(user=Depends(require_user)):
+    """Dependency that ensures the caller has the superadmin role."""
+    if user.get("role") != "superadmin":
+        raise HTTPException(status_code=403, detail="Superadmin access required")
+    return user
+
 # =========================================================
 # Pydantic Models
 # =========================================================
+class RestaurantUpdateReq(BaseModel):
+    owner_name: Optional[str] = None
+    owner_phone: Optional[str] = None
+    owner_whatsapp: Optional[str] = None
+    admin_notes: Optional[str] = None
+
 class RestaurantModel(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
     slug: str
     owner_email: str
+    owner_name: Optional[str] = None
+    owner_phone: Optional[str] = None
+    owner_whatsapp: Optional[str] = None
+    admin_notes: Optional[str] = None
     subscription_status: str = "trial"
     plan_tier: str = "starter"
     trial_ends_at: Optional[datetime] = Field(default_factory=lambda: datetime.now(timezone.utc) + timedelta(days=14))
