@@ -15,31 +15,28 @@ export default function MarketingPage() {
   const { data: settings } = useQuery({
     queryKey: ["admin_settings"],
     queryFn: async () => {
-      const res = await api.get("/api/admin/settings");
-      if (res.status === 200) {
-        if (res.data.config?.theme) setTheme(res.data.config.theme);
-        if (res.data.marketing_config) {
-          setTheme(res.data.marketing_config.theme || "luxury");
-          setTagline(res.data.marketing_config.tagline || "MULTI CUISINE RESTAURANT");
-          setLogoSvg(res.data.marketing_config.logo_svg || null);
-        }
-        return res.data;
+      const data = await api("/api/admin/settings");
+      if (data.config?.theme) setTheme(data.config.theme);
+      if (data.marketing_config) {
+        setTheme(data.marketing_config.theme || "luxury");
+        setTagline(data.marketing_config.tagline || "MULTI CUISINE RESTAURANT");
+        setLogoSvg(data.marketing_config.logo_svg || null);
       }
-      throw new Error("Failed to load settings");
+      return data;
     }
   });
 
   const generateLogo = useMutation({
     mutationFn: async () => {
-      const res = await api.post("/api/admin/marketing/generate-logo", {
-        restaurant_name: settings?.name || "Restaurant",
-        theme,
-        tagline
+      const data = await api("/api/admin/marketing/generate-logo", {
+        method: "POST",
+        body: JSON.stringify({
+          restaurant_name: settings?.name || "Restaurant",
+          theme,
+          tagline
+        })
       });
-      if (res.status === 200) {
-        return res.data.svg;
-      }
-      throw new Error(res.data.detail || "Failed to generate logo");
+      return data.svg;
     },
     onSuccess: (svg) => {
       setLogoSvg(svg);
@@ -57,7 +54,10 @@ export default function MarketingPage() {
         logo_svg: logoSvg,
         ...override
       };
-      await api.put("/api/admin/settings", { marketing_config: config });
+      await api("/api/admin/settings", { 
+        method: "PUT", 
+        body: JSON.stringify({ marketing_config: config }) 
+      });
     },
     onSuccess: () => {
       toast.success("Marketing config saved!");
