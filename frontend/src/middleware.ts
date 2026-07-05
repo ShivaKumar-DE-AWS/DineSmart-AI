@@ -12,8 +12,8 @@ export function middleware(request: NextRequest) {
       ? hostname.replace(`.smartdineai.co.in`, "")
       : hostname.replace(`.localhost:3000`, "");
 
-  // Handle staff routes (admin, kitchen, counter)
-  const isStaffRoute = url.pathname.startsWith('/admin') || url.pathname.startsWith('/kitchen') || url.pathname.startsWith('/counter');
+  // Handle staff routes (admin, kitchen, counter, cashier)
+  const isStaffRoute = url.pathname.startsWith('/admin') || url.pathname.startsWith('/kitchen') || url.pathname.startsWith('/counter') || url.pathname.startsWith('/cashier');
   
   if (isStaffRoute) {
     // If on the main domain, block access to tenant-specific staff routes
