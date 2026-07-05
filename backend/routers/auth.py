@@ -243,10 +243,12 @@ async def login(req: LoginReq):
             )
         else:
             raise HTTPException(status_code=400, detail="Could not determine restaurant for this account. Contact support.")
-    elif not restaurant_slug:
-        # We have restaurant_id but no slug (older accounts), fetch it from DB
+    elif not restaurant_slug or True:
+        # We need to fetch the restaurant anyway to check if it's suspended
         rest = await db.restaurants.find_one({"id": restaurant_id})
         if rest:
+            if rest.get("subscription_status") == "suspended":
+                raise HTTPException(status_code=403, detail="Your restaurant account has been suspended. Please contact support.")
             restaurant_slug = rest.get("slug", "")
             await db.users.update_one(
                 {"_id": user["_id"]},

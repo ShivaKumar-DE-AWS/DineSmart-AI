@@ -191,6 +191,8 @@ async def create_order(req: OrderCreateReq):
     
     # --- DUAL SERVICE MODEL & SECURITY CHECKS ---
     rest_doc = await db.restaurants.find_one({"id": restaurant_id}) if restaurant_id else {}
+    if rest_doc and rest_doc.get("subscription_status") == "suspended":
+        raise HTTPException(status_code=403, detail="Restaurant is suspended and cannot accept orders")
     service_type = rest_doc.get("service_type", "fine_dining") if rest_doc else "fine_dining"
     
     # 1. GPS Geo-Fencing Check (Dine-In)

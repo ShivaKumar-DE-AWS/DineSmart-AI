@@ -240,6 +240,9 @@ async def get_restaurant_config(slug: str):
     if not rest:
         raise HTTPException(status_code=404, detail="Restaurant not found")
         
+    if rest.get("subscription_status") == "suspended":
+        raise HTTPException(status_code=403, detail="Restaurant is temporarily suspended.")
+        
     config["sandbox_mode"] = rest.get("sandbox_mode", True)
     
     # ponytail: mask passwords — config is public, passwords should never leak
