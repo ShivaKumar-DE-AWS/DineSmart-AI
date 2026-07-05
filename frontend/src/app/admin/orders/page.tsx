@@ -1,13 +1,14 @@
 "use client";
-import { useState } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, apiUrl } from "@/lib/api";
 import { formatCurrency, fmtTime } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import type { Order } from "@/types";
 import { toast } from "sonner";
 import { useSession } from "@/stores/session";
-import { QrCode } from "lucide-react";
+import { QrCode, Search } from "lucide-react";
 import { OrderDetailsModal } from "@/components/shared/OrderDetailsModal";
 
 const STATUS_OPTIONS: Order["status"][] = ["confirmed", "preparing", "ready", "served", "cancelled"];
@@ -19,8 +20,41 @@ export default function AdminOrders() {
   const qc = useQueryClient();
   const { user } = useSession();
   const [filter, setFilter] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [orderType, setOrderType] = useState<string>("All");
+  const [dateRange, setDateRange] = useState<string>("Today");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const { data } = useQuery({ queryKey: ["admin-orders", filter, user?.restaurant_id], queryFn: () => { const params = new URLSearchParams(); if (filter) params.set("status_filter", filter); return api<{ orders: Order[] }>(`/api/orders?${params.toString()}`); }, refetchInterval: 10000 });
+  const prevCount = useRef(0);
+
+  const { data } = useQuery({ 
+    queryKey: ["admin-orders", filter, user?.restaurant_id], 
+    queryFn: () => { 
+      const params = new URLSearchParams(); 
+      if (filter) params.set("status_filter", filter); 
+      return api<{ orders: Order[] }>(`/api/orders?${params.toString()}`); 
+    }, 
+    refetchInterval: 10000 
+  });
+
+  useEffect(() => {
+    if (data?.orders) {
+      if (data.orders.length > prevCount.current && prevCount.current > 0) {
+        // Play beep
+        try {
+          const ctx = new window.AudioContext();
+          const osc = ctx.createOscillator();
+          osc.connect(ctx.destination);
+          osc.frequency.value = 880;
+          osc.start();
+          osc.stop(ctx.currentTime + 0.1);
+        } catch (e) {
+          console.error("Audio playback failed", e);
+        }
+      }
+      prevCount.current = data.orders.length;
+    }
+  }, [data]);
+
   const mut = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) => api(`/api/orders/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-orders", undefined, user?.restaurant_id] }); toast.success("Status updated"); },
@@ -49,25 +83,98 @@ export default function AdminOrders() {
     }
   };
 
+  const filteredOrders = useMemo(() => {
+    if (!data?.orders) return [];
+    let list = data.orders;
+    
+    // Search filter
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter(o => o.token.toLowerCase().includes(q) || o.customer_name.toLowerCase().includes(q));
+    }
+
+    // Order type filter
+    if (orderType !== "All") {
+      list = list.filter(o => o.order_type === (orderType === "Takeaway" ? "takeaway" : "dine_in"));
+    }
+
+    // Date filter
+    const now = new Date();
+    list = list.filter(o => {
+      const orderDate = new Date(o.created_at);
+      if (dateRange === "Today") {
+        return orderDate.toDateString() === now.toDateString();
+      } else if (dateRange === "Yesterday") {
+        const yesterday = new Date(now);
+        yesterday.setDate(yesterday.getDate() - 1);
+        return orderDate.toDateString() === yesterday.toDateString();
+      } else if (dateRange === "Last 7 days") {
+        const last7 = new Date(now);
+        last7.setDate(last7.getDate() - 7);
+        return orderDate >= last7;
+      }
+      return true; // All Time
+    });
+
+    return list;
+  }, [data?.orders, searchQuery, orderType, dateRange]);
+
+  const formatRelativeTime = (iso: string) => {
+    const diff = (new Date().getTime() - new Date(iso).getTime()) / 60000;
+    if (diff < 60) {
+      return `${Math.floor(diff)} min ago`;
+    }
+    return fmtTime(iso);
+  };
+
   return (
     <div>
-      <div className="flex items-end justify-between mb-8">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
         <div>
           <p className="uppercase tracking-[0.3em] text-xs text-stone mb-2">Orders</p>
           <h1 className="font-heading text-4xl tracking-tight">All orders</h1>
         </div>
-        <select data-testid="orders-filter" value={filter} onChange={(e) => setFilter(e.target.value)} className="h-10 rounded-full border border-bone bg-white px-4 text-sm">
-          <option value="">All statuses</option>
-          {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-stone" />
+            <Input 
+              placeholder="Search token or name..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 h-10 w-full sm:w-64 rounded-full border-bone"
+            />
+          </div>
+          
+          <div className="flex p-1 bg-cream rounded-full border border-bone">
+            {["All", "Dine-In", "Takeaway"].map(t => (
+              <button 
+                key={t}
+                onClick={() => setOrderType(t)}
+                className={`px-4 py-1.5 rounded-full text-xs font-medium transition ${orderType === t ? "bg-white shadow-sm text-ink" : "text-stone hover:text-ink"}`}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+
+          <select value={dateRange} onChange={(e) => setDateRange(e.target.value)} className="h-10 rounded-full border border-bone bg-white px-4 text-sm outline-none focus:ring-2 focus:ring-brand">
+            {["Today", "Yesterday", "Last 7 days", "All Time"].map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+
+          <select data-testid="orders-filter" value={filter} onChange={(e) => setFilter(e.target.value)} className="h-10 rounded-full border border-bone bg-white px-4 text-sm outline-none focus:ring-2 focus:ring-brand">
+            <option value="">All statuses</option>
+            {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
       </div>
 
       <div className="bg-white border border-bone rounded-2xl overflow-x-auto">
-        <table className="w-full min-w-[700px] text-sm" data-testid="admin-orders-table">
+        <table className="w-full min-w-[850px] text-sm" data-testid="admin-orders-table">
           <thead className="bg-cream border-b border-bone text-stone uppercase text-xs tracking-wider">
             <tr>
               <th className="text-left px-4 py-3">Token</th>
               <th className="text-left px-4 py-3">Type</th>
+              <th className="text-left px-4 py-3">Table</th>
               <th className="text-left px-4 py-3">Customer</th>
               <th className="text-left px-4 py-3">Items</th>
               <th className="text-left px-4 py-3">Total</th>
@@ -80,7 +187,7 @@ export default function AdminOrders() {
             </tr>
           </thead>
           <tbody>
-            {(data?.orders ?? []).map((o) => (
+            {filteredOrders.map((o) => (
               <tr key={o.id} onClick={() => setSelectedOrder(o)} className={`border-b border-bone last:border-0 transition-colors cursor-pointer ${o.payment_status === "paid" ? "bg-emerald-50/60 hover:bg-emerald-100/50" : "hover:bg-cream/50"}`} data-testid={`admin-order-row-${o.token}`}>
                 <td className="px-4 py-3 font-mono font-semibold text-clay">{o.token}</td>
                 <td className="px-4 py-3">
@@ -92,8 +199,11 @@ export default function AdminOrders() {
                     {o.order_type === "takeaway" ? "TAKEAWAY" : "DINE-IN"}
                   </span>
                 </td>
-                <td className="px-4 py-3">{o.customer_name}</td>
-                <td className="px-4 py-3 text-stone text-xs">{o.items.map((i) => `${i.qty}× ${i.name}`).join(", ")}</td>
+                <td className="px-4 py-3 text-stone font-medium">{o.order_type === 'dine_in' && o.table_number ? `T${o.table_number}` : '—'}</td>
+                <td className="px-4 py-3 font-medium">{o.customer_name}</td>
+                <td className="px-4 py-3 text-stone text-xs max-w-[200px] truncate" title={o.items.map((i) => `${i.qty}× ${i.name}`).join(", ")}>
+                  {o.items.map((i) => `${i.qty}× ${i.name}`).join(", ")}
+                </td>
                 <td className="px-4 py-3 font-medium">{formatCurrency(o.total)}</td>
                 <td className="px-4 py-3">
                   <div className="flex flex-col gap-1 items-start">
@@ -140,11 +250,11 @@ export default function AdminOrders() {
                   ) : <span className="text-stone/30 text-xs">—</span>}
                 </td>
                 <td className="px-4 py-3"><Badge variant={STATUS_COLOR[o.status] || "default"}>{o.status}</Badge></td>
-                <td className="px-4 py-3 text-stone">{fmtTime(o.created_at)}</td>
+                <td className="px-4 py-3 text-stone whitespace-nowrap">{formatRelativeTime(o.created_at)}</td>
                 <td className="px-4 py-3">
                   <select
                     data-testid={`status-select-${o.token}`}
-                    defaultValue={o.status}
+                    value={o.status}
                     onClick={(e) => e.stopPropagation()}
                     onChange={(e) => mut.mutate({ id: o.id, status: e.target.value })}
                     className="h-8 rounded-full border border-bone px-2 text-xs bg-white"
@@ -162,8 +272,8 @@ export default function AdminOrders() {
                 </td>
               </tr>
             ))}
-            {data?.orders.length === 0 && (
-            <tr><td colSpan={11} className="px-4 py-10 text-center text-stone">No orders to show.</td></tr>
+            {filteredOrders.length === 0 && (
+            <tr><td colSpan={12} className="px-4 py-10 text-center text-stone">No orders found matching criteria.</td></tr>
             )}
           </tbody>
         </table>

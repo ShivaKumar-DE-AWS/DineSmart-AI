@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, apiUrl } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, X, ImageIcon, Upload, Link2, Loader2, Sparkles, CheckCircle2 } from "lucide-react";
+import { Plus, Pencil, Trash2, X, ImageIcon, Upload, Link2, Loader2, Sparkles, CheckCircle2, Search } from "lucide-react";
 import { useSession } from "@/stores/session";
 import type { MenuItem } from "@/types";
 
@@ -21,11 +21,13 @@ interface MenuForm {
   available: boolean;
   prep_time_min: number;
   tags: string;
+  is_veg: boolean;
+  is_bestseller: boolean;
 }
 
 const empty: MenuForm = {
   name: "", description: "", price: 0, category: "Biryani", image_url: "",
-  available: true, prep_time_min: 10, tags: "",
+  available: true, prep_time_min: 10, tags: "", is_veg: true, is_bestseller: false,
 };
 
 function resolveImageUrl(u: string): string {
@@ -40,9 +42,14 @@ export default function AdminMenu() {
   const { user } = useSession();
   const rid = user?.restaurant_id || "";
   const { data, isLoading } = useQuery({ queryKey: ["admin-menu", rid], queryFn: () => api<{ items: MenuItem[] }>(`/api/menu${rid ? `?restaurant_id=${rid}` : ""}`) });
+  
   const [editing, setEditing] = useState<MenuForm | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<MenuItem | null>(null);
   const [showAiImport, setShowAiImport] = useState(false);
+  
+  const [activeCategory, setActiveCategory] = useState("All");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState("Name");
 
   const items = data?.items ?? [];
   const categories = Array.from(new Set(items.map((i) => i.category))).sort();
@@ -56,6 +63,25 @@ export default function AdminMenu() {
     mutationFn: (id: string) => api(`/api/menu/${id}`, { method: "DELETE" }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-menu"] }); qc.invalidateQueries({ queryKey: ["menu"] }); toast.success("Dish removed"); setConfirmDelete(null); },
   });
+
+  const filteredItems = useMemo(() => {
+    let result = items;
+    if (activeCategory !== "All") {
+      result = result.filter(i => i.category === activeCategory);
+    }
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(i => i.name.toLowerCase().includes(q) || (i.tags && i.tags.join(" ").toLowerCase().includes(q)));
+    }
+    result = [...result].sort((a, b) => {
+      if (sortBy === "Name") return a.name.localeCompare(b.name);
+      if (sortBy === "Price ↑") return a.price - b.price;
+      if (sortBy === "Price ↓") return b.price - a.price;
+      if (sortBy === "Prep Time") return a.prep_time_min - b.prep_time_min;
+      return 0;
+    });
+    return result;
+  }, [items, activeCategory, searchQuery, sortBy]);
 
   return (
     <div data-testid="admin-menu-page">
@@ -82,54 +108,116 @@ export default function AdminMenu() {
         </div>
       </div>
 
+      <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
+        <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0 hide-scrollbar max-w-full w-full md:w-auto">
+          <button 
+            onClick={() => setActiveCategory("All")}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition border ${activeCategory === "All" ? "bg-ink text-white border-ink" : "bg-white text-stone hover:border-ink border-bone"}`}
+          >
+            All
+          </button>
+          {categories.map(cat => (
+            <button 
+              key={cat}
+              onClick={() => setActiveCategory(cat)}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition border ${activeCategory === cat ? "bg-ink text-white border-ink" : "bg-white text-stone hover:border-ink border-bone"}`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+        
+        <div className="flex gap-3 w-full md:w-auto">
+          <div className="relative flex-1 md:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-stone" />
+            <Input 
+              placeholder="Search dishes or tags..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 rounded-full h-10 border-bone"
+            />
+          </div>
+          <select 
+            value={sortBy} 
+            onChange={(e) => setSortBy(e.target.value)}
+            className="h-10 rounded-full border border-bone bg-white px-4 text-sm outline-none focus:ring-2 focus:ring-brand"
+          >
+            {["Name", "Price ↑", "Price ↓", "Prep Time"].map(s => <option key={s} value={s}>Sort: {s}</option>)}
+          </select>
+        </div>
+      </div>
+
       {isLoading && <div className="text-stone">Loading menu…</div>}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="admin-menu-grid">
-        {items.map((m) => (
-          <div key={m.id} className="bg-white border border-bone rounded-2xl overflow-hidden flex flex-col" data-testid={`admin-menu-card-${m.id}`}>
-            <div className="aspect-[5/3] bg-cover bg-center bg-cream" style={{ backgroundImage: m.image_url ? `url(${resolveImageUrl(m.image_url)})` : undefined }} />
-            <div className="p-4 flex-1 flex flex-col">
-              <div className="flex items-start justify-between gap-2">
-                <h3 className="font-heading font-semibold leading-tight">{m.name}</h3>
-                <span className="font-heading font-semibold text-clay shrink-0">{formatCurrency(m.price)}</span>
+        {filteredItems.map((m) => {
+          const isBestseller = m.tags?.includes("bestseller");
+          const isVeg = !m.tags?.includes("non-veg");
+          
+          return (
+            <div key={m.id} className="bg-white border border-bone rounded-2xl overflow-hidden flex flex-col relative" data-testid={`admin-menu-card-${m.id}`}>
+              {isBestseller && (
+                <div className="absolute top-2 right-2 bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-1 rounded shadow-sm z-10 flex items-center gap-1">
+                  ⭐ Bestseller
+                </div>
+              )}
+              <div className="aspect-[5/3] bg-cover bg-center bg-cream relative" style={{ backgroundImage: m.image_url ? `url(${resolveImageUrl(m.image_url)})` : undefined }}>
+                <div className="absolute top-2 left-2 bg-white/90 p-1 rounded backdrop-blur shadow-sm">
+                  <div className={`w-3 h-3 rounded-full ${isVeg ? "bg-green-500" : "bg-red-500"} border border-white`} title={isVeg ? "Veg" : "Non-Veg"} />
+                </div>
               </div>
-              <div className="text-[11px] uppercase tracking-wider text-stone mt-1">{m.category} · {m.prep_time_min} min</div>
-              <p className="text-xs text-stone mt-2 line-clamp-2 flex-1">{m.description}</p>
-              <div className="flex items-center justify-between mt-4 pt-3 border-t border-bone">
-                <Badge variant={m.available ? "ready" : "alert"}>{m.available ? "Available" : "Hidden"}</Badge>
-                <div className="flex items-center gap-1">
-                  <button
-                    data-testid={`toggle-${m.id}`}
-                    onClick={() => toggle.mutate({ id: m.id, available: !m.available })}
-                    className="text-xs font-medium px-2 py-1 hover:bg-cream rounded"
-                  >
-                    {m.available ? "Hide" : "Show"}
-                  </button>
-                  <button
-                    data-testid={`edit-${m.id}`}
-                    onClick={() => setEditing({
-                      id: m.id, name: m.name, description: m.description, price: m.price,
-                      category: m.category, image_url: m.image_url, available: m.available,
-                      prep_time_min: m.prep_time_min, tags: (m.tags ?? []).join(", "),
-                    })}
-                    className="p-1.5 hover:bg-cream rounded"
-                    title="Edit"
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    data-testid={`delete-${m.id}`}
-                    onClick={() => setConfirmDelete(m)}
-                    className="p-1.5 hover:bg-cream rounded text-alert"
-                    title="Delete"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
+              <div className="p-4 flex-1 flex flex-col">
+                <div className="flex items-start justify-between gap-2">
+                  <h3 className="font-heading font-semibold leading-tight">{m.name}</h3>
+                  <span className="font-heading font-semibold text-clay shrink-0">{formatCurrency(m.price)}</span>
+                </div>
+                <div className="text-[11px] uppercase tracking-wider text-stone mt-1">{m.category} · {m.prep_time_min} min</div>
+                <p className="text-xs text-stone mt-2 line-clamp-2 flex-1">{m.description}</p>
+                
+                <div className="flex items-center justify-between mt-4 pt-3 border-t border-bone">
+                  <Badge variant={m.available ? "ready" : "alert"}>{m.available ? "Available" : "Hidden"}</Badge>
+                  <div className="flex items-center gap-1">
+                    <button
+                      data-testid={`toggle-${m.id}`}
+                      onClick={() => toggle.mutate({ id: m.id, available: !m.available })}
+                      className="text-xs font-medium px-2 py-1 hover:bg-cream rounded"
+                    >
+                      {m.available ? "Hide" : "Show"}
+                    </button>
+                    <button
+                      data-testid={`edit-${m.id}`}
+                      onClick={() => {
+                        const tagsList = m.tags || [];
+                        const isB = tagsList.includes("bestseller");
+                        const isV = !tagsList.includes("non-veg");
+                        setEditing({
+                          id: m.id, name: m.name, description: m.description, price: m.price,
+                          category: m.category, image_url: m.image_url, available: m.available,
+                          prep_time_min: m.prep_time_min, 
+                          tags: tagsList.filter(t => t !== "bestseller" && t !== "non-veg" && t !== "veg").join(", "),
+                          is_veg: isV,
+                          is_bestseller: isB,
+                        })
+                      }}
+                      className="p-1.5 hover:bg-cream rounded"
+                      title="Edit"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      data-testid={`delete-${m.id}`}
+                      onClick={() => setConfirmDelete(m)}
+                      className="p-1.5 hover:bg-cream rounded text-alert"
+                      title="Delete"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {editing && (
@@ -327,6 +415,10 @@ function DishEditorModal({ form, categories, onClose, onSaved }: { form: MenuFor
     if (f.price <= 0) { toast.error("Price must be greater than zero"); return; }
     setSaving(true);
     try {
+      const parsedTags = f.tags.split(",").map((t) => t.trim()).filter(Boolean);
+      if (f.is_bestseller && !parsedTags.includes("bestseller")) parsedTags.push("bestseller");
+      if (!f.is_veg && !parsedTags.includes("non-veg")) parsedTags.push("non-veg");
+
       const payload = {
         name: f.name.trim(),
         description: f.description.trim(),
@@ -335,7 +427,7 @@ function DishEditorModal({ form, categories, onClose, onSaved }: { form: MenuFor
         image_url: f.image_url.trim(),
         available: f.available,
         prep_time_min: Number(f.prep_time_min) || 10,
-        tags: f.tags.split(",").map((t) => t.trim()).filter(Boolean),
+        tags: parsedTags,
       };
       if (isEdit && f.id) {
         await api(`/api/menu/${f.id}`, { method: "PATCH", body: JSON.stringify(payload) });
@@ -460,10 +552,20 @@ function DishEditorModal({ form, categories, onClose, onSaved }: { form: MenuFor
             )}
           </div>
 
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input data-testid="dish-available" type="checkbox" checked={f.available} onChange={(e) => setF((s) => ({ ...s, available: e.target.checked }))} className="h-4 w-4" />
-            <span className="text-sm">Available — visible on customer menu</span>
-          </label>
+          <div className="flex flex-col gap-3 py-2">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input data-testid="dish-available" type="checkbox" checked={f.available} onChange={(e) => setF((s) => ({ ...s, available: e.target.checked }))} className="h-4 w-4" />
+              <span className="text-sm font-medium">Available — visible on customer menu</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input data-testid="dish-veg" type="checkbox" checked={f.is_veg} onChange={(e) => setF((s) => ({ ...s, is_veg: e.target.checked }))} className="h-4 w-4" />
+              <span className="text-sm">Vegetarian (shows green dot instead of red)</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input data-testid="dish-bestseller" type="checkbox" checked={f.is_bestseller} onChange={(e) => setF((s) => ({ ...s, is_bestseller: e.target.checked }))} className="h-4 w-4" />
+              <span className="text-sm">Mark as Bestseller (adds ⭐ badge)</span>
+            </label>
+          </div>
         </div>
 
         <footer className="flex justify-end gap-3 p-5 border-t border-bone sticky bottom-0 bg-white">

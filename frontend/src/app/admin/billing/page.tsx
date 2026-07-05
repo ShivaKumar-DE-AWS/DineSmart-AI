@@ -143,6 +143,24 @@ export default function BillingPage() {
             </div>
           </div>
 
+          <div className="mb-6 bg-sand/30 p-4 rounded-xl border border-bone">
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="font-medium text-ink text-sm">This Month Usage</h3>
+              <span className="text-xs font-medium text-stone">
+                {billing?.orders_this_month || 0} / {isPro ? "Unlimited" : "500"} orders
+              </span>
+            </div>
+            <div className="w-full bg-bone rounded-full h-2.5 overflow-hidden">
+              <div
+                className={`h-2.5 rounded-full ${isPro ? 'bg-emerald-500' : 'bg-clay'}`}
+                style={{ width: isPro ? '100%' : `${Math.min(((billing?.orders_this_month || 0) / 500) * 100, 100)}%` }}
+              ></div>
+            </div>
+            <p className="text-xs text-stone mt-2">
+              {billing?.orders_this_month || 0} orders this month • {isPro ? 'Unlimited (Pro)' : '500 order limit'}
+            </p>
+          </div>
+
           {isTrial && daysLeft !== null && (
             <div className={`p-4 rounded-xl border ${daysLeft <= 4 ? 'bg-red-50 border-red-200 text-red-900' : 'bg-amber-50 border-amber-200 text-amber-900'} mb-6`}>
               <div className="flex items-center gap-3 mb-2">

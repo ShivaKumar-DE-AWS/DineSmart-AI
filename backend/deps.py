@@ -359,12 +359,16 @@ class InventoryItemModel(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     restaurant_id: Optional[str] = None
     name: str
+    category: Optional[str] = None
+    supplier: Optional[str] = None
     unit: str
     qty: float
     reorder_level: float
 
 class InventoryItemUpdateModel(BaseModel):
     name: Optional[str] = None
+    category: Optional[str] = None
+    supplier: Optional[str] = None
     unit: Optional[str] = None
     qty: Optional[float] = None
     reorder_level: Optional[float] = None

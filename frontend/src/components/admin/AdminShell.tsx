@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { LayoutDashboard, ShoppingBag, LineChart, Boxes, UtensilsCrossed, Users, CalendarClock, QrCode, LogOut, Sparkles, Menu as MenuIcon, X, CreditCard, Megaphone, Info, AlertTriangle, LifeBuoy } from "lucide-react";
+import { LayoutDashboard, ShoppingBag, LineChart, Boxes, UtensilsCrossed, Users, CalendarClock, QrCode, LogOut, Sparkles, Menu as MenuIcon, X, CreditCard, Megaphone, Info, AlertTriangle, LifeBuoy, ChefHat } from "lucide-react";
 import { RoleGuard } from "@/components/shared/RoleGuard";
 import { useSession } from "@/stores/session";
 import { getRestaurantConfig } from "@/hooks/useRestaurantConfig";
@@ -13,6 +13,7 @@ import { toast } from "sonner";
 const nav = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true, testid: "admin-nav-dashboard" },
   { href: "/admin/orders", label: "Orders", icon: ShoppingBag, testid: "admin-nav-orders" },
+  { href: '/admin/kds', label: 'Kitchen Display', icon: ChefHat, testid: 'admin-nav-kds' },
   { href: "/admin/reservations", label: "Reservations", icon: CalendarClock, testid: "admin-nav-reservations" },
   { href: "/admin/tables", label: "Tables & QR", icon: QrCode, testid: "admin-nav-tables" },
   { href: "/admin/revenue", label: "Analytics & Revenue", icon: LineChart, testid: "admin-nav-revenue" },

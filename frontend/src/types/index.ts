@@ -1,5 +1,5 @@
 // Shared types across portals
-export type Role = "customer" | "admin" | "kitchen" | "counter" | "superadmin";
+export type Role = "customer" | "admin" | "kitchen" | "counter" | "superadmin" | "cashier";
 
 export interface User {
   id: string;
@@ -84,6 +84,8 @@ export interface InventoryItem {
   unit: string;
   qty: number;
   reorder_level: number;
+  category?: string;
+  supplier?: string;
 }
 
 export interface Notification {

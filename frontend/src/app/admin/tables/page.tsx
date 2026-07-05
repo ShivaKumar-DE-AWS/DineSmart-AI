@@ -350,49 +350,124 @@ function TableCard({ t, onRegen, onDelete, slug, restaurantName }: { t: TableDoc
     const svgUrl = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(xml)));
     const img = new Image();
     img.onload = () => {
-      const w = 1200, h = 1600;
+      const w = 1200, h = 1800;
       const canvas = document.createElement("canvas");
       canvas.width = w; canvas.height = h;
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
-      // Black background
-      ctx.fillStyle = "#080808"; ctx.fillRect(0, 0, w, h);
-      // Gold brand border
-      ctx.strokeStyle = "#B58A43"; ctx.lineWidth = 12;
-      ctx.strokeRect(40, 40, w - 80, h - 80);
-      // Restaurant name
-      ctx.fillStyle = "#B58A43"; ctx.textAlign = "center";
-      ctx.font = "bold 64px sans-serif";
-      ctx.fillText((restaurantName || "RESTAURANT").toUpperCase(), w / 2, 160);
-      // Decorative divider
-      ctx.strokeStyle = "rgba(181, 138, 67, 0.3)"; ctx.lineWidth = 4;
-      ctx.beginPath(); ctx.moveTo(w / 2 - 150, 200); ctx.lineTo(w / 2 + 150, 200); ctx.stroke();
-      // Table badge
+      
+      // Background
+      ctx.fillStyle = "#000000"; ctx.fillRect(0, 0, w, h);
+      
+      // Inner Card
+      ctx.fillStyle = "#080808";
+      ctx.beginPath(); ctx.roundRect(40, 40, w - 80, h - 80, 40); ctx.fill();
+      ctx.strokeStyle = "#B58A43"; ctx.lineWidth = 4; ctx.stroke();
+      
+      // Table Badge
       ctx.fillStyle = "#B58A43";
-      ctx.beginPath(); ctx.roundRect(w / 2 - 180, 250, 360, 100, 50); ctx.fill();
-      ctx.fillStyle = "#000"; ctx.font = "900 64px sans-serif";
-      ctx.fillText(`TABLE ${t.number}`, w / 2, 320);
-      // QR background and border
-      const qrSize = 600, qrX = (w - qrSize) / 2, qrY = 450;
-      ctx.fillStyle = "#FFF";
-      ctx.beginPath(); ctx.roundRect(qrX - 30, qrY - 30, qrSize + 60, qrSize + 60, 40); ctx.fill();
-      ctx.strokeStyle = "#6BAF36"; ctx.lineWidth = 10;
-      ctx.strokeRect(qrX - 30, qrY - 30, qrSize + 60, qrSize + 60);
-      // QR image
-      ctx.drawImage(img, qrX, qrY, qrSize, qrSize);
-      // Instructions
+      ctx.beginPath(); ctx.roundRect(w / 2 - 160, 15, 320, 80, 40); ctx.fill();
+      ctx.fillStyle = "#000000"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.font = "900 36px sans-serif";
+      ctx.fillText(`TABLE ${t.number}`, w / 2, 55);
+      
+      // Header
+      ctx.fillStyle = "#B58A43"; ctx.textAlign = "left"; ctx.textBaseline = "top";
+      ctx.font = "bold 52px serif";
+      ctx.fillText((restaurantName || "RESTAURANT").toUpperCase(), 100, 120);
+      ctx.fillStyle = "#AAAAAA"; ctx.font = "400 18px sans-serif";
+      ctx.fillText("E X C L U S I V E", 100, 180);
+      
+      ctx.textAlign = "right"; ctx.fillStyle = "#FFFFFF"; ctx.font = "900 44px sans-serif";
+      ctx.fillText("🍽️ SmartDine ", w - 160, 120);
       ctx.fillStyle = "#6BAF36";
-      ctx.font = "900 72px sans-serif";
-      ctx.fillText("SCAN TO ORDER", w / 2, 1220);
-      ctx.font = "32px sans-serif";
-      ctx.fillStyle = "#ccc";
-      ctx.fillText("Talk. Order. Enjoy.", w / 2, 1280);
-      // Footer branding
-      ctx.font = "24px sans-serif";
+      ctx.fillText("AI", w - 100, 120);
+      
+      // Title
+      ctx.textAlign = "center";
+      ctx.fillStyle = "#6BAF36"; ctx.font = "900 64px sans-serif";
+      ctx.fillText("SCAN TO ORDER", w / 2, 280);
+      ctx.fillStyle = "#CCCCCC"; ctx.font = "28px sans-serif";
+      ctx.fillText("Talk. Order. Enjoy.", w / 2, 350);
+      
+      // QR Code Box
+      const qrSize = 360, qrX = (w - qrSize) / 2, qrY = 460;
+      ctx.fillStyle = "#FFFFFF";
+      ctx.beginPath(); ctx.roundRect(qrX - 25, qrY - 25, qrSize + 50, qrSize + 50, 30); ctx.fill();
+      ctx.strokeStyle = "#6BAF36"; ctx.lineWidth = 6; ctx.stroke();
+      ctx.drawImage(img, qrX, qrY, qrSize, qrSize);
+      
+      // Slogan
+      ctx.fillStyle = "#FFFFFF"; ctx.font = "italic 42px serif";
+      ctx.fillText("We serve,", w / 2, 920);
+      ctx.fillStyle = "#6BAF36";
+      ctx.fillText("you enjoy! ♥", w / 2, 970);
+      
+      // Left Column (HOW TO ORDER)
+      ctx.textAlign = "left";
       ctx.fillStyle = "#B58A43";
-      ctx.fillText("Powered by SmartDine AI | smartdineai.co.in", w / 2, h - 100);
+      ctx.beginPath(); ctx.roundRect(100, 480, 200, 40, 8); ctx.fill();
+      ctx.fillStyle = "#000000"; ctx.font = "bold 18px sans-serif"; ctx.textBaseline = "middle";
+      ctx.fillText("HOW TO ORDER", 125, 500);
+      
+      const leftSteps = [
+        { i: "📱", t: "1. Scan", d: "Scan the QR code from your table." },
+        { i: "💬", t: "2. Chat or Talk", d: "Chat or talk with our AI Waiter." },
+        { i: "📖", t: "3. Explore & Order", d: "Explore the menu, get recommendations." },
+        { i: "💳", t: "4. Pay Securely", d: "Make secure payment and place order." }
+      ];
+      ctx.textBaseline = "top";
+      leftSteps.forEach((s, idx) => {
+        const y = 560 + idx * 130;
+        ctx.fillStyle = "#6BAF36"; ctx.font = "40px sans-serif"; ctx.fillText(s.i, 100, y);
+        ctx.fillStyle = "#B58A43"; ctx.font = "16px sans-serif"; ctx.fillText(s.t, 100, y + 55);
+        ctx.fillStyle = "#AAAAAA"; ctx.font = "14px sans-serif"; ctx.fillText(s.d, 100, y + 75);
+      });
+      
+      // Right Column (WHY CHOOSE US?)
+      ctx.textAlign = "right";
+      ctx.fillStyle = "#B58A43";
+      ctx.beginPath(); ctx.roundRect(w - 300, 480, 200, 40, 8); ctx.fill();
+      ctx.fillStyle = "#000000"; ctx.font = "bold 18px sans-serif"; ctx.textBaseline = "middle";
+      ctx.fillText("WHY CHOOSE US?", w - 115, 500);
+      
+      const rightSteps = [
+        { i: "⭐", t: "Personalized", d: "Recommendations" },
+        { i: "⚡", t: "Faster", d: "Service" },
+        { i: "🛡️", t: "Hygienic &", d: "Contactless" },
+        { i: "😊", t: "Better Dining", d: "Experience" }
+      ];
+      ctx.textBaseline = "top";
+      rightSteps.forEach((s, idx) => {
+        const y = 560 + idx * 130;
+        ctx.fillStyle = "#6BAF36"; ctx.font = "40px sans-serif"; ctx.fillText(s.i, w - 100, y);
+        ctx.fillStyle = "#B58A43"; ctx.font = "16px sans-serif"; ctx.fillText(s.t, w - 100, y + 55);
+        ctx.fillStyle = "#AAAAAA"; ctx.font = "14px sans-serif"; ctx.fillText(s.d, w - 100, y + 75);
+      });
+      
+      // Caution Box
+      ctx.textAlign = "left";
+      ctx.fillStyle = "#FAF5EC";
+      ctx.beginPath(); ctx.roundRect(100, 1550, w - 200, 90, 12); ctx.fill();
+      ctx.strokeStyle = "#B58A43"; ctx.lineWidth = 2; ctx.stroke();
+      
+      ctx.fillStyle = "#D32F2F";
+      ctx.beginPath(); ctx.roundRect(100, 1550, 100, 90, 8); ctx.fill();
+      ctx.fillStyle = "#FFFFFF"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.font = "bold 14px sans-serif"; ctx.fillText("CAUTION", 150, 1595);
+      
+      ctx.fillStyle = "#000000"; ctx.textAlign = "left"; ctx.font = "500 18px sans-serif";
+      ctx.fillText("Preview the QR Link Generator before clicking the link to avoid QR scams.", 220, 1595);
+      
+      // Footer
+      ctx.fillStyle = "#B58A43"; ctx.textAlign = "center"; ctx.font = "600 20px sans-serif";
+      ctx.fillText("🌐 www.smartdineai.co.in", 250, 1720);
+      ctx.fillText("Thank you for dining with us!", w / 2, 1720);
+      ctx.fillText("📸 @smartdine.ai", w - 250, 1720);
+      
       const link = document.createElement("a");
       link.download = `${slug}-table-${t.number}.png`;
+
       link.href = canvas.toDataURL("image/png");
       link.click();
     };

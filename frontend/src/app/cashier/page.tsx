@@ -509,7 +509,7 @@ function ShiftSummaryPanel() {
 
 // ─── Main Cashier Page ────────────────────────────────────────────────────────
 export default function CashierPage() {
-  const { user, clearSession } = useSession();
+  const { user, clear: clearSession } = useSession();
   const qc = useQueryClient();
   const [tab, setTab] = useState<Tab>("live");
   const [search, setSearch] = useState("");

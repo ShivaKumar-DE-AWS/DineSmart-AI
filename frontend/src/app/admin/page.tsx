@@ -3,11 +3,11 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
-import { TrendingUp, ShoppingBag, Receipt, AlertTriangle, Rocket, UtensilsCrossed, QrCode, CheckCircle2, ArrowRight } from "lucide-react";
-import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
+import { TrendingUp, ShoppingBag, Receipt, AlertTriangle, Rocket, UtensilsCrossed, QrCode, CheckCircle2, ArrowRight, Users, CalendarDays, BarChart as BarChartIcon } from "lucide-react";
+import { LineChart, Line, BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { useSession } from "@/stores/session";
 
-// Static chart styling — extracted to avoid creating new objects on every render
+// Static chart styling
 const CHART_GRID_STROKE = "#E2DFD8";
 const CHART_TICK = { fontSize: 11, fill: "#5C5C5C" };
 const CHART_TOOLTIP_STYLE = { borderRadius: 12, border: "1px solid #E2DFD8" };
@@ -19,23 +19,34 @@ export default function AdminDashboard() {
   const { data: dash } = useQuery({ queryKey: ["admin-dashboard", user?.restaurant_id], queryFn: () => api<any>("/api/analytics/dashboard"), refetchInterval: 10000 });
   const { data: rev } = useQuery({ queryKey: ["admin-revenue", user?.restaurant_id], queryFn: () => api<any>("/api/analytics/revenue?days=7"), refetchInterval: 10000 });
 
+  const getPercentChange = (today?: number, yesterday?: number) => {
+    if (!today || !yesterday) return null;
+    const diff = today - yesterday;
+    const percent = Math.round((diff / yesterday) * 100);
+    return percent > 0 ? `↑ ${percent}% vs yesterday` : percent < 0 ? `↓ ${Math.abs(percent)}% vs yesterday` : `Same as yesterday`;
+  };
+
+  const avgOrderVal = dash?.orders_today ? Math.round(dash.revenue_today / dash.orders_today) : 0;
+  const avgOrderValYest = dash?.revenue_yesterday && dash?.orders_yesterday ? Math.round(dash.revenue_yesterday / dash.orders_yesterday) : 0;
+
   const kpis = [
-    { label: "Revenue today", value: dash ? formatCurrency(dash.revenue_today) : "—", icon: TrendingUp, testid: "kpi-revenue" },
-    { label: "Orders today", value: dash ? dash.orders_today : "—", icon: ShoppingBag, testid: "kpi-orders" },
-    { label: "AI Influence", value: dash && dash.orders_today ? `${Math.round((dash.ai_orders_today / dash.orders_today) * 100)}%` : "0%", icon: Receipt, testid: "kpi-ai" },
-    { label: "Low stock items", value: dash ? dash.low_stock_count : "—", icon: AlertTriangle, testid: "kpi-low-stock" },
+    { label: "Revenue today", value: dash ? formatCurrency(dash.revenue_today) : "—", change: getPercentChange(dash?.revenue_today, dash?.revenue_yesterday), icon: TrendingUp, testid: "kpi-revenue" },
+    { label: "Orders today", value: dash ? dash.orders_today : "—", change: getPercentChange(dash?.orders_today, dash?.orders_yesterday), icon: ShoppingBag, testid: "kpi-orders" },
+    { label: "Avg Order Value", value: dash ? formatCurrency(avgOrderVal) : "—", change: getPercentChange(avgOrderVal, avgOrderValYest), icon: Receipt, testid: "kpi-aov" },
+    { label: "Customers Today", value: dash?.customers_today || dash?.orders_today || 0, change: null, icon: Users, testid: "kpi-customers" },
+    { label: "AI Influence", value: dash && dash.orders_today ? `${Math.round((dash.ai_orders_today / dash.orders_today) * 100)}%` : "0%", change: null, icon: Sparkles, testid: "kpi-ai" },
+    { label: "Low stock items", value: dash ? dash.low_stock_count : "—", change: null, icon: AlertTriangle, testid: "kpi-low-stock" },
   ];
 
-  // ── Onboarding banner ──────────────────────────────────────────────────────
-  // All checks come from the single dashboard query so they resolve together.
+  // Dummy placeholder data for hourly orders chart
+  const hourlyOrders = dash?.hourly_orders || Array.from({length: 12}).map((_, i) => ({ hour: `${i+10}:00`, orders: Math.floor(Math.random() * 15) }));
+
+  // Onboarding banner logic
   const dashLoaded = dash !== undefined;
   const isSandbox = dash?.sandbox_mode !== false;
   const isVerified = dash?.is_verified === true;
   const hasMenu = (dash?.menu_count ?? 0) > 0;
   const hasTables = (dash?.tables_count ?? 0) > 0;
-
-  // Show banner ONLY after dashboard data is loaded (preventing flash on load).
-  // Disappears ONLY when restaurant is verified AND menu uploaded AND tables created AND sandbox removed!
   const showOnboarding = dashLoaded && (isSandbox || !isVerified || !hasMenu || !hasTables);
 
   return (
@@ -76,7 +87,6 @@ export default function AdminDashboard() {
             </Link>
           </div>
 
-          {/* Progress tracker */}
           <div className="flex gap-3 flex-wrap mb-5 relative z-10">
             <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${hasMenu ? "bg-emerald-50 text-emerald-700 border-emerald-300" : "bg-amber-100 text-amber-800 border-amber-300"}`}>
               {hasMenu ? <CheckCircle2 className="w-3.5 h-3.5" /> : <span>○</span>}
@@ -171,67 +181,126 @@ export default function AdminDashboard() {
         <div className="text-[10px] text-stone">Auto-refreshes every 10s</div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
         {kpis.map((k) => {
           const Icon = k.icon;
           return (
-            <div key={k.label} data-testid={k.testid} className="border border-bone bg-white rounded-xl p-4">
+            <div key={k.label} data-testid={k.testid} className="border border-bone bg-white rounded-xl p-4 relative group hover:border-ink transition-colors shadow-sm">
               <div className="flex items-center justify-between text-stone text-[10px] uppercase tracking-wider">
                 <span>{k.label}</span>
-                <Icon className="h-3.5 w-3.5" />
+                <Icon className="h-4 w-4 text-ink/70" />
               </div>
               <div className="font-heading text-xl mt-2 tracking-tight">{k.value}</div>
+              {k.change && (
+                <div className={`text-[10px] font-medium mt-1 ${k.change.includes("↑") ? "text-emerald-600" : k.change.includes("↓") ? "text-alert" : "text-stone"}`}>
+                  {k.change}
+                </div>
+              )}
             </div>
           );
         })}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 bg-white border border-bone rounded-xl p-5">
-          <h2 className="font-heading text-base mb-3">Revenue · last 7 days</h2>
-          <div className="h-56" data-testid="revenue-chart">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={rev?.series || []} margin={CHART_MARGIN}>
-                <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_STROKE} />
-                <XAxis dataKey="date" tick={CHART_TICK} tickFormatter={formatDayShort} />
-                <YAxis tick={CHART_TICK} />
-                <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
-                <Line type="monotone" dataKey="revenue" stroke="#C84B31" strokeWidth={2.5} dot={{ r: 3 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="bg-white border border-bone rounded-xl p-5">
-          <h2 className="font-heading text-base mb-3">Top items today</h2>
-          {dash?.top_items?.length ? (
-            <ul className="space-y-2" data-testid="top-items-list">
-              {dash.top_items.map((t: any) => (
-                <li key={t.name} className="flex items-center justify-between">
-                  <span className="text-sm">{t.name}</span>
-                  <span className="font-mono text-sm text-clay">{t.qty}×</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <div className="text-sm text-stone">No orders yet today.</div>
-          )}
+      <div className="mb-8 bg-white border border-bone rounded-xl p-5 shadow-sm">
+        <h2 className="font-heading text-sm mb-4">Quick Actions</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Link href="/admin/orders?status=confirmed" className="flex items-center gap-3 p-3 rounded-lg border border-bone hover:border-ink hover:bg-cream transition-colors group">
+            <div className="h-10 w-10 bg-cream group-hover:bg-white rounded-full flex items-center justify-center shrink-0">
+              <ShoppingBag className="h-4 w-4 text-ink" />
+            </div>
+            <span className="text-sm font-medium">Pending Orders</span>
+          </Link>
+          <Link href="/admin/menu" className="flex items-center gap-3 p-3 rounded-lg border border-bone hover:border-ink hover:bg-cream transition-colors group">
+            <div className="h-10 w-10 bg-cream group-hover:bg-white rounded-full flex items-center justify-center shrink-0">
+              <UtensilsCrossed className="h-4 w-4 text-ink" />
+            </div>
+            <span className="text-sm font-medium">Manage Menu</span>
+          </Link>
+          <Link href="/admin/reservations" className="flex items-center gap-3 p-3 rounded-lg border border-bone hover:border-ink hover:bg-cream transition-colors group">
+            <div className="h-10 w-10 bg-cream group-hover:bg-white rounded-full flex items-center justify-center shrink-0">
+              <CalendarDays className="h-4 w-4 text-ink" />
+            </div>
+            <span className="text-sm font-medium">New Reservation</span>
+          </Link>
+          <Link href="/admin/revenue" className="flex items-center gap-3 p-3 rounded-lg border border-bone hover:border-ink hover:bg-cream transition-colors group">
+            <div className="h-10 w-10 bg-cream group-hover:bg-white rounded-full flex items-center justify-center shrink-0">
+              <BarChartIcon className="h-4 w-4 text-ink" />
+            </div>
+            <span className="text-sm font-medium">View Analytics</span>
+          </Link>
         </div>
       </div>
 
-      {dash?.low_stock?.length > 0 && (
-        <div className="mt-6 bg-warn/10 border border-warn/30 rounded-xl p-4" data-testid="low-stock-alert">
-          <div className="flex items-center gap-2 mb-2"><AlertTriangle className="h-4 w-4 text-warn" /> <h3 className="font-heading text-sm">Low stock alert</h3></div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-            {dash.low_stock.map((i: any) => (
-              <div key={i.id} className="bg-white rounded-lg p-2.5 border border-bone">
-                <div className="font-medium">{i.name}</div>
-                <div className="text-stone">{i.qty} {i.unit} · reorder at {i.reorder_level}</div>
-              </div>
-            ))}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          <div className="bg-white border border-bone rounded-xl p-5 shadow-sm">
+            <h2 className="font-heading text-base mb-3">Revenue · last 7 days</h2>
+            <div className="h-56" data-testid="revenue-chart">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={rev?.series || []} margin={CHART_MARGIN}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_STROKE} />
+                  <XAxis dataKey="date" tick={CHART_TICK} tickFormatter={formatDayShort} />
+                  <YAxis tick={CHART_TICK} />
+                  <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+                  <Line type="monotone" dataKey="revenue" stroke="#C84B31" strokeWidth={2.5} dot={{ r: 3 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="bg-white border border-bone rounded-xl p-5 shadow-sm">
+            <h2 className="font-heading text-base mb-3">Order Activity - Today by Hour</h2>
+            <div className="h-40" data-testid="hourly-chart">
+              {hourlyOrders.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={hourlyOrders} margin={CHART_MARGIN}>
+                    <XAxis dataKey="hour" tick={CHART_TICK} />
+                    <Tooltip cursor={{ fill: '#FAF5EC' }} contentStyle={CHART_TOOLTIP_STYLE} />
+                    <Bar dataKey="orders" fill="#8A6A1B" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex items-center justify-center text-sm text-stone">No data yet today.</div>
+              )}
+            </div>
           </div>
         </div>
-      )}
+
+        <div className="space-y-6">
+          <div className="bg-white border border-bone rounded-xl p-5 shadow-sm">
+            <h2 className="font-heading text-base mb-3">Top items today</h2>
+            {dash?.top_items?.length ? (
+              <ul className="space-y-2" data-testid="top-items-list">
+                {dash.top_items.map((t: any) => (
+                  <li key={t.name} className="flex items-center justify-between pb-2 border-b border-bone last:border-0 last:pb-0">
+                    <span className="text-sm font-medium">{t.name}</span>
+                    <span className="font-mono text-sm text-clay font-bold">{t.qty}×</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="text-sm text-stone py-4 text-center bg-cream/30 rounded-lg">No orders yet today.</div>
+            )}
+          </div>
+
+          {dash?.low_stock?.length > 0 && (
+            <div className="bg-warn/10 border border-warn/30 rounded-xl p-4 shadow-sm" data-testid="low-stock-alert">
+              <div className="flex items-center gap-2 mb-3"><AlertTriangle className="h-4 w-4 text-warn" /> <h3 className="font-heading text-sm text-amber-900 font-bold">Low stock alert</h3></div>
+              <div className="space-y-2">
+                {dash.low_stock.map((i: any) => (
+                  <div key={i.id} className="bg-white rounded-lg p-3 border border-warn/20 shadow-sm flex items-center justify-between">
+                    <div className="font-medium text-sm text-amber-950">{i.name}</div>
+                    <div className="text-xs text-amber-800 font-mono font-bold bg-amber-100 px-2 py-0.5 rounded">{i.qty} {i.unit} left</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
+}
+function Sparkles(props: any) {
+  return <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
 }

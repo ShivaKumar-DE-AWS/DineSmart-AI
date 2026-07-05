@@ -1043,7 +1043,7 @@ async def download_bill(order_id: str, user=Depends(current_user)):
         pdf.set_x(110)
         pdf.set_font("Helvetica", "I", 24)
         pdf.set_text_color(96, 182, 52) # Green Enjoy text
-        pdf.cell(text="We serve, you enjoy! ♥", w=85, align="C")
+        pdf.cell(text="We serve, you enjoy!", w=85, align="C")
         
         # Footer Box (Dark Theme with Gold Outline)
         pdf.set_fill_color(10, 10, 10)

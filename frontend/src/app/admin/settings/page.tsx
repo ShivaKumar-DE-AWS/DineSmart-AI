@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
-import { Save, UserCog, Key, Settings, Palette, Type, Link as LinkIcon, Upload, Loader2, Eye, EyeOff, ShieldAlert, ShieldCheck } from "lucide-react";
+import { Save, UserCog, Key, Settings, Palette, Type, Link as LinkIcon, Upload, Loader2, Eye, EyeOff, ShieldAlert, Phone, MapPin, Mail, Globe, Clock, Check } from "lucide-react";
 import { useSession } from "@/stores/session";
 
 export default function AdminSettings() {
@@ -29,6 +29,24 @@ export default function AdminSettings() {
   const [paymentQrUrl, setPaymentQrUrl] = useState(settings?.payment_qr_url || "");
   const [uploadingQr, setUploadingQr] = useState(false);
 
+  // Contact Info State
+  const [phone, setPhone] = useState(settings?.phone || "");
+  const [address, setAddress] = useState(settings?.address || "");
+  const [email, setEmail] = useState(settings?.email || "");
+  const [website, setWebsite] = useState(settings?.website || "");
+
+  // Logo Upload State
+  const [logoMode, setLogoMode] = useState<"url" | "upload">("url");
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+
+  // Operating Hours State
+  const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  const defaultHours = DAYS.reduce((acc, day) => {
+    acc[day] = { open: true, openTime: "09:00", closeTime: "22:00" };
+    return acc;
+  }, {} as any);
+  const [hours, setHours] = useState<any>(settings?.operating_hours || defaultHours);
+
   // Add Staff form state
   const [showAddStaff, setShowAddStaff] = useState(false);
   const [newStaffRole, setNewStaffRole] = useState<"kitchen" | "counter" | "cashier">("kitchen");
@@ -45,6 +63,15 @@ export default function AdminSettings() {
       setLogoUrl(settings.logo_url || "");
       setUpiId(settings.upi_id || "");
       setPaymentQrUrl(settings.payment_qr_url || "");
+      
+      setPhone(settings.phone || "");
+      setAddress(settings.address || "");
+      setEmail(settings.email || "");
+      setWebsite(settings.website || "");
+
+      if (settings.operating_hours) {
+        setHours(settings.operating_hours);
+      }
     }
   }, [settings]);
 
@@ -75,7 +102,9 @@ export default function AdminSettings() {
       name, tagline, 
       primary_color: primaryColor, secondary_color: secondaryColor, 
       logo_url: logoUrl,
-      upi_id: upiId, payment_qr_url: paymentQrUrl
+      upi_id: upiId, payment_qr_url: paymentQrUrl,
+      phone, address, email, website,
+      operating_hours: hours
     });
   };
 
@@ -88,7 +117,6 @@ export default function AdminSettings() {
     formData.append("file", file);
     
     try {
-      // Use direct fetch to let browser set multipart/form-data with boundary
       const token = useSession.getState().token;
       const res = await fetch("/api/upload/image", {
         method: "POST",
@@ -106,11 +134,47 @@ export default function AdminSettings() {
     }
   };
 
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setUploadingLogo(true);
+    const formData = new FormData();
+    formData.append("file", file);
+    
+    try {
+      const token = useSession.getState().token;
+      const res = await fetch("/api/upload/image", {
+        method: "POST",
+        body: formData,
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error("Failed to upload image");
+      const json = await res.json();
+      setLogoUrl(json.url);
+      toast.success("Logo uploaded!");
+    } catch (err: any) {
+      toast.error(err.message || "Upload failed");
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  const handleHourChange = (day: string, field: string, value: any) => {
+    setHours((prev: any) => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        [field]: value
+      }
+    }));
+  };
+
   return (
-    <div className="max-w-4xl space-y-8">
+    <div className="max-w-4xl space-y-8 pb-12">
       <div>
-        <h1 className="text-3xl font-heading font-semibold text-ink">Brand & Staff Settings</h1>
-        <p className="text-stone mt-1">Manage your restaurant identity and staff access.</p>
+        <h1 className="text-3xl font-heading font-semibold text-ink">Brand & Settings</h1>
+        <p className="text-stone mt-1">Manage your restaurant identity, contact details, and staff access.</p>
       </div>
 
       {(settings?.is_verified === false || settings?.sandbox_mode === true) && (
@@ -142,11 +206,51 @@ export default function AdminSettings() {
             </label>
 
             <label className="block">
-              <span className="text-sm font-medium text-stone block mb-1">Logo URL</span>
-              <div className="flex items-center gap-2 bg-cream border border-bone rounded-xl px-3 py-2">
-                <LinkIcon className="h-4 w-4 text-stone" />
-                <input value={logoUrl} onChange={e => setLogoUrl(e.target.value)} placeholder="https://..." className="bg-transparent outline-none flex-1 text-ink" />
+              <span className="text-sm font-medium text-stone block mb-3">Logo</span>
+              
+              <div className="flex bg-cream border border-bone rounded-lg p-1 mb-3">
+                <button
+                  type="button"
+                  onClick={() => setLogoMode("url")}
+                  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium transition ${logoMode === "url" ? "bg-white shadow-sm text-ink" : "text-stone hover:text-ink"}`}
+                >
+                  <LinkIcon className="h-3.5 w-3.5" /> Enter URL
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLogoMode("upload")}
+                  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium transition ${logoMode === "upload" ? "bg-white shadow-sm text-ink" : "text-stone hover:text-ink"}`}
+                >
+                  <Upload className="h-3.5 w-3.5" /> Upload File
+                </button>
               </div>
+
+              {logoMode === "url" ? (
+                <div className="flex items-center gap-2 bg-cream border border-bone rounded-xl px-3 py-2">
+                  <LinkIcon className="h-4 w-4 text-stone" />
+                  <input value={logoUrl} onChange={e => setLogoUrl(e.target.value)} placeholder="https://..." className="bg-transparent outline-none flex-1 text-ink" />
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {logoUrl && (
+                    <div className="relative inline-block border border-bone rounded-xl overflow-hidden p-2 bg-cream">
+                      <img src={logoUrl} alt="Logo" className="h-16 w-16 object-contain" />
+                      <button 
+                        onClick={() => setLogoUrl("")} 
+                        className="absolute top-1 right-1 bg-white rounded-full p-0.5 text-alert shadow-sm border border-bone hover:bg-alert/10"
+                        title="Remove image"
+                      >
+                        <Type className="h-3 w-3 rotate-45" />
+                      </button>
+                    </div>
+                  )}
+                  <label className="flex items-center justify-center gap-2 bg-cream border border-bone border-dashed rounded-xl px-4 py-3 cursor-pointer hover:bg-stone/5 transition-colors">
+                    {uploadingLogo ? <Loader2 className="h-4 w-4 text-stone animate-spin" /> : <Upload className="h-4 w-4 text-stone" />}
+                    <span className="text-sm text-stone font-medium">{uploadingLogo ? "Uploading..." : "Upload Logo Image"}</span>
+                    <input type="file" accept="image/*" onChange={handleLogoUpload} disabled={uploadingLogo} className="hidden" />
+                  </label>
+                </div>
+              )}
             </label>
 
             <div className="grid grid-cols-2 gap-4">
@@ -171,6 +275,112 @@ export default function AdminSettings() {
               <Save className="h-4 w-4" /> Save Brand Settings
             </button>
           </div>
+        </section>
+
+        <section className="bg-white border border-bone rounded-2xl p-6 shadow-sm">
+          <div className="flex items-center gap-2 mb-6">
+            <Phone className="h-5 w-5 text-ink" />
+            <h2 className="text-xl font-heading font-semibold text-ink">Contact Info</h2>
+          </div>
+          
+          <div className="space-y-4">
+            <label className="block">
+              <span className="text-sm font-medium text-stone block mb-1">Phone Number</span>
+              <div className="flex items-center gap-2 bg-cream border border-bone rounded-xl px-3 py-2">
+                <Phone className="h-4 w-4 text-stone" />
+                <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="+91 98765 43210" className="bg-transparent outline-none flex-1 text-ink" />
+              </div>
+            </label>
+
+            <label className="block">
+              <span className="text-sm font-medium text-stone block mb-1">Address</span>
+              <div className="flex items-center gap-2 bg-cream border border-bone rounded-xl px-3 py-2">
+                <MapPin className="h-4 w-4 text-stone" />
+                <input value={address} onChange={e => setAddress(e.target.value)} placeholder="123 Main Street, Hyderabad" className="bg-transparent outline-none flex-1 text-ink" />
+              </div>
+            </label>
+
+            <label className="block">
+              <span className="text-sm font-medium text-stone block mb-1">Email Address</span>
+              <div className="flex items-center gap-2 bg-cream border border-bone rounded-xl px-3 py-2">
+                <Mail className="h-4 w-4 text-stone" />
+                <input value={email} onChange={e => setEmail(e.target.value)} placeholder="info@yourrestaurant.com" className="bg-transparent outline-none flex-1 text-ink" />
+              </div>
+            </label>
+
+            <label className="block">
+              <span className="text-sm font-medium text-stone block mb-1">Website URL</span>
+              <div className="flex items-center gap-2 bg-cream border border-bone rounded-xl px-3 py-2">
+                <Globe className="h-4 w-4 text-stone" />
+                <input value={website} onChange={e => setWebsite(e.target.value)} placeholder="https://yourrestaurant.com" className="bg-transparent outline-none flex-1 text-ink" />
+              </div>
+            </label>
+
+            <button onClick={handleSaveSettings} disabled={updateSettings.isPending} className="mt-4 w-full bg-ink text-cream font-medium rounded-xl px-4 py-2 hover:opacity-90 flex items-center justify-center gap-2">
+              <Save className="h-4 w-4" /> Save Contact Info
+            </button>
+          </div>
+        </section>
+
+        <section className="bg-white border border-bone rounded-2xl p-6 shadow-sm md:col-span-2">
+          <div className="flex items-center gap-2 mb-6">
+            <Clock className="h-5 w-5 text-ink" />
+            <h2 className="text-xl font-heading font-semibold text-ink">Operating Hours</h2>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-bone text-stone text-sm">
+                  <th className="pb-3 font-medium">Day</th>
+                  <th className="pb-3 font-medium">Status</th>
+                  <th className="pb-3 font-medium">Open Time</th>
+                  <th className="pb-3 font-medium">Close Time</th>
+                </tr>
+              </thead>
+              <tbody className="text-sm">
+                {DAYS.map((day) => {
+                  const dayData = hours[day] || { open: false, openTime: "09:00", closeTime: "22:00" };
+                  return (
+                    <tr key={day} className="border-b border-bone last:border-0">
+                      <td className="py-3 font-medium text-ink">{day}</td>
+                      <td className="py-3">
+                        <button
+                          onClick={() => handleHourChange(day, "open", !dayData.open)}
+                          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${dayData.open ? "bg-ready" : "bg-stone/30"}`}
+                        >
+                          <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${dayData.open ? "translate-x-5" : "translate-x-1"}`} />
+                        </button>
+                        <span className="ml-2 text-xs font-medium text-stone">{dayData.open ? "Open" : "Closed"}</span>
+                      </td>
+                      <td className="py-3">
+                        <input
+                          type="time"
+                          value={dayData.openTime}
+                          onChange={(e) => handleHourChange(day, "openTime", e.target.value)}
+                          disabled={!dayData.open}
+                          className="bg-cream border border-bone rounded-lg px-2 py-1 text-ink outline-none disabled:opacity-50"
+                        />
+                      </td>
+                      <td className="py-3">
+                        <input
+                          type="time"
+                          value={dayData.closeTime}
+                          onChange={(e) => handleHourChange(day, "closeTime", e.target.value)}
+                          disabled={!dayData.open}
+                          className="bg-cream border border-bone rounded-lg px-2 py-1 text-ink outline-none disabled:opacity-50"
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <button onClick={handleSaveSettings} disabled={updateSettings.isPending} className="mt-6 bg-ink text-cream font-medium rounded-xl px-6 py-2 hover:opacity-90 flex items-center justify-center gap-2">
+            <Save className="h-4 w-4" /> Save Operating Hours
+          </button>
         </section>
 
         <section className="bg-white border border-bone rounded-2xl p-6 shadow-sm">
@@ -234,7 +444,7 @@ export default function AdminSettings() {
           </div>
         </section>
 
-        <section className="bg-white border border-bone rounded-2xl p-6 shadow-sm md:col-span-2">
+        <section className="bg-white border border-bone rounded-2xl p-6 shadow-sm">
           <div className="flex items-center gap-2 mb-6">
             <UserCog className="h-5 w-5 text-ink" />
             <h2 className="text-xl font-heading font-semibold text-ink">Staff Access</h2>
@@ -307,7 +517,6 @@ function StaffRow({ staff }: { staff: any }) {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  // Sync name from server when staff data refetches
   useEffect(() => {
     setName(staff.name);
   }, [staff.name]);

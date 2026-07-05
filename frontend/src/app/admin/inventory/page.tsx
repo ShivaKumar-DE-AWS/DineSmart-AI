@@ -9,8 +9,8 @@ import { Plus, Pencil, Trash2, X, Loader2, Lock, Sparkles, CheckCircle2 } from "
 import type { InventoryItem } from "@/types";
 import Link from "next/link";
 
-interface InvForm { id?: string; name: string; unit: string; qty: number; reorder_level: number }
-const empty: InvForm = { name: "", unit: "kg", qty: 0, reorder_level: 0 };
+interface InvForm { id?: string; name: string; category?: string; supplier?: string; unit: string; qty: number; reorder_level: number }
+const empty: InvForm = { name: "", category: "", supplier: "", unit: "kg", qty: 0, reorder_level: 0 };
 
 export default function AdminInventory() {
   const qc = useQueryClient();
@@ -121,6 +121,8 @@ export default function AdminInventory() {
           <thead className="bg-cream border-b border-bone text-stone uppercase text-xs tracking-wider">
             <tr>
               <th className="text-left px-4 py-3">Item</th>
+              <th className="text-left px-4 py-3">Category</th>
+              <th className="text-left px-4 py-3">Supplier</th>
               <th className="text-left px-4 py-3">Qty on hand</th>
               <th className="text-left px-4 py-3">Unit</th>
               <th className="text-left px-4 py-3">Reorder at</th>
@@ -134,6 +136,8 @@ export default function AdminInventory() {
               return (
                 <tr key={i.id} className="border-b border-bone last:border-0 hover:bg-cream/40" data-testid={`inv-row-${i.id}`}>
                   <td className="px-4 py-3 font-medium">{i.name}</td>
+                  <td className="px-4 py-3 text-stone">{i.category || "—"}</td>
+                  <td className="px-4 py-3 text-stone">{i.supplier || "—"}</td>
                   <td className="px-4 py-3">
                     <Input
                       data-testid={`inv-qty-${i.id}`}
@@ -155,7 +159,7 @@ export default function AdminInventory() {
                   <td className="px-4 py-3 text-right">
                     <button
                       data-testid={`inv-edit-${i.id}`}
-                      onClick={() => setEditing({ id: i.id, name: i.name, unit: i.unit, qty: i.qty, reorder_level: i.reorder_level })}
+                      onClick={() => setEditing({ id: i.id, name: i.name, category: i.category, supplier: i.supplier, unit: i.unit, qty: i.qty, reorder_level: i.reorder_level })}
                       className="p-1.5 hover:bg-cream rounded inline-flex"
                       title="Edit"
                     >
@@ -214,7 +218,7 @@ function InvEditor({ form, onClose, onSaved }: { form: InvForm; onClose: () => v
     if (f.qty < 0 || f.reorder_level < 0) { toast.error("Quantities cannot be negative"); return; }
     setSaving(true);
     try {
-      const body = { name: f.name.trim(), unit: f.unit.trim(), qty: Number(f.qty), reorder_level: Number(f.reorder_level) };
+      const body = { name: f.name.trim(), category: f.category?.trim() || null, supplier: f.supplier?.trim() || null, unit: f.unit.trim(), qty: Number(f.qty), reorder_level: Number(f.reorder_level) };
       if (isEdit && f.id) {
         await api(`/api/inventory/${f.id}`, { method: "PATCH", body: JSON.stringify(body) });
         toast.success(`${f.name} updated`);
@@ -242,6 +246,16 @@ function InvEditor({ form, onClose, onSaved }: { form: InvForm; onClose: () => v
           <div>
             <label className="text-xs uppercase tracking-wider text-stone">Name *</label>
             <Input data-testid="inv-name" value={f.name} onChange={(e) => setF((s) => ({ ...s, name: e.target.value }))} placeholder="Basmati Rice" className="mt-1.5" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs uppercase tracking-wider text-stone">Category</label>
+              <Input data-testid="inv-category" value={f.category || ""} onChange={(e) => setF((s) => ({ ...s, category: e.target.value }))} placeholder="Proteins, Veg..." className="mt-1.5" />
+            </div>
+            <div>
+              <label className="text-xs uppercase tracking-wider text-stone">Supplier</label>
+              <Input data-testid="inv-supplier" value={f.supplier || ""} onChange={(e) => setF((s) => ({ ...s, supplier: e.target.value }))} placeholder="Fresh Farms..." className="mt-1.5" />
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
