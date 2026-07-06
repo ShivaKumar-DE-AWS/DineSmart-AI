@@ -117,7 +117,7 @@ export default function AdminTables() {
           <p className="uppercase tracking-[0.3em] text-xs text-stone mb-2">Operations</p>
           <h1 className="font-heading text-3xl md:text-4xl tracking-tight">Tables &amp; QR codes</h1>
           <p className="text-sm text-stone mt-1">
-            {tables.length} tables Ã‚Â· <span className="text-clay font-medium">{liveCount}</span> currently seated Ã‚Â· scans hold the table for 10 minutes.
+            {tables.length} tables · <span className="text-clay font-medium">{liveCount}</span> currently seated · scans hold the table for 10 minutes.
           </p>
         </div>
         <div className="flex flex-wrap items-end gap-2 bg-white border border-bone rounded-2xl p-3" data-testid="add-table-form">
@@ -140,7 +140,7 @@ export default function AdminTables() {
         </div>
       </div>
 
-      {isLoading && <div className="text-stone">Loading tablesÃ¢â‚¬Â¦</div>}
+      {isLoading && <div className="text-stone">Loading tables...</div>}
 
       {/* Live Floor Map Section */}
       <div className="bg-zinc-900 border-2 border-zinc-800 rounded-3xl p-6 mb-8 text-white shadow-xl">
@@ -154,9 +154,9 @@ export default function AdminTables() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-4 text-xs font-semibold">
-            <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-emerald-500"></span> Active (Ã°Å¸Å¸Â¢)</span>
-            <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-yellow-500"></span> Bill Req (Ã°Å¸Å¸Â¡)</span>
-            <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-red-500 animate-ping"></span> Overtime (Ã°Å¸â€Â´)</span>
+            <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-emerald-500"></span> Active (🟢)</span>
+            <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-yellow-500"></span> Bill Req (🟡)</span>
+            <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-red-500 animate-ping"></span> Overtime (🔴)</span>
             <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-zinc-600"></span> Empty</span>
           </div>
         </div>
@@ -167,13 +167,13 @@ export default function AdminTables() {
             let statusText = "Empty";
             if (lt.color_code === "green") {
               bgStyle = "bg-emerald-950/80 border-emerald-500/60 text-emerald-300 shadow-lg shadow-emerald-500/10";
-              statusText = "Ã°Å¸Å¸Â¢ Active";
+              statusText = "🟢 Active";
             } else if (lt.color_code === "yellow") {
               bgStyle = "bg-yellow-950/80 border-yellow-500/80 text-yellow-300 shadow-lg shadow-yellow-500/10";
-              statusText = "Ã°Å¸Å¸Â¡ Bill Req";
+              statusText = "🟡 Bill Req";
             } else if (lt.color_code === "red") {
               bgStyle = "bg-red-950/90 border-red-500 text-red-200 shadow-lg shadow-red-500/20 animate-pulse";
-              statusText = "Ã°Å¸â€Â´ OVERTIME";
+              statusText = "🔴 OVERTIME";
             }
             return (
               <div key={lt.id} className={`border rounded-2xl p-3 flex flex-col justify-between transition-all ${bgStyle}`}>
@@ -188,7 +188,7 @@ export default function AdminTables() {
                 </div>
                 {lt.active_order && (
                   <div className="mt-1 font-mono font-bold text-xs">
-                    Ã¢â€šÂ¹{lt.active_order.total}
+                    ₹{lt.active_order.total}
                   </div>
                 )}
               </div>
@@ -203,7 +203,7 @@ export default function AdminTables() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {/* Takeaway QR card Ã¢â‚¬â€ always shown */}
+        {/* Takeaway QR card — always shown */}
         <div className="bg-gradient-to-br from-emerald-500/5 to-emerald-600/5 border-2 border-emerald-400/30 rounded-2xl p-5 flex flex-col relative overflow-hidden">
           <div className="absolute top-0 right-0 mt-2 mr-2">
             <span className="bg-emerald-500/20 text-emerald-600 border border-emerald-400/30 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">Takeaway</span>
@@ -246,7 +246,7 @@ export default function AdminTables() {
 
       {!isLoading && tables.length === 0 && (
         <div className="bg-white border border-bone rounded-2xl p-12 text-center text-stone" data-testid="tables-empty">
-          No tables yet Ã¢â‚¬â€ add your first one above. Each table gets a unique QR.
+          No tables yet — add your first one above. Each table gets a unique QR.
         </div>
       )}
     </div>
