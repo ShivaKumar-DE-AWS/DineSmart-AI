@@ -24,7 +24,6 @@ export const useSession = create<SessionState>()(
       restaurantSlug: null,
       setSession: (user, token) => {
         set({ user, token });
-        sharedQueryClient?.clear();
       },
       setRestaurantSlug: (slug) => set({ restaurantSlug: slug }),
       clear: () => {

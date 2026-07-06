@@ -11,13 +11,7 @@ export function RoleGuard({ allow, children }: { allow: Role[]; children: React.
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    const ph = (useSession as any).persist;
-    if (ph?.hasHydrated?.()) {
-      setHydrated(true);
-      return;
-    }
-    const unsub = ph?.onFinishHydration?.(() => setHydrated(true));
-    return () => { if (typeof unsub === "function") unsub(); };
+    setHydrated(true);
   }, []);
 
   useEffect(() => {
@@ -29,6 +23,7 @@ export function RoleGuard({ allow, children }: { allow: Role[]; children: React.
           if (stored) {
             const parsed = JSON.parse(stored);
             if (parsed?.state?.user && parsed?.state?.token) {
+              // Wait for Zustand to naturally update on next tick
               useSession.getState().setSession(parsed.state.user, parsed.state.token);
               if (parsed.state.restaurantSlug) {
                 useSession.getState().setRestaurantSlug(parsed.state.restaurantSlug);
