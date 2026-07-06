@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Plus, QrCode, RefreshCw, Trash2, Download, Printer, Users, Clock, MapPin, Eye } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { QRCodeSVG } from "qrcode.react";
+import { generateQrHtml } from "@/lib/qr-template";
 
 interface TableDoc {
   id: string;
@@ -52,107 +53,12 @@ function takeawayMenuUrl(slug: string): string {
   return `${customerOrigin()}/r/${finalSlug}?type=takeaway`;
 }
 
-function generateQrHtml(titleText: string, subtitleText: string, qrUrl: string, restaurantName: string, isTakeaway: boolean): string {
-  return `<!doctype html><html><head><title>${restaurantName} — QR</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=Playfair+Display:ital,wght@0,700;1,600&display=swap" rel="stylesheet">
-    <style>
-      @page { margin: 0; size: 1200px 1800px; }
-      body { margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #000; font-family: 'Inter', sans-serif; color: #fff; }
-      .card { width: 1100px; height: 1700px; background: #080808; border: 4px solid #B58A43; box-sizing: border-box; display: flex; flex-direction: column; padding: 60px; position: relative; border-radius: 40px; box-shadow: inset 0 0 40px rgba(181, 138, 67, 0.1); }
-      .table-badge { position: absolute; top: 0; left: 50%; transform: translate(-50%, -50%); background: #B58A43; color: #000; font-size: 42px; font-weight: 900; padding: 15px 50px; border-radius: 50px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-      .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; }
-      .logo-left { font-family: 'Playfair Display', serif; font-size: 52px; font-weight: 700; color: #B58A43; text-align: center; line-height: 1.1; }
-      .logo-left span { font-size: 18px; font-family: 'Inter', sans-serif; font-weight: 400; color: #aaa; letter-spacing: 6px; display: block; margin-top: 10px; text-transform: uppercase; }
-      .logo-right { font-size: 44px; font-weight: 900; color: #fff; display: flex; align-items: center; gap: 15px; }
-      .logo-right span { color: #6BAF36; }
-      .title { text-align: center; margin-bottom: 50px; position: relative; }
-      .title::before, .title::after { content: ''; position: absolute; top: 50%; width: 250px; height: 2px; background: rgba(181, 138, 67, 0.3); }
-      .title::before { left: 0; } .title::after { right: 0; }
-      .title h1 { color: #6BAF36; font-size: 64px; margin: 0; font-weight: 900; letter-spacing: 2px; text-shadow: 0 0 20px rgba(107, 175, 54, 0.3); }
-      .title p { color: #ccc; font-size: 28px; margin: 10px 0 0 0; }
-      .main-content { display: flex; justify-content: space-between; flex: 1; }
-      .col { width: 260px; }
-      .col-title { background: #B58A43; color: #000; font-weight: 700; font-size: 18px; padding: 8px 16px; text-align: center; border-radius: 8px; margin-bottom: 40px; display: inline-block; }
-      .step { margin-bottom: 35px; }
-      .step-icon { width: 50px; height: 50px; border: 2px solid #6BAF36; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #6BAF36; font-size: 24px; margin-bottom: 12px; }
-      .step h3 { font-size: 16px; color: #B58A43; margin: 0 0 6px 0; text-transform: uppercase; letter-spacing: 1px; }
-      .step p { font-size: 14px; color: #aaa; margin: 0; line-height: 1.5; }
-      .qr-center { display: flex; flex-direction: column; align-items: center; width: 420px; }
-      .qr-box { background: #fff; padding: 25px; border-radius: 30px; box-shadow: 0 0 50px rgba(107, 175, 54, 0.2); margin-bottom: 40px; position: relative; border: 6px solid #6BAF36; }
-      .icons-row { display: flex; justify-content: space-between; width: 100%; margin-bottom: 40px; color: #6BAF36; font-size: 14px; text-align: center; font-weight: 600; }
-      .icon-item { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-      .icon-item span { font-size: 28px; }
-      .slogan { font-family: 'Playfair Display', serif; font-style: italic; font-size: 42px; color: #fff; text-align: center; line-height: 1.3; }
-      .slogan span { color: #6BAF36; }
-      .caution { background: #FAF5EC; border-radius: 12px; padding: 15px 25px; display: flex; align-items: center; gap: 20px; width: 100%; box-sizing: border-box; margin-bottom: 30px; margin-top: auto; border: 2px solid #B58A43; }
-      .caution-icon { background: #D32F2F; color: #fff; width: 70px; height: 70px; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; flex-shrink: 0; }
-      .caution-icon span { font-size: 32px; line-height: 1; margin-bottom: -2px; }
-      .caution-text { color: #000; font-size: 18px; flex: 1; font-weight: 500; }
-      .caution-text strong { color: #D32F2F; font-weight: 900; }
-      .caution-domain { border: 2px dashed #000; border-radius: 8px; padding: 10px 15px; color: #000; font-weight: 800; font-size: 16px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-      .caution-domain .url { color: #6BAF36; }
-      .footer { display: flex; justify-content: space-between; align-items: center; font-size: 20px; color: #B58A43; font-weight: 600; letter-spacing: 1px; }
-    </style></head><body>
-    <div class="card">
-      <div class="table-badge">${titleText}</div>
-      <div class="header">
-        <div class="logo-left">${restaurantName.toUpperCase()}<br><span>Exclusive</span></div>
-        <div class="logo-right">🍽️ SmartDine <span>AI</span></div>
-      </div>
-      <div class="title">
-        <h1>SCAN TO ORDER</h1>
-        <p>${subtitleText}</p>
-      </div>
-      <div class="main-content">
-        <div class="col" style="text-align: left;">
-          <div class="col-title">HOW TO ORDER</div>
-          <div class="step"><div class="step-icon">📱</div><h3>1. Scan</h3><p>Scan the QR code from your table.</p></div>
-          <div class="step"><div class="step-icon">💬</div><h3>2. Chat or Talk</h3><p>Chat or talk with our AI Waiter.</p></div>
-          <div class="step"><div class="step-icon">📖</div><h3>3. Explore & Order</h3><p>Explore the menu, get recommendations and add to cart.</p></div>
-          <div class="step"><div class="step-icon">💳</div><h3>4. Pay Securely</h3><p>Make secure payment and place your order.</p></div>
-        </div>
-        <div class="qr-center">
-          <div class="qr-box">
-            <img src="https://api.qrserver.com/v1/create-qr-code/?size=380x380&data=${encodeURIComponent(qrUrl)}&color=000000&bgcolor=ffffff&qzone=1" alt="QR" style="display:block;" />
-          </div>
-          <div class="icons-row">
-            <div class="icon-item"><span>📱</span>SCAN</div>
-            <div class="icon-item"><span>🛎️</span>ORDER</div>
-            <div class="icon-item"><span>💳</span>PAY</div>
-            <div class="icon-item"><span>✨</span>ENJOY</div>
-          </div>
-          <div class="slogan">We serve,<br><span>you enjoy! ♥</span></div>
-        </div>
-        <div class="col" style="text-align: right; display: flex; flex-direction: column; align-items: flex-end;">
-          <div class="col-title">WHY CHOOSE US?</div>
-          <div class="step" style="display:flex; flex-direction:column; align-items:flex-end;"><div class="step-icon">⭐</div><p>Personalized<br>Recommendations</p></div>
-          <div class="step" style="display:flex; flex-direction:column; align-items:flex-end;"><div class="step-icon">⚡</div><p>Faster<br>Service</p></div>
-          <div class="step" style="display:flex; flex-direction:column; align-items:flex-end;"><div class="step-icon">🛡️</div><p>Hygienic &<br>Contactless</p></div>
-          <div class="step" style="display:flex; flex-direction:column; align-items:flex-end;"><div class="step-icon">😊</div><p>Better Dining<br>Experience</p></div>
-        </div>
-      </div>
-      <div class="caution">
-        <div class="caution-icon"><span>!</span>CAUTION</div>
-        <div class="caution-text">Preview the QR Link Generator before clicking the link to <strong>avoid QR scams.</strong></div>
-        <div class="caution-domain"><span>✅ Verify Link</span><span class="url">smartdineai.co.in</span></div>
-      </div>
-      <div class="footer">
-        <div>🌐 www.smartdineai.co.in</div>
-        <div>Thank you for dining with us!</div>
-        <div>📸 @smartdine.ai</div>
-      </div>
-    </div>
-    <script>window.onload=()=>{setTimeout(()=>window.print(),800)};</script>
-    </body></html>`;
+function serializeQrSvg(containerEl: HTMLElement | null): string {
+  const svgEl = containerEl?.querySelector("svg");
+  if (!svgEl) return "";
+  return new XMLSerializer().serializeToString(svgEl);
 }
 
-function printTakeawayMenuQr(slug: string, restaurantName: string) {
-  let menuUrl = takeawayMenuUrl(slug);
-  const w = window.open("", "_blank");
-  if (!w) { toast.error("Popup blocked — allow popups to print"); return; }
-  w.document.write(generateQrHtml("TAKEAWAY MENU", "Order from anywhere.", menuUrl, restaurantName, true));
-  w.document.close();
-}
 
 export default function AdminTables() {
   const qc = useQueryClient();
@@ -211,7 +117,7 @@ export default function AdminTables() {
           <p className="uppercase tracking-[0.3em] text-xs text-stone mb-2">Operations</p>
           <h1 className="font-heading text-3xl md:text-4xl tracking-tight">Tables &amp; QR codes</h1>
           <p className="text-sm text-stone mt-1">
-            {tables.length} tables · <span className="text-clay font-medium">{liveCount}</span> currently seated · scans hold the table for 10 minutes.
+            {tables.length} tables Ã‚Â· <span className="text-clay font-medium">{liveCount}</span> currently seated Ã‚Â· scans hold the table for 10 minutes.
           </p>
         </div>
         <div className="flex flex-wrap items-end gap-2 bg-white border border-bone rounded-2xl p-3" data-testid="add-table-form">
@@ -234,7 +140,7 @@ export default function AdminTables() {
         </div>
       </div>
 
-      {isLoading && <div className="text-stone">Loading tables…</div>}
+      {isLoading && <div className="text-stone">Loading tablesÃ¢â‚¬Â¦</div>}
 
       {/* Live Floor Map Section */}
       <div className="bg-zinc-900 border-2 border-zinc-800 rounded-3xl p-6 mb-8 text-white shadow-xl">
@@ -248,9 +154,9 @@ export default function AdminTables() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-4 text-xs font-semibold">
-            <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-emerald-500"></span> Active (🟢)</span>
-            <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-yellow-500"></span> Bill Req (🟡)</span>
-            <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-red-500 animate-ping"></span> Overtime (🔴)</span>
+            <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-emerald-500"></span> Active (Ã°Å¸Å¸Â¢)</span>
+            <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-yellow-500"></span> Bill Req (Ã°Å¸Å¸Â¡)</span>
+            <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-red-500 animate-ping"></span> Overtime (Ã°Å¸â€Â´)</span>
             <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-zinc-600"></span> Empty</span>
           </div>
         </div>
@@ -261,13 +167,13 @@ export default function AdminTables() {
             let statusText = "Empty";
             if (lt.color_code === "green") {
               bgStyle = "bg-emerald-950/80 border-emerald-500/60 text-emerald-300 shadow-lg shadow-emerald-500/10";
-              statusText = "🟢 Active";
+              statusText = "Ã°Å¸Å¸Â¢ Active";
             } else if (lt.color_code === "yellow") {
               bgStyle = "bg-yellow-950/80 border-yellow-500/80 text-yellow-300 shadow-lg shadow-yellow-500/10";
-              statusText = "🟡 Bill Req";
+              statusText = "Ã°Å¸Å¸Â¡ Bill Req";
             } else if (lt.color_code === "red") {
               bgStyle = "bg-red-950/90 border-red-500 text-red-200 shadow-lg shadow-red-500/20 animate-pulse";
-              statusText = "🔴 OVERTIME";
+              statusText = "Ã°Å¸â€Â´ OVERTIME";
             }
             return (
               <div key={lt.id} className={`border rounded-2xl p-3 flex flex-col justify-between transition-all ${bgStyle}`}>
@@ -282,7 +188,7 @@ export default function AdminTables() {
                 </div>
                 {lt.active_order && (
                   <div className="mt-1 font-mono font-bold text-xs">
-                    ₹{lt.active_order.total}
+                    Ã¢â€šÂ¹{lt.active_order.total}
                   </div>
                 )}
               </div>
@@ -297,7 +203,7 @@ export default function AdminTables() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {/* Takeaway QR card — always shown */}
+        {/* Takeaway QR card Ã¢â‚¬â€ always shown */}
         <div className="bg-gradient-to-br from-emerald-500/5 to-emerald-600/5 border-2 border-emerald-400/30 rounded-2xl p-5 flex flex-col relative overflow-hidden">
           <div className="absolute top-0 right-0 mt-2 mr-2">
             <span className="bg-emerald-500/20 text-emerald-600 border border-emerald-400/30 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">Takeaway</span>
@@ -311,12 +217,20 @@ export default function AdminTables() {
               <p className="text-[10px] text-stone">All-orders takeaway link</p>
             </div>
           </div>
-          <div className="bg-cream rounded-xl p-4 flex items-center justify-center mb-3">
+          <div data-testid="takeaway-qr-wrap" className="bg-cream rounded-xl p-4 flex items-center justify-center mb-3">
             <QRCodeSVG value={takeawayMenuUrl(slug)} size={180} bgColor="#FAF5EC" fgColor="#2D6A4F" level="M" includeMargin={false} />
           </div>
           <p className="text-[10px] text-stone text-center mb-3">Scan to browse menu &amp; place takeaway order</p>
           <div className="mt-auto flex gap-2">
-            <button onClick={() => printTakeawayMenuQr(slug, restaurantName)} className="flex-1 inline-flex items-center justify-center gap-1.5 bg-emerald-600 text-white rounded-full py-2 text-xs font-medium hover:bg-emerald-700">
+            <button onClick={() => {
+              const container = document.querySelector('[data-testid="takeaway-qr-wrap"]');
+              const svgMarkup = serializeQrSvg(container as HTMLElement);
+              if (!svgMarkup) { toast.error("QR not ready"); return; }
+              const w = window.open("", "_blank");
+              if (!w) { toast.error("Popup blocked"); return; }
+              w.document.write(generateQrHtml("TAKEAWAY MENU", svgMarkup, restaurantName));
+              w.document.close();
+            }} className="flex-1 inline-flex items-center justify-center gap-1.5 bg-emerald-600 text-white rounded-full py-2 text-xs font-medium hover:bg-emerald-700">
               <Printer className="h-3.5 w-3.5" /> Print
             </button>
             <button onClick={async () => {
@@ -332,7 +246,7 @@ export default function AdminTables() {
 
       {!isLoading && tables.length === 0 && (
         <div className="bg-white border border-bone rounded-2xl p-12 text-center text-stone" data-testid="tables-empty">
-          No tables yet — add your first one above. Each table gets a unique QR.
+          No tables yet Ã¢â‚¬â€ add your first one above. Each table gets a unique QR.
         </div>
       )}
     </div>
@@ -344,140 +258,60 @@ function TableCard({ t, onRegen, onDelete, slug, restaurantName }: { t: TableDoc
   const url = tableQrUrl(slug, t.qr_token);
 
   const downloadPng = async () => {
-    const svgEl = svgRef.current?.querySelector("svg");
-    if (!svgEl) return;
-    const xml = new XMLSerializer().serializeToString(svgEl);
-    const svgUrl = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(xml)));
-    const img = new Image();
-    img.onload = () => {
-      const w = 1200, h = 1800;
-      const canvas = document.createElement("canvas");
-      canvas.width = w; canvas.height = h;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-      
-      // Background
-      ctx.fillStyle = "#000000"; ctx.fillRect(0, 0, w, h);
-      
-      // Inner Card
-      ctx.fillStyle = "#080808";
-      ctx.beginPath(); ctx.roundRect(40, 40, w - 80, h - 80, 40); ctx.fill();
-      ctx.strokeStyle = "#B58A43"; ctx.lineWidth = 4; ctx.stroke();
-      
-      // Table Badge
-      ctx.fillStyle = "#B58A43";
-      ctx.beginPath(); ctx.roundRect(w / 2 - 160, 15, 320, 80, 40); ctx.fill();
-      ctx.fillStyle = "#000000"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.font = "900 36px sans-serif";
-      ctx.fillText(`TABLE ${t.number}`, w / 2, 55);
-      
-      // Header
-      ctx.fillStyle = "#B58A43"; ctx.textAlign = "left"; ctx.textBaseline = "top";
-      ctx.font = "bold 52px serif";
-      ctx.fillText((restaurantName || "RESTAURANT").toUpperCase(), 100, 120);
-      ctx.fillStyle = "#AAAAAA"; ctx.font = "400 18px sans-serif";
-      ctx.fillText("E X C L U S I V E", 100, 180);
-      
-      ctx.textAlign = "right"; ctx.fillStyle = "#FFFFFF"; ctx.font = "900 44px sans-serif";
-      ctx.fillText("🍽️ SmartDine ", w - 160, 120);
-      ctx.fillStyle = "#6BAF36";
-      ctx.fillText("AI", w - 100, 120);
-      
-      // Title
-      ctx.textAlign = "center";
-      ctx.fillStyle = "#6BAF36"; ctx.font = "900 64px sans-serif";
-      ctx.fillText("SCAN TO ORDER", w / 2, 280);
-      ctx.fillStyle = "#CCCCCC"; ctx.font = "28px sans-serif";
-      ctx.fillText("Talk. Order. Enjoy.", w / 2, 350);
-      
-      // QR Code Box
-      const qrSize = 360, qrX = (w - qrSize) / 2, qrY = 460;
-      ctx.fillStyle = "#FFFFFF";
-      ctx.beginPath(); ctx.roundRect(qrX - 25, qrY - 25, qrSize + 50, qrSize + 50, 30); ctx.fill();
-      ctx.strokeStyle = "#6BAF36"; ctx.lineWidth = 6; ctx.stroke();
-      ctx.drawImage(img, qrX, qrY, qrSize, qrSize);
-      
-      // Slogan
-      ctx.fillStyle = "#FFFFFF"; ctx.font = "italic 42px serif";
-      ctx.fillText("We serve,", w / 2, 920);
-      ctx.fillStyle = "#6BAF36";
-      ctx.fillText("you enjoy! ♥", w / 2, 970);
-      
-      // Left Column (HOW TO ORDER)
-      ctx.textAlign = "left";
-      ctx.fillStyle = "#B58A43";
-      ctx.beginPath(); ctx.roundRect(100, 480, 200, 40, 8); ctx.fill();
-      ctx.fillStyle = "#000000"; ctx.font = "bold 18px sans-serif"; ctx.textBaseline = "middle";
-      ctx.fillText("HOW TO ORDER", 125, 500);
-      
-      const leftSteps = [
-        { i: "📱", t: "1. Scan", d: "Scan the QR code from your table." },
-        { i: "💬", t: "2. Chat or Talk", d: "Chat or talk with our AI Waiter." },
-        { i: "📖", t: "3. Explore & Order", d: "Explore the menu, get recommendations." },
-        { i: "💳", t: "4. Pay Securely", d: "Make secure payment and place order." }
-      ];
-      ctx.textBaseline = "top";
-      leftSteps.forEach((s, idx) => {
-        const y = 560 + idx * 130;
-        ctx.fillStyle = "#6BAF36"; ctx.font = "40px sans-serif"; ctx.fillText(s.i, 100, y);
-        ctx.fillStyle = "#B58A43"; ctx.font = "16px sans-serif"; ctx.fillText(s.t, 100, y + 55);
-        ctx.fillStyle = "#AAAAAA"; ctx.font = "14px sans-serif"; ctx.fillText(s.d, 100, y + 75);
-      });
-      
-      // Right Column (WHY CHOOSE US?)
-      ctx.textAlign = "right";
-      ctx.fillStyle = "#B58A43";
-      ctx.beginPath(); ctx.roundRect(w - 300, 480, 200, 40, 8); ctx.fill();
-      ctx.fillStyle = "#000000"; ctx.font = "bold 18px sans-serif"; ctx.textBaseline = "middle";
-      ctx.fillText("WHY CHOOSE US?", w - 115, 500);
-      
-      const rightSteps = [
-        { i: "⭐", t: "Personalized", d: "Recommendations" },
-        { i: "⚡", t: "Faster", d: "Service" },
-        { i: "🛡️", t: "Hygienic &", d: "Contactless" },
-        { i: "😊", t: "Better Dining", d: "Experience" }
-      ];
-      ctx.textBaseline = "top";
-      rightSteps.forEach((s, idx) => {
-        const y = 560 + idx * 130;
-        ctx.fillStyle = "#6BAF36"; ctx.font = "40px sans-serif"; ctx.fillText(s.i, w - 100, y);
-        ctx.fillStyle = "#B58A43"; ctx.font = "16px sans-serif"; ctx.fillText(s.t, w - 100, y + 55);
-        ctx.fillStyle = "#AAAAAA"; ctx.font = "14px sans-serif"; ctx.fillText(s.d, w - 100, y + 75);
-      });
-      
-      // Caution Box
-      ctx.textAlign = "left";
-      ctx.fillStyle = "#FAF5EC";
-      ctx.beginPath(); ctx.roundRect(100, 1550, w - 200, 90, 12); ctx.fill();
-      ctx.strokeStyle = "#B58A43"; ctx.lineWidth = 2; ctx.stroke();
-      
-      ctx.fillStyle = "#D32F2F";
-      ctx.beginPath(); ctx.roundRect(100, 1550, 100, 90, 8); ctx.fill();
-      ctx.fillStyle = "#FFFFFF"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.font = "bold 14px sans-serif"; ctx.fillText("CAUTION", 150, 1595);
-      
-      ctx.fillStyle = "#000000"; ctx.textAlign = "left"; ctx.font = "500 18px sans-serif";
-      ctx.fillText("Preview the QR Link Generator before clicking the link to avoid QR scams.", 220, 1595);
-      
-      // Footer
-      ctx.fillStyle = "#B58A43"; ctx.textAlign = "center"; ctx.font = "600 20px sans-serif";
-      ctx.fillText("🌐 www.smartdineai.co.in", 250, 1720);
-      ctx.fillText("Thank you for dining with us!", w / 2, 1720);
-      ctx.fillText("📸 @smartdine.ai", w - 250, 1720);
-      
+    const svgMarkup = serializeQrSvg(svgRef.current);
+    if (!svgMarkup) { toast.error("QR not ready yet"); return; }
+    const html = generateQrHtml(`TABLE ${t.number}`, svgMarkup, restaurantName);
+    const iframe = document.createElement("iframe");
+    iframe.style.cssText = "position:fixed;left:-9999px;width:900px;height:1400px;border:none;";
+    document.body.appendChild(iframe);
+    const doc = iframe.contentDocument!;
+    doc.open(); doc.write(html.replace(/<script[\s\S]*?<\/script>/gi, "")); doc.close();
+    await new Promise(r => setTimeout(r, 1500));
+    try {
+      const { default: html2canvas } = await import("html2canvas");
+      const card = doc.querySelector(".card") as HTMLElement;
+      if (!card) { toast.error("Could not render"); return; }
+      const canvas = await html2canvas(card, { scale: 2, backgroundColor: "#0D0D0D", useCORS: true });
       const link = document.createElement("a");
       link.download = `${slug}-table-${t.number}.png`;
-
       link.href = canvas.toDataURL("image/png");
       link.click();
-    };
-    img.src = svgUrl;
+    } catch {
+      // Fallback: render QR SVG on simple canvas
+      const svgEl = svgRef.current?.querySelector("svg");
+      if (!svgEl) return;
+      const xml = new XMLSerializer().serializeToString(svgEl);
+      const svgUrl = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(xml)));
+      const img = new Image();
+      img.onload = () => {
+        const cw = 900, ch = 900;
+        const canvas = document.createElement("canvas");
+        canvas.width = cw; canvas.height = ch;
+        const ctx = canvas.getContext("2d")!;
+        ctx.fillStyle = "#FAF5EC"; ctx.fillRect(0, 0, cw, ch);
+        const qrSize = 700;
+        ctx.drawImage(img, (cw - qrSize) / 2, 30, qrSize, qrSize);
+        ctx.fillStyle = "#0D0D0D"; ctx.textAlign = "center"; ctx.font = "bold 36px sans-serif";
+        ctx.fillText(`${restaurantName} â€” Table ${t.number}`, cw / 2, qrSize + 70);
+        ctx.font = "20px sans-serif"; ctx.fillStyle = "#666";
+        ctx.fillText(url, cw / 2, qrSize + 110);
+        const link = document.createElement("a");
+        link.download = `${slug}-table-${t.number}.png`;
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+      };
+      img.src = svgUrl;
+    } finally {
+      document.body.removeChild(iframe);
+    }
   };
 
   const printQr = () => {
+    const svgMarkup = serializeQrSvg(svgRef.current);
+    if (!svgMarkup) { toast.error("QR not ready yet"); return; }
     const w = window.open("", "_blank");
     if (!w) { toast.error("Popup blocked — allow popups to print"); return; }
-    w.document.write(generateQrHtml(`TABLE ${t.number}`, "Talk. Order. Enjoy.", url, restaurantName, false));
+    w.document.write(generateQrHtml(`TABLE ${t.number}`, svgMarkup, restaurantName));
     w.document.close();
   };
 
