@@ -108,6 +108,7 @@ export interface AIWaiterEventPayload {
   cart_state?: AIWaiterCartItem[];
   added_item?: AIWaiterCartItem;
   user_language?: string;
+  silent?: boolean;
 }
 
 export interface AISuggestedItem {
@@ -575,11 +576,13 @@ export async function sendAIWaiterEvent(
       }),
     });
 
-    // Route to the correct UI handler
-    if (response.action_type === "WELCOME") {
-      showAIWelcomeModal(response.dialogue_text, 20000);
-    } else if (response.action_type === "UPSELL_OFFER") {
-      showAIUpsellSheet(response.dialogue_text, response.suggested_items, addToCartFn, proceedPayFn);
+    // Route to the correct UI handler if not silent
+    if (!payload.silent) {
+      if (response.action_type === "WELCOME") {
+        showAIWelcomeModal(response.dialogue_text, 20000);
+      } else if (response.action_type === "UPSELL_OFFER") {
+        showAIUpsellSheet(response.dialogue_text, response.suggested_items, addToCartFn, proceedPayFn);
+      }
     }
 
     return response;

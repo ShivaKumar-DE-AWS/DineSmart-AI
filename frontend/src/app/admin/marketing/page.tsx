@@ -1,6 +1,5 @@
 "use client";
 import { useState } from "react";
-import { AdminShell } from "@/components/admin/AdminShell";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -67,7 +66,6 @@ export default function MarketingPage() {
   });
 
   return (
-    <AdminShell>
       <div className="max-w-6xl mx-auto space-y-6">
         <div>
           <h1 className="text-2xl font-bold font-heading">Marketing & QR Stand</h1>
@@ -222,6 +220,5 @@ export default function MarketingPage() {
           </div>
         </div>
       </div>
-    </AdminShell>
   );
 }
