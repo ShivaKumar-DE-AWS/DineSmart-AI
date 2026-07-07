@@ -1185,6 +1185,7 @@ async def submit_order_feedback(order_id: str, req: FeedbackSubmitReq):
         "food_quality": req.food_quality,
         "service": req.service,
         "ambience": req.ambience,
+        "smartdine_interface": req.smartdine_interface,
         "suggestions": req.suggestions,
         "points_awarded": points_awarded,
         "created_at": now_iso()
@@ -1199,3 +1200,21 @@ async def submit_order_feedback(order_id: str, req: FeedbackSubmitReq):
         )
 
     return {"message": "Feedback submitted successfully", "points_awarded": points_awarded}
+
+@router.get("/api/feedbacks", dependencies=[Depends(require_roles("admin"))])
+async def list_feedbacks(user=Depends(require_user)):
+    q = {}
+    if user.get("restaurant_id"):
+        q["restaurant_id"] = user["restaurant_id"]
+    feedbacks = await db.feedbacks.find(q, {"_id": 0}).sort("created_at", -1).to_list(500)
+    
+    # Optional: fetch associated orders to get customer name/table if needed
+    for fb in feedbacks:
+        if "order_id" in fb:
+            order = await db.orders.find_one({"id": fb["order_id"]}, {"customer_name": 1, "table_number": 1, "customer_phone": 1, "_id": 0})
+            if order:
+                fb["customer_name"] = order.get("customer_name")
+                fb["table_number"] = order.get("table_number")
+                fb["customer_phone"] = order.get("customer_phone")
+
+    return {"feedbacks": feedbacks}
