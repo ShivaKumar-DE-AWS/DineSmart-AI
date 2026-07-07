@@ -14,7 +14,7 @@ async def get_platform_stats(user=Depends(require_superadmin)):
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     week_start = now - timedelta(days=7)
 
-    total_restaurants = await db.restaurants.count_documents({})
+    total_restaurants = await db.restaurants.count_documents({"subscription_status": {"$ne": "deleted"}})
     total_orders = await db.orders.count_documents({})
 
     # 1. Active today (restaurants with orders today)
