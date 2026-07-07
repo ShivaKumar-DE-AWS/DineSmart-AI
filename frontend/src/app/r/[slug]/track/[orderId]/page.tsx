@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api, apiUrl } from "@/lib/api";
 import { useParams } from "next/navigation";
 import { fmtTime, formatCurrency } from "@/lib/utils";
-import { CheckCircle2, ChefHat, ConciergeBell, ClipboardCheck, Clock, Bell, BellRing, BellOff, MapPin, Sparkles, Scissors, X, CreditCard, Banknote } from "lucide-react";
+import { CheckCircle2, ChefHat, ConciergeBell, ClipboardCheck, Clock, Bell, BellRing, BellOff, MapPin, Sparkles, Scissors, X, CreditCard, Banknote, Star, MessageSquareHeart } from "lucide-react";
 import type { Order } from "@/types";
 import { useEffect, useRef, useState } from "react";
 import { playChime, ensureNotificationPermission, notify, isPushSupported, subscribeToOrderPush } from "@/lib/notify";
@@ -72,6 +72,47 @@ export default function TrackPage() {
   };
 
   const [requestingBill, setRequestingBill] = useState(false);
+
+  const [feedbackState, setFeedbackState] = useState<"idle" | "submitting" | "success">("idle");
+  const [feedbackRating, setFeedbackRating] = useState(0);
+  const [feedbackFood, setFeedbackFood] = useState(0);
+  const [feedbackService, setFeedbackService] = useState(0);
+  const [feedbackAmbience, setFeedbackAmbience] = useState(0);
+  const [feedbackSuggestions, setFeedbackSuggestions] = useState("");
+  const [feedbackPoints, setFeedbackPoints] = useState(0);
+
+  const submitFeedback = async () => {
+    if (feedbackRating === 0) {
+      toast.error("Please provide an overall rating.");
+      return;
+    }
+    try {
+      setFeedbackState("submitting");
+      const res = await fetch(apiUrl(`/api/orders/${orderId}/feedback`), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          rating: feedbackRating,
+          food_quality: feedbackFood || undefined,
+          service: feedbackService || undefined,
+          ambience: feedbackAmbience || undefined,
+          suggestions: feedbackSuggestions || undefined
+        })
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.detail || "Failed to submit feedback");
+      }
+      const data = await res.json();
+      setFeedbackPoints(data.points_awarded || 50);
+      setFeedbackState("success");
+      toast.success("Feedback submitted!");
+    } catch (err: any) {
+      toast.error(err.message);
+      setFeedbackState("idle");
+    }
+  };
+
   const handleRequestBill = async () => {
     try {
       setRequestingBill(true);
@@ -515,6 +556,89 @@ export default function TrackPage() {
           >
             <Scissors className="h-4 w-4" /> Bill & Split Calculator
           </button>
+        </div>
+      )}
+
+      {/* Feedback Section (shows when order is served or paid) */}
+      {(order.status === "served" || order.payment_status === "paid") && !isCancelled && (
+        <div className="mehfil-card rounded-3xl p-7 md:p-9 mt-6 border-brand-primary/20 shadow-lg relative overflow-hidden">
+          {feedbackState === "success" ? (
+            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-6">
+              <div className="h-20 w-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Star className="h-10 w-10 text-emerald-500 fill-emerald-500 animate-pulse" />
+              </div>
+              <h3 className="font-royal text-3xl text-brand-primary mb-2">Thank You!</h3>
+              <p className="font-editorial italic text-[#1A1106]/70 mb-4">Your feedback helps us serve you better.</p>
+              <div className="inline-block bg-emerald-50 border border-emerald-200 text-emerald-700 px-6 py-3 rounded-full font-royal uppercase tracking-widest text-sm font-bold shadow-inner">
+                🎉 +{feedbackPoints} Loyalty Points Earned!
+              </div>
+            </motion.div>
+          ) : (
+            <>
+              <div className="text-center mb-6">
+                <div className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-brand-primary/10 text-brand-primary mb-3">
+                  <MessageSquareHeart className="h-6 w-6" />
+                </div>
+                <h3 className="font-royal text-2xl text-brand-primary">Rate Your Experience</h3>
+                <p className="font-editorial italic text-sm text-[#1A1106]/60 mt-1">Submit feedback & earn 50 loyalty points!</p>
+                <p className="font-editorial italic text-xs text-emerald-600 mt-1">Write a genuine suggestion to earn an extra 29 points.</p>
+              </div>
+
+              <div className="space-y-5">
+                <div className="flex flex-col items-center">
+                  <span className="font-royal uppercase tracking-wider text-[10px] text-[#1A1106]/70 mb-2">Overall Experience *</span>
+                  <div className="flex gap-2">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button key={star} onClick={() => setFeedbackRating(star)} className="focus:outline-none transition-transform hover:scale-110">
+                        <Star className={`h-8 w-8 ${feedbackRating >= star ? "text-amber-400 fill-amber-400 drop-shadow-md" : "text-gray-300"}`} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {feedbackRating > 0 && (
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="space-y-4 pt-4 border-t border-brand-secondary/20">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                      {[
+                        { label: "Food Quality", val: feedbackFood, setVal: setFeedbackFood },
+                        { label: "Service", val: feedbackService, setVal: setFeedbackService },
+                        { label: "Ambience", val: feedbackAmbience, setVal: setFeedbackAmbience }
+                      ].map((cat, i) => (
+                        <div key={i} className="flex flex-col items-center p-3 bg-white/50 rounded-xl border border-[#E7DFCB]">
+                          <span className="font-royal uppercase tracking-wider text-[10px] text-[#1A1106]/70 mb-2">{cat.label}</span>
+                          <div className="flex gap-1">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <button key={star} onClick={() => cat.setVal(star)} className="focus:outline-none">
+                                <Star className={`h-5 w-5 ${cat.val >= star ? "text-amber-400 fill-amber-400" : "text-gray-300"}`} />
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div>
+                      <textarea
+                        value={feedbackSuggestions}
+                        onChange={(e) => setFeedbackSuggestions(e.target.value)}
+                        placeholder="Any genuine suggestions for us? (Earn extra 29 points!)"
+                        className="w-full mt-2 bg-white border border-[#E7DFCB] rounded-xl p-3 text-sm focus:outline-none focus:border-brand-primary font-editorial placeholder:italic"
+                        rows={3}
+                      />
+                    </div>
+
+                    <button
+                      onClick={submitFeedback}
+                      disabled={feedbackState === "submitting"}
+                      className="w-full bg-brand-primary text-white font-royal uppercase tracking-widest text-xs py-3.5 rounded-full shadow-lg hover:bg-brand-primary/90 transition disabled:opacity-50"
+                    >
+                      {feedbackState === "submitting" ? "Submitting..." : "Submit Feedback"}
+                    </button>
+                  </motion.div>
+                )}
+              </div>
+            </>
+          )}
         </div>
       )}
 
