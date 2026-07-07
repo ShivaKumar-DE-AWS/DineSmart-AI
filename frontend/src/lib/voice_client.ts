@@ -59,6 +59,12 @@ export class VoiceClient {
     });
   }
 
+  public resumeContext() {
+    if (this.audioContext && this.audioContext.state === "suspended") {
+      this.audioContext.resume();
+    }
+  }
+
   private initAudioContext() {
     if (!this.audioContext) {
       this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();

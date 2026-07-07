@@ -11,79 +11,83 @@ export default function VoiceAgentOverlay({ restaurantId }: { restaurantId: stri
   const [isSpeaking, setIsSpeaking] = useState(false);
   const clientRef = useRef<VoiceClient | null>(null);
 
+  const [isConnected, setIsConnected] = useState(false);
+
+  useEffect(() => {
+    // Auto-connect on mount (Passive Mode)
+    const deviceId = getOrCreateAnonID();
+    const client = new VoiceClient(
+      restaurantId,
+      deviceId,
+      (text) => {
+        setTranscript(text);
+        setIsSpeaking(true);
+        setTimeout(() => setIsSpeaking(false), 3000);
+      },
+      (actionData) => {
+        if (actionData.action === "ADD" && actionData.item_id) {
+          useCart.getState().add(
+            { id: actionData.item_id, name: "Voice Item", price: 0 } as any, 
+            actionData.qty || 1
+          );
+        }
+      }
+    );
+
+    client.connect().then(() => setIsConnected(true)).catch(console.error);
+    clientRef.current = client;
+
+    // Browsers block autoplay audio until user interaction. 
+    // We resume the AudioContext on the very first click anywhere on the screen!
+    const handleFirstClick = () => {
+      client.resumeContext();
+      window.removeEventListener("click", handleFirstClick);
+    };
+    window.addEventListener("click", handleFirstClick);
+
+    return () => {
+      window.removeEventListener("click", handleFirstClick);
+      client.disconnect();
+    };
+  }, [restaurantId]);
+
   // Subscribe to cart changes to trigger manual events
   const cartItems = useCart((state) => state.items);
   const previousCartRef = useRef(cartItems);
 
   useEffect(() => {
-    // If the cart grew, the user added an item. Notify the Voice Agent!
     if (cartItems.length > previousCartRef.current.length) {
-      if (clientRef.current && isActive) {
+      if (clientRef.current && isConnected) {
+        clientRef.current.resumeContext(); // ensure audio can play
         clientRef.current.sendManualEvent("ITEM_ADDED");
       }
     }
     previousCartRef.current = cartItems;
-  }, [cartItems, isActive]);
+  }, [cartItems, isConnected]);
 
   const toggleVoiceAgent = async () => {
-    if (isActive && clientRef.current) {
-      clientRef.current.disconnect();
-      clientRef.current = null;
+    if (!clientRef.current || !isConnected) return;
+    
+    if (isActive) {
+      clientRef.current.stopRecording();
       setIsActive(false);
-      setTranscript("Voice agent disconnected.");
-      return;
-    }
-
-    try {
-      setTranscript("Connecting to AI Waiter...");
-      const deviceId = getOrCreateAnonID();
-      
-      const client = new VoiceClient(
-        restaurantId,
-        deviceId,
-        (text) => {
-          setTranscript(text);
-          setIsSpeaking(true);
-          setTimeout(() => setIsSpeaking(false), 3000); // Simple visual indicator
-        },
-        (actionData) => {
-          console.log("[Voice Overlay] Action received:", actionData);
-          if (actionData.action === "ADD" && actionData.item_id) {
-            // Add to cart via store
-            // Note: In real app, we'd lookup the full item from menu store. 
-            // We assume backend handles the basic mapping or we use the menu store here.
-            useCart.getState().add(
-              { id: actionData.item_id, name: "Voice Item", price: 0 } as any, 
-              actionData.qty || 1
-            );
-          }
-        }
-      );
-
-      await client.connect();
-      await client.startRecording();
-      
-      clientRef.current = client;
-      setIsActive(true);
-      setTranscript("Listening...");
-    } catch (err) {
-      console.error(err);
-      setTranscript("Failed to connect microphone.");
+      setTranscript("Voice agent listening stopped.");
+    } else {
+      try {
+        setTranscript("Activating microphone...");
+        await clientRef.current.startRecording();
+        setIsActive(true);
+        setTranscript("Listening...");
+      } catch (err) {
+        console.error(err);
+        setTranscript("Failed to connect microphone.");
+      }
     }
   };
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (clientRef.current) {
-        clientRef.current.disconnect();
-      }
-    };
-  }, []);
-
   return (
     <div className="fixed bottom-24 right-4 z-50 flex flex-col items-end gap-2">
-      {isActive && (
+      {(isActive || transcript) && (
         <div className="bg-black/80 backdrop-blur-md text-white text-xs px-3 py-2 rounded-xl shadow-xl max-w-[200px] border border-white/10 animate-fade-in-up">
           <p className="font-editorial leading-tight">
             {isSpeaking ? "🗣️ " : "🎙️ "} 
