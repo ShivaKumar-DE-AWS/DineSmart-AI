@@ -8,6 +8,7 @@ import { useSession } from "@/stores/session";
 
 const nav = [
   { href: "/super-admin", label: "Global Dashboard", icon: LayoutDashboard, exact: true, testid: "sa-nav-dashboard" },
+  { href: "/super-admin/impact", label: "Platform Impact", icon: Sparkles, testid: "sa-nav-impact" },
   { href: "/super-admin/restaurants", label: "Restaurants", icon: Store, testid: "sa-nav-restaurants" },
   { href: "/super-admin/tickets", label: "Support Tickets", icon: LifeBuoy, testid: "sa-nav-tickets" },
   { href: "/super-admin/health", label: "System Health", icon: Activity, testid: "sa-nav-health" },

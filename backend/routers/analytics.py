@@ -285,6 +285,22 @@ async def get_impact_analytics(user=Depends(require_user)):
     if manual_aov > 0 and ai_aov > manual_aov:
         aov_increase_pct = ((ai_aov - manual_aov) / manual_aov) * 100
         
+    # Global Metrics Calculation
+    global_active_restaurants = await db.restaurants.count_documents({})
+    global_orders_processed = await db.orders.count_documents({"status": {"$ne": "cancelled"}})
+    global_ai_conversations = await db.orders.count_documents({"is_ai": True})
+    
+    global_total_resolved = await db.orders.count_documents({"status": {"$in": ["completed", "cancelled"]}})
+    global_completed = await db.orders.count_documents({"status": "completed"})
+    global_success_rate = round((global_completed / global_total_resolved * 100), 1) if global_total_resolved > 0 else 100
+    
+    revenue_pipeline = [
+        {"$match": {"status": "completed"}},
+        {"$group": {"_id": None, "total": {"$sum": "$total"}}}
+    ]
+    revenue_result = await db.orders.aggregate(revenue_pipeline).to_list(1)
+    global_revenue = revenue_result[0]["total"] if revenue_result else 0
+        
     return {
         "restaurant_metrics": {
             "total_orders": total_orders,
@@ -298,10 +314,10 @@ async def get_impact_analytics(user=Depends(require_user)):
             "reduced_errors": True
         },
         "global_metrics": {
-            "active_restaurants": 200,
-            "ai_conversations": "500,000+",
-            "orders_processed": "2 Million+",
-            "customer_satisfaction": 98,
-            "uptime_pct": 99.95
+            "active_restaurants": global_active_restaurants,
+            "ai_conversations": global_ai_conversations,
+            "orders_processed": global_orders_processed,
+            "customer_satisfaction": global_success_rate,
+            "total_revenue": global_revenue
         }
     }

@@ -4,9 +4,9 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Sparkles, TrendingUp, TrendingDown, Clock, CheckCircle2, Server, Users, MessageSquare, Utensils, ShoppingBag } from "lucide-react";
 
-export default function ImpactPage() {
+export default function SuperAdminImpactPage() {
   const { data, isLoading } = useQuery({
-    queryKey: ["analytics-impact"],
+    queryKey: ["analytics-impact", "super-admin"],
     queryFn: () => api<any>("/api/analytics/impact"),
   });
 
@@ -20,8 +20,8 @@ export default function ImpactPage() {
   return (
     <div className="max-w-6xl mx-auto p-4 md:p-8 space-y-8 animate-in fade-in">
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-heading font-bold text-ink">SmartDine Impact</h1>
-        <p className="text-stone">Real-time improvements and metrics since joining SmartDine AI.</p>
+        <h1 className="text-3xl font-heading font-bold text-ink">SmartDine Platform Impact</h1>
+        <p className="text-stone">Real-time AI performance and metrics across all restaurants globally.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -54,9 +54,9 @@ export default function ImpactPage() {
             </div>
           </div>
           <div>
-            <div className="text-sm font-medium text-stone mb-1">AI Upselled Dishes</div>
+            <div className="text-sm font-medium text-stone mb-1">Total AI Upselled Dishes</div>
             <div className="text-2xl font-mono font-bold text-ink">{rm.ai_upsell_dishes || 0}</div>
-            <div className="text-xs text-stone mt-1">Dishes added via AI suggestions</div>
+            <div className="text-xs text-stone mt-1">Dishes added via AI suggestions globally</div>
           </div>
         </div>
 
