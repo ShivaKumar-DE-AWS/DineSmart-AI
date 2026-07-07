@@ -104,7 +104,7 @@ async def execute_tool(tool_name: str, args: Dict[str, Any]) -> str:
         return await analyze_checkout_upsell(**args)
     return "Error: Unknown tool."
 
-@router.websocket("/ws/voice-agent/{restaurant_id}")
+@router.websocket("/api/ws/voice-agent/{restaurant_id}")
 async def voice_agent_endpoint(websocket: WebSocket, restaurant_id: str):
     await websocket.accept()
     

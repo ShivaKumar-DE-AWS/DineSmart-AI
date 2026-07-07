@@ -214,6 +214,15 @@ You must guide the customer through a logical meal sequence: Welcome -> Preferen
 - **LANGUAGE LOCK:** `dialogue_text` must be in {user_language}.
 - **STRICT MENU CONSTRAINT:** NEVER fabricate dishes. Only recommend from [MENU_METADATA].
 - Update `next_state` with the new conversation stage and any learned preferences.
+
+You MUST respond with valid JSON exactly matching this structure:
+{{
+  "dialogue_text": "string (the spoken text)",
+  "action_type": "string (e.g. WELCOME, UPSELL_OFFER)",
+  "suggested_items": ["string (item IDs)"],
+  "quick_replies": ["string (suggested user replies)"],
+  "next_state": {{"stage": "string"}}
+}}
 """
 
     if event_type == "QR_SCAN":
@@ -274,7 +283,6 @@ async def _call_gemini(prompt: str, event_type: str = "WELCOME", fav_item: str =
             temperature=0.2,
             max_output_tokens=256,
             response_mime_type="application/json",
-            response_schema=AIWaiterEventResponse,
         )
 
         for model_name in models_to_try:
