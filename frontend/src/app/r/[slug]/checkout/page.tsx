@@ -196,6 +196,7 @@ export default function CheckoutPage() {
             available: true,
             prep_time_min: 10,
             tags: [],
+            is_ai_upsell: true,
           } as any);
           toast.success(`${suggestedItem.name} added to your order!`);
           submit();
@@ -256,6 +257,7 @@ export default function CheckoutPage() {
           return {
             item_id: i.item_id, name: i.name, price: i.price, qty: i.qty,
             notes: finalNotes || undefined,
+            is_ai_upsell: i.is_ai_upsell || false,
           };
         }),
         payment_method: paymentMethod,

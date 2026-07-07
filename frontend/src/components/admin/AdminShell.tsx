@@ -13,6 +13,7 @@ import { toast } from "sonner";
 const nav = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true, testid: "admin-nav-dashboard" },
   { href: "/admin/insights", label: "AI Insights", icon: Lightbulb, testid: "admin-nav-insights" },
+  { href: "/admin/impact", label: "SmartDine Impact", icon: Sparkles, testid: "admin-nav-impact" },
   { href: "/admin/orders", label: "Orders", icon: ShoppingBag, testid: "admin-nav-orders" },
   { href: '/admin/kds', label: 'Kitchen Display', icon: ChefHat, testid: 'admin-nav-kds' },
   { href: "/admin/reservations", label: "Reservations", icon: CalendarClock, testid: "admin-nav-reservations" },
