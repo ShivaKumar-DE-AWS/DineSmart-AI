@@ -517,6 +517,13 @@ class SplitPerson(BaseModel):
 class SplitBillReq(BaseModel):
     splits: List[SplitPerson]
 
+class FeedbackSubmitReq(BaseModel):
+    rating: int
+    food_quality: Optional[int] = None
+    service: Optional[int] = None
+    ambience: Optional[int] = None
+    suggestions: Optional[str] = None
+
 # =========================================================
 # Token generation (daily per-restaurant sequential token)
 # =========================================================

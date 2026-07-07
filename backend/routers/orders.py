@@ -15,7 +15,7 @@ from fpdf import FPDF
 from deps import (
     db, now_iso, TAX_RATE, require_user, require_roles, current_user, jwt_verify,
     client, next_token, OrderCreateReq, OrderStatusUpdate, ItemStatusUpdate,
-    PaymentReq, CheckoutSessionReq, SplitBillReq, redis_client,
+    PaymentReq, CheckoutSessionReq, SplitBillReq, FeedbackSubmitReq, redis_client,
 )
 
 logger = logging.getLogger(__name__)
@@ -1161,3 +1161,41 @@ async def manual_override_exit(order_id: str, body: OrderStatusUpdate, user=Depe
     updated_order = await db.orders.find_one({"id": order_id}, {"_id": 0})
     broadcast_order_update(order["restaurant_id"], {"type": "status_update", "order_id": order_id, "token": order["token"], "payment_status": "paid"})
     return {"ok": True, "order": updated_order}
+@router.post("/api/orders/{order_id}/feedback")
+async def submit_order_feedback(order_id: str, req: FeedbackSubmitReq):
+    order = await db.orders.find_one({"id": order_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    existing = await db.feedbacks.find_one({"order_id": order_id})
+    if existing:
+        raise HTTPException(status_code=400, detail="Feedback already submitted for this order")
+
+    # Base points
+    points_awarded = 50
+    # Extra points for genuine suggestion (e.g. > 10 chars)
+    if req.suggestions and len(req.suggestions.strip()) > 10:
+        points_awarded += 29
+
+    feedback_doc = {
+        "id": str(uuid.uuid4()),
+        "order_id": order_id,
+        "restaurant_id": order.get("restaurant_id"),
+        "rating": req.rating,
+        "food_quality": req.food_quality,
+        "service": req.service,
+        "ambience": req.ambience,
+        "suggestions": req.suggestions,
+        "points_awarded": points_awarded,
+        "created_at": now_iso()
+    }
+    await db.feedbacks.insert_one(feedback_doc)
+
+    customer_phone = order.get("customer_phone")
+    if customer_phone:
+        await db.customers.update_one(
+            {"phone": customer_phone},
+            {"$inc": {"points": points_awarded}}
+        )
+
+    return {"message": "Feedback submitted successfully", "points_awarded": points_awarded}
