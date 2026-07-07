@@ -38,3 +38,6 @@ websockets>=12.0
 aiohttp>=3.9.0
 aiosmtplib>=3.0.0
 httpx>=0.24.0
+google-cloud-speech>=2.21.0
+google-cloud-texttospeech>=2.14.1
+deepgram-sdk>=3.0.0
