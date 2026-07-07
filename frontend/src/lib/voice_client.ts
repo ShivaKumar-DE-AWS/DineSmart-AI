@@ -15,8 +15,12 @@ export class VoiceClient {
 
   public async connect() {
     return new Promise<void>((resolve, reject) => {
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const wsUrl = `${protocol}//${window.location.host}/api/ws/voice-agent/${this.restaurantId}?device_id=${this.deviceId}`;
+      // We must connect directly to the backend to bypass Next.js rewrites, as Vercel/Next.js edge doesn't proxy WebSockets.
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
+      const baseHost = backendUrl ? backendUrl.replace(/^https?:\/\//, "") : window.location.host;
+      const protocol = (backendUrl && backendUrl.startsWith("https")) || window.location.protocol === "https:" ? "wss:" : "ws:";
+      
+      const wsUrl = `${protocol}//${baseHost}/api/ws/voice-agent/${this.restaurantId}?device_id=${this.deviceId}`;
       
       this.ws = new WebSocket(wsUrl);
       this.ws.binaryType = "arraybuffer"; // Important for receiving TTS bytes
