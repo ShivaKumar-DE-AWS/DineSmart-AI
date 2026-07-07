@@ -73,7 +73,7 @@ export default function BillingPage() {
         <div className="bg-white rounded-2xl shadow-sm border border-bone p-6">
           <div className="flex items-center gap-2 mb-5">
             <Globe className="h-5 w-5 text-clay" />
-            <h2 className="text-lg font-semibold text-ink">Your Regional Pricing</h2>
+            <h2 className="text-lg font-semibold text-ink">Available Plans</h2>
             <span className="ml-auto px-3 py-1 rounded-full bg-sand text-sm flex items-center gap-1.5">
               {geo.flag && <span>{geo.flag}</span>}
               {geo.country_name}
@@ -92,19 +92,6 @@ export default function BillingPage() {
                 }`}
               >
                 <h3 className="font-semibold text-ink text-sm">{plan.name}</h3>
-                <div className="mt-2 flex items-baseline gap-1">
-                  <span className="text-2xl font-bold text-ink">
-                    {geo.currency_symbol}{plan.price.toLocaleString()}
-                  </span>
-                  <span className="text-xs text-stone">
-                    /{plan.interval}
-                  </span>
-                </div>
-                {plan.price > 0 && (
-                  <p className="text-xs text-stone mt-0.5">
-                    ~{geo.currency_symbol}{Math.round(plan.price / 30)} /day
-                  </p>
-                )}
                 <ul className="mt-4 space-y-2 text-xs text-stone flex-1">
                   {(plan.features ?? []).map((f: string, i: number) => (
                     <li key={i} className="flex items-start gap-2">
