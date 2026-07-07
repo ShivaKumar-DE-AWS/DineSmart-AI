@@ -929,7 +929,7 @@ export function showAIUpsellSheet(
       const reply = btn.dataset.reply;
       if (reply) {
         _closeSheet();
-        const restaurant_id = useMenuStore.getState().slug || "";
+        const restaurant_id = useMenuStore.getState().restaurantId || "";
         const cartItems = useCart.getState().items;
         sendAIWaiterEvent({
           event_type: "QUICK_REPLY_CLICKED",
