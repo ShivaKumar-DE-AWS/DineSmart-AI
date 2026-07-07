@@ -286,7 +286,7 @@ async def get_impact_analytics(user=Depends(require_user)):
         aov_increase_pct = ((ai_aov - manual_aov) / manual_aov) * 100
         
     # Global Metrics Calculation
-    global_active_restaurants = await db.restaurants.count_documents({})
+    global_active_restaurants = await db.restaurants.count_documents({"subscription_status": {"$ne": "deleted"}})
     global_orders_processed = await db.orders.count_documents({"status": {"$ne": "cancelled"}})
     global_ai_conversations = await db.orders.count_documents({"is_ai": True})
     
