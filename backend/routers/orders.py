@@ -1175,7 +1175,7 @@ async def submit_order_feedback(order_id: str, req: FeedbackSubmitReq):
     points_awarded = 50
     # Extra points for genuine suggestion (e.g. > 10 chars)
     if req.suggestions and len(req.suggestions.strip()) > 10:
-        points_awarded += 29
+        points_awarded += 20
 
     feedback_doc = {
         "id": str(uuid.uuid4()),

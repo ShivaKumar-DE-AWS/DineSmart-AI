@@ -581,7 +581,7 @@ export default function TrackPage() {
                 </div>
                 <h3 className="font-royal text-2xl text-brand-primary">Rate Your Experience</h3>
                 <p className="font-editorial italic text-sm text-[#1A1106]/60 mt-1">Submit feedback & earn 50 loyalty points!</p>
-                <p className="font-editorial italic text-xs text-emerald-600 mt-1">Write a genuine suggestion to earn an extra 29 points.</p>
+                <p className="font-editorial italic text-xs text-emerald-600 mt-1">Write a genuine suggestion to earn an extra 20 points.</p>
               </div>
 
               <div className="space-y-5">
@@ -621,7 +621,7 @@ export default function TrackPage() {
                       <textarea
                         value={feedbackSuggestions}
                         onChange={(e) => setFeedbackSuggestions(e.target.value)}
-                        placeholder="Any genuine suggestions for us? (Earn extra 29 points!)"
+                        placeholder="Any genuine suggestions for us? (Earn extra 20 points!)"
                         className="w-full mt-2 bg-white border border-[#E7DFCB] rounded-xl p-3 text-sm focus:outline-none focus:border-brand-primary font-editorial placeholder:italic"
                         rows={3}
                       />
