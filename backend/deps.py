@@ -522,6 +522,7 @@ class FeedbackSubmitReq(BaseModel):
     food_quality: Optional[int] = None
     service: Optional[int] = None
     ambience: Optional[int] = None
+    smartdine_interface: Optional[int] = None
     suggestions: Optional[str] = None
 
 # =========================================================

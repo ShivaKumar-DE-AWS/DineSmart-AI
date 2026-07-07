@@ -78,6 +78,7 @@ export default function TrackPage() {
   const [feedbackFood, setFeedbackFood] = useState(0);
   const [feedbackService, setFeedbackService] = useState(0);
   const [feedbackAmbience, setFeedbackAmbience] = useState(0);
+  const [feedbackSmartdine, setFeedbackSmartdine] = useState(0);
   const [feedbackSuggestions, setFeedbackSuggestions] = useState("");
   const [feedbackPoints, setFeedbackPoints] = useState(0);
 
@@ -96,6 +97,7 @@ export default function TrackPage() {
           food_quality: feedbackFood || undefined,
           service: feedbackService || undefined,
           ambience: feedbackAmbience || undefined,
+          smartdine_interface: feedbackSmartdine || undefined,
           suggestions: feedbackSuggestions || undefined
         })
       });
@@ -598,18 +600,19 @@ export default function TrackPage() {
 
                 {feedbackRating > 0 && (
                   <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="space-y-4 pt-4 border-t border-brand-secondary/20">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                       {[
                         { label: "Food Quality", val: feedbackFood, setVal: setFeedbackFood },
                         { label: "Service", val: feedbackService, setVal: setFeedbackService },
-                        { label: "Ambience", val: feedbackAmbience, setVal: setFeedbackAmbience }
+                        { label: "Ambience", val: feedbackAmbience, setVal: setFeedbackAmbience },
+                        { label: "SmartDine Interface", val: feedbackSmartdine, setVal: setFeedbackSmartdine }
                       ].map((cat, i) => (
                         <div key={i} className="flex flex-col items-center p-3 bg-white/50 rounded-xl border border-[#E7DFCB]">
                           <span className="font-royal uppercase tracking-wider text-[10px] text-[#1A1106]/70 mb-2">{cat.label}</span>
                           <div className="flex gap-1">
                             {[1, 2, 3, 4, 5].map((star) => (
                               <button key={star} onClick={() => cat.setVal(star)} className="focus:outline-none">
-                                <Star className={`h-5 w-5 ${cat.val >= star ? "text-amber-400 fill-amber-400" : "text-gray-300"}`} />
+                                <Star className={`h-4 w-4 md:h-5 md:w-5 ${cat.val >= star ? "text-amber-400 fill-amber-400" : "text-gray-300"}`} />
                               </button>
                             ))}
                           </div>
