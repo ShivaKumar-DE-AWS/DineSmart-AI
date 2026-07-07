@@ -325,6 +325,7 @@ class CartItemModel(BaseModel):
     notes: Optional[str] = None
     round_number: Optional[int] = None
     item_status: Optional[str] = None
+    is_ai_upsell: Optional[bool] = False
 
 class OrderCreateReq(BaseModel):
     restaurant_id: Optional[str] = None

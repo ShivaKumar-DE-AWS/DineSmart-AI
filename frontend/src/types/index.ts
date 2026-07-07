@@ -36,6 +36,7 @@ export interface CartItem {
   modifiers?: string[];
   round_number?: number;
   item_status?: string;
+  is_ai_upsell?: boolean;
 }
 
 export type OrderStatus =
