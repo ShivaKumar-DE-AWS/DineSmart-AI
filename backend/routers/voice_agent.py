@@ -187,10 +187,13 @@ async def voice_agent_endpoint(websocket: WebSocket, restaurant_id: str):
                     logger.info(f"[VoiceAgent] Tool Call: {tool_name} with {args}")
                     
                     # Ensure device_id and restaurant_id are forcibly injected into args if needed
-                    if "device_id" in [k for k in VOICE_TOOLS_SCHEMA if k["name"] == tool_name][0].get("parameters", {}).get("properties", {}):
-                         args["device_id"] = device_id
-                    if "restaurant_id" in [k for k in VOICE_TOOLS_SCHEMA if k["name"] == tool_name][0].get("parameters", {}).get("properties", {}):
-                         args["restaurant_id"] = restaurant_id
+                    matching_tools = [k for k in VOICE_TOOLS_SCHEMA if k["name"] == tool_name]
+                    if matching_tools:
+                        properties = matching_tools[0].get("parameters", {}).get("properties", {})
+                        if "device_id" in properties:
+                             args["device_id"] = device_id
+                        if "restaurant_id" in properties:
+                             args["restaurant_id"] = restaurant_id
                     
                     result = await execute_tool(tool_name, args)
                     
@@ -206,7 +209,7 @@ async def voice_agent_endpoint(websocket: WebSocket, restaurant_id: str):
                     contents.append(response.candidates[0].content)
                     contents.append(
                         types.Content(
-                            role="user",
+                            role="tool",
                             parts=[
                                 types.Part.from_function_response(
                                     name=tool_name,
