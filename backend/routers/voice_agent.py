@@ -114,22 +114,12 @@ async def voice_agent_endpoint(websocket: WebSocket, restaurant_id: str):
     # Initialize Gemini Client
     client = genai.Client(api_key=GEMINI_API_KEY)
     
-    # We maintain conversational memory. If Redis is available, we load past history.
-    chat_history = []
-    mem_key = f"voice_mem:{device_id}"
-    if redis_client:
-        cached_mem = await redis_client.get(mem_key)
-        if cached_mem:
-            chat_history = json.loads(cached_mem)
-
-    # Initial Welcome flow if the history is empty
-    if not chat_history:
-        welcome_text = "Welcome! I am your AI Voice Waiter. What can I get started for you today?"
-        audio = await generate_tts_audio(welcome_text)
-        await websocket.send_text(json.dumps({"type": "TEXT", "content": welcome_text}))
-        if audio:
-            await websocket.send_bytes(audio)
-        chat_history.append({"role": "model", "parts": [{"text": welcome_text}]})
+    # Initial Welcome flow (Stateless)
+    welcome_text = "Welcome! I am your AI Voice Waiter. What can I get started for you today?"
+    audio = await generate_tts_audio(welcome_text)
+    await websocket.send_text(json.dumps({"type": "TEXT", "content": welcome_text}))
+    if audio:
+        await websocket.send_bytes(audio)
         
     try:
         while True:
@@ -153,10 +143,7 @@ async def voice_agent_endpoint(websocket: WebSocket, restaurant_id: str):
             if not user_input:
                 continue
 
-            logger.info(f"[VoiceAgent] User Input: {user_input}")
-            chat_history.append({"role": "user", "parts": [{"text": user_input}]})
-
-            # Call Gemini
+            # Call Gemini statelessly for this burst
             gemini_tools = [{"function_declarations": VOICE_TOOLS_SCHEMA}]
             
             config = types.GenerateContentConfig(
@@ -165,12 +152,9 @@ async def voice_agent_endpoint(websocket: WebSocket, restaurant_id: str):
                 temperature=0.3
             )
             
-            # Format history for genai SDK (convert dicts to types.Content)
-            contents = []
-            for msg in chat_history:
-                contents.append(
-                    types.Content(role=msg["role"], parts=[types.Part.from_text(p["text"]) for p in msg["parts"]])
-                )
+            contents = [
+                types.Content(role="user", parts=[types.Part.from_text(user_input)])
+            ]
                 
             response = client.models.generate_content(
                 model="gemini-2.5-flash",
@@ -229,12 +213,6 @@ async def voice_agent_endpoint(websocket: WebSocket, restaurant_id: str):
             final_text = response.text
             if final_text:
                 logger.info(f"[VoiceAgent] AI Response: {final_text}")
-                # Save to history
-                chat_history.append({"role": "model", "parts": [{"text": final_text}]})
-                
-                if redis_client:
-                    # Save last 10 messages to Redis
-                    await redis_client.setex(mem_key, 3600, json.dumps(chat_history[-10:]))
                 
                 # Send text response back to UI for captioning
                 await websocket.send_text(json.dumps({"type": "TEXT", "content": final_text}))
