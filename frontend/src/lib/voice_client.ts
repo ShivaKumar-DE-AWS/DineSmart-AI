@@ -41,9 +41,10 @@ export class VoiceClient {
           } catch (e) {
             console.error("[VoiceClient] Failed to parse JSON:", e);
           }
-        } else if (event.data instanceof ArrayBuffer) {
+        } else if (event.data instanceof Blob || event.data instanceof ArrayBuffer) {
           // Binary audio payload (TTS from backend)
-          await this.playAudio(event.data);
+          const arrayBuffer = event.data instanceof Blob ? await event.data.arrayBuffer() : event.data;
+          await this.playAudio(arrayBuffer);
         }
       };
 
@@ -81,18 +82,31 @@ export class VoiceClient {
     }
   }
 
-  private async playAudio(arrayBuffer: ArrayBuffer) {
-    if (!this.audioContext) return;
-    try {
-      // Decode the mp3/audio buffer sent by TTS
-      const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
-      const source = this.audioContext.createBufferSource();
-      source.buffer = audioBuffer;
-      source.connect(this.audioContext.destination);
-      source.start(0);
-    } catch (e) {
-      console.error("[VoiceClient] Error playing audio:", e);
-    }
+  private playAudio(arrayBuffer: ArrayBuffer): Promise<void> {
+    return new Promise((resolve) => {
+      if (!this.audioContext) return resolve();
+      try {
+        // Use callback version for broader browser compatibility (Safari)
+        this.audioContext.decodeAudioData(
+          arrayBuffer,
+          (audioBuffer) => {
+            if (!this.audioContext) return resolve();
+            const source = this.audioContext.createBufferSource();
+            source.buffer = audioBuffer;
+            source.connect(this.audioContext.destination);
+            source.onended = () => resolve();
+            source.start(0);
+          },
+          (error) => {
+            console.error("[VoiceClient] Audio decoding failed:", error);
+            resolve();
+          }
+        );
+      } catch (e) {
+        console.error("[VoiceClient] Error playing audio:", e);
+        resolve();
+      }
+    });
   }
 
   public async startRecording() {
