@@ -82,12 +82,14 @@ class AIWaiterEventRequest(BaseModel):
     """Incoming event payload sent by the frontend."""
     event_type: Optional[str] = "QR_SCAN"
     event: Optional[str] = None
+    event_data: Optional[str] = None
     restaurant_id: str
     cart_state: List[CartItemPayload] = []
     current_cart: Optional[List[CartItemPayload]] = None
     added_item: Optional[CartItemPayload] = None
     user_language: str = "English"
     device_id: Optional[str] = None
+    session_state: dict = Field(default_factory=dict, description="Current conversation state (stage, budget, preferences)")
 
 
 class SuggestedItemSchema(BaseModel):
@@ -107,6 +109,14 @@ class AIWaiterEventResponse(BaseModel):
     suggested_items: List[SuggestedItemSchema] = Field(
         default=[],
         description="Max 2 upsell items. Only for UPSELL_OFFER. Never fabricate."
+    )
+    quick_replies: List[str] = Field(
+        default=[],
+        description="Max 4 contextual suggestion chips (e.g., 'Show Starters', 'Vegetarian', 'Skip to Main Course')."
+    )
+    next_state: dict = Field(
+        default_factory=dict,
+        description="The updated session state to return to the client. Must include 'stage' (e.g., 'soup', 'starters', 'main_course', 'dessert', 'beverage'). Can also store 'budget', 'diet', 'party_size'."
     )
 
 
@@ -153,8 +163,13 @@ def _build_prompt(
     menu_snapshot: List[dict],
     user_language: str,
     fav_item: str = "",
+    session_state: dict = None,
+    event_data: str = None,
 ) -> str:
     """Build the master Gemini prompt dynamically per event type."""
+    if session_state is None:
+        session_state = {}
+        
     menu_json = json.dumps(
         [
             {
@@ -179,64 +194,61 @@ def _build_prompt(
     )
 
     base = f"""# CONTEXT INJECTIONS
-You will receive four pieces of live data per request:
+You are a Senior AI Waiter, acting as a highly experienced restaurant dining companion.
+Live data:
 1. [CURRENT_EVENT]: {event_type}
 2. [USER_LANGUAGE]: {user_language}
 3. [CART_STATE]: {cart_summary}
-4. [MENU_METADATA]: {menu_json}
+4. [SESSION_STATE]: {json.dumps(session_state)}
+5. [MENU_METADATA]: {menu_json}
+
+# DINING FLOW RULES
+You must guide the customer through a logical meal sequence: Welcome -> Preferences/Party Size -> Soup -> Starters -> Main Course -> Curries -> Breads/Rice -> Desserts -> Beverages.
+1. Determine the customer's current `stage` from [SESSION_STATE] (or start at 'welcome').
+2. Advance the state logically. For example, if they just added a Starter, transition to Main Course recommendations.
+3. Suggest dishes using culinary logic. Automatically infer `pairsWith` and `upsell` relationships based on cuisine (e.g. Butter Chicken pairs with Naan/Roti, Biryani pairs with Raita).
+4. Strictly respect the budget or dietary preferences if set in [SESSION_STATE].
+5. Provide contextual `quick_replies` to let the customer guide you (e.g., "Skip to Main Course", "Show Rice options").
 
 # EVENT BEHAVIOR RULES
-- **LANGUAGE LOCK:** The `dialogue_text` output MUST be written fluently and naturally in the language specified in [USER_LANGUAGE]. The `action_type` and JSON keys must remain in English.
-- **STRICT MENU CONSTRAINT:** You must NEVER recommend, suggest, or mention any food or drink item that is not explicitly listed in the [MENU_METADATA]. Do not hallucinate items, even if they are common restaurant items. If a user asks for something off-menu, politely inform them it is unavailable and recommend the closest available alternative from the menu.
-- You are a warm knowledgeable restaurant host at a premium Indian restaurant.
-- You are NOT a chatbot. You observe the customer dining journey and react with brief appetizing friendly messages (max 2 sentences) to enhance their experience.
-- Never be pushy robotic or sales-y. Speak like a knowledgeable friend."""
+- **LANGUAGE LOCK:** `dialogue_text` must be in {user_language}.
+- **STRICT MENU CONSTRAINT:** NEVER fabricate dishes. Only recommend from [MENU_METADATA].
+- Update `next_state` with the new conversation stage and any learned preferences.
+"""
 
     if event_type == "QR_SCAN":
-        memory_str = f"\n[MEMORY INJECTION: This returning customer frequently orders {fav_item}. Suggest it warmly upon greeting, e.g., 'Welcome back! Would you like to start with your usual {fav_item}?']" if fav_item else ""
+        memory_str = f"\n[MEMORY INJECTION: This returning customer frequently orders {fav_item}. Suggest it warmly!]" if fav_item else ""
         return f"""{base}{memory_str}
-
-EVENT: Customer just scanned the QR code and opened the menu for the first time.
+EVENT: Customer scanned QR code.
 INSTRUCTIONS:
-1. Set action_type = "WELCOME"
-2. dialogue_text: warm personal welcome max 2 sentences. Invite them to explore.{' Warmly mention their favorite item ' + fav_item + '!' if fav_item else ''}
-3. suggested_items: empty list []."""
+1. action_type = "WELCOME"
+2. dialogue_text: Warm welcome, ask what they are planning today (e.g. Lunch, Dinner, Snacks). Max 2 sentences.
+3. suggested_items: []
+4. quick_replies: e.g. ["Lunch", "Dinner", "Quick Meal", "Family Dining"]
+5. next_state: {{"stage": "preferences"}}"""
 
     if event_type == "ITEM_ADDED":
         added_name = added_item.name if added_item else "an item"
         added_cat  = added_item.category if added_item else "Unknown"
         return f"""{base}
-
-EVENT: Customer just added "{added_name}" (category: {added_cat}) to the cart.
+EVENT: Customer added "{added_name}" (Category: {added_cat}) to cart.
 INSTRUCTIONS:
-1. Set action_type = "ITEM_VALIDATION"
-2. dialogue_text: appetizing 1-2 sentence compliment about "{added_name}".
-   You may hint at a natural menu pairing but NEVER suggest an item already in the cart.
-   Be specific to this dish. Never generic.
-3. suggested_items: empty list []."""
+1. action_type = "UPSELL_OFFER"
+2. dialogue_text: Compliment the choice. Then smoothly suggest the logical NEXT course or pairing. E.g., if they added a curry, suggest breads. If they added a main, suggest dessert/drinks.
+3. suggested_items: Pick max 2 items from the menu that perfectly pair with the cart or represent the next logical course. NEVER suggest items already in the cart.
+4. quick_replies: Generate 3-4 options for the user (e.g., "Add [Suggested Bread]", "Show Desserts", "Skip to Checkout").
+5. next_state: Update 'stage' to the next logical step."""
 
-    if event_type == "CHECKOUT":
-        cart_cats  = sorted({ci.category.lower() if ci.category else "" for ci in cart_state})
-        cart_names = sorted({ci.name.lower() for ci in cart_state})
+    if event_type == "CHECKOUT" or event_type == "QUICK_REPLY_CLICKED":
+        intent = f"User clicked quick reply: '{event_data}'" if event_type == "QUICK_REPLY_CLICKED" else "User clicked Proceed to Pay. This is the checkout upsell moment."
         return f"""{base}
-
-EVENT: Customer clicked Proceed to Pay. This is the checkout upsell moment.
-CART CATEGORIES: {cart_cats}
-CART ITEM NAMES: {cart_names}
-
+EVENT: {intent}
 INSTRUCTIONS:
-1. Set action_type = "UPSELL_OFFER"
-2. Analyse cart for: missing category (mains but no drink or bread), flavor imbalance
-   (spicy dishes but no cooling drink raita lassi), or incomplete meal.
-3. Pick AT MOST 2 items from RESTAURANT MENU that genuinely complete the meal.
-   NEVER suggest items already in cart (check by name case-insensitive).
-   NEVER fabricate items not in menu JSON.
-   Use EXACT item_id name price from the menu. Fill reason with <=8 word phrase.
-4. dialogue_text: warm 1-2 sentence pitch explaining why these complement the order.
-   CRITICAL CULINARY RULE: Your dialogue_text and your suggested_items MUST agree 100%. If your dialogue_text mentions recommending Desserts, EVERY item in suggested_items MUST be a dessert. Never promise one category and suggest dishes from another.
-5. If cart is already balanced (main + drink + bread/side present):
-   dialogue_text = "Your order looks incredible. We cannot wait to serve you!"
-   suggested_items = []"""
+1. action_type = "UPSELL_OFFER"
+2. dialogue_text: Respond naturally to their intent. If they asked to skip to a course, suggest items from that course. If checkout, do a final upsell (Dessert/Drink).
+3. suggested_items: Max 2 logical additions matching their intent.
+4. quick_replies: e.g. ["Proceed to Pay", "Add Drinks", "Go Back"]
+5. next_state: Keep updated."""
 
     return base
 
@@ -384,13 +396,10 @@ async def ai_waiter_event(req: AIWaiterEventRequest):
             suggested_items=[],
         )
 
-    # Strategy 1: Semantic Caching (The Traffic Killer)
+    # Strategy 1: Semantic Caching (Only for QR_SCAN to prevent stale dynamic states)
     cache_key = None
     if redis_client:
-        if req.event_type == "ITEM_ADDED" and req.added_item:
-            item_ident = req.added_item.item_id or req.added_item.name.lower()
-            cache_key = f"ai_cache:ITEM_ADDED:{req.user_language}:{item_ident}"
-        elif req.event_type == "QR_SCAN":
+        if req.event_type == "QR_SCAN":
             cache_key = f"ai_cache:QR_SCAN:{req.user_language}:{req.restaurant_id}:{fav_item}"
 
         if cache_key:
@@ -411,6 +420,8 @@ async def ai_waiter_event(req: AIWaiterEventRequest):
         menu_snapshot=menu_snapshot,
         user_language=req.user_language,
         fav_item=fav_item,
+        session_state=req.session_state,
+        event_data=req.event_data,
     )
 
     ai_response = await _call_gemini(prompt, req.event_type, fav_item, menu_snapshot)

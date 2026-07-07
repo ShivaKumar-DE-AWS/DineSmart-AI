@@ -37,6 +37,7 @@ import { useCart } from "@/stores/cart";
 import { useTable } from "@/stores/table";
 import { getOrCreateAnonID } from "@/lib/notify";
 import { useMenuStore } from "@/stores/menu";
+import { useAIWaiterStore } from "@/stores/ai_waiter";
 
 // ── Course Progression & Meal Balance Helper ───────────────────────────────
 export function getMealBalanceStatus(cartItems: { category?: string; name: string }[]): {
@@ -103,7 +104,8 @@ export interface AIWaiterCartItem {
 }
 
 export interface AIWaiterEventPayload {
-  event_type: "QR_SCAN" | "ITEM_ADDED" | "CHECKOUT";
+  event_type: "QR_SCAN" | "ITEM_ADDED" | "CHECKOUT" | "QUICK_REPLY_CLICKED";
+  event_data?: string;
   restaurant_id: string;
   cart_state?: AIWaiterCartItem[];
   added_item?: AIWaiterCartItem;
@@ -122,6 +124,8 @@ export interface AIWaiterEventResponse {
   dialogue_text: string;
   action_type: "WELCOME" | "ITEM_VALIDATION" | "UPSELL_OFFER";
   suggested_items: AISuggestedItem[];
+  quick_replies?: string[];
+  next_state?: Record<string, any>;
 }
 
 // ── Device Locale Detection ────────────────────────────────────────────────
@@ -545,11 +549,13 @@ export async function sendAIWaiterEvent(
                 added_item: payload.added_item ?? null,
                 user_language: payload.user_language ?? getDeviceLanguage(),
                 device_id: getOrCreateAnonID(),
+                session_state: useAIWaiterStore.getState().sessionState,
               }),
             });
             if (response) {
-              if (response.action_type === "UPSELL_OFFER" && response.suggested_items.length > 0) {
-                showAIUpsellSheet(response.dialogue_text, response.suggested_items, addToCartFn, proceedPayFn);
+              if (response.next_state) useAIWaiterStore.getState().updateSessionState(response.next_state);
+              if (response.action_type === "UPSELL_OFFER" && (response.suggested_items.length > 0 || response.quick_replies?.length)) {
+                showAIUpsellSheet(response.dialogue_text, response.suggested_items, response.quick_replies || [], addToCartFn, proceedPayFn);
               }
             }
             if (_pendingItemAddedResolve) _pendingItemAddedResolve(response);
@@ -573,15 +579,20 @@ export async function sendAIWaiterEvent(
         added_item: payload.added_item ?? null,
         user_language: payload.user_language ?? getDeviceLanguage(),
         device_id: getOrCreateAnonID(),
+        session_state: useAIWaiterStore.getState().sessionState,
       }),
     });
+
+    if (response?.next_state) {
+      useAIWaiterStore.getState().updateSessionState(response.next_state);
+    }
 
     // Route to the correct UI handler if not silent
     if (!payload.silent) {
       if (response.action_type === "WELCOME") {
         showAIWelcomeModal(response.dialogue_text, 20000);
       } else if (response.action_type === "UPSELL_OFFER") {
-        showAIUpsellSheet(response.dialogue_text, response.suggested_items, addToCartFn, proceedPayFn);
+        showAIUpsellSheet(response.dialogue_text, response.suggested_items, response.quick_replies || [], addToCartFn, proceedPayFn);
       }
     }
 
@@ -772,6 +783,7 @@ function _bootstrapUI(): void {
     </div>
     <p class="ai-sheet-pitch" id="ai-sheet-pitch"></p>
     <div class="ai-upsell-list" id="ai-upsell-list"></div>
+    <div class="ai-quick-replies" id="ai-quick-replies" style="display: flex; gap: 8px; overflow-x: auto; padding: 4px 0; margin-top: 12px; scrollbar-width: none;"></div>
     <button class="ai-skip-btn" id="ai-skip-btn">No thanks, Proceed to Payment →</button>
   `;
   document.body.appendChild(sheet);
@@ -859,6 +871,7 @@ export function showAIToast(
 export function showAIUpsellSheet(
   pitchText: string,
   items: AISuggestedItem[],
+  quickReplies: string[] = [],
   onAddToCart?: (item: AISuggestedItem) => void,
   onProceedToPay?: () => void
 ): void {
@@ -867,8 +880,9 @@ export function showAIUpsellSheet(
   const sheet   = document.getElementById("ai-waiter-sheet");
   const pitch   = document.getElementById("ai-sheet-pitch");
   const list    = document.getElementById("ai-upsell-list");
+  const replies = document.getElementById("ai-quick-replies");
   const skipBtn = document.getElementById("ai-skip-btn");
-  if (!overlay || !sheet || !pitch || !list || !skipBtn) return;
+  if (!overlay || !sheet || !pitch || !list || !replies || !skipBtn) return;
 
   pitch.textContent = pitchText ? _cleanText(pitchText) : "";
 
@@ -902,6 +916,28 @@ export function showAIUpsellSheet(
         }
       }
       _closeSheet();
+    });
+  });
+
+  // Build quick replies
+  replies.innerHTML = quickReplies.map(reply => 
+    `<button class="ai-quick-reply-btn" data-reply="${_esc(reply)}" style="white-space: nowrap; padding: 6px 12px; background: #FDE8E6; color: #C0392B; border: 1px solid #C0392B; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer; flex-shrink: 0;">${_cleanText(reply)}</button>`
+  ).join("");
+
+  replies.querySelectorAll<HTMLButtonElement>(".ai-quick-reply-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const reply = btn.dataset.reply;
+      if (reply) {
+        _closeSheet();
+        const restaurant_id = useMenuStore.getState().slug || "";
+        const cartItems = useCart.getState().items;
+        sendAIWaiterEvent({
+          event_type: "QUICK_REPLY_CLICKED",
+          event_data: reply,
+          restaurant_id,
+          cart_state: cartItems as any
+        });
+      }
     });
   });
 
