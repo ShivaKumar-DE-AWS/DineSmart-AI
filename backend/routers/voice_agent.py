@@ -166,33 +166,53 @@ async def voice_agent_endpoint(websocket: WebSocket, restaurant_id: str):
             if not user_input:
                 continue
 
-            # Call Gemini statelessly for this burst
-            gemini_tools = [{"function_declarations": VOICE_TOOLS_SCHEMA}]
+            # Call Gemini statelessly for this burst using httpx to bypass SDK additionalProperties bug
+            gemini_tools = [{"functionDeclarations": VOICE_TOOLS_SCHEMA}]
             
-            config = types.GenerateContentConfig(
-                system_instruction=SYSTEM_PROMPT,
-                tools=gemini_tools,
-                temperature=0.3
-            )
+            payload = {
+                "systemInstruction": {
+                    "parts": [{"text": SYSTEM_PROMPT}]
+                },
+                "tools": gemini_tools,
+                "generationConfig": {
+                    "temperature": 0.3
+                },
+                "contents": [
+                    {"role": "user", "parts": [{"text": user_input}]}
+                ]
+            }
             
-            contents = [
-                types.Content(role="user", parts=[types.Part.from_text(user_input)])
-            ]
-                
-            response = client.models.generate_content(
-                model="gemini-2.5-flash",
-                contents=contents,
-                config=config
-            )
+            async with httpx.AsyncClient() as http_client:
+                api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
+                response = await http_client.post(api_url, json=payload, timeout=15.0)
+                response.raise_for_status()
+                response_data = response.json()
 
             # Handle potential tool calls
-            while response.function_calls:
+            while True:
+                candidates = response_data.get("candidates", [])
+                if not candidates:
+                    break
+                    
+                first_candidate = candidates[0]
+                parts = first_candidate.get("content", {}).get("parts", [])
+                
+                function_calls = [p["functionCall"] for p in parts if "functionCall" in p]
+                
+                if not function_calls:
+                    break
+                    
                 # Implement a Lock: Flip this to True to drop/buffer incoming client audio
                 is_executing_tool = True
                 
-                for func_call in response.function_calls:
-                    tool_name = func_call.name
-                    args = func_call.args
+                # Append model's function call to history
+                payload["contents"].append(first_candidate["content"])
+                
+                tool_responses_parts = []
+                
+                for func_call in function_calls:
+                    tool_name = func_call["name"]
+                    args = func_call.get("args", {})
                     
                     logger.info(f"[VoiceAgent] Tool Call: {tool_name} with {args}")
                     
@@ -215,31 +235,35 @@ async def voice_agent_endpoint(websocket: WebSocket, restaurant_id: str):
                     except json.JSONDecodeError:
                         pass
                     
-                    # Append function call and response to history
-                    contents.append(response.candidates[0].content)
-                    contents.append(
-                        types.Content(
-                            role="tool",
-                            parts=[
-                                types.Part.from_function_response(
-                                    name=tool_name,
-                                    response={"result": result}
-                                )
-                            ]
-                        )
-                    )
+                    tool_responses_parts.append({
+                        "functionResponse": {
+                            "name": tool_name,
+                            "response": {"result": result}
+                        }
+                    })
+                
+                # Append tool responses to history
+                payload["contents"].append({
+                    "role": "function",
+                    "parts": tool_responses_parts
+                })
                 
                 # Resume and Flush: Once DB finishes, flip to False
                 is_executing_tool = False
                 
                 # Get subsequent response from Gemini after tool execution
-                response = client.models.generate_content(
-                    model="gemini-2.5-flash",
-                    contents=contents,
-                    config=config
-                )
+                response = await http_client.post(api_url, json=payload, timeout=15.0)
+                response.raise_for_status()
+                response_data = response.json()
 
-            final_text = response.text
+            candidates = response_data.get("candidates", [])
+            final_text = ""
+            if candidates:
+                parts = candidates[0].get("content", {}).get("parts", [])
+                for p in parts:
+                    if "text" in p:
+                        final_text += p["text"]
+                        
             if final_text:
                 logger.info(f"[VoiceAgent] AI Response: {final_text}")
                 
