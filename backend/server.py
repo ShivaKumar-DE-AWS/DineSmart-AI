@@ -629,7 +629,7 @@ if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     host = os.environ.get("HOST", "0.0.0.0")
     
-    print(f"\n🚀 Starting SmartDine AI Server")
+    print(f"\n>>> Starting SmartDine AI Server")
     print(f"   Host: {host}")
     print(f"   Port: {port}")
     print(f"   Environment: {os.environ.get('ENV', 'development')}")

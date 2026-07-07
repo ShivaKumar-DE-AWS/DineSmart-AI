@@ -66,11 +66,18 @@ export class VoiceClient {
   }
 
   private initAudioContext() {
-    if (!this.audioContext) {
-      this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    }
-    if (this.audioContext.state === "suspended") {
-      this.audioContext.resume();
+    try {
+      if (!this.audioContext) {
+        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioCtx) {
+          this.audioContext = new AudioCtx();
+        }
+      }
+      if (this.audioContext && this.audioContext.state === "suspended") {
+        this.audioContext.resume().catch(console.error);
+      }
+    } catch (e) {
+      console.error("[VoiceClient] Failed to init AudioContext:", e);
     }
   }
 
