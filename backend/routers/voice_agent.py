@@ -111,7 +111,6 @@ async def voice_agent_endpoint(websocket: WebSocket, restaurant_id: str):
     device_id = websocket.query_params.get("device_id", "unknown_device")
     logger.info(f"[VoiceAgent] Client connected: {device_id} for {restaurant_id}")
 
-    # Initialize Gemini Client
     client = genai.Client(api_key=GEMINI_API_KEY)
     
     # Initial Welcome flow (Stateless)
@@ -121,21 +120,45 @@ async def voice_agent_endpoint(websocket: WebSocket, restaurant_id: str):
     if audio:
         await websocket.send_bytes(audio)
         
+    is_executing_tool = False
+    message_queue = asyncio.Queue()
+
+    # Background task to continuously drain the ASGI websocket buffer
+    async def receive_loop():
+        try:
+            while True:
+                msg = await websocket.receive()
+                if "bytes" in msg:
+                    # Buffer, Don't Forward: While is_executing_tool is True, safely drop incoming audio
+                    if is_executing_tool:
+                        logger.info("[VoiceAgent] Dropping incoming audio frame because tool is currently executing.")
+                        continue
+                    await message_queue.put({"type": "bytes", "data": msg["bytes"]})
+                elif "text" in msg:
+                    await message_queue.put({"type": "text", "data": msg["text"]})
+        except WebSocketDisconnect:
+            pass
+        except Exception as e:
+            logger.error(f"[VoiceAgent] Receiver error: {e}")
+            pass
+
+    receiver_task = asyncio.create_task(receive_loop())
+
     try:
         while True:
-            # We can receive either TEXT (json events) or BYTES (audio chunks)
-            message = await websocket.receive()
+            # Process one message at a time
+            msg = await message_queue.get()
             
             user_input = ""
             
-            if "text" in message:
-                data = json.loads(message["text"])
+            if msg["type"] == "text":
+                data = json.loads(msg["data"])
                 if data.get("type") == "EVENT":
                     # This happens when the user clicks 'Add to Cart' manually on the UI
                     event_data = data.get("event")
                     user_input = f"[SYSTEM EVENT: User manually interacted with UI: {event_data}. Respond and suggest pairings.]"
-            elif "bytes" in message:
-                audio_bytes = message["bytes"]
+            elif msg["type"] == "bytes":
+                audio_bytes = msg["data"]
                 user_input = await transcribe_audio(audio_bytes)
                 if not user_input or not user_input.strip():
                     continue
@@ -164,6 +187,9 @@ async def voice_agent_endpoint(websocket: WebSocket, restaurant_id: str):
 
             # Handle potential tool calls
             while response.function_calls:
+                # Implement a Lock: Flip this to True to drop/buffer incoming client audio
+                is_executing_tool = True
+                
                 for func_call in response.function_calls:
                     tool_name = func_call.name
                     args = func_call.args
@@ -203,6 +229,9 @@ async def voice_agent_endpoint(websocket: WebSocket, restaurant_id: str):
                         )
                     )
                 
+                # Resume and Flush: Once DB finishes, flip to False
+                is_executing_tool = False
+                
                 # Get subsequent response from Gemini after tool execution
                 response = client.models.generate_content(
                     model="gemini-2.5-flash",
@@ -222,10 +251,10 @@ async def voice_agent_endpoint(websocket: WebSocket, restaurant_id: str):
                 if audio_response:
                     await websocket.send_bytes(audio_response)
 
-    except WebSocketDisconnect:
-        logger.info(f"[VoiceAgent] Client disconnected: {device_id}")
     except Exception as e:
         logger.error(f"[VoiceAgent] Error: {e}")
+    finally:
+        receiver_task.cancel()
         try:
             await websocket.close()
         except:

@@ -112,8 +112,8 @@ export class VoiceClient {
         }
       };
 
-      // Slice audio into 500ms chunks to stream
-      this.mediaRecorder.start(500);
+      // We do not slice into chunks. It records until the user presses stop, then sends the full buffer.
+      this.mediaRecorder.start();
       this.isRecording = true;
       console.log("[VoiceClient] Recording started...");
     } catch (err) {
