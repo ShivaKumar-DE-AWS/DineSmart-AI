@@ -49,7 +49,7 @@ async def generate_tts_audio(text: str) -> bytes:
                     "pitch": 0,
                     "pace": 1.0,
                     "loudness": 1.5,
-                    "speech_sample_rate": 16000,
+                    "speech_sample_rate": 8000,
                     "enable_preprocessing": True,
                     "model": "bulbul:v1"
                 },
@@ -62,6 +62,9 @@ async def generate_tts_audio(text: str) -> bytes:
             if data.get("audios") and len(data["audios"]) > 0:
                 return base64.b64decode(data["audios"][0])
             return b""
+    except httpx.HTTPStatusError as e:
+        logger.error(f"[TTS] HTTP Error {e.response.status_code}: {e.response.text}")
+        return b""
     except Exception as e:
         logger.error(f"[TTS] Error: {e}")
         return b""

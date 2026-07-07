@@ -312,7 +312,10 @@ async def _call_gemini(prompt: str, event_type: str = "WELCOME", fav_item: str =
                 parsed.suggested_items = parsed.suggested_items[:2]
                 return parsed
             except Exception as model_exc:
-                logger.warning("[AI Waiter] Model %s failed (%s), trying next model...", model_name, model_exc)
+                logger.warning(f"[AI Waiter] Model {model_name} failed: {model_exc}. Raw output was: {raw!r}")
+                if "429" in str(model_exc):
+                    logger.warning("[AI Waiter] Rate limit hit, falling back immediately.")
+                    return _fallback_response(event_type, fav_item, menu_snapshot)
                 continue
 
         logger.error("[AI Waiter] All Gemini models failed or exhausted. Using fallback response.")
