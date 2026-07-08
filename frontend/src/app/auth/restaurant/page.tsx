@@ -133,7 +133,7 @@ export default function RestaurantAuthPage() {
       }
 
       const restaurantId = res.user.restaurant_id;
-      const slug = restaurantId ? slugFromRestaurantId(restaurantId) : null;
+      const slug = (res.user as any).restaurant_slug || (restaurantId ? slugFromRestaurantId(restaurantId) : null);
       
       let dest = "/";
       if (slug) {
