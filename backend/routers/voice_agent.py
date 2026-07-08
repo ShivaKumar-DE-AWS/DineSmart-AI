@@ -45,7 +45,7 @@ async def generate_tts_audio(text: str) -> bytes:
                 json={
                     "inputs": [text],
                     "target_language_code": "en-IN",
-                    "speaker": "anushka", # Sarvam removed 'meera', using 'anushka'
+                    "speaker": "shreya", # Supported by bulbul:v3
                     "pace": 1.0,
                     "speech_sample_rate": 8000,
                     "enable_preprocessing": True,
@@ -77,7 +77,7 @@ async def transcribe_audio(audio_chunk: bytes) -> str:
                 'file': ('audio.webm', audio_chunk, 'audio/webm')
             }
             data = {
-                'model': 'saaras:v1'
+                'model': 'saaras:v3'
             }
             response = await client.post(
                 "https://api.sarvam.ai/speech-to-text-translate",
