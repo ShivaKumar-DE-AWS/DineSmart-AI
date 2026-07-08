@@ -281,7 +281,7 @@ async def _call_gemini(prompt: str, event_type: str = "WELCOME", fav_item: str =
 
         config = genai_types.GenerateContentConfig(
             temperature=0.2,
-            max_output_tokens=256,
+            max_output_tokens=512,
             response_mime_type="application/json",
         )
 
@@ -336,10 +336,10 @@ def _fallback_response(event_type: str, fav_item: str = "", menu_snapshot: Optio
             suggested_items=[],
         )
     elif event_type == "ITEM_ADDED":
-        # Strategy 3: Circuit Breaker silent fallback during ITEM_ADDED -> empty dialogue_text
+        # Strategy 3: Circuit Breaker fallback during ITEM_ADDED -> Return a generic acknowledgement
         return AIWaiterEventResponse(
-            dialogue_text="",
-            action_type="ITEM_VALIDATION",
+            dialogue_text="Excellent choice! I've added that to your tray. Please let me know if you'd like to add anything else.",
+            action_type="ACKNOWLEDGEMENT",
             suggested_items=[],
         )
     else:
