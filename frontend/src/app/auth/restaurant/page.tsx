@@ -475,8 +475,8 @@ export default function RestaurantAuthPage() {
                     <div className="text-emerald-400 font-semibold text-sm">Trial Activated Successfully!</div>
                     <div>
                       <span className="text-stone">Your URL:</span>{" "}
-                      <a href={result.url.startsWith("http") ? result.url : (typeof window !== "undefined" ? (window.location.hostname.includes("vercel.app") ? "/admin" : `${window.location.protocol}//${result.slug || result.url.replace("/r/", "").replace(/^\//, "").split("/")[0]}.${window.location.hostname.includes("localhost") ? "localhost:3000" : "smartdineai.co.in"}/admin`) : result.url)} className="text-electric-blue hover:underline font-bold">
-                        {result.url.startsWith("http") ? result.url : (typeof window !== "undefined" ? (window.location.hostname.includes("vercel.app") ? "/admin" : `${window.location.protocol}//${result.slug || result.url.replace("/r/", "").replace(/^\//, "").split("/")[0]}.${window.location.hostname.includes("localhost") ? "localhost:3000" : "smartdineai.co.in"}/admin`) : result.url)}
+                      <a href={typeof window !== "undefined" ? (window.location.hostname.includes("vercel.app") ? "/admin" : `${window.location.protocol}//${result.slug}.${window.location.hostname.includes("localhost") ? "localhost:3000" : "smartdineai.co.in"}/admin`) : result.url} className="text-electric-blue hover:underline font-bold">
+                        {typeof window !== "undefined" ? (window.location.hostname.includes("vercel.app") ? `${window.location.hostname}/admin` : `${window.location.protocol}//${result.slug}.${window.location.hostname.includes("localhost") ? "localhost:3000" : "smartdineai.co.in"}/admin`) : result.url}
                       </a>
                     </div>
                     <div className="space-y-1.5">
