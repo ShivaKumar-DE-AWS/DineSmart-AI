@@ -179,8 +179,20 @@ export class VoiceClient {
   }
 
   public speakText(text: string) {
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ type: "SPEAK", text }));
+    if (!text) return;
+    try {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
+      const baseHost = backendUrl ? backendUrl.replace(/\/$/, "") : "";
+      
+      const audio = new Audio(`${baseHost}/api/tts?text=${encodeURIComponent(text)}`);
+      
+      audio.onplay = () => {
+        if (this.onTranscript) this.onTranscript(text);
+      };
+      
+      audio.play().catch(e => console.error("[VoiceClient] Audio play failed:", e));
+    } catch (e) {
+      console.error("[VoiceClient] Error in speakText:", e);
     }
   }
 

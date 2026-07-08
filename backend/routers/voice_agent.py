@@ -61,6 +61,15 @@ async def execute_tool(tool_name: str, args: Dict[str, Any]) -> str:
         return await analyze_checkout_upsell(**args)
     return "Error: Unknown tool."
 
+@router.get("/api/tts")
+async def get_tts_audio_endpoint(text: str = ""):
+    if not text:
+        return Response(status_code=400)
+    audio = await generate_tts_audio(text)
+    if not audio:
+        return Response(status_code=500)
+    return Response(content=audio, media_type="audio/mpeg")
+
 @router.websocket("/api/ws/voice-agent/{restaurant_id}")
 async def voice_agent_endpoint(websocket: WebSocket, restaurant_id: str):
     await websocket.accept()
@@ -70,13 +79,6 @@ async def voice_agent_endpoint(websocket: WebSocket, restaurant_id: str):
 
     client = genai.Client(api_key=GEMINI_API_KEY)
     
-    # Initial Welcome flow (Stateless)
-    welcome_text = "Welcome! I am your AI Voice Waiter. What can I get started for you today?"
-    audio = await generate_tts_audio(welcome_text)
-    await websocket.send_text(json.dumps({"type": "TEXT", "content": welcome_text}))
-    if audio:
-        await websocket.send_bytes(audio)
-        
     is_executing_tool = False
     message_queue = asyncio.Queue()
 
