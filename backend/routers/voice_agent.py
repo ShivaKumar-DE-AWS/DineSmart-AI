@@ -91,6 +91,9 @@ async def transcribe_audio(audio_chunk: bytes) -> str:
             response.raise_for_status()
             result = response.json()
             return result.get("transcript", "")
+    except httpx.HTTPStatusError as e:
+        logger.error(f"[STT] HTTP Error {e.response.status_code}: {e.response.text}")
+        return ""
     except Exception as e:
         logger.error(f"[STT] Error: {e}")
         return ""
