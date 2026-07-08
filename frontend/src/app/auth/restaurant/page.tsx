@@ -146,16 +146,23 @@ export default function RestaurantAuthPage() {
         // Construct the full URL for the subdomain
         if (typeof window !== "undefined") {
           const currentHost = window.location.host;
-          // Determine base domain (remove www., handle localhost)
-          const baseDomain = currentHost.includes("localhost") ? "localhost:3000" : "smartdineai.co.in";
-          const protocol = currentHost.includes("localhost") ? "http://" : "https://";
-          
-          if (path.startsWith("/r/")) {
-             // Customer route, just use relative on current domain or subdomain, wait, better to always go to subdomain
-             dest = `${protocol}${slug}.${baseDomain}`;
+          // Support Vercel Preview Environments where subdomains aren't possible
+          if (currentHost.includes("vercel.app")) {
+            if (path.startsWith("/r/")) {
+              dest = path;
+            } else {
+              dest = path; // Native routing on Vercel preview for staff routes
+            }
           } else {
-             // Staff route
-             dest = `${protocol}${slug}.${baseDomain}${path}`;
+            // Determine base domain (remove www., handle localhost)
+            const baseDomain = currentHost.includes("localhost") ? "localhost:3000" : "smartdineai.co.in";
+            const protocol = currentHost.includes("localhost") ? "http://" : "https://";
+            
+            if (path.startsWith("/r/")) {
+               dest = `${protocol}${slug}.${baseDomain}`;
+            } else {
+               dest = `${protocol}${slug}.${baseDomain}${path}`;
+            }
           }
         }
       }
@@ -468,8 +475,8 @@ export default function RestaurantAuthPage() {
                     <div className="text-emerald-400 font-semibold text-sm">Trial Activated Successfully!</div>
                     <div>
                       <span className="text-stone">Your URL:</span>{" "}
-                      <a href={result.url.startsWith("http") ? result.url : (typeof window !== "undefined" ? `${window.location.protocol}//${result.slug || result.url.replace("/r/", "").replace(/^\//, "").split("/")[0]}.${window.location.hostname.includes("localhost") ? "localhost:3000" : "smartdineai.co.in"}/admin` : result.url)} className="text-electric-blue hover:underline font-bold">
-                        {result.url.startsWith("http") ? result.url : (typeof window !== "undefined" ? `${window.location.protocol}//${result.slug || result.url.replace("/r/", "").replace(/^\//, "").split("/")[0]}.${window.location.hostname.includes("localhost") ? "localhost:3000" : "smartdineai.co.in"}/admin` : result.url)}
+                      <a href={result.url.startsWith("http") ? result.url : (typeof window !== "undefined" ? (window.location.hostname.includes("vercel.app") ? "/admin" : `${window.location.protocol}//${result.slug || result.url.replace("/r/", "").replace(/^\//, "").split("/")[0]}.${window.location.hostname.includes("localhost") ? "localhost:3000" : "smartdineai.co.in"}/admin`) : result.url)} className="text-electric-blue hover:underline font-bold">
+                        {result.url.startsWith("http") ? result.url : (typeof window !== "undefined" ? (window.location.hostname.includes("vercel.app") ? "/admin" : `${window.location.protocol}//${result.slug || result.url.replace("/r/", "").replace(/^\//, "").split("/")[0]}.${window.location.hostname.includes("localhost") ? "localhost:3000" : "smartdineai.co.in"}/admin`) : result.url)}
                       </a>
                     </div>
                     <div className="space-y-1.5">
