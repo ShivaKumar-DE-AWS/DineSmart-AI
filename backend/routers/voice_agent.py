@@ -30,73 +30,25 @@ Rules:
 """
 
 async def generate_tts_audio(text: str) -> bytes:
-    """Synthesize speech from text using Sarvam AI TTS."""
-    if not SARVAM_API_KEY:
-        logger.warning("[TTS] SARVAM_API_KEY not set.")
-        return b""
+    """Synthesize speech from text using Edge TTS."""
     try:
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                "https://api.sarvam.ai/text-to-speech",
-                headers={
-                    "api-subscription-key": SARVAM_API_KEY,
-                    "Content-Type": "application/json"
-                },
-                json={
-                    "inputs": [text],
-                    "target_language_code": "en-IN",
-                    "speaker": "shreya", # Supported by bulbul:v3
-                    "pace": 1.0,
-                    "speech_sample_rate": 8000,
-                    "enable_preprocessing": True,
-                    "model": "bulbul:v3"
-                },
-                timeout=10.0
-            )
-            response.raise_for_status()
-            data = response.json()
-            import base64
-            # Sarvam returns base64 encoded audio strings in the audios array
-            if data.get("audios") and len(data["audios"]) > 0:
-                return base64.b64decode(data["audios"][0])
-            return b""
-    except httpx.HTTPStatusError as e:
-        logger.error(f"[TTS] HTTP Error {e.response.status_code}: {e.response.text}")
-        return b""
+        import edge_tts
+        # Basic heuristic to detect language for Voice selection
+        voice = "en-IN-NeerjaNeural"
+        if any(char in text for char in ["ह", "क", "म", "न", "स", "त"]):
+            voice = "hi-IN-SwaraNeural"
+        elif any(char in text for char in ["న", "మ", "స", "క", "ర", "ప", "చ"]):
+            voice = "te-IN-ShrutiNeural"
+            
+        communicate = edge_tts.Communicate(text, voice)
+        audio_data = bytearray()
+        async for chunk in communicate.stream():
+            if chunk["type"] == "audio":
+                audio_data.extend(chunk["data"])
+        return bytes(audio_data)
     except Exception as e:
-        logger.error(f"[TTS] Error: {e}")
+        logger.error(f"[TTS] Error generating Edge TTS: {e}")
         return b""
-
-async def transcribe_audio(audio_chunk: bytes) -> str:
-    """Transcribe audio chunk to text using Sarvam AI STT."""
-    if not SARVAM_API_KEY:
-        return ""
-    try:
-        async with httpx.AsyncClient() as client:
-            files = {
-                'file': ('audio.webm', audio_chunk, 'audio/webm')
-            }
-            data = {
-                'model': 'saaras:v3'
-            }
-            response = await client.post(
-                "https://api.sarvam.ai/speech-to-text-translate",
-                headers={
-                    "api-subscription-key": SARVAM_API_KEY
-                },
-                data=data,
-                files=files,
-                timeout=10.0
-            )
-            response.raise_for_status()
-            result = response.json()
-            return result.get("transcript", "")
-    except httpx.HTTPStatusError as e:
-        logger.error(f"[STT] HTTP Error {e.response.status_code}: {e.response.text}")
-        return ""
-    except Exception as e:
-        logger.error(f"[STT] Error: {e}")
-        return ""
 
 async def execute_tool(tool_name: str, args: Dict[str, Any]) -> str:
     """Dynamically routes tool calls to python functions."""
@@ -132,13 +84,7 @@ async def voice_agent_endpoint(websocket: WebSocket, restaurant_id: str):
         try:
             while True:
                 msg = await websocket.receive()
-                if "bytes" in msg:
-                    # Buffer, Don't Forward: While is_executing_tool is True, safely drop incoming audio
-                    if is_executing_tool:
-                        logger.info("[VoiceAgent] Dropping incoming audio frame because tool is currently executing.")
-                        continue
-                    await message_queue.put({"type": "bytes", "data": msg["bytes"]})
-                elif "text" in msg:
+                if "text" in msg:
                     await message_queue.put({"type": "text", "data": msg["text"]})
         except WebSocketDisconnect:
             pass
@@ -156,7 +102,11 @@ async def voice_agent_endpoint(websocket: WebSocket, restaurant_id: str):
             user_input = ""
             
             if msg["type"] == "text":
-                data = json.loads(msg["data"])
+                try:
+                    data = json.loads(msg["data"])
+                except Exception:
+                    continue
+                    
                 if data.get("type") == "SPEAK":
                     text_to_speak = data.get("text")
                     if text_to_speak:
@@ -165,15 +115,14 @@ async def voice_agent_endpoint(websocket: WebSocket, restaurant_id: str):
                             await websocket.send_text(json.dumps({"type": "TEXT", "content": text_to_speak}))
                             await websocket.send_bytes(audio)
                     continue
+                elif data.get("type") == "USER_TEXT":
+                    user_input = data.get("text", "")
+                    if not user_input.strip():
+                        continue
                 elif data.get("type") == "EVENT":
                     # This happens when the user clicks 'Add to Cart' manually on the UI
                     event_data = data.get("event")
                     user_input = f"[SYSTEM EVENT: User manually interacted with UI: {event_data}. Respond and suggest pairings.]"
-            elif msg["type"] == "bytes":
-                audio_bytes = msg["data"]
-                user_input = await transcribe_audio(audio_bytes)
-                if not user_input or not user_input.strip():
-                    continue
 
             if not user_input:
                 continue

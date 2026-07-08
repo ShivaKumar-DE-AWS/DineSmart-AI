@@ -2,7 +2,7 @@
 
 export class VoiceClient {
   private ws: WebSocket | null = null;
-  private mediaRecorder: MediaRecorder | null = null;
+  private recognition: any = null;
   private audioContext: AudioContext | null = null;
   private isRecording = false;
 
@@ -120,31 +120,53 @@ export class VoiceClient {
     }
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      this.mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm;codecs=opus" });
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        console.error("[VoiceClient] Speech Recognition API not supported in this browser.");
+        import("sonner").then(({ toast }) => toast.error("Speech Recognition is not supported in your browser."));
+        return;
+      }
       
-      this.mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0 && this.ws?.readyState === WebSocket.OPEN) {
-          // Send raw audio blobs to backend (FastAPI will read as bytes)
-          this.ws.send(e.data);
+      this.recognition = new SpeechRecognition();
+      this.recognition.continuous = false;
+      this.recognition.interimResults = false;
+      // 'en-IN' is excellent for capturing Indian English, and often successfully transcribes Hindi words in English script.
+      this.recognition.lang = "en-IN"; 
+
+      this.recognition.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        console.log("[VoiceClient] Transcribed locally:", transcript);
+        if (transcript && this.ws?.readyState === WebSocket.OPEN) {
+          this.ws.send(JSON.stringify({ type: "USER_TEXT", text: transcript }));
         }
       };
 
-      // We do not slice into chunks. It records until the user presses stop, then sends the full buffer.
-      this.mediaRecorder.start();
+      this.recognition.onerror = (event: any) => {
+        console.error("[VoiceClient] Speech recognition error:", event.error);
+      };
+
+      this.recognition.onend = () => {
+        this.isRecording = false;
+        console.log("[VoiceClient] Recording stopped automatically.");
+      };
+
+      this.recognition.start();
       this.isRecording = true;
-      console.log("[VoiceClient] Recording started...");
+      console.log("[VoiceClient] Web Speech Recognition started...");
     } catch (err) {
-      console.error("[VoiceClient] Microphone access denied:", err);
+      console.error("[VoiceClient] Microphone access denied or STT error:", err);
     }
   }
 
   public stopRecording() {
-    if (this.mediaRecorder && this.isRecording) {
-      this.mediaRecorder.stop();
-      this.mediaRecorder.stream.getTracks().forEach((track) => track.stop());
+    if (this.recognition && this.isRecording) {
+      try {
+        this.recognition.stop();
+      } catch (e) {
+        // ignore
+      }
       this.isRecording = false;
-      console.log("[VoiceClient] Recording stopped.");
+      console.log("[VoiceClient] Web Speech Recognition stopped manually.");
     }
   }
 
