@@ -14,40 +14,61 @@ export default function VoiceAgentOverlay({ restaurantId }: { restaurantId: stri
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    // Auto-connect on mount (Passive Mode)
-    const deviceId = getOrCreateAnonID();
-    const client = new VoiceClient(
-      restaurantId,
-      deviceId,
-      (text) => {
-        setTranscript(text);
-        setIsSpeaking(true);
-        setTimeout(() => setIsSpeaking(false), 3000);
-      },
-      (actionData) => {
-        if (actionData.action === "ADD" && actionData.item_id) {
-          useCart.getState().add(
-            { id: actionData.item_id, name: "Voice Item", price: 0 } as any, 
-            actionData.qty || 1
-          );
+    let reconnectTimer: any;
+
+    const connectClient = () => {
+      const deviceId = getOrCreateAnonID();
+      const client = new VoiceClient(
+        restaurantId,
+        deviceId,
+        (text) => {
+          setTranscript(text);
+          setIsSpeaking(true);
+          setTimeout(() => setIsSpeaking(false), 3000);
+        },
+        (actionData) => {
+          if (actionData.action === "ADD" && actionData.item_id) {
+            const addedItem = { id: actionData.item_id, name: "Voice Item", price: 0 } as any;
+            useCart.getState().add(addedItem, actionData.qty || 1);
+            
+            import("@/lib/ai_waiter_client").then(({ sendAIWaiterEvent }) => {
+              sendAIWaiterEvent({
+                event_type: "ITEM_ADDED",
+                restaurant_id: restaurantId,
+                cart_state: useCart.getState().items,
+                added_item: addedItem
+              });
+            });
+          }
         }
-      }
-    );
+      );
 
-    client.connect().then(() => setIsConnected(true)).catch(console.error);
-    clientRef.current = client;
+      client.onClose = () => {
+        setIsConnected(false);
+        reconnectTimer = setTimeout(connectClient, 3000);
+      };
 
-    // Browsers block autoplay audio until user interaction. 
-    // We resume the AudioContext on the very first click anywhere on the screen!
-    const handleFirstClick = () => {
-      client.resumeContext();
-      window.removeEventListener("click", handleFirstClick);
+      client.connect().then(() => setIsConnected(true)).catch((e) => {
+        console.error(e);
+        reconnectTimer = setTimeout(connectClient, 5000);
+      });
+      clientRef.current = client;
+
+      const handleFirstClick = () => {
+        if (clientRef.current) clientRef.current.resumeContext();
+        window.removeEventListener("click", handleFirstClick);
+      };
+      window.addEventListener("click", handleFirstClick);
     };
-    window.addEventListener("click", handleFirstClick);
+
+    connectClient();
 
     return () => {
-      window.removeEventListener("click", handleFirstClick);
-      client.disconnect();
+      clearTimeout(reconnectTimer);
+      if (clientRef.current) {
+        clientRef.current.onClose = undefined; // prevent reconnect loop
+        clientRef.current.disconnect();
+      }
     };
   }, [restaurantId]);
 

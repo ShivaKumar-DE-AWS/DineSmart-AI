@@ -5,6 +5,7 @@ export class VoiceClient {
   private recognition: any = null;
   private audioContext: AudioContext | null = null;
   private isRecording = false;
+  public onClose?: () => void;
 
   constructor(
     private readonly restaurantId: string,
@@ -60,6 +61,7 @@ export class VoiceClient {
       this.ws.onclose = () => {
         console.log("[VoiceClient] Disconnected.");
         this.stopRecording();
+        if (this.onClose) this.onClose();
       };
     });
   }
