@@ -51,38 +51,46 @@ export default function VoiceAgentOverlay({ restaurantId }: { restaurantId: stri
     };
   }, [restaurantId]);
 
+  useEffect(() => {
+    const handleSpeakEvent = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (clientRef.current && isConnected && customEvent.detail?.text) {
+        clientRef.current.resumeContext();
+        clientRef.current.speakText(customEvent.detail.text);
+      }
+    };
+    window.addEventListener("ai-voice-speak", handleSpeakEvent);
+    return () => window.removeEventListener("ai-voice-speak", handleSpeakEvent);
+  }, [isConnected]);
+
   // Subscribe to cart changes to trigger manual events
   const cartItems = useCart((state) => state.items);
   const previousCartRef = useRef(cartItems);
 
   useEffect(() => {
-    if (cartItems.length > previousCartRef.current.length) {
-      if (clientRef.current && isConnected) {
-        clientRef.current.resumeContext(); // ensure audio can play
-        clientRef.current.sendManualEvent("ITEM_ADDED");
-      }
-    }
+    // Intentionally left blank, we now rely on ai-voice-speak for cart interactions
     previousCartRef.current = cartItems;
   }, [cartItems, isConnected]);
 
-  const toggleVoiceAgent = async () => {
+  const startWalkieTalkie = async (e: React.PointerEvent | React.TouchEvent) => {
+    e.preventDefault(); // Prevent default mobile touch behaviors
     if (!clientRef.current || !isConnected) return;
-    
-    if (isActive) {
-      clientRef.current.stopRecording();
-      setIsActive(false);
-      setTranscript("Voice agent listening stopped.");
-    } else {
-      try {
-        setTranscript("Activating microphone...");
-        await clientRef.current.startRecording();
-        setIsActive(true);
-        setTranscript("Listening...");
-      } catch (err) {
-        console.error(err);
-        setTranscript("Failed to connect microphone.");
-      }
+    try {
+      setTranscript("Listening...");
+      await clientRef.current.startRecording();
+      setIsActive(true);
+    } catch (err) {
+      console.error(err);
+      setTranscript("Failed to connect microphone.");
     }
+  };
+
+  const stopWalkieTalkie = (e: React.PointerEvent | React.TouchEvent) => {
+    e.preventDefault();
+    if (!clientRef.current || !isActive) return;
+    clientRef.current.stopRecording();
+    setIsActive(false);
+    setTranscript("Processing...");
   };
 
   return (
@@ -104,14 +112,18 @@ export default function VoiceAgentOverlay({ restaurantId }: { restaurantId: stri
       )}
       
       <button
-        onClick={toggleVoiceAgent}
-        className={`w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 ${
+        onPointerDown={startWalkieTalkie}
+        onPointerUp={stopWalkieTalkie}
+        onPointerLeave={(e) => isActive && stopWalkieTalkie(e)}
+        onTouchStart={startWalkieTalkie}
+        onTouchEnd={stopWalkieTalkie}
+        className={`w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 select-none ${
           isActive 
             ? "bg-red-500 hover:bg-red-600 scale-110 animate-pulse-soft" 
             : "bg-[#1A1106] hover:bg-[#8A6A1B]"
         }`}
       >
-        <span className="text-2xl" aria-hidden="true">
+        <span className="text-2xl pointer-events-none" aria-hidden="true">
           {isActive ? "🛑" : "🎙️"}
         </span>
       </button>

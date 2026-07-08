@@ -157,7 +157,15 @@ async def voice_agent_endpoint(websocket: WebSocket, restaurant_id: str):
             
             if msg["type"] == "text":
                 data = json.loads(msg["data"])
-                if data.get("type") == "EVENT":
+                if data.get("type") == "SPEAK":
+                    text_to_speak = data.get("text")
+                    if text_to_speak:
+                        audio = await generate_tts_audio(text_to_speak)
+                        if audio:
+                            await websocket.send_text(json.dumps({"type": "TEXT", "content": text_to_speak}))
+                            await websocket.send_bytes(audio)
+                    continue
+                elif data.get("type") == "EVENT":
                     # This happens when the user clicks 'Add to Cart' manually on the UI
                     event_data = data.get("event")
                     user_input = f"[SYSTEM EVENT: User manually interacted with UI: {event_data}. Respond and suggest pairings.]"

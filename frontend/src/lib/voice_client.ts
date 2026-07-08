@@ -154,6 +154,12 @@ export class VoiceClient {
     }
   }
 
+  public speakText(text: string) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ type: "SPEAK", text }));
+    }
+  }
+
   public disconnect() {
     this.stopRecording();
     if (this.ws) {

@@ -555,6 +555,9 @@ export async function sendAIWaiterEvent(
             if (response) {
               if (response.next_state) useAIWaiterStore.getState().updateSessionState(response.next_state);
               if (response.action_type === "UPSELL_OFFER" && (response.suggested_items.length > 0 || response.quick_replies?.length)) {
+                if (typeof window !== "undefined" && response.dialogue_text) {
+                  window.dispatchEvent(new CustomEvent("ai-voice-speak", { detail: { text: response.dialogue_text } }));
+                }
                 showAIUpsellSheet(response.dialogue_text, response.suggested_items, response.quick_replies || [], addToCartFn, proceedPayFn);
               }
             }
@@ -590,8 +593,14 @@ export async function sendAIWaiterEvent(
     // Route to the correct UI handler if not silent
     if (!payload.silent) {
       if (response.action_type === "WELCOME") {
+        if (typeof window !== "undefined" && response.dialogue_text) {
+          window.dispatchEvent(new CustomEvent("ai-voice-speak", { detail: { text: response.dialogue_text } }));
+        }
         showAIWelcomeModal(response.dialogue_text, 20000);
       } else if (response.action_type === "UPSELL_OFFER") {
+        if (typeof window !== "undefined" && response.dialogue_text) {
+          window.dispatchEvent(new CustomEvent("ai-voice-speak", { detail: { text: response.dialogue_text } }));
+        }
         showAIUpsellSheet(response.dialogue_text, response.suggested_items, response.quick_replies || [], addToCartFn, proceedPayFn);
       }
     }
