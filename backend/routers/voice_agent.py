@@ -148,7 +148,7 @@ async def voice_agent_endpoint(websocket: WebSocket, restaurant_id: str):
                     while True:
                         response = await asyncio.wait_for(
                             groq_client.chat.completions.create(
-                                model="llama3-8b-8192",
+                                model="llama-3.1-8b-instant",
                                 messages=messages,
                                 tools=GROQ_VOICE_TOOLS_SCHEMA,
                                 tool_choice="auto",

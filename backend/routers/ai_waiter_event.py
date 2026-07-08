@@ -275,7 +275,7 @@ async def _call_llm_engine(prompt: str, event_type: str = "WELCOME", fav_item: s
             prompt=prompt,
             schema_cls=AIWaiterEventResponse,
             system_prompt="",
-            model_preference="llama3-70b-8192"
+            model_preference="llama-3.3-70b-versatile"
         )
         if parsed:
             parsed.suggested_items = parsed.suggested_items[:2]

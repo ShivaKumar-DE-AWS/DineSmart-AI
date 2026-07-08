@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 T = TypeVar("T", bound=BaseModel)
 
-async def generate_structured_json(prompt: str, schema_cls: Type[T], system_prompt: str = "", model_preference: str = "llama3-70b-8192") -> Optional[T]:
+async def generate_structured_json(prompt: str, schema_cls: Type[T], system_prompt: str = "", model_preference: str = "llama-3.3-70b-versatile") -> Optional[T]:
     """Generates structured JSON using Groq with an automatic fallback to Gemini."""
     
     groq_err = "Not attempted or no API Key"
