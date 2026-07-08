@@ -51,7 +51,7 @@ async def generate_tts_audio(text: str) -> bytes:
                     "loudness": 1.5,
                     "speech_sample_rate": 8000,
                     "enable_preprocessing": True,
-                    "model": "bulbul:v1"
+                    "model": "bulbul:v3"
                 },
                 timeout=10.0
             )
