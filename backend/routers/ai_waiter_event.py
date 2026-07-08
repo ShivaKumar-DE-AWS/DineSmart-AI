@@ -339,7 +339,7 @@ def _fallback_response(event_type: str, fav_item: str = "", menu_snapshot: Optio
         # Strategy 3: Circuit Breaker fallback during ITEM_ADDED -> Return a generic acknowledgement
         return AIWaiterEventResponse(
             dialogue_text="Excellent choice! I've added that to your tray. Please let me know if you'd like to add anything else.",
-            action_type="ACKNOWLEDGEMENT",
+            action_type="ITEM_VALIDATION",
             suggested_items=[],
         )
     else:
