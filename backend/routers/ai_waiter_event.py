@@ -170,16 +170,17 @@ def _build_prompt(
     if session_state is None:
         session_state = {}
         
+    import random
+    sampled_menu = random.sample(menu_snapshot, min(len(menu_snapshot), 40)) if menu_snapshot else []
+    
     menu_json = json.dumps(
         [
             {
                 "id":       item.get("id", ""),
                 "name":     item.get("name", ""),
-                "price":    item.get("price", 0),
                 "category": item.get("category", ""),
-                "tags":     item.get("tags", []),
             }
-            for item in menu_snapshot
+            for item in sampled_menu
         ],
         ensure_ascii=False,
         separators=(",", ":"),
