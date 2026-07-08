@@ -282,35 +282,38 @@ async def _call_llm_engine(prompt: str, event_type: str = "WELCOME", fav_item: s
             return parsed
             
         logger.error("[AI Waiter] LLM generation returned None. Using fallback response.")
-        return _fallback_response(event_type, fav_item, menu_snapshot)
+        return _fallback_response(event_type, fav_item, menu_snapshot, "LLM returned None")
     except Exception as exc:
         logger.error("[AI Waiter] Unexpected error calling LLM: %s. Using fallback response.", exc)
-        return _fallback_response(event_type, fav_item, menu_snapshot)
+        return _fallback_response(event_type, fav_item, menu_snapshot, str(exc))
 
 
-def _fallback_response(event_type: str, fav_item: str = "", menu_snapshot: Optional[List[dict]] = None) -> AIWaiterEventResponse:
-    """Return a polite, non-blocking fallback response if models fail or time out."""
+def _fallback_response(event_type: str, fav_item: str, menu_snapshot: Optional[List[dict]], error_msg: str = "") -> AIWaiterEventResponse:
+    """Safe static fallback to prevent 500 crashes if LLM is exhausted or times out."""
+    logger.warning(f"[AI Waiter] Using fallback response for {event_type} (Error: {error_msg})")
+    
     if event_type == "QR_SCAN":
         msg = f"Welcome back! Would you like to start with your usual {fav_item}? We are delighted to host you today." if fav_item else "Welcome! We are delighted to host you today. Please explore our curated menu and let us know if we can craft anything special for your table."
+        if error_msg: msg += f" [DEBUG: {error_msg}]"
         return AIWaiterEventResponse(
             dialogue_text=msg,
             action_type="WELCOME",
             suggested_items=[],
         )
     elif event_type == "ITEM_ADDED":
-        # Strategy 3: Circuit Breaker fallback during ITEM_ADDED -> Return a generic acknowledgement
+        msg = "Excellent choice! I've added that to your tray. Please let me know if you'd like to add anything else."
+        if error_msg: msg += f" [DEBUG: {error_msg}]"
         return AIWaiterEventResponse(
-            dialogue_text="Excellent choice! I've added that to your tray. Please let me know if you'd like to add anything else.",
+            dialogue_text=msg,
             action_type="ITEM_VALIDATION",
             suggested_items=[],
         )
     else:
-        # Strategy 3: Circuit Breaker fallback during CHECKOUT -> return real menu items from snapshot
         fallback_sugs = []
         if menu_snapshot:
             for item in menu_snapshot:
                 if item.get("available", True) is not False:
-                    fallback_sugs.append(AISuggestedItem(
+                    fallback_sugs.append(SuggestedItemSchema(
                         item_id=str(item.get("id", "")),
                         name=str(item.get("name", "")),
                         price=float(item.get("price", 0.0)),
@@ -318,8 +321,10 @@ def _fallback_response(event_type: str, fav_item: str = "", menu_snapshot: Optio
                     ))
                 if len(fallback_sugs) >= 2:
                     break
+        msg = "To complete your feast, our Chef recommends these signature pairings from our menu:"
+        if error_msg: msg += f" [DEBUG: {error_msg}]"
         return AIWaiterEventResponse(
-            dialogue_text="To complete your feast, our Chef recommends these signature pairings from our menu:",
+            dialogue_text=msg,
             action_type="UPSELL_OFFER",
             suggested_items=fallback_sugs,
         )

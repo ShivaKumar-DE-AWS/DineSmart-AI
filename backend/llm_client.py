@@ -12,6 +12,9 @@ T = TypeVar("T", bound=BaseModel)
 async def generate_structured_json(prompt: str, schema_cls: Type[T], system_prompt: str = "", model_preference: str = "llama3-70b-8192") -> Optional[T]:
     """Generates structured JSON using Groq with an automatic fallback to Gemini."""
     
+    groq_err = "Not attempted or no API Key"
+    gemini_err = "Not attempted or no API Key"
+    
     # Attempt Groq first
     if GROQ_API_KEY:
         try:
@@ -38,6 +41,7 @@ async def generate_structured_json(prompt: str, schema_cls: Type[T], system_prom
             raw = response.choices[0].message.content
             return schema_cls.model_validate_json(raw)
         except Exception as e:
+            groq_err = str(e)
             logger.warning(f"[llm_client] Groq generation failed: {e}. Falling back to Gemini.")
 
     # Fallback to Gemini
@@ -74,6 +78,9 @@ async def generate_structured_json(prompt: str, schema_cls: Type[T], system_prom
                 
             return schema_cls.model_validate_json(raw)
         except Exception as e:
+            gemini_err = str(e)
             logger.error(f"[llm_client] Gemini fallback also failed: {e}")
-
-    return None
+            
+    # If we got here, everything failed. Raise a detailed error.
+    error_msg = f"Groq Error: {groq_err} | Gemini Error: {gemini_err}"
+    raise Exception(error_msg)
