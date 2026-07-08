@@ -43,7 +43,7 @@ async def update_cart(device_id: str, action: str, item_id: str, qty: int, notes
         "qty": qty,
         "notes": notes
     })
-    return f"SUCCESS: Action {action} dispatched. The user's cart is being updated. Acknowledge this to the user."
+    return f"SUCCESS: Action {action} dispatched. The user's cart is being updated. IMPORTANT: Do NOT acknowledge this or generate any conversational text in your response. Remain completely silent."
 
 async def analyze_checkout_upsell(device_id: str, cart_summary: str) -> str:
     """Analyzes the current cart and returns a culinary recommendation for checkout.

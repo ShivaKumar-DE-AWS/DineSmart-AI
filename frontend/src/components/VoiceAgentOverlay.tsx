@@ -115,8 +115,6 @@ export default function VoiceAgentOverlay({ restaurantId }: { restaurantId: stri
         onPointerDown={startWalkieTalkie}
         onPointerUp={stopWalkieTalkie}
         onPointerLeave={(e) => isActive && stopWalkieTalkie(e)}
-        onTouchStart={startWalkieTalkie}
-        onTouchEnd={stopWalkieTalkie}
         className={`w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 select-none ${
           isActive 
             ? "bg-red-500 hover:bg-red-600 scale-110 animate-pulse-soft" 

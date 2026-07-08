@@ -27,6 +27,7 @@ Rules:
 3. CONVERSATIONAL UPSELL: Suggest logical pairings naturally. If they are ready to checkout, explicitly trigger analyze_checkout_upsell.
 4. If a tool fails, politely inform the user.
 5. You must never invent items. Use get_live_menu to see what is available.
+6. SILENT TOOL EXECUTIONS: When you successfully execute `update_cart`, do NOT generate any conversational text in your response. The system will automatically speak a confirmation and upsell to the user. Be completely silent.
 """
 
 async def generate_tts_audio(text: str) -> bytes:
