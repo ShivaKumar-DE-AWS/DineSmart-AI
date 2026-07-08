@@ -554,11 +554,16 @@ export async function sendAIWaiterEvent(
             });
             if (response) {
               if (response.next_state) useAIWaiterStore.getState().updateSessionState(response.next_state);
+              
+              if (typeof window !== "undefined" && response.dialogue_text) {
+                window.dispatchEvent(new CustomEvent("ai-voice-speak", { detail: { text: response.dialogue_text } }));
+              }
+              
               if (response.action_type === "UPSELL_OFFER" && (response.suggested_items.length > 0 || response.quick_replies?.length)) {
-                if (typeof window !== "undefined" && response.dialogue_text) {
-                  window.dispatchEvent(new CustomEvent("ai-voice-speak", { detail: { text: response.dialogue_text } }));
-                }
                 showAIUpsellSheet(response.dialogue_text, response.suggested_items, response.quick_replies || [], addToCartFn, proceedPayFn);
+              } else if (response.dialogue_text) {
+                // For acknowledgements or other types without an upsell sheet, just show a toast
+                import("sonner").then(({ toast }) => toast(response.dialogue_text));
               }
             }
             if (_pendingItemAddedResolve) _pendingItemAddedResolve(response);
@@ -591,17 +596,18 @@ export async function sendAIWaiterEvent(
     }
 
     // Route to the correct UI handler if not silent
-    if (!payload.silent) {
+    if (!payload.silent && response?.dialogue_text) {
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("ai-voice-speak", { detail: { text: response.dialogue_text } }));
+      }
+      
       if (response.action_type === "WELCOME") {
-        if (typeof window !== "undefined" && response.dialogue_text) {
-          window.dispatchEvent(new CustomEvent("ai-voice-speak", { detail: { text: response.dialogue_text } }));
-        }
         showAIWelcomeModal(response.dialogue_text, 20000);
-      } else if (response.action_type === "UPSELL_OFFER") {
-        if (typeof window !== "undefined" && response.dialogue_text) {
-          window.dispatchEvent(new CustomEvent("ai-voice-speak", { detail: { text: response.dialogue_text } }));
-        }
+      } else if (response.action_type === "UPSELL_OFFER" && (response.suggested_items?.length || response.quick_replies?.length)) {
         showAIUpsellSheet(response.dialogue_text, response.suggested_items, response.quick_replies || [], addToCartFn, proceedPayFn);
+      } else {
+        // Fallback for ACKNOWLEDGEMENT and other action types
+        import("sonner").then(({ toast }) => toast(response.dialogue_text));
       }
     }
 
