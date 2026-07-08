@@ -215,7 +215,7 @@ You must guide the customer through a logical meal sequence: Welcome -> Preferen
 - **STRICT MENU CONSTRAINT:** NEVER fabricate dishes. Only recommend from [MENU_METADATA].
 - Update `next_state` with the new conversation stage and any learned preferences.
 
-You MUST respond with valid JSON exactly matching this structure:
+You MUST respond with valid JSON exactly matching this structure. DO NOT include any preamble text or markdown formatting outside the JSON:
 {{
   "dialogue_text": "string (the spoken text)",
   "action_type": "string (e.g. WELCOME, UPSELL_OFFER)",
@@ -297,16 +297,16 @@ async def _call_gemini(prompt: str, event_type: str = "WELCOME", fav_item: str =
                     timeout=4.5,  # Strategy 3: 4.5s Circuit Breaker timeout
                 )
 
+                import re
+                
                 raw = (getattr(response, "text", None) or "").strip()
 
-                # Defensive markdown fence strip
-                if raw.startswith("```json"):
-                    raw = raw[7:]
-                if raw.startswith("```"):
-                    raw = raw[3:]
-                if raw.endswith("```"):
-                    raw = raw[:-3]
-                raw = raw.strip()
+                # Robust JSON extraction
+                json_match = re.search(r'\{.*\}', raw, re.DOTALL)
+                if json_match:
+                    raw = json_match.group(0)
+                else:
+                    raw = raw.strip()
 
                 parsed = AIWaiterEventResponse.model_validate_json(raw)
                 parsed.suggested_items = parsed.suggested_items[:2]

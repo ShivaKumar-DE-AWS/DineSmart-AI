@@ -45,7 +45,7 @@ async def generate_tts_audio(text: str) -> bytes:
                 json={
                     "inputs": [text],
                     "target_language_code": "en-IN",
-                    "speaker": "meera", # Or "shubh", "meera" for english/hindi
+                    "speaker": "anushka", # Sarvam removed 'meera', using 'anushka'
                     "pitch": 0,
                     "pace": 1.0,
                     "loudness": 1.5,
