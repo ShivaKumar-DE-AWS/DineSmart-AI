@@ -102,3 +102,54 @@ VOICE_TOOLS_SCHEMA = [
         }
     }
 ]
+
+GROQ_VOICE_TOOLS_SCHEMA = [
+    {
+        "type": "function",
+        "function": {
+            "name": "get_live_menu",
+            "description": "Fetches the live menu for the restaurant. Use this to find items the user is asking for.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "restaurant_id": {"type": "string"}
+                },
+                "required": ["restaurant_id"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "update_cart",
+            "description": "Updates the user's cart. Call this immediately when a user asks to order something.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "device_id": {"type": "string"},
+                    "action": {"type": "string", "description": "'ADD' or 'REMOVE'"},
+                    "item_id": {"type": "string", "description": "The exact ID of the menu item"},
+                    "qty": {"type": "integer"},
+                    "notes": {"type": "string", "description": "Special instructions"},
+                    "restaurant_id": {"type": "string"}
+                },
+                "required": ["device_id", "action", "item_id", "qty", "restaurant_id"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "analyze_checkout_upsell",
+            "description": "Analyzes the current cart and returns a culinary recommendation for checkout.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "device_id": {"type": "string"},
+                    "cart_summary": {"type": "string"}
+                },
+                "required": ["device_id", "cart_summary"]
+            }
+        }
+    }
+]

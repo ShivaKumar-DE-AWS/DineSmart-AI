@@ -266,63 +266,25 @@ INSTRUCTIONS:
 # Step 3: Gemini SDK Call
 # =========================================================
 
-async def _call_gemini(prompt: str, event_type: str = "WELCOME", fav_item: str = "", menu_snapshot: Optional[List[dict]] = None) -> AIWaiterEventResponse:
-    """Call Gemini with automatic model switching and graceful fallback on exhaustion."""
-    if not GEMINI_API_KEY:
-        logger.warning("[AI Waiter] GEMINI_API_KEY not set. Returning graceful fallback.")
-        return _fallback_response(event_type, fav_item, menu_snapshot)
-
+async def _call_llm_engine(prompt: str, event_type: str = "WELCOME", fav_item: str = "", menu_snapshot: Optional[List[dict]] = None) -> AIWaiterEventResponse:
+    """Call the LLM abstraction (Groq -> Gemini) and return structured response."""
+    from llm_client import generate_structured_json
+    
     try:
-        from google import genai
-        from google.genai import types as genai_types
-
-        client_ai = genai.Client(api_key=GEMINI_API_KEY)
-        models_to_try = get_gemini_models(client_ai)
-
-        config = genai_types.GenerateContentConfig(
-            temperature=0.2,
-            max_output_tokens=512,
-            response_mime_type="application/json",
+        parsed = await generate_structured_json(
+            prompt=prompt,
+            schema_cls=AIWaiterEventResponse,
+            system_prompt="",
+            model_preference="llama3-70b-8192"
         )
-
-        for model_name in models_to_try:
-            try:
-                response = await asyncio.wait_for(
-                    asyncio.to_thread(
-                        client_ai.models.generate_content,
-                        model=model_name,
-                        contents=prompt,
-                        config=config,
-                    ),
-                    timeout=4.5,  # Strategy 3: 4.5s Circuit Breaker timeout
-                )
-
-                import re
-                
-                raw = (getattr(response, "text", None) or "").strip()
-
-                # Robust JSON extraction
-                json_match = re.search(r'\{.*\}', raw, re.DOTALL)
-                if json_match:
-                    raw = json_match.group(0)
-                else:
-                    raw = raw.strip()
-
-                parsed = AIWaiterEventResponse.model_validate_json(raw)
-                parsed.suggested_items = parsed.suggested_items[:2]
-                return parsed
-            except Exception as model_exc:
-                logger.warning(f"[AI Waiter] Model {model_name} failed: {model_exc}. Raw output was: {raw!r}")
-                if "429" in str(model_exc):
-                    logger.warning("[AI Waiter] Rate limit hit, falling back immediately.")
-                    return _fallback_response(event_type, fav_item, menu_snapshot)
-                continue
-
-        logger.error("[AI Waiter] All Gemini models failed or exhausted. Using fallback response.")
+        if parsed:
+            parsed.suggested_items = parsed.suggested_items[:2]
+            return parsed
+            
+        logger.error("[AI Waiter] LLM generation returned None. Using fallback response.")
         return _fallback_response(event_type, fav_item, menu_snapshot)
-
     except Exception as exc:
-        logger.error("[AI Waiter] Unexpected error calling Gemini: %s. Using fallback response.", exc)
+        logger.error("[AI Waiter] Unexpected error calling LLM: %s. Using fallback response.", exc)
         return _fallback_response(event_type, fav_item, menu_snapshot)
 
 
@@ -435,7 +397,7 @@ async def ai_waiter_event(req: AIWaiterEventRequest):
         event_data=req.event_data,
     )
 
-    ai_response = await _call_gemini(prompt, req.event_type, fav_item, menu_snapshot)
+    ai_response = await _call_llm_engine(prompt, req.event_type, fav_item, menu_snapshot)
 
     # Step 4: Strict Menu Validation - strip out any suggestion not in menu_snapshot
     if ai_response and ai_response.suggested_items and menu_snapshot:
