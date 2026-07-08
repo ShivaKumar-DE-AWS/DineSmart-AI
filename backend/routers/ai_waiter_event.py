@@ -212,18 +212,10 @@ You must guide the customer through a logical meal sequence: Welcome -> Preferen
 5. Provide contextual `quick_replies` to let the customer guide you (e.g., "Skip to Main Course", "Show Rice options").
 
 # EVENT BEHAVIOR RULES
+- **EVENT BEHAVIOR RULES**
 - **LANGUAGE LOCK:** `dialogue_text` must be in {user_language}.
 - **STRICT MENU CONSTRAINT:** NEVER fabricate dishes. Only recommend from [MENU_METADATA].
 - Update `next_state` with the new conversation stage and any learned preferences.
-
-You MUST respond with valid JSON exactly matching this structure. DO NOT include any preamble text or markdown formatting outside the JSON:
-{{
-  "dialogue_text": "string (the spoken text)",
-  "action_type": "string (e.g. WELCOME, UPSELL_OFFER)",
-  "suggested_items": ["string (item IDs)"],
-  "quick_replies": ["string (suggested user replies)"],
-  "next_state": {{"stage": "string"}}
-}}
 """
 
     if event_type == "QR_SCAN":
