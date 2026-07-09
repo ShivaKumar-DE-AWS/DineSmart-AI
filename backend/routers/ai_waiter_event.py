@@ -235,10 +235,10 @@ INSTRUCTIONS:
         return f"""{base}
 EVENT: Customer added "{added_name}" (Category: {added_cat}) to cart.
 INSTRUCTIONS:
-1. action_type = "UPSELL_OFFER"
-2. dialogue_text: Compliment the choice. Then smoothly suggest the logical NEXT course or pairing. E.g., if they added a curry, suggest breads. If they added a main, suggest dessert/drinks.
-3. suggested_items: Pick max 2 items from the menu that perfectly pair with the cart or represent the next logical course. NEVER suggest items already in the cart.
-4. quick_replies: Generate 3-4 options for the user (e.g., "Add [Suggested Bread]", "Show Desserts", "Skip to Checkout").
+1. action_type = "ACKNOWLEDGEMENT"
+2. dialogue_text: Briefly compliment the choice in one short sentence. Do NOT offer upsells here to avoid annoying the user.
+3. suggested_items: []
+4. quick_replies: []
 5. next_state: Update 'stage' to the next logical step."""
 
     if event_type == "CHECKOUT" or event_type == "QUICK_REPLY_CLICKED":
