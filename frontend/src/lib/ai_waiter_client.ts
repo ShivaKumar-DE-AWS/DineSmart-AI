@@ -515,8 +515,16 @@ export async function sendAIWaiterEvent(
       }
     }
 
-    // Strategy 2: Smart Frontend Debouncing (1.5s delay for ITEM_ADDED network calls)
+    // Strategy 2: Smart Frontend Debouncing & Rate Limiting (Prevent spamming the user on every add)
     if (payload.event_type === "ITEM_ADDED") {
+      // Rate limit: Only allow one AI upsell sheet every 45 seconds to avoid annoyance
+      const now = Date.now();
+      const lastUpsell = useAIWaiterStore.getState().lastUpsellTime || 0;
+      if (now - lastUpsell < 45000) {
+        return Promise.resolve(null);
+      }
+      useAIWaiterStore.getState().setLastUpsellTime?.(now);
+
       return new Promise<AIWaiterEventResponse | null>((resolve) => {
         if (_itemAddedDebounceTimer) {
           clearTimeout(_itemAddedDebounceTimer);

@@ -17,7 +17,10 @@ export class VoiceClient {
   public async connect() {
     return new Promise<void>((resolve, reject) => {
       // We must connect directly to the backend to bypass Next.js rewrites, as Vercel/Next.js edge doesn't proxy WebSockets.
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
+      let backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
+      if (backendUrl && !backendUrl.startsWith("http") && !backendUrl.startsWith("/")) {
+        backendUrl = "https://" + backendUrl;
+      }
       const baseHost = backendUrl ? backendUrl.replace(/^https?:\/\//, "") : window.location.host;
       const protocol = (backendUrl && backendUrl.startsWith("https")) || window.location.protocol === "https:" ? "wss:" : "ws:";
       
@@ -178,21 +181,24 @@ export class VoiceClient {
     }
   }
 
-  public speakText(text: string) {
+  public async speakText(text: string) {
     if (!text) return;
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
+      let backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
+      if (backendUrl && !backendUrl.startsWith("http") && !backendUrl.startsWith("/")) {
+        backendUrl = "https://" + backendUrl;
+      }
       const baseHost = backendUrl ? backendUrl.replace(/\/$/, "") : "";
       
-      const audio = new Audio(`${baseHost}/api/tts?text=${encodeURIComponent(text)}`);
+      if (this.onTranscript) this.onTranscript(text);
       
-      audio.onplay = () => {
-        if (this.onTranscript) this.onTranscript(text);
-      };
+      const response = await fetch(`${baseHost}/api/tts?text=${encodeURIComponent(text)}`);
+      if (!response.ok) throw new Error("TTS request failed");
       
-      audio.play().catch(e => console.error("[VoiceClient] Audio play failed:", e));
+      const arrayBuffer = await response.arrayBuffer();
+      await this.playAudio(arrayBuffer);
     } catch (e) {
-      console.error("[VoiceClient] Error in speakText:", e);
+      console.error("[VoiceClient] Audio play failed:", e);
     }
   }
 
