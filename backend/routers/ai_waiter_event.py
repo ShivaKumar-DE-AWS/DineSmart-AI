@@ -103,7 +103,7 @@ class SuggestedItemSchema(BaseModel):
 class AIWaiterEventResponse(BaseModel):
     """Strict Gemini output schema enforced via response_schema."""
     dialogue_text: str = Field(description="Brief warm appetizing message. Max 2 sentences.")
-    action_type: Literal["WELCOME", "ITEM_VALIDATION", "UPSELL_OFFER"] = Field(
+    action_type: Literal["WELCOME", "ITEM_VALIDATION", "UPSELL_OFFER", "ACKNOWLEDGEMENT"] = Field(
         description="Determines which UI component to trigger."
     )
     suggested_items: List[SuggestedItemSchema] = Field(
