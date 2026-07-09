@@ -69,13 +69,7 @@ export class VoiceClient {
     });
   }
 
-  public resumeContext() {
-    if (this.audioContext && this.audioContext.state === "suspended") {
-      this.audioContext.resume();
-    }
-  }
-
-  private initAudioContext() {
+  public initAudioContext() {
     try {
       if (!this.audioContext) {
         const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
@@ -91,8 +85,13 @@ export class VoiceClient {
     }
   }
 
+  public resumeContext() {
+    this.initAudioContext();
+  }
+
   private playAudio(arrayBuffer: ArrayBuffer): Promise<void> {
     return new Promise((resolve) => {
+      this.initAudioContext();
       if (!this.audioContext) return resolve();
       try {
         // Use callback version for broader browser compatibility (Safari)
