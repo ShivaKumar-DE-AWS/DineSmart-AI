@@ -96,7 +96,7 @@ class SuggestedItemSchema(BaseModel):
     """A single AI-recommended upsell item (max 2 at CHECKOUT)."""
     item_id: str
     name: str
-    price: float
+    price: float = 0.0
     reason: str = ""
 
 
