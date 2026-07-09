@@ -56,9 +56,9 @@ export default function VoiceAgentOverlay({ restaurantId }: { restaurantId: stri
 
       const handleFirstClick = () => {
         if (clientRef.current) clientRef.current.resumeContext();
-        window.removeEventListener("click", handleFirstClick);
       };
-      window.addEventListener("click", handleFirstClick);
+      window.addEventListener("click", handleFirstClick, { capture: true, once: true });
+      window.addEventListener("touchstart", handleFirstClick, { capture: true, once: true });
     };
 
     connectClient();
