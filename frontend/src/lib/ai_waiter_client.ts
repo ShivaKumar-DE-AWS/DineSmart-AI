@@ -204,7 +204,9 @@ export async function sendAIWaiterEvent(
         }
       }
 
-      showAIWelcomeModal(timeGreeting, 20000);
+      if (!payload.silent) {
+        showAIWelcomeModal(timeGreeting, 20000);
+      }
     }
 
     // 2. Optimistic Instant UI for ITEM_ADDED — Deep Dish-Aware Pairing Intelligence
@@ -509,10 +511,12 @@ export async function sendAIWaiterEvent(
         }
       }
 
-      if (suggestedAction) {
-        showAIToast(instantMsg, 5000, suggestedAction);
-      } else {
-        showAIToast(instantMsg, 3500);
+      if (instantMsg) {
+        if (suggestedAction) {
+          showAIToast(instantMsg, 5000, suggestedAction);
+        } else {
+          showAIToast(instantMsg, 3500);
+        }
       }
     }
 
@@ -590,6 +594,16 @@ export async function sendAIWaiterEvent(
 
     // Route to the correct UI handler if not silent
     if (!payload.silent) {
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("ai-ui-sync", {
+          detail: {
+            dialogue: response.dialogue_text,
+            suggested: response.suggested_items,
+            options: response.quick_replies
+          }
+        }));
+      }
+
       if (response.action_type === "WELCOME") {
         showAIWelcomeModal(response.dialogue_text, 20000);
       } else if (response.action_type === "UPSELL_OFFER") {
@@ -822,6 +836,7 @@ export function showAIToast(
   action?: { label: string; onClick: () => void }
 ): void {
   const cleanMsg = message ? message.replace(/\*\*/g, "") : "";
+  _speakAIWaiterText(cleanMsg);
   toast("✨ AI Waiter Suggestion", {
     description: cleanMsg,
     duration: durationMs,
@@ -886,6 +901,7 @@ export function showAIUpsellSheet(
   if (!overlay || !sheet || !pitch || !list || !replies || !skipBtn) return;
 
   pitch.textContent = pitchText ? _cleanText(pitchText) : "";
+  _speakAIWaiterText(_buildSpokenUpsellText(pitchText, items));
 
   // Build upsell cards in clean horizontal sentence structure with full-width horizontal addition button below
   list.innerHTML = items
@@ -978,6 +994,7 @@ export function showAIWelcomeModal(message: string, autoDismissMs = 20000): void
   if (!welcome || !text || !btn) return;
 
   text.textContent = _cleanText(message);
+  _speakAIWaiterText(message);
   welcome.classList.remove("hidden");
 
   const close = () => welcome.classList.add("hidden");
@@ -1006,4 +1023,20 @@ function _esc(str: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
+}
+
+function _speakAIWaiterText(text: string): void {
+  if (typeof window === "undefined") return;
+  const clean = (text || "").replace(/\*\*/g, "").replace(/\*/g, "").trim();
+  if (!clean) return;
+  window.dispatchEvent(new CustomEvent("ai-voice-speak", {
+    detail: { text: clean }
+  }));
+}
+
+function _buildSpokenUpsellText(pitchText: string, items: AISuggestedItem[]): string {
+  const cleanPitch = (pitchText || "").replace(/\*\*/g, "").replace(/\*/g, "").trim();
+  if (!items.length) return cleanPitch;
+  const itemNames = items.slice(0, 2).map((item) => `${item.name} for ₹${item.price.toFixed(0)}`);
+  return [cleanPitch, `I can also suggest ${itemNames.join(" and ")}.`].filter(Boolean).join(" ");
 }
