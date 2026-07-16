@@ -204,7 +204,14 @@ export async function sendAIWaiterEvent(
         }
       }
 
-      showAIWelcomeModal(timeGreeting, 20000);
+      if (!payload.silent) {
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("ai-speak", {
+            detail: { text: timeGreeting }
+          }));
+        }
+        showAIWelcomeModal(timeGreeting, 20000);
+      }
     }
 
     // 2. Optimistic Instant UI for ITEM_ADDED — Deep Dish-Aware Pairing Intelligence
@@ -590,6 +597,21 @@ export async function sendAIWaiterEvent(
 
     // Route to the correct UI handler if not silent
     if (!payload.silent) {
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("ai-ui-sync", {
+          detail: {
+            dialogue: response.dialogue_text,
+            suggested: response.suggested_items,
+            options: response.quick_replies
+          }
+        }));
+        if (response.dialogue_text) {
+          window.dispatchEvent(new CustomEvent("ai-speak", {
+            detail: { text: response.dialogue_text }
+          }));
+        }
+      }
+
       if (response.action_type === "WELCOME") {
         showAIWelcomeModal(response.dialogue_text, 20000);
       } else if (response.action_type === "UPSELL_OFFER") {
