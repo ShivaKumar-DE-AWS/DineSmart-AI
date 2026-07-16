@@ -200,6 +200,11 @@ async def login(req: LoginReq):
 
     restaurant_id = user.get("restaurant_id")
     restaurant_slug = user.get("restaurant_slug")
+    
+    if restaurant_id and not restaurant_slug:
+        rest = await db.restaurants.find_one({"id": restaurant_id}, {"slug": 1})
+        if rest and rest.get("slug"):
+            restaurant_slug = rest["slug"]
 
     # Superadmins are platform-level users — no restaurant_id needed
     if user.get("role") == "superadmin":
