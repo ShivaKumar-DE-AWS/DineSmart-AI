@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { useRestaurantConfig } from "@/hooks/useRestaurantConfig";
 import { useSession } from "@/stores/session";
 import { getOrCreateAnonID } from "@/lib/notify";
+import VoiceAgentOverlay from "@/components/VoiceAgentOverlay";
 
 const STAFF_CALL_REASONS = [
   { id: "Water / Refill", label: "Water / Refill", icon: "💧", desc: "Drinking water or ice" },
@@ -372,6 +373,11 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
       </header>
 
       <main id="customer-content">{children}</main>
+
+      {/* Voice AI Waiter */}
+      {restaurantConfig && (
+        <VoiceAgentOverlay restaurantId={restaurantConfig.id} />
+      )}
 
       {activeOrders.length > 0 && !path.includes("/track") && !path.includes("/checkout") && (
         <Link 
