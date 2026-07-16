@@ -5,12 +5,17 @@ export function middleware(request: NextRequest) {
   const url = request.nextUrl;
   const hostname = request.headers.get("host") || "";
 
-  // Determine the subdomain based on the environment
-  // We handle both local dev (e.g., mehfil.localhost:3000) and production
-  const currentHost =
-    process.env.NODE_ENV === "production"
-      ? hostname.replace(`.smartdineai.co.in`, "")
-      : hostname.replace(`.localhost:3000`, "");
+  let currentHost = hostname;
+  if (hostname.includes(".smartdineai.co.in")) {
+    currentHost = hostname.replace(".smartdineai.co.in", "");
+  } else if (hostname.includes(".localhost:3000")) {
+    currentHost = hostname.replace(".localhost:3000", "");
+  } else if (hostname.includes(".vercel.app")) {
+    const parts = hostname.split(".");
+    if (parts.length >= 4) {
+      currentHost = parts[0];
+    }
+  }
 
   // Handle staff routes (admin, kitchen, counter, cashier)
   const isStaffRoute = url.pathname.startsWith('/admin') || url.pathname.startsWith('/kitchen') || url.pathname.startsWith('/counter') || url.pathname.startsWith('/cashier');

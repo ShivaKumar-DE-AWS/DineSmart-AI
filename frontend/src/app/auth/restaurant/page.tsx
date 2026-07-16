@@ -134,14 +134,29 @@ export default function RestaurantAuthPage() {
 
       const restaurantId = res.user.restaurant_id;
       const slug = restaurantId ? slugFromRestaurantId(restaurantId) : null;
-      const dest = slug
-        ? res.user.role === "kitchen" ? `/kitchen`
-        : res.user.role === "counter" ? `/counter`
-        : res.user.role === "cashier" ? `/cashier`
-        : res.user.role === "admin" ? `/admin`
-        : `/r/${slug}`
-        : "/";
-      if (typeof window !== "undefined") window.location.href = dest;
+      let destPath = "/";
+      if (slug) {
+        destPath = res.user.role === "kitchen" ? `/kitchen`
+                 : res.user.role === "counter" ? `/counter`
+                 : res.user.role === "cashier" ? `/cashier`
+                 : res.user.role === "admin" ? `/admin`
+                 : `/r/${slug}`;
+      }
+
+      if (typeof window !== "undefined") {
+        if (slug && ["/kitchen", "/counter", "/cashier", "/admin"].includes(destPath)) {
+          let host = window.location.host;
+          if (host.startsWith("www.")) host = host.substring(4);
+          
+          if (host.startsWith(`${slug}.`)) {
+            window.location.href = destPath;
+          } else {
+            window.location.href = `${window.location.protocol}//${slug}.${host}${destPath}`;
+          }
+        } else {
+          window.location.href = destPath;
+        }
+      }
     } catch (e) {
       toast.error((e as Error).message || "Sign in failed. Please check your credentials.");
     } finally {
