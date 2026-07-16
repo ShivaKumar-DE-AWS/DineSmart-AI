@@ -75,7 +75,7 @@ export default function VoiceAgentOverlay({ restaurantId }: { restaurantId: stri
   useEffect(() => {
     const handleSpeakEvent = (e: Event) => {
       const customEvent = e as CustomEvent;
-      if (clientRef.current && isConnected && customEvent.detail?.text) {
+      if (clientRef.current && customEvent.detail?.text) {
         clientRef.current.resumeContext();
         clientRef.current.speakText(customEvent.detail.text);
       }
@@ -83,7 +83,7 @@ export default function VoiceAgentOverlay({ restaurantId }: { restaurantId: stri
 
     const handleUiSyncEvent = (e: Event) => {
       const customEvent = e as CustomEvent;
-      if (clientRef.current && isConnected && customEvent.detail) {
+      if (clientRef.current && customEvent.detail) {
         clientRef.current.syncUiState(customEvent.detail);
       }
     };
