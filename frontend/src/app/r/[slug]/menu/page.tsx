@@ -101,6 +101,17 @@ export default function MenuPage() {
     }
   }, []);
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("ai-ui-sync", {
+        detail: {
+          active_category: quickCategory,
+          view_mode: viewMode
+        }
+      }));
+    }
+  }, [quickCategory, viewMode]);
+
   // AI Waiter: fire ITEM_ADDED toast on every add-to-cart action
   const handleAddToCart = useCallback((item: MenuItem) => {
     cart.add(item);

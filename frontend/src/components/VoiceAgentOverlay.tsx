@@ -80,8 +80,20 @@ export default function VoiceAgentOverlay({ restaurantId }: { restaurantId: stri
         clientRef.current.speakText(customEvent.detail.text);
       }
     };
+
+    const handleUiSyncEvent = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (clientRef.current && isConnected && customEvent.detail) {
+        clientRef.current.syncUiState(customEvent.detail);
+      }
+    };
+
     window.addEventListener("ai-voice-speak", handleSpeakEvent);
-    return () => window.removeEventListener("ai-voice-speak", handleSpeakEvent);
+    window.addEventListener("ai-ui-sync", handleUiSyncEvent);
+    return () => {
+      window.removeEventListener("ai-voice-speak", handleSpeakEvent);
+      window.removeEventListener("ai-ui-sync", handleUiSyncEvent);
+    };
   }, [isConnected]);
 
   // Subscribe to cart changes to trigger manual events

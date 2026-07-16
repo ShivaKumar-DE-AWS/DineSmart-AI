@@ -5,6 +5,7 @@ export class VoiceClient {
   private recognition: any = null;
   private audioContext: AudioContext | null = null;
   private isRecording = false;
+  private hasGreeted = false;
   public onClose?: () => void;
 
   constructor(
@@ -32,6 +33,18 @@ export class VoiceClient {
       this.ws.onopen = () => {
         console.log("[VoiceClient] Connected to AI Voice Waiter.");
         this.initAudioContext();
+        
+        // Send the Init Payload to trigger Active Welcome (only on first connection)
+        if (!this.hasGreeted) {
+          const initPayload = {
+            type: "init",
+            language: navigator.language || "en-US",
+            device_id: this.deviceId
+          };
+          this.ws?.send(JSON.stringify(initPayload));
+          this.hasGreeted = true;
+        }
+        
         resolve();
       };
 
@@ -177,6 +190,12 @@ export class VoiceClient {
   public sendManualEvent(eventName: string) {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify({ type: "EVENT", event: eventName }));
+    }
+  }
+
+  public syncUiState(state: Record<string, any>) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ type: "ui_state", state }));
     }
   }
 

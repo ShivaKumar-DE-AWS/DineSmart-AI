@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi.responses import Response
 from typing import Dict, Any
 
 from google import genai
@@ -21,6 +22,7 @@ router = APIRouter(tags=["voice-agent"])
 
 # The System Prompt as per user instructions
 SYSTEM_PROMPT = """You are a highly experienced, Real-Time Voice AI Waiter at a premium restaurant.
+You have real-time awareness of the user's screen. If the user uses pronouns like 'this', 'that', or 'the first one', refer to the [CURRENT SCREEN STATE] to deduce the item and execute the appropriate tool.
 Rules:
 1. BREVITY: Keep all responses to STRICTLY 1 or 2 short sentences. You are speaking out loud. Do not use markdown or lists.
 2. ACTION FIRST: If the user asks for food, strictly use the update_cart tool first before responding.
@@ -81,6 +83,7 @@ async def voice_agent_endpoint(websocket: WebSocket, restaurant_id: str):
     
     is_executing_tool = False
     message_queue = asyncio.Queue()
+    session_ui_state = {}
 
     # Background task to continuously drain the ASGI websocket buffer
     async def receive_loop():
@@ -119,13 +122,20 @@ async def voice_agent_endpoint(websocket: WebSocket, restaurant_id: str):
                             await websocket.send_bytes(audio)
                     continue
                 elif data.get("type") == "USER_TEXT":
-                    user_input = data.get("text", "")
-                    if not user_input.strip():
+                    base_text = data.get("text", "")
+                    if not base_text.strip():
                         continue
+                    user_input = f"[CURRENT SCREEN STATE: {json.dumps(session_ui_state)}]\n\nUser Speech: \"{base_text}\""
                 elif data.get("type") == "EVENT":
-                    # This happens when the user clicks 'Add to Cart' manually on the UI
                     event_data = data.get("event")
-                    user_input = f"[SYSTEM EVENT: User manually interacted with UI: {event_data}. Respond and suggest pairings.]"
+                    user_input = f"[CURRENT SCREEN STATE: {json.dumps(session_ui_state)}]\n\n[SYSTEM EVENT: User manually interacted with UI: {event_data}. Respond and suggest pairings.]"
+                elif data.get("type") == "ui_state":
+                    # Replace wholesale to keep a clean, bounded snapshot
+                    session_ui_state = data.get("state", {})
+                    continue
+                elif data.get("type") == "init":
+                    lang = data.get("language", "en-IN")
+                    user_input = f"[EVENT: NEW_SESSION] [TARGET_LANGUAGE: {lang}] [CONTEXT: Returning customer]. Generate a warm, humanoid welcome message introducing yourself as the digital waiter. [CURRENT SCREEN STATE: {json.dumps(session_ui_state)}]"
 
             if not user_input:
                 continue
@@ -226,69 +236,69 @@ async def voice_agent_endpoint(websocket: WebSocket, restaurant_id: str):
                     response.raise_for_status()
                     response_data = response.json()
     
-                # Handle potential tool calls
-                while True:
-                    candidates = response_data.get("candidates", [])
-                    if not candidates:
-                        break
+                    # Handle potential tool calls (loop stays inside async with)
+                    while True:
+                        candidates = response_data.get("candidates", [])
+                        if not candidates:
+                            break
+                            
+                        first_candidate = candidates[0]
+                        parts = first_candidate.get("content", {}).get("parts", [])
                         
-                    first_candidate = candidates[0]
-                    parts = first_candidate.get("content", {}).get("parts", [])
-                    
-                    function_calls = [p["functionCall"] for p in parts if "functionCall" in p]
-                    
-                    if not function_calls:
-                        break
+                        function_calls = [p["functionCall"] for p in parts if "functionCall" in p]
                         
-                    is_executing_tool = True
-                    payload["contents"].append(first_candidate["content"])
-                    
-                    tool_responses_parts = []
-                    for func_call in function_calls:
-                        tool_name = func_call["name"]
-                        args = func_call.get("args", {})
-                        logger.info(f"[VoiceAgent-Gemini] Tool Call: {tool_name} with {args}")
+                        if not function_calls:
+                            break
+                            
+                        is_executing_tool = True
+                        payload["contents"].append(first_candidate["content"])
                         
-                        matching_tools = [k for k in VOICE_TOOLS_SCHEMA if k["name"] == tool_name]
-                        if matching_tools:
-                            properties = matching_tools[0].get("parameters", {}).get("properties", {})
-                            if "device_id" in properties:
-                                 args["device_id"] = device_id
-                            if "restaurant_id" in properties:
-                                 args["restaurant_id"] = restaurant_id
+                        tool_responses_parts = []
+                        for func_call in function_calls:
+                            tool_name = func_call["name"]
+                            args = func_call.get("args", {})
+                            logger.info(f"[VoiceAgent-Gemini] Tool Call: {tool_name} with {args}")
+                            
+                            matching_tools = [k for k in VOICE_TOOLS_SCHEMA if k["name"] == tool_name]
+                            if matching_tools:
+                                properties = matching_tools[0].get("parameters", {}).get("properties", {})
+                                if "device_id" in properties:
+                                     args["device_id"] = device_id
+                                if "restaurant_id" in properties:
+                                     args["restaurant_id"] = restaurant_id
+                            
+                            result = await execute_tool(tool_name, args)
+                            
+                            try:
+                                parsed_res = json.loads(result)
+                                if isinstance(parsed_res, dict) and parsed_res.get("type") == "ACTION":
+                                    await websocket.send_text(result)
+                            except json.JSONDecodeError:
+                                pass
+                            
+                            tool_responses_parts.append({
+                                "functionResponse": {
+                                    "name": tool_name,
+                                    "response": {"result": result}
+                                }
+                            })
                         
-                        result = await execute_tool(tool_name, args)
-                        
-                        try:
-                            parsed_res = json.loads(result)
-                            if isinstance(parsed_res, dict) and parsed_res.get("type") == "ACTION":
-                                await websocket.send_text(result)
-                        except json.JSONDecodeError:
-                            pass
-                        
-                        tool_responses_parts.append({
-                            "functionResponse": {
-                                "name": tool_name,
-                                "response": {"result": result}
-                            }
+                        payload["contents"].append({
+                            "role": "function",
+                            "parts": tool_responses_parts
                         })
-                    
-                    payload["contents"].append({
-                        "role": "function",
-                        "parts": tool_responses_parts
-                    })
-                    
-                    is_executing_tool = False
-                    response = await http_client.post(api_url, json=payload, timeout=15.0)
-                    response.raise_for_status()
-                    response_data = response.json()
+                        
+                        is_executing_tool = False
+                        response = await http_client.post(api_url, json=payload, timeout=15.0)
+                        response.raise_for_status()
+                        response_data = response.json()
     
-                candidates = response_data.get("candidates", [])
-                if candidates:
-                    parts = candidates[0].get("content", {}).get("parts", [])
-                    for p in parts:
-                        if "text" in p:
-                            final_text += p["text"]
+                    candidates = response_data.get("candidates", [])
+                    if candidates:
+                        parts = candidates[0].get("content", {}).get("parts", [])
+                        for p in parts:
+                            if "text" in p:
+                                final_text += p["text"]
                         
             if final_text:
                 logger.info(f"[VoiceAgent] AI Response: {final_text}")
