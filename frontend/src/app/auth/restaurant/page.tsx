@@ -148,7 +148,7 @@ export default function RestaurantAuthPage() {
           let host = window.location.host;
           if (host.startsWith("www.")) host = host.substring(4);
           
-          if (host.startsWith(`${slug}.`)) {
+          if (host.startsWith(`${slug}.`) || host.includes(".vercel.app")) {
             window.location.href = destPath;
           } else {
             window.location.href = `${window.location.protocol}//${slug}.${host}${destPath}`;
