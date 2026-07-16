@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { VoiceClient } from "@/lib/voice_client";
 import { useCart } from "@/stores/cart";
+import { useMenuStore } from "@/stores/menu";
 import { getOrCreateAnonID } from "@/lib/notify";
 
 export default function VoiceAgentOverlay({ restaurantId }: { restaurantId: string }) {
@@ -27,16 +28,43 @@ export default function VoiceAgentOverlay({ restaurantId }: { restaurantId: stri
           setTimeout(() => setIsSpeaking(false), 3000);
         },
         (actionData) => {
-          if (actionData.action === "ADD" && actionData.item_id) {
-            const addedItem = { id: actionData.item_id, name: "Voice Item", price: 0 } as any;
+          if (!actionData.item_id) return;
+
+          if (actionData.action === "REMOVE") {
+            useCart.getState().remove(actionData.item_id);
+            return;
+          }
+
+          if (actionData.action === "ADD") {
+            const menuStore = useMenuStore.getState();
+            const addedItem = menuStore.findItem(actionData.item_id);
+
+            if (!addedItem) {
+              setTranscript("I could not find that item on this menu.");
+              import("sonner").then(({ toast }) => {
+                toast.error("Voice waiter could not find that menu item.");
+              });
+              return;
+            }
+
             useCart.getState().add(addedItem, actionData.qty || 1);
+
+            if (actionData.notes) {
+              useCart.getState().setNote(addedItem.id, actionData.notes);
+            }
             
             import("@/lib/ai_waiter_client").then(({ sendAIWaiterEvent }) => {
               sendAIWaiterEvent({
                 event_type: "ITEM_ADDED",
                 restaurant_id: restaurantId,
                 cart_state: useCart.getState().items,
-                added_item: addedItem
+                added_item: {
+                  item_id: addedItem.id,
+                  name: addedItem.name,
+                  price: addedItem.price,
+                  qty: actionData.qty || 1,
+                  category: addedItem.category
+                }
               });
             });
           }

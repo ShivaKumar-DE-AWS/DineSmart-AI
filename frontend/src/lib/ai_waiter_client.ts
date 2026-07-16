@@ -205,11 +205,6 @@ export async function sendAIWaiterEvent(
       }
 
       if (!payload.silent) {
-        if (typeof window !== "undefined") {
-          window.dispatchEvent(new CustomEvent("ai-voice-speak", {
-            detail: { text: timeGreeting }
-          }));
-        }
         showAIWelcomeModal(timeGreeting, 20000);
       }
     }
@@ -517,11 +512,6 @@ export async function sendAIWaiterEvent(
       }
 
       if (instantMsg) {
-        if (typeof window !== "undefined") {
-          window.dispatchEvent(new CustomEvent("ai-voice-speak", {
-            detail: { text: instantMsg }
-          }));
-        }
         if (suggestedAction) {
           showAIToast(instantMsg, 5000, suggestedAction);
         } else {
@@ -612,11 +602,6 @@ export async function sendAIWaiterEvent(
             options: response.quick_replies
           }
         }));
-        if (response.dialogue_text) {
-          window.dispatchEvent(new CustomEvent("ai-voice-speak", {
-            detail: { text: response.dialogue_text }
-          }));
-        }
       }
 
       if (response.action_type === "WELCOME") {
@@ -851,6 +836,7 @@ export function showAIToast(
   action?: { label: string; onClick: () => void }
 ): void {
   const cleanMsg = message ? message.replace(/\*\*/g, "") : "";
+  _speakAIWaiterText(cleanMsg);
   toast("✨ AI Waiter Suggestion", {
     description: cleanMsg,
     duration: durationMs,
@@ -915,6 +901,7 @@ export function showAIUpsellSheet(
   if (!overlay || !sheet || !pitch || !list || !replies || !skipBtn) return;
 
   pitch.textContent = pitchText ? _cleanText(pitchText) : "";
+  _speakAIWaiterText(_buildSpokenUpsellText(pitchText, items));
 
   // Build upsell cards in clean horizontal sentence structure with full-width horizontal addition button below
   list.innerHTML = items
@@ -1007,6 +994,7 @@ export function showAIWelcomeModal(message: string, autoDismissMs = 20000): void
   if (!welcome || !text || !btn) return;
 
   text.textContent = _cleanText(message);
+  _speakAIWaiterText(message);
   welcome.classList.remove("hidden");
 
   const close = () => welcome.classList.add("hidden");
@@ -1035,4 +1023,20 @@ function _esc(str: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
+}
+
+function _speakAIWaiterText(text: string): void {
+  if (typeof window === "undefined") return;
+  const clean = (text || "").replace(/\*\*/g, "").replace(/\*/g, "").trim();
+  if (!clean) return;
+  window.dispatchEvent(new CustomEvent("ai-voice-speak", {
+    detail: { text: clean }
+  }));
+}
+
+function _buildSpokenUpsellText(pitchText: string, items: AISuggestedItem[]): string {
+  const cleanPitch = (pitchText || "").replace(/\*\*/g, "").replace(/\*/g, "").trim();
+  if (!items.length) return cleanPitch;
+  const itemNames = items.slice(0, 2).map((item) => `${item.name} for ₹${item.price.toFixed(0)}`);
+  return [cleanPitch, `I can also suggest ${itemNames.join(" and ")}.`].filter(Boolean).join(" ");
 }

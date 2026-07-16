@@ -30,19 +30,27 @@ Rules:
 4. If a tool fails, politely inform the user.
 5. You must never invent items. Use get_live_menu to see what is available.
 6. SILENT TOOL EXECUTIONS: When you successfully execute `update_cart`, do NOT generate any conversational text in your response. The system will automatically speak a confirmation and upsell to the user. Be completely silent.
+7. LANGUAGE MIRRORING: If the guest speaks Hindi, Telugu, Tamil, Urdu, Marathi, English, Hinglish, or any other language, reply in that same language or mixed style. If unsure, use the latest [TARGET_LANGUAGE].
 """
 
 async def generate_tts_audio(text: str) -> bytes:
     """Synthesize speech from text using Edge TTS with Google TTS fallback."""
+    def detect_voice_and_google_lang(value: str) -> tuple[str, str]:
+        if any("\u0900" <= char <= "\u097f" for char in value):
+            # Devanagari covers Hindi/Marathi. Swara gives a natural Indian voice for both.
+            return "hi-IN-SwaraNeural", "hi-in"
+        if any("\u0c00" <= char <= "\u0c7f" for char in value):
+            return "te-IN-ShrutiNeural", "te-in"
+        if any("\u0b80" <= char <= "\u0bff" for char in value):
+            return "ta-IN-PallaviNeural", "ta-in"
+        if any("\u0600" <= char <= "\u06ff" for char in value):
+            return "ur-IN-SalmanNeural", "ur-in"
+        return "en-IN-NeerjaNeural", "en-in"
+
     try:
         import edge_tts
         import asyncio
-        # Basic heuristic to detect language for Voice selection
-        voice = "en-IN-NeerjaNeural"
-        if any(char in text for char in ["ह", "क", "म", "न", "स", "त"]):
-            voice = "hi-IN-SwaraNeural"
-        elif any(char in text for char in ["న", "మ", "స", "క", "ర", "ప", "చ"]):
-            voice = "te-IN-ShrutiNeural"
+        voice, _ = detect_voice_and_google_lang(text)
             
         communicate = edge_tts.Communicate(text, voice)
         audio_data = bytearray()
@@ -65,8 +73,7 @@ async def generate_tts_audio(text: str) -> bytes:
     try:
         import httpx
         import urllib.parse
-        # Default to hi-in if hindi characters, otherwise en-in
-        tl = "hi-in" if any(char in text for char in ["ह", "क", "म", "न", "स", "त"]) else "en-in"
+        _, tl = detect_voice_and_google_lang(text)
         url = f"https://translate.google.com/translate_tts?ie=UTF-8&q={urllib.parse.quote(text)}&tl={tl}&client=tw-ob"
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
@@ -117,6 +124,7 @@ async def voice_agent_endpoint(websocket: WebSocket, restaurant_id: str):
     is_executing_tool = False
     message_queue = asyncio.Queue()
     session_ui_state = {}
+    target_language = "auto"
 
     # Background task to continuously drain the ASGI websocket buffer
     async def receive_loop():
@@ -160,17 +168,17 @@ async def voice_agent_endpoint(websocket: WebSocket, restaurant_id: str):
                     base_text = data.get("text", "")
                     if not base_text.strip():
                         continue
-                    user_input = f"[CURRENT SCREEN STATE: {json.dumps(session_ui_state)}]\n\nUser Speech: \"{base_text}\""
+                    user_input = f"[TARGET_LANGUAGE: {target_language}] [LANGUAGE_MODE: mirror the guest]\n[CURRENT SCREEN STATE: {json.dumps(session_ui_state)}]\n\nUser Speech: \"{base_text}\""
                 elif data.get("type") == "EVENT":
                     event_data = data.get("event")
-                    user_input = f"[CURRENT SCREEN STATE: {json.dumps(session_ui_state)}]\n\n[SYSTEM EVENT: User manually interacted with UI: {event_data}. Respond and suggest pairings.]"
+                    user_input = f"[TARGET_LANGUAGE: {target_language}] [LANGUAGE_MODE: mirror the guest]\n[CURRENT SCREEN STATE: {json.dumps(session_ui_state)}]\n\n[SYSTEM EVENT: User manually interacted with UI: {event_data}. Respond and suggest pairings.]"
                 elif data.get("type") == "ui_state":
                     # Replace wholesale to keep a clean, bounded snapshot
                     session_ui_state = data.get("state", {})
                     continue
                 elif data.get("type") == "init":
-                    lang = data.get("language", "en-IN")
-                    user_input = f"[EVENT: NEW_SESSION] [TARGET_LANGUAGE: {lang}] [CONTEXT: Returning customer]. Generate a warm, humanoid welcome message introducing yourself as the digital waiter. [CURRENT SCREEN STATE: {json.dumps(session_ui_state)}]"
+                    target_language = data.get("language", "auto")
+                    user_input = f"[EVENT: NEW_SESSION] [TARGET_LANGUAGE: {target_language}] [LANGUAGE_MODE: mirror the guest] [CONTEXT: Returning customer]. Generate a warm, humanoid welcome message introducing yourself as the digital waiter. [CURRENT SCREEN STATE: {json.dumps(session_ui_state)}]"
 
             if not user_input and msg["type"] == "audio":
                 audio_bytes = msg["data"]
@@ -192,7 +200,7 @@ async def voice_agent_endpoint(websocket: WebSocket, restaurant_id: str):
                             logger.info(f"[VoiceAgent-Whisper] Transcribed: {transcribed_text}")
                             # Send transcribed text back to UI for visual feedback
                             await websocket.send_text(json.dumps({"type": "TEXT", "content": f"You: {transcribed_text}"}))
-                            user_input = f"[CURRENT SCREEN STATE: {json.dumps(session_ui_state)}]\n\nUser Speech: \"{transcribed_text}\""
+                            user_input = f"[TARGET_LANGUAGE: {target_language}] [LANGUAGE_MODE: mirror the guest]\n[CURRENT SCREEN STATE: {json.dumps(session_ui_state)}]\n\nUser Speech: \"{transcribed_text}\""
                 except Exception as e:
                     logger.error(f"[VoiceAgent-Whisper] Error transcribing audio: {e}")
                     

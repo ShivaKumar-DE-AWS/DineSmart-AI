@@ -34,6 +34,8 @@ export class VoiceClient {
       this.ws.onopen = () => {
         console.log("[VoiceClient] Connected to AI Voice Waiter.");
         this.initAudioContext();
+        const language = typeof navigator !== "undefined" && navigator.language ? navigator.language : "auto";
+        this.ws?.send(JSON.stringify({ type: "init", language }));
         resolve();
       };
 

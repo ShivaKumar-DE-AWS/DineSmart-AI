@@ -4,10 +4,13 @@ import json
 import base64
 
 async def test_voice_agent():
-    uri = "ws://localhost:8000/ws/voice-agent/test_rest?device_id=test_dev"
+    uri = "ws://localhost:8000/api/ws/voice-agent/test_rest?device_id=test_dev"
     try:
         async with websockets.connect(uri) as websocket:
             print("Connected to WebSocket.")
+
+            await websocket.send(json.dumps({"type": "init", "language": "en-IN"}))
+            print("Sent init event.")
             
             # 1. Listen for Welcome Text
             resp1 = await websocket.recv()
