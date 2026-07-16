@@ -33,9 +33,10 @@ Rules:
 """
 
 async def generate_tts_audio(text: str) -> bytes:
-    """Synthesize speech from text using Edge TTS."""
+    """Synthesize speech from text using Edge TTS with Google TTS fallback."""
     try:
         import edge_tts
+        import asyncio
         # Basic heuristic to detect language for Voice selection
         voice = "en-IN-NeerjaNeural"
         if any(char in text for char in ["ह", "क", "म", "न", "स", "त"]):
@@ -45,13 +46,38 @@ async def generate_tts_audio(text: str) -> bytes:
             
         communicate = edge_tts.Communicate(text, voice)
         audio_data = bytearray()
-        async for chunk in communicate.stream():
-            if chunk["type"] == "audio":
-                audio_data.extend(chunk["data"])
-        return bytes(audio_data)
+        
+        # Add timeout to edge_tts stream to prevent hanging on Render/Vercel
+        async def fetch_edge():
+            async for chunk in communicate.stream():
+                if chunk["type"] == "audio":
+                    audio_data.extend(chunk["data"])
+                    
+        await asyncio.wait_for(fetch_edge(), timeout=4.0)
+        
+        if len(audio_data) > 0:
+            return bytes(audio_data)
+            
     except Exception as e:
-        logger.error(f"[TTS] Error generating Edge TTS: {e}")
-        return b""
+        logger.error(f"[TTS] Edge TTS failed or timed out: {e}. Falling back to Google TTS.")
+        
+    # Google TTS Fallback
+    try:
+        import httpx
+        import urllib.parse
+        # Default to hi-in if hindi characters, otherwise en-in
+        tl = "hi-in" if any(char in text for char in ["ह", "क", "म", "न", "स", "त"]) else "en-in"
+        url = f"https://translate.google.com/translate_tts?ie=UTF-8&q={urllib.parse.quote(text)}&tl={tl}&client=tw-ob"
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, timeout=5.0)
+            if response.status_code == 200:
+                return response.content
+            else:
+                logger.error(f"[TTS] Google TTS fallback failed with status {response.status_code}")
+    except Exception as fallback_err:
+        logger.error(f"[TTS] Google TTS fallback exception: {fallback_err}")
+        
+    return b""
 
 async def execute_tool(tool_name: str, args: Dict[str, Any]) -> str:
     """Dynamically routes tool calls to python functions."""
