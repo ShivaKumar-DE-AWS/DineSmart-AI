@@ -6,7 +6,6 @@ export class VoiceClient {
   private audioChunks: Blob[] = [];
   private audioContext: AudioContext | null = null;
   private isRecording = false;
-  private hasGreeted = false;
   public onClose?: () => void;
 
   constructor(
@@ -93,30 +92,30 @@ export class VoiceClient {
     this.initAudioContext();
   }
 
-  private playAudio(arrayBuffer: ArrayBuffer): Promise<void> {
+  private playAudio(arrayBuffer: ArrayBuffer): Promise<boolean> {
     return new Promise((resolve) => {
       this.initAudioContext();
-      if (!this.audioContext) return resolve();
+      if (!this.audioContext || this.audioContext.state !== "running") return resolve(false);
       try {
         // Use callback version for broader browser compatibility (Safari)
         this.audioContext.decodeAudioData(
           arrayBuffer,
           (audioBuffer) => {
-            if (!this.audioContext) return resolve();
+            if (!this.audioContext) return resolve(false);
             const source = this.audioContext.createBufferSource();
             source.buffer = audioBuffer;
             source.connect(this.audioContext.destination);
-            source.onended = () => resolve();
+            source.onended = () => resolve(true);
             source.start(0);
           },
           (error) => {
             console.error("[VoiceClient] Audio decoding failed:", error);
-            resolve();
+            resolve(false);
           }
         );
       } catch (e) {
         console.error("[VoiceClient] Error playing audio:", e);
-        resolve();
+        resolve(false);
       }
     });
   }
@@ -188,9 +187,23 @@ export class VoiceClient {
       if (!response.ok) throw new Error("TTS request failed");
       
       const arrayBuffer = await response.arrayBuffer();
-      await this.playAudio(arrayBuffer);
+      const played = await this.playAudio(arrayBuffer);
+      if (!played) this.speakWithBrowser(text);
     } catch (e) {
       console.error("[VoiceClient] Audio play failed:", e);
+      this.speakWithBrowser(text);
+    }
+  }
+
+  private speakWithBrowser(text: string) {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    try {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = navigator.language || "en-IN";
+      window.speechSynthesis.speak(utterance);
+    } catch (e) {
+      console.error("[VoiceClient] Browser speech fallback failed:", e);
     }
   }
 
