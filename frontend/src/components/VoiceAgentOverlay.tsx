@@ -11,11 +11,21 @@ export default function VoiceAgentOverlay({ restaurantId }: { restaurantId: stri
   const [transcript, setTranscript] = useState("");
   const [isSpeaking, setIsSpeaking] = useState(false);
   const clientRef = useRef<VoiceClient | null>(null);
+  const pendingSpeechRef = useRef<string[]>([]);
+  const hasUserGestureRef = useRef(false);
+  const isConnectedRef = useRef(false);
 
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
     let reconnectTimer: any;
+
+    const flushPendingSpeech = () => {
+      const client = clientRef.current;
+      if (!client || !hasUserGestureRef.current) return;
+      const pending = pendingSpeechRef.current.splice(0);
+      pending.forEach((text) => client.speakText(text));
+    };
 
     const connectClient = () => {
       const deviceId = getOrCreateAnonID();
@@ -72,18 +82,25 @@ export default function VoiceAgentOverlay({ restaurantId }: { restaurantId: stri
       );
 
       client.onClose = () => {
+        isConnectedRef.current = false;
         setIsConnected(false);
         reconnectTimer = setTimeout(connectClient, 3000);
       };
 
-      client.connect().then(() => setIsConnected(true)).catch((e) => {
+      client.connect().then(() => {
+        isConnectedRef.current = true;
+        setIsConnected(true);
+        setTimeout(flushPendingSpeech, 0);
+      }).catch((e) => {
         console.error(e);
         reconnectTimer = setTimeout(connectClient, 5000);
       });
       clientRef.current = client;
 
       const handleFirstClick = () => {
+        hasUserGestureRef.current = true;
         if (clientRef.current) clientRef.current.resumeContext();
+        flushPendingSpeech();
       };
       window.addEventListener("click", handleFirstClick, { capture: true, once: true });
       window.addEventListener("touchstart", handleFirstClick, { capture: true, once: true });
@@ -93,6 +110,7 @@ export default function VoiceAgentOverlay({ restaurantId }: { restaurantId: stri
 
     return () => {
       clearTimeout(reconnectTimer);
+      isConnectedRef.current = false;
       if (clientRef.current) {
         clientRef.current.onClose = undefined; // prevent reconnect loop
         clientRef.current.disconnect();
@@ -103,9 +121,15 @@ export default function VoiceAgentOverlay({ restaurantId }: { restaurantId: stri
   useEffect(() => {
     const handleSpeakEvent = (e: Event) => {
       const customEvent = e as CustomEvent;
-      if (clientRef.current && customEvent.detail?.text) {
+      if (customEvent.detail?.text) {
+        const cleanText = String(customEvent.detail.text).trim();
+        if (!cleanText) return;
+        pendingSpeechRef.current.push(cleanText);
+      }
+      if (clientRef.current && hasUserGestureRef.current) {
         clientRef.current.resumeContext();
-        clientRef.current.speakText(customEvent.detail.text);
+        const pending = pendingSpeechRef.current.splice(0);
+        pending.forEach((text) => clientRef.current?.speakText(text));
       }
     };
 
