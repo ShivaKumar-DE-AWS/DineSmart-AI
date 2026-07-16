@@ -2,7 +2,8 @@
 
 export class VoiceClient {
   private ws: WebSocket | null = null;
-  private recognition: any = null;
+  private mediaRecorder: MediaRecorder | null = null;
+  private audioChunks: Blob[] = [];
   private audioContext: AudioContext | null = null;
   private isRecording = false;
   private hasGreeted = false;
@@ -125,56 +126,44 @@ export class VoiceClient {
     }
 
     try {
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      if (!SpeechRecognition) {
-        console.error("[VoiceClient] Speech Recognition API not supported in this browser.");
-        import("sonner").then(({ toast }) => toast.error("Speech Recognition is not supported in your browser."));
-        return;
-      }
-      
-      this.recognition = new SpeechRecognition();
-      this.recognition.continuous = false;
-      this.recognition.interimResults = false;
-      // 'en-IN' is excellent for capturing Indian English, and often successfully transcribes Hindi words in English script.
-      this.recognition.lang = "en-IN"; 
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      this.mediaRecorder = new MediaRecorder(stream);
+      this.audioChunks = [];
 
-      this.recognition.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        console.log("[VoiceClient] Transcribed locally:", transcript);
-        if (transcript) {
-          if (this.onTranscript) this.onTranscript("You: " + transcript);
-          if (this.ws?.readyState === WebSocket.OPEN) {
-            this.ws.send(JSON.stringify({ type: "USER_TEXT", text: transcript }));
-          }
+      this.mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          this.audioChunks.push(event.data);
         }
       };
 
-      this.recognition.onerror = (event: any) => {
-        console.error("[VoiceClient] Speech recognition error:", event.error);
-      };
-
-      this.recognition.onend = () => {
+      this.mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(this.audioChunks, { type: "audio/webm" });
+        if (this.ws?.readyState === WebSocket.OPEN) {
+          // Send audio blob directly as binary
+          this.ws.send(audioBlob);
+        }
+        // Stop all tracks to release microphone
+        stream.getTracks().forEach((track) => track.stop());
         this.isRecording = false;
-        console.log("[VoiceClient] Recording stopped automatically.");
+        console.log("[VoiceClient] MediaRecorder stopped and audio sent.");
       };
 
-      this.recognition.start();
+      this.mediaRecorder.start();
       this.isRecording = true;
-      console.log("[VoiceClient] Web Speech Recognition started...");
+      console.log("[VoiceClient] MediaRecorder started...");
     } catch (err) {
-      console.error("[VoiceClient] Microphone access denied or STT error:", err);
+      console.error("[VoiceClient] Microphone access denied or MediaRecorder error:", err);
+      import("sonner").then(({ toast }) => toast.error("Microphone access denied. Please allow microphone access."));
     }
   }
 
   public stopRecording() {
-    if (this.recognition && this.isRecording) {
+    if (this.mediaRecorder && this.isRecording) {
       try {
-        this.recognition.stop();
+        this.mediaRecorder.stop();
       } catch (e) {
         // ignore
       }
-      this.isRecording = false;
-      console.log("[VoiceClient] Web Speech Recognition stopped manually.");
     }
   }
 

@@ -118,6 +118,8 @@ async def voice_agent_endpoint(websocket: WebSocket, restaurant_id: str):
                 msg = await websocket.receive()
                 if "text" in msg:
                     await message_queue.put({"type": "text", "data": msg["text"]})
+                elif "bytes" in msg:
+                    await message_queue.put({"type": "audio", "data": msg["bytes"]})
         except WebSocketDisconnect:
             pass
         except Exception as e:
@@ -163,6 +165,30 @@ async def voice_agent_endpoint(websocket: WebSocket, restaurant_id: str):
                     lang = data.get("language", "en-IN")
                     user_input = f"[EVENT: NEW_SESSION] [TARGET_LANGUAGE: {lang}] [CONTEXT: Returning customer]. Generate a warm, humanoid welcome message introducing yourself as the digital waiter. [CURRENT SCREEN STATE: {json.dumps(session_ui_state)}]"
 
+            if not user_input and msg["type"] == "audio":
+                audio_bytes = msg["data"]
+                try:
+                    from deps import GROQ_API_KEY
+                    from groq import AsyncGroq
+                    import tempfile
+                    import os
+                    
+                    if GROQ_API_KEY:
+                        groq_client = AsyncGroq(api_key=GROQ_API_KEY)
+                        # Groq Whisper accepts webm/mp4
+                        response = await groq_client.audio.transcriptions.create(
+                            file=("audio.webm", audio_bytes),
+                            model="whisper-large-v3",
+                        )
+                        transcribed_text = response.text
+                        if transcribed_text and transcribed_text.strip():
+                            logger.info(f"[VoiceAgent-Whisper] Transcribed: {transcribed_text}")
+                            # Send transcribed text back to UI for visual feedback
+                            await websocket.send_text(json.dumps({"type": "TEXT", "content": f"You: {transcribed_text}"}))
+                            user_input = f"[CURRENT SCREEN STATE: {json.dumps(session_ui_state)}]\n\nUser Speech: \"{transcribed_text}\""
+                except Exception as e:
+                    logger.error(f"[VoiceAgent-Whisper] Error transcribing audio: {e}")
+                    
             if not user_input:
                 continue
 
