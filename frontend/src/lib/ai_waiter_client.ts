@@ -836,10 +836,11 @@ export function showAIToast(
   action?: { label: string; onClick: () => void }
 ): void {
   const cleanMsg = message ? message.replace(/\*\*/g, "") : "";
+  const readableDurationMs = Math.max(durationMs, Math.min(12000, cleanMsg.length * 70 + 3000));
   _speakAIWaiterText(cleanMsg);
   toast("✨ AI Waiter Suggestion", {
     description: cleanMsg,
-    duration: durationMs,
+    duration: readableDurationMs,
     closeButton: true,
     action: action ? {
       label: action.label.replace(/\*\*/g, ""),

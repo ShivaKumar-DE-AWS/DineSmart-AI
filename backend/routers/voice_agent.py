@@ -31,6 +31,7 @@ Rules:
 5. You must never invent items. Use get_live_menu to see what is available.
 6. SILENT TOOL EXECUTIONS: When you successfully execute `update_cart`, do NOT generate any conversational text in your response. The system will automatically speak a confirmation and upsell to the user. Be completely silent.
 7. LANGUAGE MIRRORING: If the guest speaks Hindi, Telugu, Tamil, Urdu, Marathi, English, Hinglish, or any other language, reply in that same language or mixed style. If unsure, use the latest [TARGET_LANGUAGE].
+8. HUMANOID WAITER STYLE: Sound like a calm, warm restaurant waiter. Use natural phrasing, small courtesies, and contractions where appropriate. Avoid robotic phrases like "request processed" or "action completed".
 """
 
 async def generate_tts_audio(text: str) -> bytes:
@@ -185,9 +186,6 @@ async def voice_agent_endpoint(websocket: WebSocket, restaurant_id: str):
                 try:
                     from deps import GROQ_API_KEY
                     from groq import AsyncGroq
-                    import tempfile
-                    import os
-                    
                     if GROQ_API_KEY:
                         groq_client = AsyncGroq(api_key=GROQ_API_KEY)
                         # Groq Whisper accepts webm/mp4
@@ -201,8 +199,11 @@ async def voice_agent_endpoint(websocket: WebSocket, restaurant_id: str):
                             # Send transcribed text back to UI for visual feedback
                             await websocket.send_text(json.dumps({"type": "TEXT", "content": f"You: {transcribed_text}"}))
                             user_input = f"[TARGET_LANGUAGE: {target_language}] [LANGUAGE_MODE: mirror the guest]\n[CURRENT SCREEN STATE: {json.dumps(session_ui_state)}]\n\nUser Speech: \"{transcribed_text}\""
+                    else:
+                        await websocket.send_text(json.dumps({"type": "TEXT", "content": "I’m sorry, voice recognition is not configured yet."}))
                 except Exception as e:
                     logger.error(f"[VoiceAgent-Whisper] Error transcribing audio: {e}")
+                    await websocket.send_text(json.dumps({"type": "TEXT", "content": "I’m sorry, I couldn’t hear that clearly. Please try again."}))
                     
             if not user_input:
                 continue
@@ -373,10 +374,8 @@ async def voice_agent_endpoint(websocket: WebSocket, restaurant_id: str):
                 # Send text response back to UI for captioning
                 await websocket.send_text(json.dumps({"type": "TEXT", "content": final_text}))
                 
-                # Synthesize and send audio
-                audio_response = await generate_tts_audio(final_text)
-                if audio_response:
-                    await websocket.send_bytes(audio_response)
+                # Browser speech starts immediately from the TEXT message. Server-side
+                # audio can be slow on cold starts, so avoid blocking live conversation.
 
     except Exception as e:
         logger.error(f"[VoiceAgent] Error: {e}")

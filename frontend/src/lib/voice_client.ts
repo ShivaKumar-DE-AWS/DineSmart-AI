@@ -6,6 +6,7 @@ export class VoiceClient {
   private audioChunks: Blob[] = [];
   private audioContext: AudioContext | null = null;
   private isRecording = false;
+  private skipNextServerAudio = false;
   public onClose?: () => void;
 
   constructor(
@@ -45,6 +46,10 @@ export class VoiceClient {
             const data = JSON.parse(event.data);
             if (data.type === "TEXT" && this.onTranscript) {
               this.onTranscript(data.content);
+              if (typeof data.content === "string" && !data.content.startsWith("You:")) {
+                this.speakWithBrowser(data.content);
+                this.skipNextServerAudio = true;
+              }
             } else if (data.type === "ACTION" && this.onAction) {
               // The backend tool triggered an action (e.g., ADD to cart)
               this.onAction(data);
@@ -53,6 +58,10 @@ export class VoiceClient {
             console.error("[VoiceClient] Failed to parse JSON:", e);
           }
         } else if (event.data instanceof Blob || event.data instanceof ArrayBuffer) {
+          if (this.skipNextServerAudio) {
+            this.skipNextServerAudio = false;
+            return;
+          }
           // Binary audio payload (TTS from backend)
           const arrayBuffer = event.data instanceof Blob ? await event.data.arrayBuffer() : event.data;
           await this.playAudio(arrayBuffer);
@@ -201,10 +210,25 @@ export class VoiceClient {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = navigator.language || "en-IN";
+      utterance.rate = 0.92;
+      utterance.pitch = 1.04;
+      utterance.voice = this.pickBrowserVoice(utterance.lang);
       window.speechSynthesis.speak(utterance);
     } catch (e) {
       console.error("[VoiceClient] Browser speech fallback failed:", e);
     }
+  }
+
+  private pickBrowserVoice(language: string): SpeechSynthesisVoice | null {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return null;
+    const voices = window.speechSynthesis.getVoices();
+    if (!voices.length) return null;
+    const lang = language.toLowerCase();
+    const preferred = voices.find((voice) => voice.lang.toLowerCase() === lang);
+    if (preferred) return preferred;
+    const indianEnglish = voices.find((voice) => voice.lang.toLowerCase() === "en-in");
+    if (indianEnglish) return indianEnglish;
+    return voices.find((voice) => voice.lang.toLowerCase().startsWith(lang.split("-")[0])) || voices[0] || null;
   }
 
   public disconnect() {

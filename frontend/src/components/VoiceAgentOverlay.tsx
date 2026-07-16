@@ -42,6 +42,9 @@ export default function VoiceAgentOverlay({ restaurantId }: { restaurantId: stri
 
           if (actionData.action === "REMOVE") {
             useCart.getState().remove(actionData.item_id);
+            window.dispatchEvent(new CustomEvent("ai-voice-speak", {
+              detail: { text: "Of course, I’ve removed that from your order." }
+            }));
             return;
           }
 
@@ -62,6 +65,10 @@ export default function VoiceAgentOverlay({ restaurantId }: { restaurantId: stri
             if (actionData.notes) {
               useCart.getState().setNote(addedItem.id, actionData.notes);
             }
+
+            window.dispatchEvent(new CustomEvent("ai-voice-speak", {
+              detail: { text: `Certainly, I’ve added ${actionData.qty || 1} ${addedItem.name} to your order.` }
+            }));
             
             import("@/lib/ai_waiter_client").then(({ sendAIWaiterEvent }) => {
               sendAIWaiterEvent({
