@@ -182,8 +182,6 @@ export class VoiceClient {
   public async speakText(text: string) {
     if (!text) return;
     try {
-      if (this.onTranscript) this.onTranscript(text);
-      
       const response = await fetch(`/api/tts?text=${encodeURIComponent(text)}`);
       if (!response.ok) throw new Error("TTS request failed");
       
