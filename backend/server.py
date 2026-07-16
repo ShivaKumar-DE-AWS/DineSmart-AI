@@ -276,7 +276,6 @@ ALLOWED_ORIGINS = os.environ.get("ALLOWED_ORIGINS", "https://dine-smart-ai.verce
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
-    allow_origin_regex=r"^https?://(.*\.smartdineai\.co\.in|dine-smart-ai.*\.vercel\.app)(:\d+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -309,7 +308,6 @@ from routers.campaigns import router as campaigns_router
 from routers.pricing import router as pricing_router
 from routers.otp import router as otp_router
 from routers.ai_waiter_event import router as ai_waiter_router
-from routers.voice_agent import router as voice_agent_router
 from routers.cashier import router as cashier_router
 
 app.include_router(auth_router)
@@ -332,7 +330,6 @@ app.include_router(campaigns_router)
 app.include_router(pricing_router)
 app.include_router(otp_router)
 app.include_router(ai_waiter_router)
-app.include_router(voice_agent_router)
 app.include_router(cashier_router)
 
 
@@ -630,7 +627,7 @@ if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     host = os.environ.get("HOST", "0.0.0.0")
     
-    print(f"\n>>> Starting SmartDine AI Server")
+    print(f"\n🚀 Starting SmartDine AI Server")
     print(f"   Host: {host}")
     print(f"   Port: {port}")
     print(f"   Environment: {os.environ.get('ENV', 'development')}")

@@ -14,10 +14,7 @@ const nextConfig = {
   typescript: { ignoreBuildErrors: false },
   async rewrites() {
     // Attempt to use NEXT_PUBLIC_BACKEND_URL, fallback to REACT_APP_BACKEND_URL
-    let backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.REACT_APP_BACKEND_URL || "https://api.smartdineai.co.in";
-    if (backendUrl && !backendUrl.startsWith("http") && !backendUrl.startsWith("/")) {
-      backendUrl = "https://" + backendUrl;
-    }
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.REACT_APP_BACKEND_URL || "https://api.smartdineai.co.in";
     return [
       {
         source: "/api/:path*",

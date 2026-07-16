@@ -515,16 +515,8 @@ export async function sendAIWaiterEvent(
       }
     }
 
-    // Strategy 2: Smart Frontend Debouncing & Rate Limiting (Prevent spamming the user on every add)
+    // Strategy 2: Smart Frontend Debouncing (1.5s delay for ITEM_ADDED network calls)
     if (payload.event_type === "ITEM_ADDED") {
-      // Rate limit: Only allow one AI upsell sheet every 45 seconds to avoid annoyance
-      const now = Date.now();
-      const lastUpsell = useAIWaiterStore.getState().lastUpsellTime || 0;
-      if (now - lastUpsell < 45000) {
-        return Promise.resolve(null);
-      }
-      useAIWaiterStore.getState().setLastUpsellTime?.(now);
-
       return new Promise<AIWaiterEventResponse | null>((resolve) => {
         if (_itemAddedDebounceTimer) {
           clearTimeout(_itemAddedDebounceTimer);
@@ -562,16 +554,8 @@ export async function sendAIWaiterEvent(
             });
             if (response) {
               if (response.next_state) useAIWaiterStore.getState().updateSessionState(response.next_state);
-              
-              if (typeof window !== "undefined" && response.dialogue_text) {
-                window.dispatchEvent(new CustomEvent("ai-voice-speak", { detail: { text: response.dialogue_text } }));
-              }
-              
               if (response.action_type === "UPSELL_OFFER" && (response.suggested_items.length > 0 || response.quick_replies?.length)) {
                 showAIUpsellSheet(response.dialogue_text, response.suggested_items, response.quick_replies || [], addToCartFn, proceedPayFn);
-              } else if (response.dialogue_text) {
-                // For acknowledgements or other types without an upsell sheet, just show a toast
-                import("sonner").then(({ toast }) => toast(response.dialogue_text));
               }
             }
             if (_pendingItemAddedResolve) _pendingItemAddedResolve(response);
@@ -604,18 +588,11 @@ export async function sendAIWaiterEvent(
     }
 
     // Route to the correct UI handler if not silent
-    if (!payload.silent && response?.dialogue_text) {
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new CustomEvent("ai-voice-speak", { detail: { text: response.dialogue_text } }));
-      }
-      
+    if (!payload.silent) {
       if (response.action_type === "WELCOME") {
         showAIWelcomeModal(response.dialogue_text, 20000);
-      } else if (response.action_type === "UPSELL_OFFER" && (response.suggested_items?.length || response.quick_replies?.length)) {
+      } else if (response.action_type === "UPSELL_OFFER") {
         showAIUpsellSheet(response.dialogue_text, response.suggested_items, response.quick_replies || [], addToCartFn, proceedPayFn);
-      } else {
-        // Fallback for ACKNOWLEDGEMENT and other action types
-        import("sonner").then(({ toast }) => toast(response.dialogue_text));
       }
     }
 

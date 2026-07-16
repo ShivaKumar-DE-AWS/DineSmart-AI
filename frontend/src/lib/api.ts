@@ -73,8 +73,8 @@ export async function api<T = any>(path: string, init: RequestInit = {}): Promis
           useSession.getState().clear();
           if (typeof window !== "undefined") {
             const hostname = window.location.hostname;
-            const isSubdomain = hostname !== "smartdineai.co.in" && hostname !== "www.smartdineai.co.in" && hostname !== "localhost" && hostname !== "127.0.0.1" && !hostname.includes("vercel.app");
-            window.location.href = isSubdomain ? "/login" : "/auth/restaurant";
+            const isSubdomain = hostname !== "smartdineai.co.in" && hostname !== "www.smartdineai.co.in" && hostname !== "localhost" && hostname !== "127.0.0.1";
+            window.location.href = isSubdomain ? "/login" : "/auth/login";
           }
         }
         

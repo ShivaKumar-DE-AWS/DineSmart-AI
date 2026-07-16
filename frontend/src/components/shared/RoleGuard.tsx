@@ -33,7 +33,7 @@ export function RoleGuard({ allow, children }: { allow: Role[]; children: React.
           }
         } catch {}
       }
-      const isSubdomain = typeof window !== "undefined" && window.location.hostname !== "smartdineai.co.in" && window.location.hostname !== "www.smartdineai.co.in" && window.location.hostname !== "localhost" && !window.location.hostname.includes("vercel.app");
+      const isSubdomain = typeof window !== "undefined" && window.location.hostname !== "smartdineai.co.in" && window.location.hostname !== "www.smartdineai.co.in" && window.location.hostname !== "localhost";
       const loginUrl = isSubdomain ? "/login" : "/auth/restaurant";
       router.replace(`${loginUrl}?next=${encodeURIComponent(path || "/")}`);
     } else if (!allow.includes(user.role)) {

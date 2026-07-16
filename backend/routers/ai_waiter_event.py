@@ -96,14 +96,14 @@ class SuggestedItemSchema(BaseModel):
     """A single AI-recommended upsell item (max 2 at CHECKOUT)."""
     item_id: str
     name: str
-    price: float = 0.0
+    price: float
     reason: str = ""
 
 
 class AIWaiterEventResponse(BaseModel):
     """Strict Gemini output schema enforced via response_schema."""
     dialogue_text: str = Field(description="Brief warm appetizing message. Max 2 sentences.")
-    action_type: Literal["WELCOME", "ITEM_VALIDATION", "UPSELL_OFFER", "ACKNOWLEDGEMENT"] = Field(
+    action_type: Literal["WELCOME", "ITEM_VALIDATION", "UPSELL_OFFER"] = Field(
         description="Determines which UI component to trigger."
     )
     suggested_items: List[SuggestedItemSchema] = Field(
@@ -170,17 +170,16 @@ def _build_prompt(
     if session_state is None:
         session_state = {}
         
-    import random
-    sampled_menu = random.sample(menu_snapshot, min(len(menu_snapshot), 40)) if menu_snapshot else []
-    
     menu_json = json.dumps(
         [
             {
                 "id":       item.get("id", ""),
                 "name":     item.get("name", ""),
+                "price":    item.get("price", 0),
                 "category": item.get("category", ""),
+                "tags":     item.get("tags", []),
             }
-            for item in sampled_menu
+            for item in menu_snapshot
         ],
         ensure_ascii=False,
         separators=(",", ":"),
@@ -212,7 +211,6 @@ You must guide the customer through a logical meal sequence: Welcome -> Preferen
 5. Provide contextual `quick_replies` to let the customer guide you (e.g., "Skip to Main Course", "Show Rice options").
 
 # EVENT BEHAVIOR RULES
-- **EVENT BEHAVIOR RULES**
 - **LANGUAGE LOCK:** `dialogue_text` must be in {user_language}.
 - **STRICT MENU CONSTRAINT:** NEVER fabricate dishes. Only recommend from [MENU_METADATA].
 - Update `next_state` with the new conversation stage and any learned preferences.
@@ -235,10 +233,10 @@ INSTRUCTIONS:
         return f"""{base}
 EVENT: Customer added "{added_name}" (Category: {added_cat}) to cart.
 INSTRUCTIONS:
-1. action_type = "ACKNOWLEDGEMENT"
-2. dialogue_text: Briefly compliment the choice in one short sentence. Do NOT offer upsells here to avoid annoying the user.
-3. suggested_items: []
-4. quick_replies: []
+1. action_type = "UPSELL_OFFER"
+2. dialogue_text: Compliment the choice. Then smoothly suggest the logical NEXT course or pairing. E.g., if they added a curry, suggest breads. If they added a main, suggest dessert/drinks.
+3. suggested_items: Pick max 2 items from the menu that perfectly pair with the cart or represent the next logical course. NEVER suggest items already in the cart.
+4. quick_replies: Generate 3-4 options for the user (e.g., "Add [Suggested Bread]", "Show Desserts", "Skip to Checkout").
 5. next_state: Update 'stage' to the next logical step."""
 
     if event_type == "CHECKOUT" or event_type == "QUICK_REPLY_CLICKED":
@@ -259,54 +257,87 @@ INSTRUCTIONS:
 # Step 3: Gemini SDK Call
 # =========================================================
 
-async def _call_llm_engine(prompt: str, event_type: str = "WELCOME", fav_item: str = "", menu_snapshot: Optional[List[dict]] = None) -> AIWaiterEventResponse:
-    """Call the LLM abstraction (Groq -> Gemini) and return structured response."""
-    from llm_client import generate_structured_json
-    
+async def _call_gemini(prompt: str, event_type: str = "WELCOME", fav_item: str = "", menu_snapshot: Optional[List[dict]] = None) -> AIWaiterEventResponse:
+    """Call Gemini with automatic model switching and graceful fallback on exhaustion."""
+    if not GEMINI_API_KEY:
+        logger.warning("[AI Waiter] GEMINI_API_KEY not set. Returning graceful fallback.")
+        return _fallback_response(event_type, fav_item, menu_snapshot)
+
     try:
-        parsed = await generate_structured_json(
-            prompt=prompt,
-            schema_cls=AIWaiterEventResponse,
-            system_prompt="",
-            model_preference="llama-3.3-70b-versatile"
+        from google import genai
+        from google.genai import types as genai_types
+
+        client_ai = genai.Client(api_key=GEMINI_API_KEY)
+        models_to_try = get_gemini_models(client_ai)
+
+        config = genai_types.GenerateContentConfig(
+            temperature=0.2,
+            max_output_tokens=256,
+            response_mime_type="application/json",
+            response_schema=AIWaiterEventResponse,
         )
-        if parsed:
-            parsed.suggested_items = parsed.suggested_items[:2]
-            return parsed
-            
-        logger.error("[AI Waiter] LLM generation returned None. Using fallback response.")
-        return _fallback_response(event_type, fav_item, menu_snapshot, "LLM returned None")
+
+        for model_name in models_to_try:
+            try:
+                response = await asyncio.wait_for(
+                    asyncio.to_thread(
+                        client_ai.models.generate_content,
+                        model=model_name,
+                        contents=prompt,
+                        config=config,
+                    ),
+                    timeout=4.5,  # Strategy 3: 4.5s Circuit Breaker timeout
+                )
+
+                raw = (getattr(response, "text", None) or "").strip()
+
+                # Defensive markdown fence strip
+                if raw.startswith("```json"):
+                    raw = raw[7:]
+                if raw.startswith("```"):
+                    raw = raw[3:]
+                if raw.endswith("```"):
+                    raw = raw[:-3]
+                raw = raw.strip()
+
+                parsed = AIWaiterEventResponse.model_validate_json(raw)
+                parsed.suggested_items = parsed.suggested_items[:2]
+                return parsed
+            except Exception as model_exc:
+                logger.warning("[AI Waiter] Model %s failed (%s), trying next model...", model_name, model_exc)
+                continue
+
+        logger.error("[AI Waiter] All Gemini models failed or exhausted. Using fallback response.")
+        return _fallback_response(event_type, fav_item, menu_snapshot)
+
     except Exception as exc:
-        logger.error("[AI Waiter] Unexpected error calling LLM: %s. Using fallback response.", exc)
-        return _fallback_response(event_type, fav_item, menu_snapshot, str(exc))
+        logger.error("[AI Waiter] Unexpected error calling Gemini: %s. Using fallback response.", exc)
+        return _fallback_response(event_type, fav_item, menu_snapshot)
 
 
-def _fallback_response(event_type: str, fav_item: str, menu_snapshot: Optional[List[dict]], error_msg: str = "") -> AIWaiterEventResponse:
-    """Safe static fallback to prevent 500 crashes if LLM is exhausted or times out."""
-    logger.warning(f"[AI Waiter] Using fallback response for {event_type} (Error: {error_msg})")
-    
+def _fallback_response(event_type: str, fav_item: str = "", menu_snapshot: Optional[List[dict]] = None) -> AIWaiterEventResponse:
+    """Return a polite, non-blocking fallback response if models fail or time out."""
     if event_type == "QR_SCAN":
         msg = f"Welcome back! Would you like to start with your usual {fav_item}? We are delighted to host you today." if fav_item else "Welcome! We are delighted to host you today. Please explore our curated menu and let us know if we can craft anything special for your table."
-        if error_msg: msg += f" [DEBUG: {error_msg}]"
         return AIWaiterEventResponse(
             dialogue_text=msg,
             action_type="WELCOME",
             suggested_items=[],
         )
     elif event_type == "ITEM_ADDED":
-        msg = "Excellent choice! I've added that to your tray. Please let me know if you'd like to add anything else."
-        if error_msg: msg += f" [DEBUG: {error_msg}]"
+        # Strategy 3: Circuit Breaker silent fallback during ITEM_ADDED -> empty dialogue_text
         return AIWaiterEventResponse(
-            dialogue_text=msg,
+            dialogue_text="",
             action_type="ITEM_VALIDATION",
             suggested_items=[],
         )
     else:
+        # Strategy 3: Circuit Breaker fallback during CHECKOUT -> return real menu items from snapshot
         fallback_sugs = []
         if menu_snapshot:
             for item in menu_snapshot:
                 if item.get("available", True) is not False:
-                    fallback_sugs.append(SuggestedItemSchema(
+                    fallback_sugs.append(AISuggestedItem(
                         item_id=str(item.get("id", "")),
                         name=str(item.get("name", "")),
                         price=float(item.get("price", 0.0)),
@@ -314,10 +345,8 @@ def _fallback_response(event_type: str, fav_item: str, menu_snapshot: Optional[L
                     ))
                 if len(fallback_sugs) >= 2:
                     break
-        msg = "To complete your feast, our Chef recommends these signature pairings from our menu:"
-        if error_msg: msg += f" [DEBUG: {error_msg}]"
         return AIWaiterEventResponse(
-            dialogue_text=msg,
+            dialogue_text="To complete your feast, our Chef recommends these signature pairings from our menu:",
             action_type="UPSELL_OFFER",
             suggested_items=fallback_sugs,
         )
@@ -395,7 +424,7 @@ async def ai_waiter_event(req: AIWaiterEventRequest):
         event_data=req.event_data,
     )
 
-    ai_response = await _call_llm_engine(prompt, req.event_type, fav_item, menu_snapshot)
+    ai_response = await _call_gemini(prompt, req.event_type, fav_item, menu_snapshot)
 
     # Step 4: Strict Menu Validation - strip out any suggestion not in menu_snapshot
     if ai_response and ai_response.suggested_items and menu_snapshot:
