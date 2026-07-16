@@ -190,15 +190,9 @@ export class VoiceClient {
   public async speakText(text: string) {
     if (!text) return;
     try {
-      let backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
-      if (backendUrl && !backendUrl.startsWith("http") && !backendUrl.startsWith("/")) {
-        backendUrl = "https://" + backendUrl;
-      }
-      const baseHost = backendUrl ? backendUrl.replace(/\/$/, "") : "";
-      
       if (this.onTranscript) this.onTranscript(text);
       
-      const response = await fetch(`${baseHost}/api/tts?text=${encodeURIComponent(text)}`);
+      const response = await fetch(`/api/tts?text=${encodeURIComponent(text)}`);
       if (!response.ok) throw new Error("TTS request failed");
       
       const arrayBuffer = await response.arrayBuffer();
