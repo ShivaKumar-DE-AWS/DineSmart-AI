@@ -53,7 +53,7 @@ async def generate_tts_audio(text: str) -> bytes:
                 if chunk["type"] == "audio":
                     audio_data.extend(chunk["data"])
                     
-        await asyncio.wait_for(fetch_edge(), timeout=4.0)
+        await asyncio.wait_for(fetch_edge(), timeout=15.0)
         
         if len(audio_data) > 0:
             return bytes(audio_data)
@@ -61,17 +61,24 @@ async def generate_tts_audio(text: str) -> bytes:
     except Exception as e:
         logger.error(f"[TTS] Edge TTS failed or timed out: {e}. Falling back to Google TTS.")
         
-    # Google TTS Fallback
+        # Google TTS Fallback
     try:
         import httpx
         import urllib.parse
         # Default to hi-in if hindi characters, otherwise en-in
         tl = "hi-in" if any(char in text for char in ["ह", "क", "म", "न", "स", "त"]) else "en-in"
         url = f"https://translate.google.com/translate_tts?ie=UTF-8&q={urllib.parse.quote(text)}&tl={tl}&client=tw-ob"
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        }
         async with httpx.AsyncClient() as client:
-            response = await client.get(url, timeout=5.0)
+            response = await client.get(url, headers=headers, timeout=10.0)
             if response.status_code == 200:
-                return response.content
+                # Basic check to avoid HTML CAPTCHA pages (MP3 starts with ID3 or FFF)
+                if response.content.startswith(b"ID3") or response.content.startswith(b"\xff"):
+                    return response.content
+                else:
+                    logger.error(f"[TTS] Google TTS returned non-audio content")
             else:
                 logger.error(f"[TTS] Google TTS fallback failed with status {response.status_code}")
     except Exception as fallback_err:
