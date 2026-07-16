@@ -141,8 +141,11 @@ export class VoiceClient {
       this.recognition.onresult = (event: any) => {
         const transcript = event.results[0][0].transcript;
         console.log("[VoiceClient] Transcribed locally:", transcript);
-        if (transcript && this.ws?.readyState === WebSocket.OPEN) {
-          this.ws.send(JSON.stringify({ type: "USER_TEXT", text: transcript }));
+        if (transcript) {
+          if (this.onTranscript) this.onTranscript("You: " + transcript);
+          if (this.ws?.readyState === WebSocket.OPEN) {
+            this.ws.send(JSON.stringify({ type: "USER_TEXT", text: transcript }));
+          }
         }
       };
 
