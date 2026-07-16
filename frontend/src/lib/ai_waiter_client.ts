@@ -832,11 +832,11 @@ let _toastTimer: ReturnType<typeof setTimeout> | null = null;
  */
 export function showAIToast(
   message: string,
-  durationMs = 4000,
+  durationMs = 8000,
   action?: { label: string; onClick: () => void }
 ): void {
   const cleanMsg = message ? message.replace(/\*\*/g, "") : "";
-  const readableDurationMs = Math.max(durationMs, Math.min(12000, cleanMsg.length * 70 + 3000));
+  const readableDurationMs = Math.max(durationMs, Math.min(20000, cleanMsg.length * 80 + 4000));
   _speakAIWaiterText(cleanMsg);
   toast("✨ AI Waiter Suggestion", {
     description: cleanMsg,
