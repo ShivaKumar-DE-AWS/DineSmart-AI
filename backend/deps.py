@@ -34,7 +34,6 @@ load_dotenv(ROOT_DIR / ".env")
 MONGO_URL = os.environ.get("MONGO_URL") or os.environ.get("MONGODB_URI") or "mongodb://localhost:27017/dinesmart_test"
 DB_NAME = os.environ.get("DB_NAME") or os.environ.get("MONGODB_DB_NAME") or "smartdine"
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 JWT_SECRET = os.environ.get("JWT_SECRET", "")
 if not JWT_SECRET:
     env = os.environ.get("ENVIRONMENT", "development").lower()

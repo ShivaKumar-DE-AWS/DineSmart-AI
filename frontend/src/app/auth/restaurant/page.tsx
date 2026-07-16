@@ -133,39 +133,14 @@ export default function RestaurantAuthPage() {
       }
 
       const restaurantId = res.user.restaurant_id;
-      const slug = (res.user as any).restaurant_slug || (restaurantId ? slugFromRestaurantId(restaurantId) : null);
-      
-      let dest = "/";
-      if (slug) {
-        const path = res.user.role === "kitchen" ? `/kitchen`
-          : res.user.role === "counter" ? `/counter`
-          : res.user.role === "cashier" ? `/cashier`
-          : res.user.role === "admin" ? `/admin`
-          : `/r/${slug}`;
-        
-        // Construct the full URL for the subdomain
-        if (typeof window !== "undefined") {
-          const currentHost = window.location.host;
-          // Support Vercel Preview Environments where subdomains aren't possible
-          if (currentHost.includes("vercel.app")) {
-            if (path.startsWith("/r/")) {
-              dest = path;
-            } else {
-              dest = path; // Native routing on Vercel preview for staff routes
-            }
-          } else {
-            // Determine base domain (remove www., handle localhost)
-            const baseDomain = currentHost.includes("localhost") ? "localhost:3000" : "smartdineai.co.in";
-            const protocol = currentHost.includes("localhost") ? "http://" : "https://";
-            
-            if (path.startsWith("/r/")) {
-               dest = `${protocol}${slug}.${baseDomain}`;
-            } else {
-               dest = `${protocol}${slug}.${baseDomain}${path}`;
-            }
-          }
-        }
-      }
+      const slug = restaurantId ? slugFromRestaurantId(restaurantId) : null;
+      const dest = slug
+        ? res.user.role === "kitchen" ? `/kitchen`
+        : res.user.role === "counter" ? `/counter`
+        : res.user.role === "cashier" ? `/cashier`
+        : res.user.role === "admin" ? `/admin`
+        : `/r/${slug}`
+        : "/";
       if (typeof window !== "undefined") window.location.href = dest;
     } catch (e) {
       toast.error((e as Error).message || "Sign in failed. Please check your credentials.");
@@ -475,8 +450,8 @@ export default function RestaurantAuthPage() {
                     <div className="text-emerald-400 font-semibold text-sm">Trial Activated Successfully!</div>
                     <div>
                       <span className="text-stone">Your URL:</span>{" "}
-                      <a href={typeof window !== "undefined" ? (window.location.hostname.includes("vercel.app") ? "/admin" : `${window.location.protocol}//${result.slug}.${window.location.hostname.includes("localhost") ? "localhost:3000" : "smartdineai.co.in"}/admin`) : result.url} className="text-electric-blue hover:underline font-bold">
-                        {typeof window !== "undefined" ? (window.location.hostname.includes("vercel.app") ? `${window.location.hostname}/admin` : `${window.location.protocol}//${result.slug}.${window.location.hostname.includes("localhost") ? "localhost:3000" : "smartdineai.co.in"}/admin`) : result.url}
+                      <a href={result.url.startsWith("http") ? result.url : (typeof window !== "undefined" && window.location.hostname.includes(".") && !window.location.hostname.includes("localhost") ? `${window.location.protocol}//${result.slug || result.url.replace("/r/", "").replace(/^\//, "").split("/")[0]}.${window.location.hostname.replace(/^(www\.|[^.]+\.)/, "")}${window.location.port ? ":" + window.location.port : ""}/admin` : result.url)} className="text-electric-blue hover:underline font-bold">
+                        {result.url.startsWith("http") ? result.url : (typeof window !== "undefined" && window.location.hostname.includes(".") && !window.location.hostname.includes("localhost") ? `${window.location.protocol}//${result.slug || result.url.replace("/r/", "").replace(/^\//, "").split("/")[0]}.${window.location.hostname.replace(/^(www\.|[^.]+\.)/, "")}${window.location.port ? ":" + window.location.port : ""}/admin` : result.url)}
                       </a>
                     </div>
                     <div className="space-y-1.5">
