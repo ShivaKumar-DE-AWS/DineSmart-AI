@@ -5,10 +5,9 @@ import { api } from "@/lib/api";
 import { useTable } from "@/stores/table";
 import { useSession } from "@/stores/session";
 import { useRestaurantConfig } from "@/hooks/useRestaurantConfig";
-import { generateFunAlias } from "@/types";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Clock, X, Sparkles, ArrowRight, RefreshCw, Utensils, User } from "lucide-react";
+import { MapPin, Clock, X, Sparkles, ArrowRight, RefreshCw, Utensils, User, LogOut } from "lucide-react";
 import { MehfilLogo } from "@/components/customer/MehfilLogo";
 import { sendAIWaiterEvent } from "@/lib/ai_waiter_client";
 
@@ -44,18 +43,16 @@ export function TableSessionGuard({ slug }: { slug?: string }) {
     return id;
   });
 
-  // Alias state — persisted per device+restaurant (no PII)
-  const aliasKey = `sd-alias-${typeof window !== "undefined" ? window.location.host : ""}-${slugFromPath}`;
-  const [alias, setAlias] = useState(() => {
-    if (typeof window === "undefined") return generateFunAlias();
-    const stored = localStorage.getItem(aliasKey);
-    if (stored) try { return JSON.parse(stored); } catch {}
-    const fresh = generateFunAlias();
-    localStorage.setItem(aliasKey, JSON.stringify(fresh));
-    return fresh;
+  // Name state — persisted per device (no PII, just a display name)
+  const [customerName, setCustomerName] = useState(() => {
+    if (typeof window === "undefined") return "";
+    return localStorage.getItem("sd-customer-name") || "";
   });
-  const [customAlias, setCustomAlias] = useState("");
-  const [useCustom, setUseCustom] = useState(false);
+  const [isReturning, setIsReturning] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return !!localStorage.getItem("sd-customer-name");
+  });
+  
   const [isTakeawayQr, setIsTakeawayQr] = useState(false);
   const restaurantName = restaurantConfig?.name || slugFromPath.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || "Restaurant";
 
@@ -72,26 +69,20 @@ export function TableSessionGuard({ slug }: { slug?: string }) {
     }
   }, [search]);
 
-  // Regenerate alias
-  const regenerateAlias = useCallback(() => {
-    const fresh = generateFunAlias();
-    setAlias(fresh);
-    setUseCustom(false);
-    setCustomAlias("");
-    localStorage.setItem(aliasKey, JSON.stringify(fresh));
-  }, [aliasKey]);
-
-  // Get display name
-  const getDisplayName = useCallback(() => {
-    if (useCustom && customAlias.trim()) return customAlias.trim();
-    return `${alias.prefix}${alias.suffix}-${deviceId.slice(0, 4)}`;
-  }, [alias, useCustom, customAlias, deviceId]);
-
-  // Join table or takeaway with alias
+  // Join table or takeaway with name
   const handleJoin = async () => {
     if (!qrToken) return;
     
-    const displayName = getDisplayName();
+    if (!customerName.trim() || customerName.trim().length < 2) {
+      toast.error("Please enter a valid name to continue.");
+      return;
+    }
+    
+    const displayName = customerName.trim();
+    if (typeof window !== "undefined") {
+      localStorage.setItem("sd-customer-name", displayName);
+    }
+    
     setScanning(true);
     try {
       // Step 1: Create guest JWT session if not already authenticated or if name differs
@@ -248,86 +239,68 @@ export function TableSessionGuard({ slug }: { slug?: string }) {
               <div className="mehfil-card rounded-2xl p-6 relative overflow-hidden shadow-xl">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-brand-secondary/5 rounded-full blur-2xl pointer-events-none -mr-10 -mt-10" />
                 
-                {/* Alias section heading */}
+                {/* Identity section heading */}
                 <div className="mehfil-divider mb-5">
                   <span className="font-royal tracking-[0.3em] text-[10px] uppercase">Your Dining Identity</span>
                 </div>
 
-                <p className="font-editorial italic text-sm text-[#1A1106]/70 text-center mb-6 leading-relaxed">
-                  No personal data needed! Pick a fun alias or start instantly.
-                </p>
-
-                {/* Fun Alias Display */}
-                <div className="bg-gradient-to-br from-[#F3EBD8] to-[#FAF5EC] rounded-xl p-5 border border-brand-secondary/20 mb-5">
-                  <div className="text-center">
-                    <div className="text-xs font-royal tracking-[0.2em] uppercase text-[#8A6A1B] mb-2">Your Alias</div>
-                    <AnimatePresence mode="wait">
-                      <motion.div
-                        key={useCustom ? "custom" : `${alias.prefix}${alias.suffix}`}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="font-royal text-2xl md:text-3xl text-brand-primary tracking-wide"
-                      >
-                        {useCustom ? (customAlias || "Your Alias") : `${alias.prefix}${alias.suffix}`}
-                      </motion.div>
-                    </AnimatePresence>
-
-                    {!useCustom && (
-                      <button
-                        onClick={regenerateAlias}
-                        className="mt-3 inline-flex items-center gap-1.5 text-xs font-royal tracking-wider uppercase text-brand-secondary hover:text-brand-primary transition-colors"
-                      >
-                        <RefreshCw className="h-3 w-3" />
-                        Shuffle
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Custom Alias Toggle */}
-                <div className="mb-5">
-                  <button
-                    onClick={() => setUseCustom(!useCustom)}
-                    className="w-full flex items-center justify-between px-4 py-3 rounded-lg border border-[#E7DFCB] hover:border-brand-secondary/50 transition-colors"
-                  >
-                    <span className="flex items-center gap-2 text-sm font-royal text-[#1A1106]">
-                      <User className="h-4 w-4 text-brand-primary" />
-                      {useCustom ? "Use random alias instead" : "Pick my own alias"}
-                    </span>
-                    <div className={`w-10 h-5 rounded-full transition-colors ${useCustom ? "bg-brand-primary" : "bg-[#E7DFCB]"}`}>
-                      <div className={`h-4 w-4 rounded-full bg-white shadow transition-transform mt-0.5 ${useCustom ? "translate-x-5" : "translate-x-0.5"}`} />
-                    </div>
-                  </button>
-                </div>
-
-                {/* Custom Alias Input */}
-                <AnimatePresence>
-                  {useCustom && (
+                <AnimatePresence mode="wait">
+                  {isReturning ? (
                     <motion.div
+                      key="returning"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="text-center mb-6"
+                    >
+                      <h3 className="font-royal text-2xl md:text-3xl text-brand-primary mb-2">
+                        Welcome back, <br/>
+                        <span className="text-[#8A6A1B]">{customerName}</span>!
+                      </h3>
+                      <p className="font-editorial italic text-sm text-[#1A1106]/70 leading-relaxed">
+                        Ready for another delicious meal?
+                      </p>
+                      <button
+                        onClick={() => {
+                          setIsReturning(false);
+                          setCustomerName("");
+                          if (typeof window !== "undefined") {
+                            localStorage.removeItem("sd-customer-name");
+                          }
+                        }}
+                        className="mt-4 inline-flex items-center gap-1.5 text-[10px] font-royal tracking-wider uppercase text-brand-secondary hover:text-brand-primary transition-colors"
+                      >
+                        <LogOut className="h-3 w-3" />
+                        Not {customerName}? Switch User
+                      </button>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="new"
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: "auto" }}
                       exit={{ opacity: 0, height: 0 }}
-                      className="mb-5 overflow-hidden"
+                      className="mb-5"
                     >
+                      <p className="font-editorial italic text-sm text-[#1A1106]/70 text-center mb-6 leading-relaxed">
+                        Please enter your name to start ordering.
+                      </p>
+                      
                       <label className="block">
-                        <span className="font-royal tracking-wider uppercase text-[10px] text-[#8A6A1B]">Your custom alias</span>
-                        <div className="mt-1.5 flex items-center bg-white border border-brand-secondary/30 rounded-full px-4">
-                          <Sparkles className="h-4 w-4 text-brand-primary" />
+                        <span className="font-royal tracking-wider uppercase text-[10px] text-[#8A6A1B]">Your Name</span>
+                        <div className="mt-1.5 flex items-center bg-white border border-brand-secondary/30 rounded-xl px-4 focus-within:border-brand-primary focus-within:ring-1 focus-within:ring-brand-primary transition-all">
+                          <User className="h-4 w-4 text-brand-primary/50" />
                           <input
-                            value={customAlias}
-                            onChange={(e) => setCustomAlias(e.target.value)}
-                            onKeyDown={(e) => e.key === "Enter" && handleJoin()}
-                            placeholder="e.g. BiryaniBoss"
-                            maxLength={20}
+                            value={customerName}
+                            onChange={(e) => setCustomerName(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleJoin()}
+                            placeholder="e.g. Rahul Sharma"
+                            maxLength={40}
                             className="flex-1 bg-transparent px-3 py-3 text-sm outline-none font-editorial"
                             autoFocus
                           />
                         </div>
                       </label>
-                      <p className="mt-2 text-[10px] text-[#1A1106]/50 font-editorial italic">
-                        Max 20 characters. No spaces, no personal info!
-                      </p>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -335,7 +308,7 @@ export function TableSessionGuard({ slug }: { slug?: string }) {
                 {/* Start Ordering Button */}
                 <button
                   onClick={handleJoin}
-                  disabled={scanning}
+                  disabled={scanning || (!isReturning && customerName.trim().length < 2)}
                   className="w-full mehfil-btn-royal rounded-full py-3.5 font-royal tracking-[0.2em] uppercase text-xs disabled:opacity-50 inline-flex items-center justify-center gap-2"
                 >
                   {scanning ? (
@@ -346,7 +319,7 @@ export function TableSessionGuard({ slug }: { slug?: string }) {
                 </button>
 
                 <div className="mt-5 text-center font-editorial italic text-[11px] text-[#1A1106]/55">
-                  No sign-up, no phone, no email. Just good food.
+                  No sign-up required. Just good food.
                 </div>
               </div>
 
