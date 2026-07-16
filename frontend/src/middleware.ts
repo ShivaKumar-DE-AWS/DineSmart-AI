@@ -26,7 +26,7 @@ export function middleware(request: NextRequest) {
       currentHost === "smartdineai.co.in" ||
       currentHost === "www" ||
       currentHost === "localhost:3000" ||
-      currentHost === hostname // Fallback if replace didn't do anything
+      (currentHost === hostname && !hostname.includes(".vercel.app")) // Fallback if replace didn't do anything, EXCEPT on vercel previews where we must allow root domain access
     ) {
       url.pathname = "/404";
       return NextResponse.rewrite(url);
