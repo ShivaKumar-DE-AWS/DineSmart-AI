@@ -218,10 +218,11 @@ export async function sendAIWaiterEvent(
 
       const menuStore = useMenuStore.getState();
       const currentCart = useCart.getState().items || [];
-      /** Pick the best match from the live menu not already in cart */
+      /** Pick the best match from the live menu, allowing items already in cart */
       const getRec = (keywords: string[]) => {
         const recs = menuStore.getRecommendations(keywords, 8);
-        return recs.find(r => !currentCart.some(ci => ci.item_id === r.id || ci.name === r.name));
+        // Exclude the exact item just added to avoid immediate redundancy, but allow other items in cart
+        return recs.find(r => r.id !== item.item_id) || recs[0];
       };
 
       // ─── PAIRING RULES (most-specific first) ────────────────────────────

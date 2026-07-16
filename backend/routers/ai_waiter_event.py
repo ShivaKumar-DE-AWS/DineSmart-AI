@@ -235,7 +235,7 @@ EVENT: Customer added "{added_name}" (Category: {added_cat}) to cart.
 INSTRUCTIONS:
 1. action_type = "UPSELL_OFFER"
 2. dialogue_text: Compliment the choice. Then smoothly suggest the logical NEXT course or pairing. E.g., if they added a curry, suggest breads. If they added a main, suggest dessert/drinks.
-3. suggested_items: Pick max 2 items from the menu that perfectly pair with the cart or represent the next logical course. NEVER suggest items already in the cart.
+3. suggested_items: Pick max 2 items from the menu that perfectly pair with the cart or represent the next logical course. You MAY suggest items already in the cart if it makes logical sense to have more of them (like an extra drink or bread).
 4. quick_replies: Generate 3-4 options for the user (e.g., "Add [Suggested Bread]", "Show Desserts", "Skip to Checkout").
 5. next_state: Update 'stage' to the next logical step."""
 
@@ -246,7 +246,7 @@ EVENT: {intent}
 INSTRUCTIONS:
 1. action_type = "UPSELL_OFFER"
 2. dialogue_text: Respond naturally to their intent. If they asked to skip to a course, suggest items from that course. If checkout, do a final upsell (Dessert/Drink).
-3. suggested_items: Max 2 logical additions matching their intent.
+3. suggested_items: MUST return exactly 2 logical additions from the menu matching their intent. You MAY suggest items already in the [CART_STATE] if it makes sense (e.g., more of a drink or starter). Suggest in a proper logical order (e.g., if they ordered main course but no drinks, suggest drinks; if no dessert, suggest dessert).
 4. quick_replies: e.g. ["Proceed to Pay", "Add Drinks", "Go Back"]
 5. next_state: Keep updated."""
 
@@ -441,6 +441,22 @@ async def ai_waiter_event(req: AIWaiterEventRequest):
                 valid_suggestions.append(sug)
             else:
                 logger.warning("[AI Waiter] Dropped non-menu or unavailable suggestion: %s (%s)", sug.name, sug.item_id)
+        
+        # If CHECKOUT and we stripped all suggestions, try to append 2 fallback suggestions
+        if req.event_type == "CHECKOUT" and len(valid_suggestions) == 0:
+            for item in menu_snapshot:
+                if item.get("available", True) is not False:
+                    i_id = str(item.get("id", ""))
+                    i_name = str(item.get("name", ""))
+                    valid_suggestions.append(SuggestedItemSchema(
+                        item_id=i_id,
+                        name=i_name,
+                        price=float(item.get("price", 0.0)),
+                        reason="Chef's signature recommendation to complete your meal!"
+                    ))
+                if len(valid_suggestions) >= 2:
+                    break
+
         ai_response.suggested_items = valid_suggestions
 
     if cache_key and redis_client and ai_response and ai_response.dialogue_text:
