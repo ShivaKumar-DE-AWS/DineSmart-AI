@@ -206,7 +206,7 @@ export async function sendAIWaiterEvent(
 
       if (!payload.silent) {
         if (typeof window !== "undefined") {
-          window.dispatchEvent(new CustomEvent("ai-speak", {
+          window.dispatchEvent(new CustomEvent("ai-voice-speak", {
             detail: { text: timeGreeting }
           }));
         }
@@ -516,10 +516,17 @@ export async function sendAIWaiterEvent(
         }
       }
 
-      if (suggestedAction) {
-        showAIToast(instantMsg, 5000, suggestedAction);
-      } else {
-        showAIToast(instantMsg, 3500);
+      if (instantMsg) {
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("ai-voice-speak", {
+            detail: { text: instantMsg }
+          }));
+        }
+        if (suggestedAction) {
+          showAIToast(instantMsg, 5000, suggestedAction);
+        } else {
+          showAIToast(instantMsg, 3500);
+        }
       }
     }
 
@@ -606,7 +613,7 @@ export async function sendAIWaiterEvent(
           }
         }));
         if (response.dialogue_text) {
-          window.dispatchEvent(new CustomEvent("ai-speak", {
+          window.dispatchEvent(new CustomEvent("ai-voice-speak", {
             detail: { text: response.dialogue_text }
           }));
         }
