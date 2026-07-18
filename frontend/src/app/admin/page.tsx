@@ -116,6 +116,31 @@ export default function AdminDashboard() {
         </DialogContent>
       </Dialog>
 
+      {showTrialWarning && (
+        <div className={`mb-8 p-4 rounded-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-2 shadow-sm ${isSuspended || trialExpired ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
+          <div className="flex items-center gap-4">
+            <div className={`p-2 rounded-full ${isSuspended || trialExpired ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'}`}>
+              <AlertTriangle className="h-6 w-6" />
+            </div>
+            <div>
+              <h3 className={`font-bold text-lg ${isSuspended || trialExpired ? 'text-red-900' : 'text-amber-900'}`}>
+                {isSuspended ? "Account Suspended" : trialExpired ? "Trial Expired" : `Trial Ends in ${trialDaysLeft} Days`}
+              </h3>
+              <p className={`text-sm mt-0.5 ${isSuspended || trialExpired ? 'text-red-700' : 'text-amber-700'}`}>
+                {isSuspended 
+                  ? "Your account has been suspended. Please subscribe to a plan to restore access." 
+                  : trialExpired 
+                    ? "Your trial period has ended. Subscribe now to continue using all features." 
+                    : "Your trial is ending soon. Choose a subscription plan to ensure uninterrupted access."}
+              </p>
+            </div>
+          </div>
+          <Link href="/admin/billing" className={`shrink-0 px-6 py-2.5 rounded-lg font-bold text-sm transition text-white shadow-sm ${isSuspended || trialExpired ? 'bg-red-600 hover:bg-red-700' : 'bg-amber-500 hover:bg-amber-600'}`}>
+            Subscribe Now
+          </Link>
+        </div>
+      )}
+
       {showOnboarding && (
         <div className="mb-8 bg-gradient-to-br from-amber-50 via-cream to-amber-50/50 border-2 border-amber-300 rounded-2xl p-6 shadow-md relative overflow-hidden">
           <div className="absolute -top-10 -right-10 w-48 h-48 bg-amber-200/40 rounded-full blur-3xl pointer-events-none" />
