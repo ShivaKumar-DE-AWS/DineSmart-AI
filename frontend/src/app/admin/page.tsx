@@ -1,4 +1,5 @@
 "use client";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -6,6 +7,7 @@ import { formatCurrency } from "@/lib/utils";
 import { TrendingUp, ShoppingBag, Receipt, AlertTriangle, Rocket, UtensilsCrossed, QrCode, CheckCircle2, ArrowRight, Users, CalendarDays, BarChart as BarChartIcon } from "lucide-react";
 import { LineChart, Line, BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { useSession } from "@/stores/session";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 // Static chart styling
 const CHART_GRID_STROKE = "#E2DFD8";
@@ -67,30 +69,52 @@ export default function AdminDashboard() {
 
   const showTrialWarning = dashLoaded && (isSuspended || (isTrial && (trialExpired || trialDaysLeft <= 7)));
 
+  const [isTrialModalOpen, setIsTrialModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (showTrialWarning) {
+      setIsTrialModalOpen(true);
+    }
+  }, [showTrialWarning]);
+
   return (
     <div>
-      {showTrialWarning && (
-        <div className={`mb-6 p-5 rounded-2xl shadow-sm border-l-4 flex items-start sm:items-center justify-between gap-4 ${isSuspended || trialExpired ? 'bg-red-50 border-red-500 text-red-900' : 'bg-amber-50 border-amber-500 text-amber-900'}`}>
-          <div className="flex items-start sm:items-center gap-3">
-            <AlertTriangle className={`h-6 w-6 shrink-0 ${isSuspended || trialExpired ? 'text-red-500' : 'text-amber-500'}`} />
-            <div>
-              <h3 className="font-bold text-base md:text-lg">
-                {isSuspended ? "Account Suspended" : trialExpired ? "Trial Expired" : `Trial Ends in ${trialDaysLeft} Days`}
-              </h3>
-              <p className="text-sm opacity-90 mt-0.5">
-                {isSuspended 
-                  ? "Your account has been suspended. Please subscribe to restore access to all features." 
-                  : trialExpired 
-                    ? "Your trial period has ended. Subscribe now to continue using SmartDine AI features." 
-                    : "Your trial is ending soon. Choose a plan to ensure uninterrupted access."}
-              </p>
-            </div>
+      <Dialog open={isTrialModalOpen} onOpenChange={setIsTrialModalOpen}>
+        <DialogContent className="sm:max-w-md text-center p-8">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 mb-6">
+            <AlertTriangle className={`h-8 w-8 ${isSuspended || trialExpired ? 'text-red-600' : 'text-amber-600'}`} aria-hidden="true" />
           </div>
-          <Link href="/admin/billing" className={`px-5 py-2.5 shrink-0 rounded-xl font-bold text-sm shadow-sm transition ${isSuspended || trialExpired ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-amber-500 text-white hover:bg-amber-600'}`}>
-            View Plans
-          </Link>
-        </div>
-      )}
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold mb-2">
+              {isSuspended ? "Account Suspended" : trialExpired ? "Trial Expired" : `Trial Ends in ${trialDaysLeft} Days`}
+            </DialogTitle>
+            <DialogDescription className="text-base">
+              {isSuspended 
+                ? "Your account has been suspended. Please subscribe to a plan to restore access to all features." 
+                : trialExpired 
+                  ? "Your trial period has ended. Subscribe now to continue using SmartDine AI features." 
+                  : "Your trial is ending soon. Choose a subscription plan to ensure uninterrupted access to the dashboard."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-8 flex flex-col gap-3">
+            <Link 
+              href="/admin/billing" 
+              className={`w-full py-3 px-4 rounded-xl font-bold text-base shadow-sm transition ${isSuspended || trialExpired ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-amber-500 text-white hover:bg-amber-600'}`}
+              onClick={() => setIsTrialModalOpen(false)}
+            >
+              View Subscription Plans
+            </Link>
+            {!isSuspended && !trialExpired && (
+              <button 
+                onClick={() => setIsTrialModalOpen(false)} 
+                className="w-full py-2.5 px-4 rounded-xl font-semibold text-sm text-gray-500 hover:bg-gray-100 transition"
+              >
+                Remind me later
+              </button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {showOnboarding && (
         <div className="mb-8 bg-gradient-to-br from-amber-50 via-cream to-amber-50/50 border-2 border-amber-300 rounded-2xl p-6 shadow-md relative overflow-hidden">
