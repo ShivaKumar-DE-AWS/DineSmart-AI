@@ -92,6 +92,10 @@ async def dashboard(user=Depends(require_user)):
     menu_count = await db.menu.count_documents(menu_q)
     tables_count = await db.tables.count_documents(tables_q)
 
+    trial_ends_at = rest.get("trial_ends_at") if rest else None
+    if trial_ends_at and hasattr(trial_ends_at, "isoformat"):
+        trial_ends_at = trial_ends_at.isoformat()
+
     return {
         "revenue_today": round(revenue_today, 2), "orders_today": total_orders,
         "ai_orders_today": ai_orders_count, "avg_ticket": round(avg_ticket, 2),
@@ -101,6 +105,9 @@ async def dashboard(user=Depends(require_user)):
         "is_verified": is_verified,
         "menu_count": menu_count,
         "tables_count": tables_count,
+        "subscription_status": rest.get("subscription_status") if rest else "trial",
+        "plan_tier": rest.get("plan_tier") or rest.get("plan") if rest else "starter",
+        "trial_ends_at": trial_ends_at,
     }
 
 @router.get("/api/analytics/revenue", dependencies=[Depends(require_roles("admin"))])

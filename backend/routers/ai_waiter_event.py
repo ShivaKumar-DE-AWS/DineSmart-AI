@@ -373,6 +373,11 @@ async def ai_waiter_event(req: AIWaiterEventRequest):
     if not req.cart_state and req.current_cart:
         req.cart_state = req.current_cart
 
+    # Block access for Starter tier
+    rest = await db.restaurants.find_one({"id": req.restaurant_id})
+    if rest and rest.get("plan_tier") == "starter":
+        raise HTTPException(status_code=403, detail="AI Waiter is not available on the Starter plan.")
+
     if not req.restaurant_id or not req.restaurant_id.strip():
         raise HTTPException(status_code=400, detail="restaurant_id is required and cannot be empty.")
 

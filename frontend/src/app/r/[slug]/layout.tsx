@@ -375,7 +375,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
       <main id="customer-content">{children}</main>
 
       {/* Voice AI Waiter */}
-      {restaurantConfig && (
+      {restaurantConfig && restaurantConfig.plan_tier !== "starter" && (
         <VoiceAgentOverlay restaurantId={restaurantConfig.id} />
       )}
 

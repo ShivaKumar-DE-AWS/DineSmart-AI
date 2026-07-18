@@ -1,5 +1,5 @@
 "use client";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { CreditCard, CheckCircle2, AlertTriangle, ShieldCheck, Zap, Globe } from "lucide-react";
 import { toast } from "sonner";
@@ -12,6 +12,7 @@ function CheckIcon() {
 
 export default function BillingPage() {
   const searchParams = useSearchParams();
+  const qc = useQueryClient();
 
   useEffect(() => {
     if (searchParams.get("success")) {
@@ -48,6 +49,16 @@ export default function BillingPage() {
     onError: (err: Error) => toast.error(err.message),
   });
 
+  const mockSubscribeMut = useMutation({
+    mutationFn: (plan_tier: string) => api<{ status: string; message: string }>("/api/billing/mock-subscribe", { method: "POST", body: JSON.stringify({ plan_tier }) }),
+    onSuccess: (data) => {
+      toast.success(data.message);
+      qc.invalidateQueries({ queryKey: ["admin-dashboard"] });
+      qc.invalidateQueries({ queryKey: ["billing-status"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
   if (isLoading) {
     return <div className="p-8 text-center text-stone">Loading billing info...</div>;
   }
@@ -80,7 +91,16 @@ export default function BillingPage() {
             </span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {(geo.plans ?? []).map((plan: any) => (
+            {(geo.plans ?? []).map((plan: any) => {
+              const isCurrentPlan = billing?.plan_tier === plan.id;
+              let displayPrice = plan.id === "enterprise" ? "Custom Pricing" : plan.price === 0 ? "Free" : `${plan.currency_symbol}${plan.price}/${plan.interval}`;
+              if (geo.country === "IN" || true) {
+                if (plan.id === "starter") displayPrice = "₹999/mo";
+                if (plan.id === "pro") displayPrice = "₹1999/mo";
+                if (plan.id === "enterprise") displayPrice = "Custom";
+              }
+
+              return (
               <div
                 key={plan.id}
                 className={`rounded-xl border p-5 flex flex-col ${
@@ -91,8 +111,11 @@ export default function BillingPage() {
                       : "border-bone bg-sand/30"
                 }`}
               >
-                <h3 className="font-semibold text-ink text-sm">{plan.name}</h3>
-                <ul className="mt-4 space-y-2 text-xs text-stone flex-1">
+                <div className="mb-4">
+                  <h3 className="font-semibold text-ink text-sm uppercase tracking-wider">{plan.name}</h3>
+                  <div className="text-2xl font-bold mt-2 text-ink">{displayPrice}</div>
+                </div>
+                <ul className="space-y-2 text-xs text-stone flex-1 mb-6">
                   {(plan.features ?? []).map((f: string, i: number) => (
                     <li key={i} className="flex items-start gap-2">
                       <CheckIcon />
@@ -100,8 +123,21 @@ export default function BillingPage() {
                     </li>
                   ))}
                 </ul>
+                <button
+                  onClick={() => mockSubscribeMut.mutate(plan.id)}
+                  disabled={mockSubscribeMut.isPending || isCurrentPlan}
+                  className={`w-full py-2.5 rounded-lg text-sm font-bold transition-colors ${
+                    isCurrentPlan 
+                      ? "bg-emerald-50 text-emerald-600 border border-emerald-200" 
+                      : plan.id === "pro" 
+                        ? "bg-clay text-white hover:bg-clay/90" 
+                        : "bg-ink text-white hover:bg-ink/90"
+                  }`}
+                >
+                  {isCurrentPlan ? "Current Plan" : mockSubscribeMut.isPending ? "Updating..." : "Subscribe"}
+                </button>
               </div>
-            ))}
+            )})}
           </div>
         </div>
       )}

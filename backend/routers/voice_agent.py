@@ -8,7 +8,7 @@ from typing import Dict, Any
 from google import genai
 from google.genai import types
 
-from deps import GEMINI_API_KEY, redis_client
+from deps import GEMINI_API_KEY, redis_client, db
 from routers.voice_tools import get_live_menu, update_cart, analyze_checkout_upsell, VOICE_TOOLS_SCHEMA
 
 import os
@@ -118,6 +118,12 @@ async def get_tts_audio_endpoint(text: str = ""):
 @router.websocket("/api/ws/voice-agent/{restaurant_id}")
 async def voice_agent_endpoint(websocket: WebSocket, restaurant_id: str):
     await websocket.accept()
+    
+    # Block access for Starter tier
+    rest = await db.restaurants.find_one({"id": restaurant_id})
+    if rest and rest.get("plan_tier") == "starter":
+        await websocket.close(code=1008, reason="AI Waiter is not available on the Starter plan.")
+        return
     
     device_id = websocket.query_params.get("device_id", "unknown_device")
     logger.info(f"[VoiceAgent] Client connected: {device_id} for {restaurant_id}")
