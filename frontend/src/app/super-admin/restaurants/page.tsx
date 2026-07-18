@@ -145,7 +145,34 @@ export default function SuperAdminRestaurantsPage() {
             ) : restaurants.length === 0 ? (
               <tr><td colSpan={8} className="text-center py-8 text-stone">No restaurants found.</td></tr>
             ) : (
-              restaurants.map((r) => (
+              restaurants.map((r) => {
+                const isTrial = r.subscription_status === "trial";
+                let isExpired = false;
+                if (isTrial && r.trial_ends_at) {
+                  isExpired = new Date(r.trial_ends_at).getTime() < Date.now();
+                }
+
+                let displayStatus = (r.subscription_status || "not subscribed").toUpperCase();
+                let statusColor = "bg-zinc-100 text-zinc-800 border-zinc-200";
+
+                if (r.subscription_status === "active") {
+                  statusColor = "bg-emerald-100 text-emerald-800 border-emerald-200";
+                } else if (r.subscription_status === "suspended") {
+                  statusColor = "bg-red-100 text-red-800 border-red-200";
+                } else if (isTrial) {
+                  if (isExpired) {
+                    displayStatus = "TRIAL EXPIRED";
+                    statusColor = "bg-red-100 text-red-800 border-red-200 font-bold";
+                  } else {
+                    displayStatus = "TRIAL";
+                    statusColor = "bg-amber-100 text-amber-800 border-amber-200";
+                  }
+                } else if (!r.subscription_status || r.subscription_status === "none") {
+                  displayStatus = "NOT SUBSCRIBED";
+                  statusColor = "bg-stone-100 text-stone-600 border-stone-200";
+                }
+
+                return (
                 <tr 
                   key={r.id || r.slug} 
                   className="border-b border-bone last:border-0 hover:bg-sand/50 transition cursor-pointer"
@@ -162,13 +189,8 @@ export default function SuperAdminRestaurantsPage() {
                     </span>
                   </td>
                   <td className="py-3 px-4 hidden md:table-cell">
-                    <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium border ${
-                      r.subscription_status === "active" ? "bg-emerald-100 text-emerald-800 border-emerald-200" :
-                      r.subscription_status === "trial" ? "bg-amber-100 text-amber-800 border-amber-200" :
-                      r.subscription_status === "suspended" ? "bg-red-100 text-red-800 border-red-200" :
-                      "bg-zinc-100 text-zinc-800 border-zinc-200"
-                    }`}>
-                      {(r.subscription_status || "unknown").toUpperCase()}
+                    <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium border ${statusColor}`}>
+                      {displayStatus}
                     </span>
                   </td>
                   <td className="py-3 px-4 text-ink font-bold">{r.order_count.toLocaleString()}</td>
@@ -240,7 +262,8 @@ export default function SuperAdminRestaurantsPage() {
                     </button>
                   </td>
                 </tr>
-              ))
+              )
+            })
             )}
           </tbody>
         </table>
