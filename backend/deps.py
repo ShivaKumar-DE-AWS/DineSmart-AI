@@ -11,7 +11,7 @@ from typing import Optional, List, Dict, Any
 from pathlib import Path
 
 from dotenv import load_dotenv
-from fastapi import HTTPException, Depends
+from fastapi import HTTPException, Depends, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, Field, EmailStr, field_validator
 from motor.motor_asyncio import AsyncIOMotorClient
