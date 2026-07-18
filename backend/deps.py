@@ -174,7 +174,7 @@ async def require_user(user=Depends(current_user)) -> Dict[str, Any]:
             raise HTTPException(status_code=403, detail="Restaurant not found or deleted")
             
         status = restaurant.get("subscription_status")
-        if status == "suspended":
+        if status == "suspended" and not user.get("is_impersonated"):
             raise HTTPException(status_code=403, detail="Restaurant is suspended")
             
         if status == "trial":

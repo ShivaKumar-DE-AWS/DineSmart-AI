@@ -225,9 +225,10 @@ async def impersonate_restaurant(restaurant_id: str, user=Depends(require_supera
         "sub": user.get("sub"),
         "email": user["email"],
         "role": "admin",
-        "name": f"SmartDine HQ ({user['name']})",
+        "name": f"SmartDine HQ ({user.get('name', 'Admin')})",
         "restaurant_id": restaurant_id,
         "restaurant_slug": restaurant.get("slug"),
+        "is_impersonated": True,
     }, ttl_hours=0.5)
 
     from routers.audit import log_audit_event

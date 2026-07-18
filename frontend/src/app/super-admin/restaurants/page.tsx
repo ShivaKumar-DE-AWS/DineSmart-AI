@@ -84,7 +84,7 @@ export default function SuperAdminRestaurantsPage() {
     onSuccess: (data) => {
       setSession(data.user, data.token);
       toast.success(`Impersonating ${data.user.restaurant_slug}`);
-      router.push(`/admin`);
+      window.location.href = "/admin";
     },
     onError: (err: Error) => toast.error(err.message),
   });
