@@ -108,7 +108,7 @@ export default function SuperAdminRestaurantsPage() {
         </div>
         <button 
           onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-2 bg-brand text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand/90 transition shadow-sm"
+          className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition shadow-sm"
         >
           <Plus className="h-4 w-4" /> Add Restaurant
         </button>
@@ -312,7 +312,7 @@ export default function SuperAdminRestaurantsPage() {
                   <button 
                     type="submit"
                     disabled={addMut.isPending}
-                    className="flex-1 px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand/90 transition flex justify-center items-center"
+                    className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition flex justify-center items-center"
                   >
                     {addMut.isPending ? "Creating..." : "Create Restaurant"}
                   </button>
@@ -353,7 +353,7 @@ export default function SuperAdminRestaurantsPage() {
                   <button 
                     onClick={() => extendTrialMut.mutate({ id: selectedRest.id, days: trialDays })}
                     disabled={extendTrialMut.isPending || trialDays < 1}
-                    className="flex-1 px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand/90 transition"
+                    className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition"
                   >
                     {extendTrialMut.isPending ? "Extending..." : "Confirm"}
                   </button>

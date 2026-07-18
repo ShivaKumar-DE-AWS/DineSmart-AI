@@ -112,6 +112,7 @@ export interface RestaurantConfig {
   tagline: string;
   description: string;
   logo_url?: string;
+  plan_tier?: string;
 
   // Theme Colors (auto-derived from logo if not set)
   primary_color: string;

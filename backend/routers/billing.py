@@ -14,6 +14,27 @@ STRIPE_PRICE_ID_PRO = os.environ.get("STRIPE_PRICE_ID_PRO")
 # URL to return to after checkout or portal
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
 
+from pydantic import BaseModel
+
+class MockSubscribeReq(BaseModel):
+    plan_tier: str
+
+@router.post("/mock-subscribe")
+async def mock_subscribe(req: MockSubscribeReq, user=Depends(require_roles("admin"))):
+    """Mock endpoint to immediately subscribe to a plan without Stripe."""
+    restaurant_id = user.get("restaurant_id")
+    if not restaurant_id:
+        raise HTTPException(status_code=400, detail="No restaurant found")
+        
+    await db.restaurants.update_one(
+        {"id": restaurant_id},
+        {"$set": {
+            "subscription_status": "active",
+            "plan_tier": req.plan_tier
+        }}
+    )
+    return {"status": "success", "message": f"Subscribed to {req.plan_tier} plan."}
+
 @router.get("/status")
 async def get_billing_status(user=Depends(require_roles("admin", "manager", "staff"))):
     """Get the current restaurant's billing status."""

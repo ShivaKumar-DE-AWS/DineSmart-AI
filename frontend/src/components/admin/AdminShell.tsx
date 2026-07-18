@@ -15,7 +15,6 @@ const nav = [
   { href: "/admin/insights", label: "AI Insights", icon: Lightbulb, testid: "admin-nav-insights" },
   { href: "/admin/impact", label: "SmartDine Impact", icon: Sparkles, testid: "admin-nav-impact" },
   { href: "/admin/orders", label: "Orders", icon: ShoppingBag, testid: "admin-nav-orders" },
-  { href: '/admin/kds', label: 'Kitchen Display', icon: ChefHat, testid: 'admin-nav-kds' },
   { href: "/admin/reservations", label: "Reservations", icon: CalendarClock, testid: "admin-nav-reservations" },
   { href: "/admin/tables", label: "Tables & QR", icon: QrCode, testid: "admin-nav-tables" },
   { href: "/admin/revenue", label: "Analytics & Revenue", icon: LineChart, testid: "admin-nav-revenue" },

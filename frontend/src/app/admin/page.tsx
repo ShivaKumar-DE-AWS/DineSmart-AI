@@ -49,8 +49,49 @@ export default function AdminDashboard() {
   const hasTables = (dash?.tables_count ?? 0) > 0;
   const showOnboarding = dashLoaded && (isSandbox || !isVerified || !hasMenu || !hasTables);
 
+  // Trial logic
+  const isTrial = dash?.subscription_status === "trial";
+  const isSuspended = dash?.subscription_status === "suspended";
+  let trialExpired = false;
+  let trialDaysLeft = 0;
+  if (isTrial && dash?.trial_ends_at) {
+    const endsAt = new Date(dash.trial_ends_at);
+    const now = new Date();
+    const diff = endsAt.getTime() - now.getTime();
+    if (diff <= 0) {
+      trialExpired = true;
+    } else {
+      trialDaysLeft = Math.ceil(diff / (1000 * 3600 * 24));
+    }
+  }
+
+  const showTrialWarning = dashLoaded && (isSuspended || (isTrial && (trialExpired || trialDaysLeft <= 7)));
+
   return (
     <div>
+      {showTrialWarning && (
+        <div className={`mb-6 p-5 rounded-2xl shadow-sm border-l-4 flex items-start sm:items-center justify-between gap-4 ${isSuspended || trialExpired ? 'bg-red-50 border-red-500 text-red-900' : 'bg-amber-50 border-amber-500 text-amber-900'}`}>
+          <div className="flex items-start sm:items-center gap-3">
+            <AlertTriangle className={`h-6 w-6 shrink-0 ${isSuspended || trialExpired ? 'text-red-500' : 'text-amber-500'}`} />
+            <div>
+              <h3 className="font-bold text-base md:text-lg">
+                {isSuspended ? "Account Suspended" : trialExpired ? "Trial Expired" : `Trial Ends in ${trialDaysLeft} Days`}
+              </h3>
+              <p className="text-sm opacity-90 mt-0.5">
+                {isSuspended 
+                  ? "Your account has been suspended. Please subscribe to restore access to all features." 
+                  : trialExpired 
+                    ? "Your trial period has ended. Subscribe now to continue using SmartDine AI features." 
+                    : "Your trial is ending soon. Choose a plan to ensure uninterrupted access."}
+              </p>
+            </div>
+          </div>
+          <Link href="/admin/billing" className={`px-5 py-2.5 shrink-0 rounded-xl font-bold text-sm shadow-sm transition ${isSuspended || trialExpired ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-amber-500 text-white hover:bg-amber-600'}`}>
+            View Plans
+          </Link>
+        </div>
+      )}
+
       {showOnboarding && (
         <div className="mb-8 bg-gradient-to-br from-amber-50 via-cream to-amber-50/50 border-2 border-amber-300 rounded-2xl p-6 shadow-md relative overflow-hidden">
           <div className="absolute -top-10 -right-10 w-48 h-48 bg-amber-200/40 rounded-full blur-3xl pointer-events-none" />

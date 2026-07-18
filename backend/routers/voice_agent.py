@@ -8,7 +8,7 @@ from typing import Dict, Any
 from google import genai
 from google.genai import types
 
-from deps import GEMINI_API_KEY, redis_client
+from deps import GEMINI_API_KEY, redis_client, db
 from routers.voice_tools import get_live_menu, update_cart, analyze_checkout_upsell, VOICE_TOOLS_SCHEMA
 
 import os
@@ -37,16 +37,18 @@ Rules:
 async def generate_tts_audio(text: str) -> bytes:
     """Synthesize speech from text using Edge TTS with Google TTS fallback."""
     def detect_voice_and_google_lang(value: str) -> tuple[str, str]:
+        # Use highly realistic, expressive humanoid voices
+        voice = "en-US-AvaMultilingualNeural"
+        lang = "en-in"
         if any("\u0900" <= char <= "\u097f" for char in value):
-            # Devanagari covers Hindi/Marathi. Swara gives a natural Indian voice for both.
-            return "hi-IN-SwaraNeural", "hi-in"
-        if any("\u0c00" <= char <= "\u0c7f" for char in value):
-            return "te-IN-ShrutiNeural", "te-in"
-        if any("\u0b80" <= char <= "\u0bff" for char in value):
-            return "ta-IN-PallaviNeural", "ta-in"
-        if any("\u0600" <= char <= "\u06ff" for char in value):
-            return "ur-IN-SalmanNeural", "ur-in"
-        return "en-IN-NeerjaNeural", "en-in"
+            voice, lang = "hi-IN-SwaraNeural", "hi-in"
+        elif any("\u0c00" <= char <= "\u0c7f" for char in value):
+            voice, lang = "te-IN-ShrutiNeural", "te-in"
+        elif any("\u0b80" <= char <= "\u0bff" for char in value):
+            voice, lang = "ta-IN-PallaviNeural", "ta-in"
+        elif any("\u0600" <= char <= "\u06ff" for char in value):
+            voice, lang = "ur-IN-SalmanNeural", "ur-in"
+        return voice, lang
 
     try:
         import edge_tts
@@ -117,6 +119,11 @@ async def get_tts_audio_endpoint(text: str = ""):
 async def voice_agent_endpoint(websocket: WebSocket, restaurant_id: str):
     await websocket.accept()
     
+    # Block access for Starter tier
+    rest = await db.restaurants.find_one({"id": restaurant_id})
+    if rest and rest.get("plan_tier") == "starter":
+        await websocket.close(code=1008, reason="AI Waiter is not available on the Starter plan.")
+        return
     device_id = websocket.query_params.get("device_id", "unknown_device")
     logger.info(f"[VoiceAgent] Client connected: {device_id} for {restaurant_id}")
 

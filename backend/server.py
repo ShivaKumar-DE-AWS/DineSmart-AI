@@ -244,6 +244,7 @@ async def get_restaurant_config(slug: str):
         raise HTTPException(status_code=403, detail="Restaurant is temporarily suspended.")
         
     config["sandbox_mode"] = rest.get("sandbox_mode", True)
+    config["plan_tier"] = rest.get("plan_tier", "pro")
     
     # ponytail: mask passwords — config is public, passwords should never leak
     resp = copy.deepcopy(config)
