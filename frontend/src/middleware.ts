@@ -21,16 +21,8 @@ export function middleware(request: NextRequest) {
   const isStaffRoute = url.pathname.startsWith('/admin') || url.pathname.startsWith('/kitchen') || url.pathname.startsWith('/counter') || url.pathname.startsWith('/cashier');
   
   if (isStaffRoute) {
-    // If on the main domain, block access to tenant-specific staff routes
-    if (
-      currentHost === "smartdineai.co.in" ||
-      currentHost === "www" ||
-      currentHost === "localhost:3000" ||
-      (currentHost === hostname && !hostname.includes(".vercel.app")) // Fallback if replace didn't do anything, EXCEPT on vercel previews where we must allow root domain access
-    ) {
-      url.pathname = "/404";
-      return NextResponse.rewrite(url);
-    }
+    // We allow staff routes on the main domain so Super Admin impersonation can work 
+    // since localStorage tokens cannot be passed across subdomains easily.
     // For subdomains, DO NOT rewrite staff routes so they hit app/admin natively!
     return NextResponse.next();
   }
