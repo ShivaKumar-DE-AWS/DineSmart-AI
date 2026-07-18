@@ -351,13 +351,18 @@ async def extend_trial(restaurant_id: str, req: ExtendTrialReq, user=Depends(req
     current_ends_at = restaurant.get("trial_ends_at")
     
     if current_ends_at:
+        if isinstance(current_ends_at, str):
+            try:
+                # Handle isoformat strings that might end in 'Z'
+                current_ends_at = datetime.fromisoformat(current_ends_at.replace('Z', '+00:00'))
+            except ValueError:
+                current_ends_at = datetime.now(timezone.utc)
         if current_ends_at.tzinfo is None:
             current_ends_at = current_ends_at.replace(tzinfo=timezone.utc)
         # If expired, add from today. If still active, add to existing end date.
         base_date = max(current_ends_at, datetime.now(timezone.utc))
     else:
         base_date = datetime.now(timezone.utc)
-        
     new_ends_at = base_date + timedelta(days=req.days)
     
     await db.restaurants.update_one(
