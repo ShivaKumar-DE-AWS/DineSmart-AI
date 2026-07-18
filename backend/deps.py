@@ -160,7 +160,7 @@ async def current_user(creds: Optional[HTTPAuthorizationCredentials] = Depends(b
     except HTTPException:
         return None
 
-async def require_user(user=Depends(current_user)) -> Dict[str, Any]:
+async def require_user(request: Request, user=Depends(current_user)) -> Dict[str, Any]:
     if not user:
         raise HTTPException(status_code=401, detail="Authentication required")
         
@@ -186,11 +186,12 @@ async def require_user(user=Depends(current_user)) -> Dict[str, Any]:
                     except ValueError:
                         pass
                 
-                if isinstance(trial_ends_at, datetime):
-                    if trial_ends_at.tzinfo is None:
-                        trial_ends_at = trial_ends_at.replace(tzinfo=timezone.utc)
                     if datetime.now(timezone.utc) > trial_ends_at:
-                        raise HTTPException(status_code=403, detail="Trial period has expired. Please upgrade your plan.")
+                        # Allow trial expired users to hit the analytics endpoints so they can see the dashboard banners and their status
+                        if request.url.path.startswith("/api/analytics"):
+                            pass
+                        else:
+                            raise HTTPException(status_code=403, detail="Trial period has expired. Please upgrade your plan.")
                         
     return user
 
