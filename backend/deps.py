@@ -187,8 +187,8 @@ async def require_user(request: Request, user=Depends(current_user)) -> Dict[str
                         pass
                 
                     if datetime.now(timezone.utc) > trial_ends_at:
-                        # Allow trial expired users to hit the analytics endpoints so they can see the dashboard banners and their status
-                        if request.url.path.startswith("/api/analytics"):
+                        # Allow trial expired users to hit the analytics endpoints so they can see the dashboard banners and their status, and billing endpoints to upgrade
+                        if request.url.path.startswith("/api/analytics") or request.url.path.startswith("/api/billing"):
                             pass
                         else:
                             raise HTTPException(status_code=403, detail="Trial period has expired. Please upgrade your plan.")
